@@ -1,0 +1,20 @@
+# Survivorship rules — which assertion wins for each golden field. Versioned; part of the
+# release tag. The golden table is a pure function of (assertions, id_registry, these rules).
+#
+# For each field: an ordered list of source preferences (first match wins), then a default.
+# `operator` is a human correction recorded as an assertion — it outranks every source.
+# `site_visit` matches any assertion whose source carries site-visit attestation (OSHA).
+version: 1
+default_order: [operator, site_visit, "class:A", "class:D", "class:B", "class:C"]
+fields:
+  name:            {order: [operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
+  legal_name:      {order: [operator, lookup], tie: most_recent}
+  address:         {order: [operator, site_visit, "class:D", "class:A", "class:B", "class:C"], tie: most_recent}
+  city:            {order: [operator, site_visit, "class:D", "class:A", "class:B", "class:C"], tie: most_recent}
+  state:           {order: [operator, "class:A", "class:D", "class:B", "class:C"], tie: most_recent}
+  zip:             {order: [operator, site_visit, "class:D", "class:A", "class:B"], tie: most_recent}
+  lat_lon:         {order: [operator, "class:B"], tie: most_recent}
+  naics:           {order: [operator, "class:B"], tie: most_recent}
+  status:          {order: [operator, "basis:dated_expiry", "basis:explicit_status_field", "basis:certified_as_of_date", "basis:on_current_list"], tie: most_recent}
+  expiry_date:     {order: [operator, "basis:dated_expiry"], tie: most_recent}
+  product_type:    {order: [operator, "class:D", "class:C", "class:A"], tie: most_recent}

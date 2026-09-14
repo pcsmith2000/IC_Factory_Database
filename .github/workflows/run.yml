@@ -1,0 +1,69 @@
+# The quarterly run. Layers 1–8, halts at the first failing gate, opens a PR with the release.
+# Heavy steps (EPA bulk, Playwright sweeps, classifier batches) can be handed to a Cloud Run
+# Job — see docs/where-it-runs.md — this workflow is the trigger and the record either way.
+name: pipeline-run
+on:
+  schedule:
+    - cron: "0 12 1 1,4,7,10 *"     # 12:00 UTC on the 1st of Jan/Apr/Jul/Oct
+  workflow_dispatch:
+    inputs:
+      layers:
+        description: "layer range, e.g. 2-8 to skip acquisition"
+        default: "1-8"
+      rerun:
+        description: "identical inputs — G3 must issue zero ids"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write                    # Workload Identity Federation to GCP, no stored key
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[acquire]"
+
+      - name: Authenticate to Google Cloud
+        if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Run pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+        run: |
+          python -m pipeline.run \
+            --layers "${{ github.event.inputs.layers || '1-8' }}" \
+            ${{ github.event.inputs.rerun == 'true' && '--rerun' || '' }}
+
+      - name: Upload build (facilities, dedupe pairs, review queue, run record)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ github.run_id }}
+          path: |
+            build/
+            run_records/
+
+      - name: Open release PR
+        if: success()
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: release/${{ github.run_id }}
+          title: "Release: pipeline run ${{ github.run_id }}"
+          body: |
+            Automated release. Review `build/dedupe_audit_*.csv` (G1 pairs) and
+            `build/review_queue.csv` (UNCERTAIN rows) before merging. Merging is the sign-off.
+          add-paths: |
+            id_registry.json
+            run_records/*.json

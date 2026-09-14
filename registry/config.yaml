@@ -1,0 +1,42 @@
+# Run configuration. Secrets are NOT here — they come from the environment
+# (GitHub Actions secrets locally exported, or GCP Secret Manager in Cloud Run).
+
+storage:
+  gcs_bucket: ic-factory-database          # raw archives: gs://<bucket>/ic-sources/<source>/<date>_raw.*
+  local_cache: .cache/ic-sources           # where a local run stages downloads
+
+frame:
+  source: census_cbp
+  naics: ["321991", "321992", "332311", "321214"]
+  level: state                             # county is 30% complete — never used as a denominator
+  vintage: "2023"                          # refresh annually
+  establishments_total: 2750               # control total; treated as a FLOOR
+
+control:
+  path: control/control-triaged.csv
+  checksum_path: control/control.sha256
+  in_scope_rows: 213
+  total_rows: 241
+
+classifier:
+  prompt_path: prompts/CLASSIFIER-PROMPT.md
+  model: claude-sonnet-4-5                 # pinned; recorded in every run record
+  temperature: 0
+  batch_size: 100
+  seeded_positives: 30
+  seeded_negatives: 30
+  labels: [IC, NOT-IC, UNCERTAIN]
+
+gates:
+  g1_dedupe_max_rate: 0.02
+  g1_thresholds: {street_key: 0.95, name_city: 0.90, fuzzy: 0.80}
+  g3_allow_new_ids_on_rerun: 0
+  g5_min_precision: 0.95
+  g5_min_recall: 0.90
+
+measure:
+  bias_band: [0.7, 1.4]
+  bias_min_state_share: 0.02
+
+validate:
+  row_count_drift_tolerance: 0.25          # pull halts for that source if |rows - last_rows| / last_rows exceeds this

@@ -1,0 +1,7 @@
+# States outside the bias band, with the cause on record. Layer 7 publishes these with the
+# release. A state that leaves the band with no entry here is reported as NO CAUSE ON RECORD.
+states:
+  OH: "No component roster published; ohiowoodproducts.com robots-blocked and compromised (2026-09-09)."
+  KY: "No component roster published."
+  MO: "No component roster published."
+  CA: "HCD issues no plant-level identifier; rows are company-level leads capped at T1."

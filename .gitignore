@@ -1,0 +1,10 @@
+build/
+.cache/
+ic-csv/*.csv
+ic-csv/*.pull.json
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.env
+*.~lock.*
