@@ -1,7 +1,7 @@
 """Assertions → golden table.
 
 Every reconciled row becomes field-level assertions: (facility_id, field, value, source_id,
-retrieved_date, row_hash, basis). Assertions are append-only. The golden table is rebuilt
+retrieved_date, row_hash, basis, confidence). Assertions are append-only. The golden table is rebuilt
 from scratch every run by applying registry/survivorship.yaml — nothing writes to it directly.
 A human correction is an assertion with source_id='operator' (control/operator_assertions.csv).
 """
@@ -22,7 +22,8 @@ def assertions_from_rows(rows: list[dict], source_class: dict[str, str]) -> list
     for r in rows:
         base = {"facility_id": r["facility_id"], "source_id": r["source_id"], "source_class": source_class.get(r["source_id"], "?"),
                 "retrieved_date": r["retrieved_date"], "row_hash": r["row_hash"], "basis": r.get("status_basis", "none"),
-                "site_visit": "osha" in r["source_id"] or "OSHA" in (r.get("notes") or "")}
+                "site_visit": "osha" in r["source_id"] or "OSHA" in (r.get("notes") or ""),
+                "confidence": r.get("match_confidence", "")}
         for field, col in FIELD_MAP.items():
             v = (r.get(col) or "").strip()
             if v:
@@ -77,5 +78,6 @@ def load_operator_assertions(path: Path) -> list[dict]:
     out = []
     for r in csv.DictReader(open(path, newline="")):
         out.append({"facility_id": r["facility_id"], "field": r["field"], "value": r["value"], "source_id": "operator",
-                    "source_class": "operator", "retrieved_date": r.get("retrieved_date", ""), "row_hash": "", "basis": "operator", "site_visit": False})
+                    "source_class": "operator", "retrieved_date": r.get("retrieved_date", ""), "row_hash": "", "basis": "operator", "site_visit": False,
+                    "confidence": 1.0})
     return out

@@ -26,7 +26,9 @@ They connect through Workload Identity Federation — no long-lived key is store
   from this repo's `pyproject.toml`.
 - **Secret Manager** for `ANTHROPIC_API_KEY`, `CENSUS_API_KEY` when running in Cloud Run;
   GitHub secrets when running on the runner.
-- **BigQuery** (optional) as the queryable sink for `facilities.csv` per release, dated.
+- **BigQuery** as the eventual warehouse. Today Layer 8 loads the same star schema into a
+  SQLite file in `build/` (`docs/warehouse.md`); `BQ_DATASET` switches engines once the
+  BigQuery loader exists.
 
 ## Setup once
 

@@ -27,6 +27,7 @@ Layer 5b golden        rows → field-level assertions → survivorship rules �
 Layer 6  gates         G1 dedupe · G2 false-merge · G3 id stability · G4 control isolation · G5 classifier eval
 Layer 7  measure       recall on control · per-state coverage · bias index — reported, not steered
 Layer 8  publish       tagged release: registry version + id_registry hash + control checksum + prompt/model versions
+                       → warehouse: star schema, SQLite file today, BigQuery when the loader lands
 ```
 
 Full design: `docs/pipeline-v4.md` (assumptions register inside). Data model: `docs/data-model.md`.
@@ -56,9 +57,10 @@ registry/survivorship.yaml     which source wins per golden field; hashed into t
 registry/known-gaps.yaml       out-of-band states with the cause on record
 prompts/CLASSIFIER-PROMPT.md   frozen; changing it is a versioned change that G5 must re-pass
 control/                       triaged control list + checksum · seeds for G5 · crosswalk · operator assertions
-pipeline/                      one module per layer, plus gates.py and run.py
+pipeline/                      one module per layer, plus gates.py, warehouse.py and run.py
 ic-csv/                        contract CSVs, one per source per run (generated)
 run_records/                   one JSON per run: inputs, versions, gate results, metrics
+build/ic_factory.sqlite        the warehouse (generated): assertions, golden table, provenance views
 docs/                          pipeline design, assumptions register, contract, runbook
 .github/workflows/             ci.yml (tests on every push) · run.yml (quarterly pipeline run)
 ```
@@ -81,13 +83,14 @@ in `registry/config.yaml`, keyed `ic-sources/<source>/<date>_raw.*`.
 pip install -e ".[dev]"
 python -m pipeline.run --registry registry/sources.yaml --dry-run      # plan only
 python -m pipeline.run --registry registry/sources.yaml --layers 2-8   # from existing ic-csv/
+python -m pipeline.warehouse provenance IC-00001                       # golden fields → source → document row
 pytest
 ```
 
 ## Status (v1.0)
 
 Scaffold of the v4 process. Layers 2, 5, 5b, 6 (all five gates), 7 and 8 run end to end
-against the contract; Layer 3 carries the regimented classifier call; Layer 4 (entity
+against the contract, and Layer 8 loads the SQLite warehouse (`docs/warehouse.md`); Layer 3 carries the regimented classifier call; Layer 4 (entity
 resolution) passes rows through flagged NOT-ATTEMPTED and reports resolution_rate = 0 so the
 gap is visible; no source fetchers are written yet (Layer 1 halts loudly, by design). The measured figures in the
 docs are from the 2026-09-09 build (5,026 facilities after dedupe, 96% in-scope recall).

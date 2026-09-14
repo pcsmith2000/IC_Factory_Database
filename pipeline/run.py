@@ -3,14 +3,15 @@
     python -m pipeline.run --registry registry/sources.yaml [--layers 2-8] [--dry-run] [--rerun]
 
 Layer 1 is skipped with --layers 2-8 (use existing ic-csv/). --rerun asserts identical inputs
-so G3 tests id stability. Every run writes run_records/<timestamp>.json whatever happens.
+so G3 tests id stability. Every run writes run_records/<timestamp>.json whatever happens; a
+successful release also loads the warehouse (pipeline/warehouse.py — SQLite now, BigQuery later).
 """
 from __future__ import annotations
 import argparse, csv, json, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, acquire, validate, classify, resolve, reconcile, golden, gates, measure
+from . import __version__, acquire, validate, classify, resolve, reconcile, golden, gates, measure, warehouse
 from .registry import load_yaml, active_sources, sha256_file, registry_version
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -158,6 +159,18 @@ def main(argv=None) -> int:
                + (f"+prompt.{cls_meta['prompt_hash']}+model.{cls_meta['model']}" if cls_meta else ""),
         "finished": datetime.now(timezone.utc).isoformat(),
     }
+    try:
+        wh = warehouse.open_warehouse(cfg, ROOT)
+        if wh is not None:
+            record["release"]["warehouse"] = wh.load_release(
+                record, assertions=asserts, golden=gold, conflicts=conflicts, facilities=facilities, rows=rec["rows"],
+                registry=reg, registry_text=(ROOT / args.registry).read_text(), rules=rules, control_rows=control_rows,
+                control_sha=record["control_sha"], survivorship_hash=sha256_file(ROOT / "registry" / "survivorship.yaml"),
+                known_gaps=load_yaml(ROOT / "registry" / "known-gaps.yaml") if (ROOT / "registry" / "known-gaps.yaml").exists() else {})
+            wh.close()
+            print(f"  warehouse {wh.engine}: {record['release']['warehouse']['assertions_appended']} assertions appended → {record['release']['warehouse']['path']}")
+    except warehouse.WarehouseNotImplemented as e:
+        return halt("layer 8", str(e))
     _write_record(record)
     print(f"RELEASE {record['release']['tag']} · {record['release']['published_count']} facilities")
     return 0
