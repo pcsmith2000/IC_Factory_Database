@@ -14,6 +14,11 @@ on:
         description: "identical inputs — G3 must issue zero ids"
         type: boolean
         default: false
+      ai:
+        description: "model calls: off = deterministic sources only (no ANTHROPIC_API_KEY needed)"
+        type: choice
+        options: ["off", "on"]
+        default: "off"
 
 permissions:
   contents: write
@@ -57,6 +62,9 @@ jobs:
           CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY || secrets.CENSUS_KEY }}
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN || secrets.IC_DB_PRI_SOURCE_READ_WRITE_TOKEN }}
           BLOB_STORE_ID: ${{ secrets.BLOB_STORE_ID || secrets.IC_DB_PRI_SOURCE_STORE_ID }}
+          # off skips Layer 3 classification and `ai_extraction` sources, and records both as
+          # skipped. The scheduled quarterly run is a full run; only a dispatch can turn AI off.
+          IC_AI: ${{ github.event.inputs.ai || 'on' }}
         run: |
           python -m pipeline.run \
             --layers "${{ github.event.inputs.layers || '1-8' }}" \
