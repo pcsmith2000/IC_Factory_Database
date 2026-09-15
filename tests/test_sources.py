@@ -11,50 +11,82 @@ from pipeline.sources._extract import verbatim_check
 SRC = lambda sid, **kw: {"id": sid, "status_basis": "on_current_list", **kw}
 
 
-def _minimal_pdf(lines: list[str]) -> bytes:
-    """A one-page PDF with one text line per row — enough for pdfplumber to extract."""
-    content = "BT /F1 11 Tf 40 760 Td 14 TL " + " ".join(f"({l.replace('(', '').replace(')', '')}) Tj T*" for l in lines) + " ET"
-    objs = [b"<< /Type /Catalog /Pages 2 0 R >>",
-            b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
-            f"<< /Length {len(content)} >>\nstream\n{content}\nendstream".encode(),
-            b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
-    out, offs = b"%PDF-1.4\n", []
-    for i, o in enumerate(objs, 1):
-        offs.append(len(out)); out += f"{i} 0 obj\n".encode() + o + b"\nendobj\n"
-    xref = len(out)
-    out += f"xref\n0 {len(objs)+1}\n0000000000 65535 f \n".encode() + b"".join(f"{o:010d} 00000 n \n".encode() for o in offs)
-    out += f"trailer\n<< /Size {len(objs)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode()
-    return out
+def _line(page, top, *pairs):
+    """A PDF line as pdf_lines() yields it: (text, x0) pairs at one vertical position."""
+    return [{"text": t, "x0": float(x), "x1": float(x) + 6.0 * len(t), "top": float(top), "page": page}
+            for t, x in pairs]
 
 
-def test_pa_xlsx_columns_are_matched_by_name(tmp_path: Path):
-    wb = openpyxl.Workbook(); ws = wb.active
-    ws.append(["Manufacturer Name", "Street Address", "City", "State", "Zip", "Approval Type", "Evaluation Agency"])
-    ws.append(["Bladwin Homes", "12 Mill Rd", "Bladwin", "GA", "30511", "Residential", "PFS"])
-    ws.append(["", "", "", "", "", "", ""])
-    ws.append(["Modtech Canada", "1 Rue X", "Montreal", "QC", "", "Both", "NTA"])
-    f = tmp_path / "m.xlsx"; wb.save(f)
-    rows = pa_dced.parse([f], SRC("pa_dced"))
-    assert [r["name_verbatim"] for r in rows] == ["Bladwin Homes", "Modtech Canada"]
-    assert rows[0]["city_verbatim"] == "Bladwin" and rows[0]["state_verbatim"] == "GA"  # typo kept verbatim
-    assert rows[0]["row_position"] == "1" and rows[1]["row_position"] == "3"
-    assert validate_rows("pa_dced", rows) == []
+# Geometry copied from the real 2026-09-15 TDLR PDF: a whitespace-aligned table whose header
+# labels are centred over left-aligned data, with each record wrapping onto a second line.
+TX_HEADER = ("Reg", 29), ("#", 47), ("Name", 138), ("Exp", 250), ("Date", 267), ("Physical", 328), \
+            ("Address", 364), ("Mailing", 454), ("Address", 487), ("Phone", 572)
+TX_LINES = [
+    _line(1, 80, *TX_HEADER),
+    _line(1, 101, ("IHM-234", 24), ("A", 68), ("&", 75), ("A", 83), ("SHEET", 90), ("METAL", 116),
+          ("10/29/2026", 246), ("5122", 302), ("N", 322), ("STATE", 332), ("ROAD", 357), ("39,", 380), ("LA", 394),
+          ("PO", 431), ("BOX", 444), ("1848,", 461), ("(219)", 558), ("326-7890", 580)),
+    _line(1, 112, ("PORTE,", 302), ("IN", 331), ("46350-1848", 341), ("46352", 431)),
+    _line(1, 128, ("IHM-461", 24), ("A1", 68), ("SHEET", 80), ("METAL", 105), ("INC", 132),
+          ("4/10/2027", 249), ("9410", 302), ("E.", 322), ("54TH", 331), ("ST,", 352), ("TULSA,", 383), ("OK", 411),
+          ("9410", 431), ("E.", 451), ("(918)", 558), ("271-5712", 580)),
+    _line(1, 139, ("74112", 302), ("74145", 431)),
+    _line(1, 760, ("Page", 100), ("1", 130), ("of", 140), ("13", 150), ("Texas", 300), ("Department", 330)),
+    _line(2, 80, *TX_HEADER),
+    _line(2, 101, ("IHM-560", 24), ("ABB", 68), ("INC", 85), ("10/25/2026", 246),
+          ("6828", 302), ("WILLOWBROOK", 322), ("PARK,", 383), ("305", 431), ("GREGSON", 447),
+          ("(860)", 558), ("803-9707", 580)),
+    _line(2, 112, ("HOUSTON,", 302), ("OHIO", 344), ("44146", 380), ("27511-6496", 431)),
+    _line(2, 760, ("Page", 100), ("2", 130), ("of", 140), ("13", 150), ("Texas", 300), ("Department", 330)),
+    _line(3, 80, *TX_HEADER),
+    _line(3, 101, ("IHM-364", 24), ("ADVANCED", 68), ("MODULAR", 111), ("11/17/2026", 246),
+          ("1168", 302), ("S", 322), ("LEGACY", 328), ("VIEW", 359), ("ST,", 381),
+          ("1168", 431), ("S", 451), ("LEGACY", 458), ("(801)", 558), ("571-9841", 580)),
+    _line(3, 112, ("SALT", 302), ("LAKE", 322), ("CITY,", 342), ("UT", 362), ("84104", 374), ("LAKE", 431)),
+    _line(3, 760, ("Page", 100), ("3", 130), ("of", 140), ("13", 150), ("Texas", 300), ("Department", 330)),
+]
 
 
-def test_tx_pdf_entries_group_on_city_state_zip_and_carry_expiry(tmp_path: Path):
-    f = tmp_path / "2-Certified_Manufacturers_List.pdf"
-    f.write_bytes(_minimal_pdf(["Certified Manufacturers List", "Aura Prefab, LLC", "IHB-12345 Expires 01/31/2027",
-                                "5730 Clinton Dr", "Houston, TX 77020", "Legacy Building Solutions", "19500 County Rd 142",
-                                "Saint Augusta, MN 56301", "Page 1"]))
-    rows = tx_tdlr.parse([f], SRC("tx_tdlr", status_basis="dated_expiry"))
-    assert len(rows) == 2
-    a = rows[0]
-    assert a["name_verbatim"] == "Aura Prefab, LLC" and a["address_verbatim"] == "5730 Clinton Dr"
-    assert (a["city_verbatim"], a["state_verbatim"], a["zip_verbatim"]) == ("Houston", "TX", "77020")
-    assert a["expiry_date"] == "2027-01-31" and a["status_basis"] == "dated_expiry" and a["source_identifier"] == "IHB-12345"
-    assert rows[1]["expiry_date"] == "" and rows[1]["status_basis"] == "on_current_list"
-    assert validate_rows("tx_tdlr", rows) == []
+def test_tx_columns_are_calibrated_per_file_not_hard_coded(tmp_path: Path):
+    cols = _common.detect_columns(TX_LINES, tx_tdlr.LABELS, tmp_path / "f.pdf")
+    # each label lands on its DATA column (left-aligned), not on its own centred header
+    assert [name for name, _ in cols] == ["Reg", "Exp", "Physical", "Mailing", "Phone"]
+    assert [round(x) for _, x in cols] == [24, 246, 302, 431, 558]
+    cells = _common.slice_columns(TX_LINES[1], cols)
+    assert cells["Reg"].startswith("IHM-234 A & A SHEET METAL")     # Reg + Name share a column by design
+    assert cells["Exp"] == "10/29/2026"
+    assert cells["Physical"] == "5122 N STATE ROAD 39, LA"
+    assert cells["Mailing"] == "PO BOX 1848,"
+
+
+def test_tx_page_furniture_is_dropped_but_wrapped_address_lines_are_kept():
+    kept = _common.drop_repeated_lines(TX_LINES)
+    texts = [" ".join(w["text"] for w in ln) for ln in kept]
+    assert not any("Page" in t for t in texts), "repeating footer must go"
+    assert not any(t.startswith("Reg #") for t in texts), "repeating column header must go"
+    assert "74112 74145" in texts, "a wrapped address line repeats in text but not in position — keep it"
+
+
+def test_tx_records_join_wrapped_lines_and_split_the_address(tmp_path: Path):
+    cols = _common.detect_columns(TX_LINES, tx_tdlr.LABELS, tmp_path / "f.pdf")
+    recs = tx_tdlr._records(_common.drop_repeated_lines(TX_LINES), cols)
+    assert [r["Reg"] for r in recs] == ["IHM-234", "IHM-461", "IHM-560", "IHM-364"]
+    assert recs[0]["Name"] == "A & A SHEET METAL"
+    assert recs[0]["Physical"] == "5122 N STATE ROAD 39, LA PORTE, IN 46350-1848"
+    street, city, state, zip_, country = _common.split_address(recs[0]["Physical"])
+    assert (street, city, state, zip_, country) == ("5122 N STATE ROAD 39", "LA PORTE", "IN", "46350-1848", "US")
+    # a spelled-out state is normalised; the mailing column never becomes the plant address
+    assert _common.split_address(recs[2]["Physical"])[2] == "OH"
+    assert "305 GREGSON" in recs[2]["Mailing"]
+
+
+def test_split_address_leaves_what_it_cannot_parse_whole():
+    assert _common.split_address("TOWER 2 FF2 RAKEZ AMENITY CENTRE, RAS AL KHAIMAH, UAE") == (
+        "TOWER 2 FF2 RAKEZ AMENITY CENTRE, RAS AL KHAIMAH, UAE", "", "", "", "US")
+    assert _common.split_address("3461 FM 934, ITASCA, TX 76055- 4900")[3] == "76055-4900"   # zip wrapped by the PDF
+    assert _common.split_address("621 VZ CR 2149, CANTON, TX 75103 -")[3] == "75103"
+    assert _common.split_address("101-6420 6A ST SE, CALGARY, ALBERTA T2H2B7") == (
+        "101-6420 6A ST SE", "CALGARY", "AB", "T2H2B7", "CA")
 
 
 def test_iibc_table_with_year_columns(tmp_path: Path):

@@ -65,6 +65,113 @@ def pdf_pages_text(path: Path) -> list[str]:
         raise ImportError("pip install -e '.[acquire]' — pdfplumber (or pypdf) is needed to read PDFs") from e
 
 
+def pdf_lines(path: Path) -> list[list[dict]]:
+    """Every page's words grouped into visual lines, each word {text, x0, x1}. Reading order."""
+    try:
+        import pdfplumber
+    except ImportError as e:
+        raise ImportError("pip install -e '.[acquire]' — pdfplumber is needed to read PDF layouts") from e
+    from collections import defaultdict
+    out = []
+    with pdfplumber.open(path) as pdf:
+        for page in pdf.pages:
+            rows: dict[int, list[dict]] = defaultdict(list)
+            for w in page.extract_words():
+                rows[round(w["top"] / 3)].append({"text": w["text"], "x0": w["x0"], "x1": w["x1"],
+                                                  "top": w["top"], "page": page.page_number})
+            for key in sorted(rows):
+                out.append(sorted(rows[key], key=lambda w: w["x0"]))
+    return out
+
+
+def drop_repeated_lines(lines: list[list[dict]], min_repeats: int = 3) -> list[list[dict]]:
+    """Remove page furniture: running headers, footers, "Page 3 of 13", the column header row.
+
+    Furniture repeats at the SAME HEIGHT on many pages; a data row does not. A line is dropped
+    only when both hold: its text (with digit runs masked, so "Page 3 of 13" and "Page 4 of 13"
+    match) and its vertical position repeat at least `min_repeats` times. Text alone is not
+    enough — wrapped address lines like "HOUSTON, TX 77095" legitimately recur, and dropping
+    those would silently truncate records. Content-blind on purpose: it needs no list of the
+    strings one agency happens to print.
+    """
+    from collections import Counter
+    keys = [(re.sub(r"\d+", "#", " ".join(w["text"] for w in ln)), round(ln[0].get("top", 0) / 6))
+            for ln in lines if ln]
+    seen = Counter(keys)
+    return [ln for ln, k in zip([l for l in lines if l], keys) if seen[k] < min_repeats]
+
+
+def set_difference(all_lines: list, kept: list) -> list:
+    """The lines in `all_lines` that `kept` no longer contains, compared by identity."""
+    keep = {id(ln) for ln in kept}
+    return [ln for ln in all_lines if id(ln) not in keep]
+
+
+def detect_columns(lines: list[list[dict]], labels: list[str], path: Path, *, gap: float = 10.0) -> list[tuple[str, float]]:
+    """Column left edges for a whitespace-aligned PDF table, calibrated per file.
+
+    Headers in these PDFs are centred over columns while data is left-aligned, so the header x
+    alone cannot slice a row. Instead: find the header line (it carries every label in `labels`),
+    cluster the x where a word starts after a wide gap across all lines — those clusters are the
+    real column starts — then give each label the cluster nearest its header. A label with no
+    cluster near it means the layout is not the one this parser was written against.
+    Returns [(label, x_start), ...] left to right.
+    """
+    is_header = lambda ln: all(any(w["text"].lower().startswith(l.lower()) for w in ln) for l in labels)
+    header = next((ln for ln in lines if is_header(ln)), None)
+    require(header is not None, path, f"no header line carrying {labels}")
+    # Header and footer lines are excluded from the clustering: they repeat once per page, so they
+    # would otherwise form clusters of their own and a label would match its own centred header, or
+    # a running footer would drag a column's left edge sideways. The header is still needed to name
+    # the columns, so it is skipped here rather than removed from `lines`.
+    furniture = {id(ln) for ln in set_difference(lines, drop_repeated_lines(lines))}
+    starts: list[float] = []
+    for ln in lines:
+        if is_header(ln) or id(ln) in furniture:
+            continue
+        prev = None
+        for w in ln:
+            if prev is None or w["x0"] - prev > gap:
+                starts.append(w["x0"])
+            prev = w["x1"]
+    # Group nearby starts, then take each group's LEFT edge: the data is left-aligned, so the
+    # smallest x a column ever starts at is that column's true boundary. Rounding to a grid
+    # instead would push the boundary right of some rows and silently steal their first word.
+    groups, group = [], []
+    for x in sorted(starts):
+        if group and x - group[-1] > 6:
+            groups.append(group); group = []
+        group.append(x)
+    if group:
+        groups.append(group)
+    # A real column starts on a large share of the rows; stray indents (titles, footnotes) do not.
+    floor = max(3, (max((len(g) for g in groups), default=0)) // 10)
+    clusters = sorted(min(g) for g in groups if len(g) >= floor)
+    require(bool(clusters), path, "no repeating column starts found — is this a table?")
+    cols = []
+    for label in labels:
+        hx = next(w["x0"] for w in header if w["text"].lower().startswith(label.lower()))
+        near = min(clusters, key=lambda c: abs(c - hx))
+        require(abs(near - hx) < 90, path, f"column {label!r}: header at x={hx:.0f} but nearest data column is x={near} — layout changed")
+        cols.append((label, float(near)))
+    for (a, xa), (b, xb) in zip(cols, cols[1:]):
+        require(xb > xa, path, f"columns {a!r} and {b!r} resolved out of order ({xa} ≥ {xb})")
+    return cols
+
+
+def slice_columns(line: list[dict], cols: list[tuple[str, float]]) -> dict[str, str]:
+    """Assign each word on a line to its column by x, and join each column's words with spaces."""
+    out = {name: [] for name, _ in cols}
+    edges = [x for _, x in cols]
+    for w in line:
+        i = 0
+        for j, e in enumerate(edges):
+            if w["x0"] >= e - 1:
+                i = j
+        out[cols[i][0]].append(w["text"])
+    return {k: " ".join(v) for k, v in out.items()}
+
+
 def pdf_tables(path: Path) -> list[list[list[str]]]:
     """Every table on every page as rows of cell strings (pdfplumber only)."""
     try:
@@ -128,6 +235,55 @@ def xlsx_rows(path: Path, sheet: str | int = 0) -> list[dict]:
 
 # ---------------------------------------------------------------- shaping
 _CSZ = re.compile(r"^(?P<city>.+?)[,\s]+(?P<state>[A-Z]{2})\.?\s*(?P<zip>\d{5}(?:-\d{4})?)?\s*$")
+# "1 Mill Rd, Saint Augusta, MN 56301" → street + city + state + zip; the zip and the province
+# forms are optional because some rows are Canadian and some carry no postcode at all.
+_ADDR = re.compile(r"^(?P<street>.*?),\s*(?P<city>[^,]+),\s*(?P<state>[A-Z]{2})\.?(?:\s+(?P<zip>\d{5}(?:-\d{4})?))?\s*$")
+_PROVINCES = {"ALBERTA": "AB", "BRITISH COLUMBIA": "BC", "MANITOBA": "MB", "NEW BRUNSWICK": "NB",
+              "NEWFOUNDLAND": "NL", "NOVA SCOTIA": "NS", "ONTARIO": "ON", "QUEBEC": "QC",
+              "SASKATCHEWAN": "SK", "PRINCE EDWARD ISLAND": "PE"}
+
+
+_STATE_NAMES = {
+    "ALABAMA": "AL", "ALASKA": "AK", "ARIZONA": "AZ", "ARKANSAS": "AR", "CALIFORNIA": "CA",
+    "COLORADO": "CO", "CONNECTICUT": "CT", "DELAWARE": "DE", "FLORIDA": "FL", "GEORGIA": "GA",
+    "HAWAII": "HI", "IDAHO": "ID", "ILLINOIS": "IL", "INDIANA": "IN", "IOWA": "IA", "KANSAS": "KS",
+    "KENTUCKY": "KY", "LOUISIANA": "LA", "MAINE": "ME", "MARYLAND": "MD", "MASSACHUSETTS": "MA",
+    "MICHIGAN": "MI", "MINNESOTA": "MN", "MISSISSIPPI": "MS", "MISSOURI": "MO", "MONTANA": "MT",
+    "NEBRASKA": "NE", "NEVADA": "NV", "NEW HAMPSHIRE": "NH", "NEW JERSEY": "NJ", "NEW MEXICO": "NM",
+    "NEW YORK": "NY", "NORTH CAROLINA": "NC", "NORTH DAKOTA": "ND", "OHIO": "OH", "OKLAHOMA": "OK",
+    "OREGON": "OR", "PENNSYLVANIA": "PA", "RHODE ISLAND": "RI", "SOUTH CAROLINA": "SC",
+    "SOUTH DAKOTA": "SD", "TENNESSEE": "TN", "TEXAS": "TX", "UTAH": "UT", "VERMONT": "VT",
+    "VIRGINIA": "VA", "WASHINGTON": "WA", "WEST VIRGINIA": "WV", "WISCONSIN": "WI", "WYOMING": "WY",
+    "DISTRICT OF COLUMBIA": "DC", "PUERTO RICO": "PR",
+}
+
+
+def split_address(s: str) -> tuple[str, str, str, str, str]:
+    """'5122 N STATE ROAD 39, LA PORTE, IN 46350' → (street, city, state, zip, country).
+
+    Returns the whole string as the street with everything else blank when it does not match —
+    blank means blank, and an address is never invented from a partial match. The only repairs
+    are to damage the PDF itself introduced: a ZIP+4 split across a line wrap ("76055- 4900"),
+    and a trailing hyphen left by an absent +4.
+    """
+    s = " ".join((s or "").split())
+    s = re.sub(r"(\d{5})\s*-\s+(\d{4})\b", r"\1-\2", s)   # "76055- 4900" → "76055-4900"
+    s = re.sub(r"(\d{5})\s*-\s*$", r"\1", s)                 # "75103 -"     → "75103"
+    for name, code in _STATE_NAMES.items():                    # "BEDFORD, OHIO 44146" → "OH"
+        s = re.sub(rf",\s*{name}\b", f", {code}", s, flags=re.I)
+    m = _ADDR.match(s)
+    if m:
+        return m.group("street").strip(), m.group("city").strip(), m.group("state"), (m.group("zip") or ""), "US"
+    # Canadian rows name the province in full and often carry no postcode
+    up = s.upper()
+    for name, code in _PROVINCES.items():
+        m2 = re.search(rf",\s*{name}\b\s*(?P<pc>[A-Z]\d[A-Z]\s*\d[A-Z]\d)?\s*$", up)
+        if m2:
+            head = s[: m2.start()].rstrip(" ,")
+            street, _, city = head.rpartition(",")
+            pc = (m2.group("pc") or "").replace(" ", "")
+            return (street.strip() or head.strip()), (city.strip() if street else ""), code, pc, "CA"
+    return s, "", "", "", "US"
 
 
 def split_city_state_zip(s: str) -> tuple[str, str, str]:
