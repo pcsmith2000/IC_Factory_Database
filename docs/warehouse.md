@@ -1,22 +1,30 @@
-# Warehouse — star schema, SQLite today, BigQuery as the target
+# Warehouse — star schema; SQLite locally, Postgres (Neon) in the cloud
 
 ## Engine
-**Today: SQLite** (`pipeline/warehouse.py`, standard library, one file at
-`warehouse.sqlite_path` in `registry/config.yaml`, default `build/ic_factory.sqlite`). Layer 8
-loads it on every successful release. The file is a build artifact — uploaded by `run.yml`,
-never committed. Because the Actions runner is ephemeral, each GitHub run starts from an empty
-file; a local or Cowork checkout accumulates releases across runs.
+One loader (`pipeline/warehouse.py`), one schema, two engines:
 
-**Target: BigQuery.** Append-heavy, read-heavy, quarterly, columnar; free at this scale; no
-server. GCS holds raw archives; BigQuery holds the modelled tables; the golden table is what
-downstream users query. The schema below is the same for both engines, so the move is a second
-loader, not a redesign. Setting `BQ_DATASET` in the environment (or `warehouse.engine: bigquery`)
-selects BigQuery now — and halts the run at Layer 8 until that loader is written. It is never
-silently skipped.
+| engine | when | where the data lives |
+|---|---|---|
+| **sqlite** | no `DATABASE_URL` in the environment (laptop, Cowork) | `warehouse.sqlite_path` in `registry/config.yaml`, default `build/ic_factory.sqlite`; a build artifact, never committed |
+| **postgres** | `DATABASE_URL` set (GitHub Actions secret, or `neon env pull` locally) | the Neon project; persists across runs, so `fact_assertions` really is append-only across releases |
 
-Engine selection, in order: `IC_WAREHOUSE_ENGINE` env · `BQ_DATASET` env (→ bigquery) ·
-`warehouse.engine` in config (default `sqlite`). `IC_WAREHOUSE_PATH` overrides the SQLite path.
-`engine: none` disables the load.
+The SQL is written once in the dialect both share (`ON CONFLICT` upserts, `TEXT / INTEGER / REAL`);
+only the parameter placeholder differs. Selection order: `IC_WAREHOUSE_ENGINE` env ·
+`DATABASE_URL_UNPOOLED` / `DATABASE_URL` env (→ postgres) · `warehouse.engine` in config
+(default sqlite). `engine: none` disables the load. An engine that is selected but cannot be
+opened (no URL, driver missing, connection refused) halts the run at Layer 8 — never skipped.
+
+**Neon.** The loader prefers `DATABASE_URL_UNPOOLED` (direct connection): it runs DDL and one
+transaction per release, which does not belong on the PgBouncer transaction-mode pool. Both
+strings come from `neon env pull` locally and are set as repository secrets for `run.yml`.
+Neon scales to zero between quarterly runs. `python -m pipeline.warehouse init` creates the
+schema on an empty database (idempotent; the loader also does this on open).
+
+**Google Cloud later.** The path is Cloud SQL for PostgreSQL (or AlloyDB): `pg_dump` from Neon,
+restore, change the connection string, nothing else. If column analytics are ever wanted,
+BigQuery federated queries read Cloud SQL Postgres in place — the star schema stays where it
+is. `docs/gcp-setup.sh` remains for the raw-archive bucket and Workload Identity Federation;
+its BigQuery dataset step is no longer on the path.
 
 ## Schema — a star with one derived table
 ```
@@ -73,9 +81,23 @@ A human correction is an `operator` assertion with no row_hash: `v_provenance` s
 empty document columns, which is the honest answer. Nothing in the warehouse is edited by hand;
 a wrong golden value is an assertion not yet recorded in `control/operator_assertions.csv`.
 
-## GCP resources to create once (project owner/editor)
+## Neon — set up once
+1. `npx neon@latest init --agent` (or `neon auth` + `neon link`) in the repo; `.neon` is git-ignored.
+2. `neon env pull` → `.env.local` with `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
+3. `python -m pipeline.warehouse init` — schema on the default branch.
+4. Credentials for `run.yml`, either of:
+   - repository secrets `DATABASE_URL` and `DATABASE_URL_UNPOOLED` (the two strings `neon env pull` writes), or
+   - the Neon GitHub integration (Neon console → project → Integrations → GitHub), which stores
+     `NEON_API_KEY` (secret) and `NEON_PROJECT_ID` (variable); the workflow derives both URLs from
+     them at run time (`.github/scripts/neon_connection_string.py`). A stored `DATABASE_URL` wins.
+   The loader needs a role that can CREATE in `public` and INSERT/UPDATE/DELETE — the project's
+   default owner role has this.
+5. Optional: a Neon branch per experiment (`neon checkout dev-survivorship-v2`) to try a
+   survivorship or normalisation change against a copy of the release without touching it.
+
+## GCP resources to create once (raw archives; later)
 1. GCS bucket `ic-factory-database` (raw archives, bulk downloads, classifier response archives)
-2. BigQuery dataset `ic_factory`
+2. ~~BigQuery dataset `ic_factory`~~ — superseded by Neon / Cloud SQL for PostgreSQL
 3. Service account `ic-pipeline@<project>.iam.gserviceaccount.com`
 4. Workload Identity Federation pool + provider trusting repo `pcsmith2000/IC_Factory_Database`
 5. Secret Manager: `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`
@@ -94,5 +116,5 @@ a wrong golden value is an assertion not yet recorded in `control/operator_asser
 People: `roles/bigquery.dataViewer` on the dataset for anyone who reads the golden table.
 
 ## Repo variables and secrets
-Variables: `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `BQ_DATASET`.
-Secrets: `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`.
+Variables: `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` (raw archives, later).
+Secrets: `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`.

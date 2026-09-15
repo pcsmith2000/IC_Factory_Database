@@ -5,12 +5,21 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:                          # the warehouse tests run on sqlite and, when this is up, on postgres too
+        image: postgres:16
+        env: { POSTGRES_USER: ic, POSTGRES_PASSWORD: ic, POSTGRES_DB: ic_factory }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ic" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install -e ".[dev]"
+      - run: pip install -e ".[dev,postgres]"
       - run: pytest -q
+        env:
+          TEST_DATABASE_URL: postgresql://ic:ic@127.0.0.1:5432/ic_factory
       - name: registry parses and dry-run plans
         run: python -m pipeline.run --dry-run
       - name: control checksum matches

@@ -1,10 +1,28 @@
-import sqlite3
+import os
 from pathlib import Path
+import pytest
 from pipeline import reconcile, golden, warehouse
 from pipeline.contract import COLUMNS, normalise
 from pipeline.registry import load_yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+PG_URL = os.environ.get("TEST_DATABASE_URL")   # e.g. postgresql://ic:ic@127.0.0.1/ic_factory — postgres tests skip without it
+
+
+@pytest.fixture(params=["sqlite", "postgres"])
+def wh(request, tmp_path):
+    if request.param == "sqlite":
+        w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
+    else:
+        if not PG_URL:
+            pytest.skip("TEST_DATABASE_URL not set")
+        w = warehouse.PostgresWarehouse(PG_URL)
+        with w.transaction() as c:   # each test starts from an empty warehouse
+            for t in ("fact_assertions", "dim_facility", "dim_source", "dim_field", "dim_date", "golden_facility", "conflicts",
+                      "fact_release_metrics", "ref_control", "ref_source_registry", "ref_known_gaps", "ref_source_row"):
+                c.execute(f"DELETE FROM {t}")
+    yield w
+    w.close()
 
 def _row(sid, name, addr, city, st, pos="1", **kw):
     r = {c: "" for c in COLUMNS}
@@ -39,8 +57,7 @@ def _load(wh, tmp_path, tag):
                            known_gaps={"states": {"OH": "no roster"}}, survivorship_hash="s"), asserts, gold
 
 
-def test_golden_field_traces_back_to_the_contract_row(tmp_path: Path):
-    wh = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
+def test_golden_field_traces_back_to_the_contract_row(wh, tmp_path: Path):
     summary, asserts, gold = _load(wh, tmp_path, "v-test+1")
     assert summary["assertions_appended"] == len(asserts) and summary["golden_rows"] == len(gold) == 2
     legacy = next(g for g in gold if g["state"] == "MN")
@@ -58,8 +75,7 @@ def test_golden_field_traces_back_to_the_contract_row(tmp_path: Path):
     assert {r["source_key"] for r in wh.query("SELECT source_key FROM dim_source")} >= {"pa_dced", "iibc", "tx_tdlr", "operator", "lookup"}
 
 
-def test_reload_is_idempotent_and_second_release_appends_facts_and_replaces_golden(tmp_path: Path):
-    wh = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
+def test_reload_is_idempotent_and_second_release_appends_facts_and_replaces_golden(wh, tmp_path: Path):
     a, asserts, _ = _load(wh, tmp_path, "v-test+1")
     b, _, _ = _load(wh, tmp_path, "v-test+1")
     assert b["assertions_appended"] == 0 and b["assertions_total"] == len(asserts)
@@ -72,14 +88,15 @@ def test_reload_is_idempotent_and_second_release_appends_facts_and_replaces_gold
     assert wh.query("SELECT state, cause FROM ref_known_gaps WHERE release_tag='v-test+2'") == [{"state": "OH", "cause": "no roster"}]
 
 
-def test_bigquery_is_selected_but_not_silently_skipped(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("BQ_DATASET", "proj.ic_factory")
-    try:
+def test_database_url_selects_postgres_and_is_never_silently_skipped(tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False); monkeypatch.delenv("DATABASE_URL_UNPOOLED", raising=False)
+    w = warehouse.open_warehouse({"warehouse": {"engine": "sqlite", "sqlite_path": "x/w.sqlite"}}, tmp_path)
+    assert w.engine == "sqlite" and w.path == tmp_path / "x" / "w.sqlite"; w.close()
+    monkeypatch.setenv("IC_WAREHOUSE_ENGINE", "postgres")
+    with pytest.raises(warehouse.WarehouseNotImplemented, match="DATABASE_URL"):
         warehouse.open_warehouse({"warehouse": {"engine": "sqlite"}}, tmp_path)
-    except warehouse.WarehouseNotImplemented as e:
-        assert "BigQuery" in str(e)
-    else:
-        raise AssertionError("BQ_DATASET must select the BigQuery engine and halt until it exists")
-    monkeypatch.delenv("BQ_DATASET")
-    wh = warehouse.open_warehouse({"warehouse": {"engine": "sqlite", "sqlite_path": "x/w.sqlite"}}, tmp_path)
-    assert wh.path == tmp_path / "x" / "w.sqlite"
+    monkeypatch.delenv("IC_WAREHOUSE_ENGINE")
+    if PG_URL:
+        monkeypatch.setenv("DATABASE_URL", PG_URL)
+        w = warehouse.open_warehouse({"warehouse": {"engine": "sqlite"}}, tmp_path)
+        assert w.engine == "postgres" and "***" in w.path and ":ic@" not in w.path; w.close()

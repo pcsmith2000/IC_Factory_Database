@@ -6,9 +6,8 @@ storage:
   local_cache: .cache/ic-sources           # where a local run stages downloads
 
 warehouse:
-  engine: sqlite                           # sqlite now; bigquery is the target architecture (docs/warehouse.md)
-  sqlite_path: build/ic_factory.sqlite     # same star schema BigQuery will hold; a build artifact, not committed
-  bq_dataset: ic_factory                   # used once the BigQuery loader exists; BQ_DATASET in the env selects it
+  engine: sqlite                           # local default. DATABASE_URL in the env selects postgres (Neon now,
+  sqlite_path: build/ic_factory.sqlite     # Cloud SQL for PostgreSQL later) — same schema, one loader (docs/warehouse.md)
 
 frame:
   source: census_cbp

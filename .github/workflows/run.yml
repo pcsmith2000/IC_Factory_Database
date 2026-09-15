@@ -18,7 +18,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  id-token: write                    # Workload Identity Federation to GCP, no stored key
+  id-token: write                    # Workload Identity Federation to GCP (raw archives, later), no stored key
 
 jobs:
   run:
@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install -e ".[acquire]"
+      - run: pip install -e ".[acquire,postgres]"
 
       - name: Authenticate to Google Cloud
         if: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' }}
@@ -36,6 +36,18 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Resolve the Neon warehouse connection
+        # Uses the DATABASE_URL secret when present; otherwise derives it from the Neon GitHub
+        # integration's NEON_API_KEY secret + NEON_PROJECT_ID variable. Writes both URLs to $GITHUB_ENV.
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
+          python .github/scripts/neon_connection_string.py
 
       - name: Run pipeline
         env:

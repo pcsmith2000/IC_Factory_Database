@@ -1,10 +1,11 @@
 """Layer 8 sink: the warehouse.
 
-One star schema (docs/warehouse.md), two engines. SQLite is the engine today: a single file,
-no server, built from the standard library, holding exactly the tables BigQuery will hold.
-BigQuery is the target architecture; selecting it (BQ_DATASET in the environment, or
-`warehouse.engine: bigquery` in registry/config.yaml) halts the run loudly until the loader is
-written — it is never silently skipped.
+One star schema (docs/warehouse.md), two engines behind one loader:
+  sqlite    a local file (default; standard library) — laptop and Cowork runs
+  postgres  Neon today, Cloud SQL for PostgreSQL later — selected whenever DATABASE_URL is set
+The SQL is written once in the dialect both engines share (ON CONFLICT upserts, TEXT/INTEGER/REAL);
+only the parameter placeholder differs. An engine that is selected but cannot be opened halts
+the run loudly — it is never silently skipped.
 
 Provenance is the point. `fact_assertions` is append-only and tagged by release; `golden_facility`
 is replaced per release and is a pure function of the assertions and registry/survivorship.yaml;
@@ -12,12 +13,14 @@ is replaced per release and is a pure function of the assertions and registry/su
 position. The `v_provenance` view walks that chain: golden value → winning source → assertion →
 contract row. Nothing here decides anything; it records what Layers 5–7 decided.
 
+    python -m pipeline.warehouse init                      # create the schema on the configured engine
     python -m pipeline.warehouse provenance IC-00001 [--field address]
     python -m pipeline.warehouse releases
     python -m pipeline.warehouse sql "select state, count(*) from golden_facility group by 1"
 """
 from __future__ import annotations
 import hashlib, json, os, sqlite3, sys
+from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 
@@ -78,13 +81,13 @@ DDL = [
         retrieved_date TEXT, row_position TEXT, source_identifier TEXT,
         name_verbatim TEXT, address_verbatim TEXT, city_verbatim TEXT, state_verbatim TEXT, zip_verbatim TEXT,
         facility_key TEXT, match_method TEXT, match_confidence REAL, last_seen_release TEXT)""",
-    # golden, one row per (facility, field): the wide table unpivoted
+    # golden, one row per (facility, field): the wide table unpivoted (v_provenance depends on it: drop that first)
+    "DROP VIEW IF EXISTS v_provenance",
     "DROP VIEW IF EXISTS v_golden_field",
     "CREATE VIEW v_golden_field AS " + " UNION ALL ".join(
         f"SELECT release_tag, facility_key, '{f}' AS field_key, {f} AS value, {f}__source AS source_key "
         f"FROM golden_facility WHERE {f} IS NOT NULL" for f in GOLDEN_FIELDS),
     # golden value → the assertion(s) that carried it → the contract row they came from
-    "DROP VIEW IF EXISTS v_provenance",
     """CREATE VIEW v_provenance AS
         SELECT g.release_tag, g.facility_key, g.field_key, g.value, g.source_key,
                a.assertion_id, a.date_key AS retrieved_date, a.basis, a.site_visit, a.confidence, a.row_hash,
@@ -120,20 +123,36 @@ def _float(x) -> float | None:
 
 
 # ---------------------------------------------------------------- engines
-class SqliteWarehouse:
-    engine = "sqlite"
+class _Cursor:
+    """Executes shared-dialect SQL ('?' placeholders) on either driver; exposes rowcount and fetches."""
+    def __init__(self, wh, raw):
+        self.wh, self.raw = wh, raw
+    def execute(self, sql: str, params=()):
+        self.raw.execute(sql.replace("?", self.wh.placeholder) if self.wh.placeholder != "?" else sql, params)
+        return self.raw
+    def fetchone(self): return self.raw.fetchone()
+    def fetchall(self): return self.raw.fetchall()
 
-    def __init__(self, path: Path):
-        self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.path)
-        self.conn.row_factory = sqlite3.Row
-        with self.conn:
+
+class _Warehouse:
+    engine = "?"
+    placeholder = "?"
+    path = ""
+
+    def init_schema(self):
+        with self.transaction() as c:
             for stmt in DDL:
-                self.conn.execute(stmt)
+                c.execute(stmt)
+
+    @contextmanager
+    def transaction(self):
+        raise NotImplementedError
 
     def close(self):
         self.conn.close()
+
+    def _rows(self, raw) -> list[dict]:
+        raise NotImplementedError
 
     def load_release(self, record: dict, *, assertions: list[dict], golden: list[dict], conflicts: list[dict],
                      facilities: list[dict], rows: list[dict], registry: dict, registry_text: str,
@@ -142,8 +161,7 @@ class SqliteWarehouse:
         """Load one successful release. Idempotent per release tag: loading the same release twice
         changes nothing. Facts append; golden and conflicts are replaced; dimensions upsert."""
         tag, run_ts = record["release"]["tag"], record["started"]
-        c = self.conn
-        with c:
+        with self.transaction() as c:
             # dimensions
             for s in registry.get("sources", []):
                 c.execute("""INSERT INTO dim_source VALUES (?,?,?,?,?,?,?)
@@ -151,7 +169,7 @@ class SqliteWarehouse:
                              method=excluded.method, status_basis=excluded.status_basis, status=excluded.status""",
                           (s["id"], s["id"], s.get("name"), str(s.get("class")), s.get("method"), s.get("status_basis"), s.get("status")))
             for sid, meta in SYNTHETIC_SOURCES.items():
-                c.execute("INSERT OR IGNORE INTO dim_source VALUES (?,?,?,?,?,?,?)",
+                c.execute("INSERT INTO dim_source VALUES (?,?,?,?,?,?,?) ON CONFLICT (source_key) DO NOTHING",
                           (sid, sid, meta["name"], meta["class"], None, None, "active"))
             c.execute("DELETE FROM dim_field")
             for f in GOLDEN_FIELDS:
@@ -165,10 +183,13 @@ class SqliteWarehouse:
             for d in {a.get("retrieved_date") for a in assertions} | {r.get("retrieved_date") for r in rows}:
                 dr = _date_row(d or "")
                 if dr:
-                    c.execute("INSERT OR IGNORE INTO dim_date VALUES (?,?,?,?)", dr)
+                    c.execute("INSERT INTO dim_date VALUES (?,?,?,?) ON CONFLICT (date_key) DO NOTHING", dr)
             # provenance anchor: every reconciled contract row
             for r in rows:
-                c.execute("INSERT OR REPLACE INTO ref_source_row VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                c.execute("INSERT INTO ref_source_row VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (row_hash) DO UPDATE SET "
+                          + ", ".join(f"{k}=excluded.{k}" for k in ("source_key", "source_url", "source_document", "retrieved_date", "row_position",
+                                                                   "source_identifier", "name_verbatim", "address_verbatim", "city_verbatim", "state_verbatim",
+                                                                   "zip_verbatim", "facility_key", "match_method", "match_confidence", "last_seen_release")),
                           (r["row_hash"], r["source_id"], r.get("source_url"), r.get("source_document"), r.get("retrieved_date"),
                            r.get("row_position"), r.get("source_identifier"), r.get("name_verbatim"), r.get("address_verbatim"),
                            r.get("city_verbatim"), r.get("state_verbatim"), r.get("zip_verbatim"), r.get("facility_id"),
@@ -177,7 +198,7 @@ class SqliteWarehouse:
             n_facts = 0
             for a in assertions:
                 dr = _date_row(a.get("retrieved_date") or "")
-                cur = c.execute("INSERT OR IGNORE INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                cur = c.execute("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (assertion_id, release_tag) DO NOTHING",
                                 (assertion_id(a), tag, a["facility_id"], a["source_id"], a["field"], dr[0] if dr else None,
                                  a["value"], a.get("basis"), 1 if a.get("site_visit") in (True, "True") else 0,
                                  a.get("row_hash") or None, _float(a.get("confidence")), a.get("source_class")))
@@ -195,54 +216,111 @@ class SqliteWarehouse:
             # release metrics and versioned references
             rel, g1 = record["release"], next((g for g in record.get("gates", []) if g["gate"].startswith("G1")), {})
             m7, cls = record.get("layers", {}).get("7_measure", {}), record.get("layers", {}).get("3_classify") or {}
-            c.execute("INSERT OR REPLACE INTO fact_release_metrics VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            c.execute("INSERT INTO fact_release_metrics VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (release_tag, run_ts) DO UPDATE SET "
+                      "published_count=excluded.published_count, raw_count=excluded.raw_count, dup_rate=excluded.dup_rate, recall=excluded.recall, "
+                      "mean_abs_bias=excluded.mean_abs_bias, gates_passed=excluded.gates_passed, gates_total=excluded.gates_total",
                       (tag, run_ts, rel.get("published_count"), rel.get("raw_count"), g1.get("details", {}).get("rate"),
                        m7.get("recall", {}).get("recall"), (m7.get("coverage_bias") or {}).get("mean_abs_bias"),
                        sum(1 for g in record.get("gates", []) if g["passed"]), len(record.get("gates", [])),
                        record.get("registry_version"), survivorship_hash, cls.get("prompt_hash"), cls.get("model"),
                        record.get("pipeline_version")))
-            c.execute("INSERT OR REPLACE INTO ref_source_registry VALUES (?,?,?,?)",
+            c.execute("INSERT INTO ref_source_registry VALUES (?,?,?,?) ON CONFLICT (release_tag) DO UPDATE SET registry_version=excluded.registry_version, registry_sha=excluded.registry_sha, yaml=excluded.yaml",
                       (tag, record.get("registry_version"), record.get("registry_file_sha"), registry_text))
             if control_sha:
                 for r in control_rows:
-                    c.execute("INSERT OR IGNORE INTO ref_control VALUES (?,?,?,?,?,?,?)",
+                    c.execute("INSERT INTO ref_control VALUES (?,?,?,?,?,?,?) ON CONFLICT (checksum, control_id) DO NOTHING",
                               (control_sha, r.get("control_id"), r.get("name"), r.get("city"), r.get("state"), r.get("triage"), r.get("reason")))
             for st, cause in (known_gaps.get("states") or {}).items():
-                c.execute("INSERT OR REPLACE INTO ref_known_gaps VALUES (?,?,?,?)", (tag, st, cause, run_ts))
+                c.execute("INSERT INTO ref_known_gaps VALUES (?,?,?,?) ON CONFLICT (release_tag, state) DO UPDATE SET cause=excluded.cause, as_of=excluded.as_of", (tag, st, cause, run_ts))
+            total = self.query("SELECT count(*) AS n FROM fact_assertions")[0]["n"]
         return {"engine": self.engine, "path": str(self.path), "release_tag": tag, "assertions_appended": n_facts,
-                "golden_rows": len(golden), "conflicts": len(conflicts), "source_rows": len(rows),
-                "assertions_total": c.execute("SELECT count(*) FROM fact_assertions").fetchone()[0]}
+                "golden_rows": len(golden), "conflicts": len(conflicts), "source_rows": len(rows), "assertions_total": total}
 
     # ---- reads
     def provenance(self, facility_id: str, field: str | None = None) -> list[dict]:
         q = "SELECT * FROM v_provenance WHERE facility_key = ?" + (" AND field_key = ?" if field else "") + " ORDER BY field_key, retrieved_date"
-        return [dict(r) for r in self.conn.execute(q, (facility_id, field) if field else (facility_id,))]
+        return self.query(q, (facility_id, field) if field else (facility_id,))
 
-    def query(self, sql: str) -> list[dict]:
-        return [dict(r) for r in self.conn.execute(sql)]
+    def query(self, sql: str, params=()) -> list[dict]:
+        with self.transaction() as c:
+            return self._rows(c.execute(sql, params))
+
+
+class SqliteWarehouse(_Warehouse):
+    engine = "sqlite"
+
+    def __init__(self, path: Path):
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.conn = sqlite3.connect(self.path)
+        self.conn.row_factory = sqlite3.Row
+        self.init_schema()
+
+    @contextmanager
+    def transaction(self):
+        with self.conn:
+            yield _Cursor(self, self.conn.cursor())
+
+    def _rows(self, raw) -> list[dict]:
+        return [dict(r) for r in raw.fetchall()]
+
+
+class PostgresWarehouse(_Warehouse):
+    """Neon (or any Postgres). Prefers the direct/unpooled URL for the loader — DDL and one long
+    transaction per release do not belong on a PgBouncer transaction-mode pool."""
+    engine = "postgres"
+    placeholder = "%s"
+
+    def __init__(self, url: str):
+        try:
+            import psycopg
+            from psycopg.rows import dict_row
+        except ImportError as e:
+            raise WarehouseNotImplemented("DATABASE_URL is set but psycopg is not installed: pip install -e '.[postgres]'") from e
+        self.psycopg = psycopg
+        self.conn = psycopg.connect(url, row_factory=dict_row)
+        self.path = self._redact(url)
+        self.init_schema()
+
+    @staticmethod
+    def _redact(url: str) -> str:
+        import re
+        return re.sub(r"://([^:/@]+):[^@]*@", r"://\1:***@", url)
+
+    @contextmanager
+    def transaction(self):
+        with self.conn.transaction():
+            with self.conn.cursor() as cur:
+                yield _Cursor(self, cur)
+
+    def _rows(self, raw) -> list[dict]:
+        return [dict(r) for r in raw.fetchall()] if raw.description else []
 
 
 def open_warehouse(cfg: dict, root: Path):
-    """Engine from the environment first (BQ_DATASET, IC_WAREHOUSE_ENGINE, IC_WAREHOUSE_PATH), then config."""
+    """Engine: IC_WAREHOUSE_ENGINE env · else postgres when DATABASE_URL (or DATABASE_URL_UNPOOLED) is set ·
+    else warehouse.engine in config (default sqlite). IC_WAREHOUSE_PATH overrides the SQLite path."""
     w = cfg.get("warehouse") or {}
-    engine = os.environ.get("IC_WAREHOUSE_ENGINE") or ("bigquery" if os.environ.get("BQ_DATASET") else w.get("engine", "sqlite"))
+    url = os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
+    engine = os.environ.get("IC_WAREHOUSE_ENGINE") or ("postgres" if url else w.get("engine", "sqlite"))
     if engine in ("none", "off"):
         return None
     if engine == "sqlite":
         return SqliteWarehouse(root / (os.environ.get("IC_WAREHOUSE_PATH") or w.get("sqlite_path", "build/ic_factory.sqlite")))
-    if engine == "bigquery":
-        raise WarehouseNotImplemented(
-            f"BigQuery loader not written (BQ_DATASET={os.environ.get('BQ_DATASET') or w.get('bq_dataset')!r}). "
-            "Same star schema as the SQLite engine — see docs/warehouse.md. Unset BQ_DATASET or set warehouse.engine: sqlite.")
-    raise WarehouseNotImplemented(f"unknown warehouse engine {engine!r}")
+    if engine in ("postgres", "neon"):
+        if not url:
+            raise WarehouseNotImplemented("warehouse engine is postgres but DATABASE_URL is not set (neon env pull, or a GitHub secret)")
+        return PostgresWarehouse(url)
+    raise WarehouseNotImplemented(f"unknown warehouse engine {engine!r} (sqlite | postgres | none)")
 
 
 # ---------------------------------------------------------------- CLI
 def main(argv=None) -> int:
     import argparse
     ap = argparse.ArgumentParser(prog="python -m pipeline.warehouse")
-    ap.add_argument("--db", default=None, help="sqlite path (default: warehouse.sqlite_path in registry/config.yaml)")
+    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine (DATABASE_URL → postgres, else warehouse.sqlite_path)")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("init", help="create the schema (tables, indexes, views) on the configured engine; idempotent")
     p = sub.add_parser("provenance", help="every golden field of a facility, its winning source, and the contract row behind it")
     p.add_argument("facility_id"); p.add_argument("--field")
     sub.add_parser("releases", help="fact_release_metrics, newest first")
@@ -250,14 +328,19 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
 
     root = Path(__file__).resolve().parent.parent
-    db = args.db
-    if not db:
-        from .registry import load_yaml
-        db = (load_yaml(root / "registry" / "config.yaml").get("warehouse") or {}).get("sqlite_path", "build/ic_factory.sqlite")
-    path = Path(db) if Path(db).is_absolute() else root / db
-    if not path.exists():
-        print(f"no warehouse at {path} — run the pipeline first", file=sys.stderr); return 1
-    wh = SqliteWarehouse(path)
+    from .registry import load_yaml
+    cfg = load_yaml(root / "registry" / "config.yaml")
+    if args.db:
+        wh = SqliteWarehouse(Path(args.db) if Path(args.db).is_absolute() else root / args.db)
+    else:
+        try:
+            wh = open_warehouse(cfg, root)
+        except WarehouseNotImplemented as e:
+            print(e, file=sys.stderr); return 1
+        if wh is None:
+            print("warehouse engine is 'none'", file=sys.stderr); return 1
+    if args.cmd == "init":
+        print(f"schema ready on {wh.engine}: {wh.path}"); return 0
     if args.cmd == "provenance":
         rows = wh.provenance(args.facility_id, args.field)
         if not rows:
@@ -267,10 +350,10 @@ def main(argv=None) -> int:
             print(f"{r['field_key']:<13} = {r['value']!s:<40} ← {r['source_key']:<20} {r['retrieved_date'] or '':<10} {where}")
     elif args.cmd == "releases":
         for r in wh.query("SELECT * FROM fact_release_metrics ORDER BY run_ts DESC"):
-            print(json.dumps(r))
+            print(json.dumps(r, default=str))
     else:
         for r in wh.query(args.query):
-            print(json.dumps(r))
+            print(json.dumps(r, default=str))
     return 0
 
 

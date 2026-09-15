@@ -26,16 +26,16 @@ They connect through Workload Identity Federation — no long-lived key is store
   from this repo's `pyproject.toml`.
 - **Secret Manager** for `ANTHROPIC_API_KEY`, `CENSUS_API_KEY` when running in Cloud Run;
   GitHub secrets when running on the runner.
-- **BigQuery** as the eventual warehouse. Today Layer 8 loads the same star schema into a
-  SQLite file in `build/` (`docs/warehouse.md`); `BQ_DATASET` switches engines once the
-  BigQuery loader exists.
+- **Warehouse: Neon (Postgres)** when `DATABASE_URL` is set — the persistent store across
+  quarterly runs; a SQLite file in `build/` otherwise (`docs/warehouse.md`). Cloud SQL for
+  PostgreSQL is the drop-in when the project moves to Google Cloud.
 
 ## Setup once
 
 1. Create the bucket and a service account with `storage.objectAdmin` on it.
 2. Configure Workload Identity Federation for this repo; set repo variables
    `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT`.
-3. Add repo secrets `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`.
+3. Add repo secrets `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`, `DATABASE_URL`, `DATABASE_URL_UNPOOLED` (Neon).
 4. Pick one scheduler. This repo keeps the cron in Actions so the run, its failure and its
    release PR are in one place; Cloud Scheduler is not used.
 
