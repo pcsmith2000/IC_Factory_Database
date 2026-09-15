@@ -41,14 +41,17 @@ No job in `run.yml` or `ci.yml` declares an `environment:`, so GitHub *Environme
 not be visible to them; use the repository tab. Secrets and variables are different tabs on that
 page — a variable in the Secrets tab (or the reverse) reads as empty, not as an error.
 
-| name | tab | needed for | absent means |
+`run.yml` accepts either name in each row below, so whichever is set is the one used.
+
+| name (either of) | tab | needed for | absent means |
 |---|---|---|---|
-| `BLOB_READ_WRITE_TOKEN` | Secrets | raw-source archive to Vercel Blob | no archive; raw files die with the runner (run record says so) |
-| `DATABASE_URL` + `DATABASE_URL_UNPOOLED` | Secrets | the Neon warehouse | falls back to the Neon integration below, else SQLite in the artifact |
+| `BLOB_READ_WRITE_TOKEN` · `IC_DB_PRI_SOURCE_READ_WRITE_TOKEN` | Secrets | raw-source archive to Vercel Blob | no archive; raw files die with the runner (run record says so) |
+| `BLOB_STORE_ID` · `IC_DB_PRI_SOURCE_STORE_ID` | Secrets | names the blob store explicitly | the store id is read out of the token |
+| `DATABASE_URL` + `DATABASE_URL_UNPOOLED` · `IC_DB_DATABASE_URL`(`_UNPOOLED`) | Secrets | the Neon warehouse | falls back to the Neon integration below, else SQLite in the artifact |
 | `NEON_API_KEY` | Secrets | set by the Neon GitHub integration; used only when `DATABASE_URL` is absent | — |
 | `NEON_PROJECT_ID` | **Variables** | same integration path | — |
-| `ANTHROPIC_API_KEY` | Secrets | Layer 3 classification, AI extraction | those layers fail loudly |
-| `CENSUS_API_KEY` | Secrets | Layer 7 frame refresh | frame is read from the committed CSV |
+| `ANTHROPIC_API_KEY` · `IC_DB_ANTHROPIC_API_KEY` | Secrets | Layer 3 classification, AI extraction | those layers fail loudly |
+| `CENSUS_API_KEY` · `CENSUS_KEY` | Secrets | Layer 7 frame refresh | frame is read from the committed CSV |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` | Variables | later, Cloud Run Jobs | the GCP auth step is skipped |
 
 Locally these are ordinary environment variables (`.env.local` from `neon env pull`, exported for

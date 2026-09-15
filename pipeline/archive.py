@@ -1,6 +1,7 @@
 """Raw-source archive: every file Layer 1 fetched, kept off the runner.
 
-Engine today: Vercel Blob, selected when BLOB_READ_WRITE_TOKEN is set. Objects are keyed
+Engine today: Vercel Blob, selected when BLOB_READ_WRITE_TOKEN is set (BLOB_STORE_ID optionally
+names the store explicitly; otherwise it is read out of the token). Objects are keyed
 <prefix>/<source_id>/<date>/<file> (the layout registry/config.yaml has always described), access
 private, overwrite allowed (a re-run on the same day replaces the same keys). A manifest.json per
 source/date lists every file with size and sha256, including files too large to upload — the
@@ -32,10 +33,14 @@ class ArchiveError(Exception):
 class VercelBlobArchive:
     engine = "vercel_blob"
 
-    def __init__(self, token: str, *, prefix: str = "ic-sources", access: str = "private", max_file_mb: int = 100):
+    def __init__(self, token: str, *, prefix: str = "ic-sources", access: str = "private", max_file_mb: int = 100,
+                 store_id: str | None = None):
         self.token, self.prefix, self.access, self.max_bytes = token, prefix.strip("/"), access, int(max_file_mb * 1024 * 1024)
         parts = token.split("_")
-        self.store_id = parts[3] if len(parts) > 3 else ""
+        # A store id given explicitly (BLOB_STORE_ID) wins over the one encoded in the token, which is
+        # only a convention; `store_`-prefixed ids are normalised the way the SDK normalises them.
+        sid = (store_id or "").strip() or (parts[3] if len(parts) > 3 else "")
+        self.store_id = sid[len("store_"):] if sid.startswith("store_") else sid
 
     def _headers(self, extra: dict | None = None) -> dict:
         h = {
@@ -112,7 +117,8 @@ def open_archive(cfg: dict):
     if not token:
         return None
     a = cfg.get("archive") or {}
-    return VercelBlobArchive(token, prefix=a.get("prefix", "ic-sources"), access=a.get("access", "private"), max_file_mb=a.get("max_file_mb", 100))
+    return VercelBlobArchive(token, prefix=a.get("prefix", "ic-sources"), access=a.get("access", "private"),
+                             max_file_mb=a.get("max_file_mb", 100), store_id=os.environ.get("BLOB_STORE_ID"))
 
 
 # ---------------------------------------------------------------- CLI

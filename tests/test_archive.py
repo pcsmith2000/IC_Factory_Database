@@ -101,3 +101,13 @@ def test_verify_fails_when_the_readback_size_is_wrong(capsys, monkeypatch):
         return _Resp(json.dumps({"pathname": "p", "size": 1}).encode())
     monkeypatch.setattr(urllib.request, "urlopen", fake)
     assert archive._verify(archive.VercelBlobArchive("vercel_blob_rw_S_x")) == 1
+
+
+def test_explicit_store_id_beats_the_token_and_is_normalised(monkeypatch):
+    a = archive.VercelBlobArchive("vercel_blob_rw_FROMTOKEN_secret")
+    assert a.store_id == "FROMTOKEN"
+    assert archive.VercelBlobArchive("vercel_blob_rw_FROMTOKEN_secret", store_id="store_EXPLICIT").store_id == "EXPLICIT"
+    monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", "vercel_blob_rw_FROMTOKEN_secret")
+    monkeypatch.setenv("BLOB_STORE_ID", "store_FROMENV")
+    monkeypatch.delenv("IC_ARCHIVE", raising=False)
+    assert archive.open_archive({}).store_id == "FROMENV"
