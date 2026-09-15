@@ -34,6 +34,32 @@ GitHub ↔ GCP connects through Workload Identity Federation — no long-lived k
   quarterly runs; a SQLite file in `build/` otherwise (`docs/warehouse.md`). Cloud SQL for
   PostgreSQL is the drop-in when the project moves to Google Cloud.
 
+## Credentials — where each one goes
+
+All of these are **repository-level**, in GitHub → Settings → Secrets and variables → **Actions**.
+No job in `run.yml` or `ci.yml` declares an `environment:`, so GitHub *Environment* secrets would
+not be visible to them; use the repository tab. Secrets and variables are different tabs on that
+page — a variable in the Secrets tab (or the reverse) reads as empty, not as an error.
+
+| name | tab | needed for | absent means |
+|---|---|---|---|
+| `BLOB_READ_WRITE_TOKEN` | Secrets | raw-source archive to Vercel Blob | no archive; raw files die with the runner (run record says so) |
+| `DATABASE_URL` + `DATABASE_URL_UNPOOLED` | Secrets | the Neon warehouse | falls back to the Neon integration below, else SQLite in the artifact |
+| `NEON_API_KEY` | Secrets | set by the Neon GitHub integration; used only when `DATABASE_URL` is absent | — |
+| `NEON_PROJECT_ID` | **Variables** | same integration path | — |
+| `ANTHROPIC_API_KEY` | Secrets | Layer 3 classification, AI extraction | those layers fail loudly |
+| `CENSUS_API_KEY` | Secrets | Layer 7 frame refresh | frame is read from the committed CSV |
+| `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` | Variables | later, Cloud Run Jobs | the GCP auth step is skipped |
+
+Locally these are ordinary environment variables (`.env.local` from `neon env pull`, exported for
+a shell). Check each one before it matters:
+
+```
+python -m pipeline.archive verify        # put a probe blob, read it back, delete it
+python -m pipeline.warehouse init        # create/confirm the warehouse schema
+python -m pipeline.control check         # the hand-placed inputs
+```
+
 ## Setup once
 
 1. Create a private Vercel Blob store; copy its read-write token.

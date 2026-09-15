@@ -45,6 +45,6 @@ counted. Needs `ANTHROPIC_API_KEY`.
 | WebForms POST (no login) | fl_bcis |
 | `ANTHROPIC_API_KEY` | corporate_locations (extraction), Layer 3 classification |
 | `CENSUS_API_KEY` | Layer 7 frame refresh only (not a Layer 1 source) |
-| `BLOB_READ_WRITE_TOKEN` | raw-file archive to Vercel Blob after every pull (optional locally; the run record says when it is off) |
+| `BLOB_READ_WRITE_TOKEN` | raw-file archive to Vercel Blob after every pull (optional locally; the run record says when it is off). Check it with `python -m pipeline.archive verify` |
 | Playwright (`pip install -e ".[acquire]"` + `playwright install chromium`) | or_bcd if the data file route fails |
 | FOIL response file | ny_dos |

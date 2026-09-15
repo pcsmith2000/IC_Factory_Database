@@ -13,9 +13,12 @@ x-vercel-blob-access, x-content-type, x-add-random-suffix, x-allow-overwrite, x-
 
 No token → no archive, and the run record says so. Token present but an upload fails → the
 source fails at Layer 1 (never silently skipped). IC_ARCHIVE=off disables it explicitly.
+
+    python -m pipeline.archive verify     # real round trip: put a probe file, read it back, delete it
+    python -m pipeline.archive list <source_id> <date>    # what the manifest for one pull recorded
 """
 from __future__ import annotations
-import hashlib, json, mimetypes, os, random, time, urllib.parse, urllib.request
+import hashlib, json, mimetypes, os, random, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
 BLOB_API = os.environ.get("VERCEL_BLOB_API_URL", "https://vercel.com/api/blob")
@@ -34,25 +37,43 @@ class VercelBlobArchive:
         parts = token.split("_")
         self.store_id = parts[3] if len(parts) > 3 else ""
 
-    def put(self, path: Path, pathname: str) -> dict:
-        body = path.read_bytes()
-        headers = {
+    def _headers(self, extra: dict | None = None) -> dict:
+        h = {
             "authorization": f"Bearer {self.token}", "x-api-version": BLOB_API_VERSION,
-            "x-vercel-blob-access": self.access, "x-add-random-suffix": "0", "x-allow-overwrite": "1",
-            "x-content-type": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
-            "x-content-length": str(len(body)), "x-vercel-blob-store-id": self.store_id,
+            "x-vercel-blob-store-id": self.store_id,
             "x-api-blob-request-id": f"{self.store_id}:{int(time.time()*1000)}:{random.random().hex()[2:]}",
             "x-api-blob-request-attempt": "0",
         }
-        url = f"{BLOB_API}/?{urllib.parse.urlencode({'pathname': pathname})}"
-        req = urllib.request.Request(url, data=body, method="PUT", headers=headers)
+        h.update(extra or {})
+        return h
+
+    def _call(self, url: str, *, method: str, what: str, data: bytes | None = None, headers: dict | None = None, timeout: int = 600):
+        req = urllib.request.Request(url, data=data, method=method, headers=self._headers(headers))
         try:
-            with urllib.request.urlopen(req, timeout=600) as resp:
-                return json.load(resp)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw = resp.read()
+                return json.loads(raw) if raw else {}
         except urllib.error.HTTPError as e:
-            raise ArchiveError(f"blob put {pathname}: HTTP {e.code} {e.read()[:300]!r}") from e
+            raise ArchiveError(f"blob {what}: HTTP {e.code} {e.read()[:300]!r}") from e
         except urllib.error.URLError as e:
-            raise ArchiveError(f"blob put {pathname}: {e.reason}") from e
+            raise ArchiveError(f"blob {what}: {e.reason}") from e
+
+    def put(self, path: Path, pathname: str) -> dict:
+        body = path.read_bytes()
+        return self._call(f"{BLOB_API}/?{urllib.parse.urlencode({'pathname': pathname})}", method="PUT", data=body,
+                          what=f"put {pathname}", headers={
+                              "x-vercel-blob-access": self.access, "x-add-random-suffix": "0", "x-allow-overwrite": "1",
+                              "x-content-type": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+                              "x-content-length": str(len(body))})
+
+    def head(self, url_or_pathname: str) -> dict:
+        """Metadata for one blob (pathname, size, url). Raises ArchiveError (HTTP 404) when absent."""
+        return self._call(f"{BLOB_API}/?{urllib.parse.urlencode({'url': url_or_pathname})}", method="GET",
+                          what=f"head {url_or_pathname}", timeout=60)
+
+    def delete(self, urls: list[str]) -> None:
+        self._call(f"{BLOB_API}/delete", method="POST", data=json.dumps({"urls": urls}).encode(),
+                   what=f"delete {len(urls)} object(s)", headers={"content-type": "application/json"}, timeout=120)
 
     def archive_dir(self, source_id: str, day_dir: Path) -> dict:
         """Upload every file under <day_dir> (one source, one date); write and upload manifest.json."""
@@ -92,3 +113,55 @@ def open_archive(cfg: dict):
         return None
     a = cfg.get("archive") or {}
     return VercelBlobArchive(token, prefix=a.get("prefix", "ic-sources"), access=a.get("access", "private"), max_file_mb=a.get("max_file_mb", 100))
+
+
+# ---------------------------------------------------------------- CLI
+def _verify(a: VercelBlobArchive) -> int:
+    """One real round trip against the store: put → head → delete. Proves the token, the store and
+    the key layout before a quarterly run depends on them. Leaves nothing behind."""
+    import tempfile
+    from datetime import date
+    key = f"{a.prefix}/_verify/{date.today().isoformat()}/probe.txt"
+    body = f"ic-factory-database archive verify {time.time():.0f}\n".encode()
+    with tempfile.TemporaryDirectory() as d:
+        f = Path(d) / "probe.txt"; f.write_bytes(body)
+        print(f"store {a.store_id or '(unparsed)'} · access {a.access} · prefix {a.prefix}")
+        r = a.put(f, key)
+        print(f"  PUT    {r.get('pathname', key)}  → {r.get('url', '(no url in response)')}")
+        meta = a.head(r.get("url") or key)
+        size = meta.get("size")
+        if size != len(body):
+            print(f"  HEAD   size {size} ≠ {len(body)} written", file=sys.stderr); return 1
+        print(f"  HEAD   {meta.get('pathname')}  {size} bytes  ok")
+        a.delete([r.get("url") or key])
+        print("  DELETE probe removed")
+    print("archive verify: ok")
+    return 0
+
+
+def main(argv=None) -> int:
+    import argparse
+    from .registry import load_yaml
+    root = Path(__file__).resolve().parent.parent
+    ap = argparse.ArgumentParser(prog="python -m pipeline.archive")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("verify", help="put a probe file, read it back, delete it — proves the token and store")
+    ls = sub.add_parser("list", help="print the manifest one pull recorded")
+    ls.add_argument("source_id"); ls.add_argument("date")
+    args = ap.parse_args(argv)
+
+    cfg = load_yaml(root / "registry" / "config.yaml")
+    a = open_archive(cfg)
+    if a is None:
+        print("no archive: BLOB_READ_WRITE_TOKEN is not set (or IC_ARCHIVE=off)", file=sys.stderr); return 1
+    if args.cmd == "verify":
+        return _verify(a)
+    key = f"{a.prefix}/{args.source_id}/{args.date}/manifest.json"
+    local = root / cfg["storage"]["local_cache"] / args.source_id / args.date / "manifest.json"
+    if local.exists():
+        print(local.read_text()); return 0
+    print(a.head(key)); return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

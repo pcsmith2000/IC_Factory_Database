@@ -1,4 +1,4 @@
-import io, json, urllib.request
+import io, json, urllib.parse, urllib.request
 from pathlib import Path
 import pytest
 from pipeline import archive
@@ -15,7 +15,6 @@ def test_vercel_blob_put_matches_the_sdk_contract_and_manifest_skips_big_files(t
         calls.append(req)
         pn = dict(x.split("=") for x in req.full_url.split("?", 1)[1].split("&"))["pathname"]
         return _Resp(json.dumps({"url": f"https://x.private.blob.vercel-storage.com/{pn}", "pathname": urllib.parse.unquote(pn), "etag": "e"}).encode())
-    import urllib.parse
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     day = tmp_path / "tx_tdlr" / "2026-09-15"; day.mkdir(parents=True)
     (day / "2-Certified_Manufacturers_List.pdf").write_bytes(b"%PDF small")
@@ -55,3 +54,50 @@ def test_http_error_is_loud(tmp_path: Path, monkeypatch):
     f = tmp_path / "a.txt"; f.write_text("x")
     with pytest.raises(archive.ArchiveError, match="HTTP 403"):
         archive.VercelBlobArchive("vercel_blob_rw_S_x").put(f, "ic-sources/a.txt")
+
+
+def test_head_and_delete_match_the_sdk_contract(tmp_path: Path, monkeypatch):
+    import urllib.parse
+    seen = []
+    def fake(req, timeout=0):
+        seen.append(req)
+        if req.full_url.endswith("/delete"):
+            return _Resp(b"")
+        return _Resp(json.dumps({"url": "https://x/p", "pathname": "ic-sources/a.txt", "size": 3}).encode())
+    monkeypatch.setattr(urllib.request, "urlopen", fake)
+    a = archive.VercelBlobArchive("vercel_blob_rw_STORE123_secret")
+    assert a.head("ic-sources/a.txt")["size"] == 3
+    h = seen[-1]
+    assert h.get_method() == "GET" and h.full_url == "https://vercel.com/api/blob/?url=ic-sources%2Fa.txt"
+    a.delete(["https://x/p"])
+    d = seen[-1]
+    assert d.get_method() == "POST" and d.full_url == "https://vercel.com/api/blob/delete"
+    assert json.loads(d.data) == {"urls": ["https://x/p"]}
+    assert {k.lower(): v for k, v in d.header_items()}["content-type"] == "application/json"
+
+
+def test_verify_round_trip_puts_reads_back_and_cleans_up(capsys, monkeypatch):
+    calls = []
+    def fake(req, timeout=0):
+        calls.append((req.get_method(), req.full_url, req.data))
+        if req.full_url.endswith("/delete"):
+            return _Resp(b"")
+        if req.get_method() == "PUT":
+            fake.body = req.data
+            return _Resp(json.dumps({"url": "https://x/probe", "pathname": "ic-sources/_verify/d/probe.txt"}).encode())
+        return _Resp(json.dumps({"pathname": "ic-sources/_verify/d/probe.txt", "size": len(fake.body)}).encode())
+    monkeypatch.setattr(urllib.request, "urlopen", fake)
+    a = archive.VercelBlobArchive("vercel_blob_rw_STORE123_secret")
+    assert archive._verify(a) == 0
+    methods = [c[0] for c in calls]
+    assert methods == ["PUT", "GET", "POST"]          # put, head, delete — nothing left behind
+    assert "archive verify: ok" in capsys.readouterr().out
+
+
+def test_verify_fails_when_the_readback_size_is_wrong(capsys, monkeypatch):
+    def fake(req, timeout=0):
+        if req.get_method() == "PUT":
+            return _Resp(json.dumps({"url": "https://x/probe", "pathname": "p"}).encode())
+        return _Resp(json.dumps({"pathname": "p", "size": 1}).encode())
+    monkeypatch.setattr(urllib.request, "urlopen", fake)
+    assert archive._verify(archive.VercelBlobArchive("vercel_blob_rw_S_x")) == 1
