@@ -90,20 +90,23 @@ def test_split_address_leaves_what_it_cannot_parse_whole():
 
 
 def test_iibc_table_with_year_columns(tmp_path: Path):
+    # Shape verified against the live page 2026-09-15: Name | Address | City | ST | one column per year
     html = """<html><body><table>
-    <tr><th>Facility</th><th>Address</th><th>2023</th><th>2024</th><th>2025</th></tr>
-    <tr><td><a href="https://interstateibc.org/manufacturers/homark-co-inc/">HOMARK CO., INC.</a></td>
-        <td>105 West Main St<br>Red Lake Falls, MN 56750</td><td>R</td><td>R</td><td></td></tr>
-    <tr><td>Names Only Corp</td><td></td><td></td><td></td><td>R</td></tr>
+    <tr><th>Name</th><th>Address</th><th>City</th><th>ST</th><th>2023</th><th>2024</th><th>2025</th><th>2026</th></tr>
+    <tr><td>A &amp; A SHEET METAL PRODUCTS</td><td>5122 N. STATE RD. 39</td><td>LA PORTE</td><td>IN</td>
+        <td>R</td><td>R</td><td>R</td><td>R</td></tr>
+    <tr><td>LAPSED PLANT CO</td><td>1 OLD RD</td><td>ERIE</td><td>PA</td><td>R</td><td></td><td></td><td></td></tr>
+    <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
     </table></body></html>"""
     f = tmp_path / "manufacturers.html"; f.write_text(html)
     rows = iibc.parse([f], SRC("iibc"))
-    assert len(rows) == 2
+    assert len(rows) == 2, "blank rows are skipped, not emitted"
     r = rows[0]
-    assert r["name_verbatim"] == "HOMARK CO., INC." and r["address_verbatim"] == "105 West Main St"
-    assert (r["city_verbatim"], r["state_verbatim"], r["zip_verbatim"]) == ("Red Lake Falls", "MN", "56750")
-    assert r["source_url"].endswith("/homark-co-inc/") and "2023,2024" in r["status_verbatim"]
-    assert rows[1]["address_verbatim"] == "" and validate_rows("iibc", rows) == []
+    assert r["name_verbatim"] == "A & A SHEET METAL PRODUCTS" and r["address_verbatim"] == "5122 N. STATE RD. 39"
+    assert (r["city_verbatim"], r["state_verbatim"]) == ("LA PORTE", "IN")
+    assert r["status_verbatim"] == "registered 2023,2024,2025,2026" and r["status_basis"] == "certified_as_of_date"
+    assert rows[1]["status_verbatim"] == "registered 2023"      # a lapsed plant keeps its last year
+    assert validate_rows("iibc", rows) == []
 
 
 def test_epa_zip_is_filtered_by_naics_and_flags_osha(tmp_path: Path):

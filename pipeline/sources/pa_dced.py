@@ -1,14 +1,18 @@
-"""pa_dced — Pennsylvania DCED industrialized housing: approved manufacturers list (XLSX).
+"""pa_dced — Pennsylvania DCED industrialized housing: approved manufacturers list.
 
 Landing page (durable bookmark): https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/
-The XLSX link on it goes through DCED's download manager (?wpdmdl=...), so the file URL is
-discovered from the page each run rather than hard-coded. Traps (registry): ~36 of ~112 rows
-are PA plants, the rest are out-of-state / Canadian plants approved to ship in; typos verbatim.
+The page calls it "an Excel file" but serves a CSV from a WordPress theme path
+(/wp-content/themes/.../csv/manufacturers_list.csv), which is exactly the trap the registry
+records. The link is therefore discovered from the page each run — CSV, XLSX or the download
+manager (?wpdmdl=) are all accepted — rather than hard-coded.
+
+Traps (registry): ~36 of ~112 rows are PA plants, the rest are out-of-state and Canadian plants
+approved to ship in; source typos are kept verbatim.
 """
 from __future__ import annotations
 import re
 from pathlib import Path
-from ._common import http_get, xlsx_rows, contract_row, split_city_state_zip, require, LayoutChanged
+from ._common import http_get, xlsx_rows, csv_rows, contract_row, split_city_state_zip, require, LayoutChanged
 
 LANDING = "https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/"
 
@@ -16,11 +20,14 @@ LANDING = "https://dced.pa.gov/housing-and-development/website-list-of-manufactu
 def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
     page = http_get(source.get("url") or LANDING, archive_dir, "landing.html")
     html = page.read_text(encoding="utf-8", errors="replace")
-    links = re.findall(r'href="([^"]+)"', html)
-    xlsx = [l for l in links if re.search(r"\.xlsx?(\?|$)", l) or ("wpdmdl" in l and re.search(r"manufactur", l, re.I))]
-    require(bool(xlsx), page, "no XLSX / download-manager link on the DCED landing page")
-    url = xlsx[0] if xlsx[0].startswith("http") else "https://dced.pa.gov" + xlsx[0]
-    return [http_get(url, archive_dir, "manufacturers.xlsx")]
+    links = [h for h, _ in re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', html, re.I | re.S)]
+    cands = [l for l in links if re.search(r"manufactur[a-z_]*\.(csv|xlsx?)(\?|$)", l, re.I)] \
+        or [l for l in links if re.search(r"\.(csv|xlsx?)(\?|$)", l, re.I) and re.search(r"manufactur", l, re.I)] \
+        or [l for l in links if "wpdmdl" in l and re.search(r"manufactur", l, re.I)]
+    require(bool(cands), page, "no manufacturers CSV/XLSX link on the DCED landing page")
+    url = cands[0] if cands[0].startswith("http") else "https://dced.pa.gov" + cands[0]
+    ext = (re.search(r"\.(csv|xlsx?)(\?|$)", url, re.I) or [None, "csv"])[1].lower()
+    return [http_get(url, archive_dir, f"manufacturers.{ext}")]
 
 
 def _pick(row: dict, *names: str) -> str:
@@ -33,7 +40,7 @@ def _pick(row: dict, *names: str) -> str:
 
 def parse(paths: list[Path], source: dict) -> list[dict]:
     path = paths[0]
-    rows = xlsx_rows(path)
+    rows = csv_rows(path) if path.suffix.lower() == ".csv" else xlsx_rows(path)
     require(bool(rows), path, "XLSX has no data rows")
     out = []
     for i, r in enumerate(rows, 1):

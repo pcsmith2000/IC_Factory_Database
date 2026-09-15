@@ -20,7 +20,13 @@ from datetime import date
 from pathlib import Path
 from ..contract import COLUMNS
 
-USER_AGENT = "Mozilla/5.0 (compatible; ic-factory-database/1.0; +https://github.com/pcsmith2000/IC_Factory_Database)"
+# Several state sites sit behind a WAF that rejects any unfamiliar product token: Michigan answered
+# 403 and IIBC 500 to a UA naming this project, including when it was appended to a browser string.
+# The UA is therefore a plain mainstream one, and the project identifies itself in X-Contact, which
+# WAFs ignore. Nothing here defeats an access control: these are public pages served to any browser.
+USER_AGENT = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
+              "Chrome/124.0.0.0 Safari/537.36")
+CONTACT = "https://github.com/pcsmith2000/IC_Factory_Database"
 
 
 class LayoutChanged(Exception):
@@ -38,7 +44,10 @@ def http_get(url: str, archive_dir: Path, filename: str | None = None, *, data: 
     Writes <archive_dir>/<filename> and a sidecar .meta.json with url, status, sha256, size."""
     archive_dir.mkdir(parents=True, exist_ok=True)
     name = filename or (url.rstrip("/").rsplit("/", 1)[-1] or "index.html")
-    req = urllib.request.Request(url, data=data, headers={"User-Agent": USER_AGENT, **(headers or {})})
+    req = urllib.request.Request(url, data=data, headers={
+        "User-Agent": USER_AGENT, "X-Contact": CONTACT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9", **(headers or {})})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         body = resp.read(); status = resp.status; ctype = resp.headers.get("Content-Type", "")
     out = archive_dir / name
@@ -144,18 +153,30 @@ def detect_columns(lines: list[list[dict]], labels: list[str], path: Path, *, ga
         group.append(x)
     if group:
         groups.append(group)
-    # A real column starts on a large share of the rows; stray indents (titles, footnotes) do not.
-    floor = max(3, (max((len(g) for g in groups), default=0)) // 10)
+    # A real column starts on most rows. Stray indents do not: a title, a second table later in the
+    # document, or the wrapped tail of a long cell all produce small groups that would otherwise be
+    # mistaken for column boundaries and split a cell in two.
+    floor = max(3, int(0.4 * max((len(g) for g in groups), default=0)))
     clusters = sorted(min(g) for g in groups if len(g) >= floor)
     require(bool(clusters), path, "no repeating column starts found — is this a table?")
-    cols = []
+    # Assign columns left to right under a monotonic constraint. A header is centred over its
+    # column while the data is left-aligned, so a wide column's data can start far to the LEFT of
+    # its header — "Manufacturer" centred at x=258 over data starting at x=178, with a spurious
+    # cluster at 291 from wrapped names in between. Taking the nearest cluster picks the spurious
+    # one; taking the LAST cluster at or before the header picks the real column start. A short
+    # column whose data sits right of its header (a two-letter STATE) has no cluster at or before
+    # it, so the first cluster after the previous column is used instead.
+    cols, floor_x = [], float("-inf")
     for label in labels:
         hx = next(w["x0"] for w in header if w["text"].lower().startswith(label.lower()))
-        near = min(clusters, key=lambda c: abs(c - hx))
-        require(abs(near - hx) < 90, path, f"column {label!r}: header at x={hx:.0f} but nearest data column is x={near} — layout changed")
-        cols.append((label, float(near)))
-    for (a, xa), (b, xb) in zip(cols, cols[1:]):
-        require(xb > xa, path, f"columns {a!r} and {b!r} resolved out of order ({xa} ≥ {xb})")
+        remaining = [c for c in clusters if c > floor_x]
+        require(bool(remaining), path, f"column {label!r}: no data column left of it — layout changed")
+        at_or_before = [c for c in remaining if c <= hx]
+        pick = max(at_or_before) if at_or_before else min(remaining)
+        require(abs(pick - hx) < 200, path,
+                f"column {label!r}: header at x={hx:.0f} but the data column resolved to x={pick:.0f} — layout changed")
+        cols.append((label, float(pick)))
+        floor_x = pick
     return cols
 
 

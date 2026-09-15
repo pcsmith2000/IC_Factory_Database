@@ -12,14 +12,21 @@ A FOIL response received as a file is parsed with:  python -m pipeline.sources.c
 from __future__ import annotations
 import re
 from pathlib import Path
-from ._common import http_get, pdf_pages_text, xlsx_rows, csv_rows, contract_row, NeedsBrowser, require
+from ._common import NeedsBrowser, http_get, pdf_pages_text, xlsx_rows, csv_rows, contract_row, NeedsBrowser, require
 
 PAGE = "https://dos.ny.gov/code/factory-manufactured-buildings-modular"
 CSZ = re.compile(r"^(.+?),?\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\s*$")
 
 
 def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
-    page = http_get(source.get("url") or PAGE, archive_dir, "program.html")
+    try:
+        page = http_get(source.get("url") or PAGE, archive_dir, "program.html")
+    except Exception as e:
+        raise NeedsBrowser(
+            "ny_dos: dos.ny.gov answers 403 to any automated fetch (verified 2026-09-15), and DOS publishes no "
+            "manufacturer list — the records are approval-centric and a FOIL request is the route. "
+            f"({type(e).__name__}: {e}). Obtain the list out of band and parse it with: "
+            "python -m pipeline.sources.check ny_dos --file <file>") from e
     html = page.read_text(encoding="utf-8", errors="replace")
     cands = [h for h, t in re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', html, re.I | re.S)
              if re.search(r"(approved|certified|registered).{0,40}(manufacturer|plant)", re.sub("<[^>]+>", " ", t), re.I)]

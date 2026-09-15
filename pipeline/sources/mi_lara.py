@@ -9,7 +9,7 @@ PDF or XLSX are both handled. Typos verbatim ("Shangahi").
 from __future__ import annotations
 import re
 from pathlib import Path
-from ._common import http_get, pdf_pages_text, xlsx_rows, html_tables, contract_row, split_city_state_zip, require
+from ._common import NeedsBrowser, http_get, pdf_pages_text, xlsx_rows, html_tables, contract_row, split_city_state_zip, require
 
 PAGE = "https://www.michigan.gov/lara/bureau-list/bcc/sections/plan-review/premanufactured-units/premanufactured-units-program"
 CSZ = re.compile(r"^(.+?),?\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\s*$")
@@ -24,7 +24,12 @@ def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
         # the list may be an in-page table rather than a file
         if any(re.search(r"approved manufacturers", "".join(sum(t, [])), re.I) for t in html_tables(html)):
             return [page]
-    require(bool(cands), page, "no 'Approved Manufacturers' link on the LARA plan-review page")
+    if not cands:
+        raise NeedsBrowser("""mi_lara: VERIFIED 2026-09-15 — Michigan publishes no approved-manufacturers list. The Plan Review
+premanufactured-units programme page and the Compliance Assurance Program page carry only forms,
+fee schedules and the Accela portal link. The list is not public; request it from the Bureau
+(bccpermits@michigan.gov, 517-241-9313) and parse the reply with:
+    python -m pipeline.sources.check mi_lara --file <file>""")
     href = cands[0][1]
     url = href if href.startswith("http") else "https://www.michigan.gov" + href
     ext = ".xlsx" if re.search(r"\.xlsx?(\?|$)", url, re.I) else ".pdf"

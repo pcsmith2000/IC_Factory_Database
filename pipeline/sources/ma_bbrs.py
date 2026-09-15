@@ -8,18 +8,30 @@ manufacturers defunct 10+ years — status_basis stays on_current_list, liveness
 from __future__ import annotations
 import re
 from pathlib import Path
-from ._common import http_get, pdf_pages_text, contract_row, split_city_state_zip, require
+from ._common import NeedsBrowser, http_get, pdf_pages_text, contract_row, split_city_state_zip, require
 
 PAGE = "https://www.mass.gov/info-details/manufactured-building-program"
 CSZ = re.compile(r"^(.+?),?\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\s*$")
 
 
 def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
-    page = http_get(source.get("url") or PAGE, archive_dir, "program.html")
+    try:
+        page = http_get(source.get("url") or PAGE, archive_dir, "program.html")
+    except Exception as e:
+        raise NeedsBrowser(
+            "ma_bbrs: mass.gov answers 403 to any automated fetch (verified 2026-09-15), and the BBRS programme page "
+            "links only the certification applications — no list is published. "
+            f"({type(e).__name__}: {e}). Obtain the list out of band and parse it with: "
+            "python -m pipeline.sources.check ma_bbrs --file <file>") from e
     html = page.read_text(encoding="utf-8", errors="replace")
     links = re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', html, re.I | re.S)
     cands = [h for h, t in links if re.search(r"(certified|approved|list of).{0,40}manufacturer|manufacturer.{0,40}list", re.sub("<[^>]+>", " ", t), re.I)]
-    require(bool(cands), page, "no certified/approved manufacturers document linked from the BBRS program page")
+    if not cands:
+        raise NeedsBrowser("""ma_bbrs: VERIFIED 2026-09-15 — Massachusetts publishes no certified-manufacturers list. The BBRS
+programme page links only the initial and renewal certification applications; the service-details
+and lists pages answer 403 to any automated fetch. Request the list from the Manufactured Buildings
+Program and parse the reply with:
+    python -m pipeline.sources.check ma_bbrs --file <file>""")
     url = cands[0] if cands[0].startswith("http") else "https://www.mass.gov" + cands[0]
     return [http_get(url, archive_dir, "certified_manufacturers.pdf")]
 

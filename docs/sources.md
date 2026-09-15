@@ -17,19 +17,32 @@ A fetcher that meets a layout it was not written for raises `LayoutChanged` nami
 archived file; one that needs a scripted browser raises `NeedsBrowser`. Both are recorded per
 source in the run record and halt Layer 1. Nothing is skipped silently and nothing is guessed.
 
-| id | what is fetched | how sure | what to check on the first live run |
-|---|---|---|---|
-| `pa_dced` | DCED landing page → XLSX via download manager | endpoint confirmed; XLSX columns matched by name | column headers; that non-PA plants come through with their own state |
-| `tx_tdlr` | three PDFs (certified all-states, certified TX, registered) | endpoints confirmed; text-line grouping on `City, ST zip` | that pdfplumber keeps one entry per line block; registration-number pattern; expiry-date presence |
-| `mi_lara` | Plan Review programme page → "Approved Manufacturers" link (PDF/XLSX/in-page table) | page confirmed; list link discovered per run | that the link text says "Approved Manufacturers"; format |
-| `ma_bbrs` | programme page → certified-manufacturers document (PDF) | page confirmed; document link discovered per run | link text; PDF line layout |
-| `or_bcd` | licence-search page → registration data file; fallback: programme PDF | both URLs confirmed; registry says the PDF is empty | whether the data file link exists and which column names the licence type; else Playwright sweep |
-| `fl_bcis` | MB menu → organisation search → WebForms POST → results table | POST-only confirmed; form fields discovered per run | the search link text, the submit-button name, results table shape. Names only: rows stay T0 |
-| `ny_dos` | programme page → manufacturer list if DOS ever publishes one; else halts naming the FOIL | no public list found | parse the FOIL response with `--file` |
-| `epa_frs` | national_combined.zip (~730 MB) streamed: NAICS filter → OSHA-OIS flag → facility rows | URL and file names confirmed from EPA docs; column names from FRS metadata | column names on the first pull; runtime (three passes over 5.3M rows) |
-| `iibc` | manufacturers page HTML table: Facility · Address · year columns | page and columns confirmed | whether Address is one cell with `<br>` (handled) or split cells |
-| `mhi_plants` | MHI plant-list PDF (dated file name in the registry `url`) | URL confirmed; layout unknown → tables first, then text lines | plant-code pattern; update `url` when MHI posts a new list |
-| `corporate_locations` | registry `pages:` (7 companies) → archived HTML → AI extraction → verbatim check | company pages found by search; ABS has no url on record | which pages are JS-rendered (text < 200 chars is reported, not extracted); extraction audit in `.cache/ic-sources/corporate_locations/<date>/extraction_audit.json` |
+| id | live result 2026-09-15 | what it yields |
+|---|---|---|
+| `tx_tdlr` | **works — 334 rows** | every row with a street address, expiry date and Reg #; 8 foreign addresses left whole on purpose |
+| `iibc` | **works — 286 rows** | Name · Address · City · ST plus a column per year; 227 registered in 2026; 45 states |
+| `mhi_plants` | **works — 150 rows** | durable plant codes (TMOD01, CVLR09 …), city and state. **No street address published** |
+| `pa_dced` | **works — 115 rows** | **No street address published**: Manufacturer, City, State, Approved For, Evaluation/Inspection Agency. Served as a CSV under a theme path, not the "Excel file" the page claims |
+| `mi_lara` | **no list published** | verified: the Plan Review and Compliance Assurance pages carry only forms and the Accela link. Request from the Bureau, then `--file` |
+| `ma_bbrs` | **no list published** | verified: only the certification applications are linked, and mass.gov answers 403 to any automated fetch. Request, then `--file` |
+| `ny_dos` | **no list published** | verified: approval-centric records only, and dos.ny.gov answers 403. FOIL, then `--file` |
+| `or_bcd` | **needs a browser** | the programme PDF is empty as the registry predicted, and no licence data file was linked. Playwright sweep of the licence search |
+| `fl_bcis` | **search link not found** | the MB menu no longer carries a link matching the organisation search; the POST form needs re-locating from the archived menu |
+| `epa_frs` | **not run** | ~730 MB bulk file; not exercised in this environment |
+| `corporate_locations` | **not run** | needs `ANTHROPIC_API_KEY` for extraction |
+
+Three of the eleven sources publish no list at all, and two more (`pa_dced`, `mhi_plants`) publish
+no street address — their rows cannot pass tier T0 alone and reach a plant address only by
+matching another source. That is the measured state of the input, not a defect in the pipeline.
+
+### What the live run changed in the code
+- PDF lists are whitespace-aligned tables, not line blocks. `_common.pdf_lines`, `detect_columns`
+  and `slice_columns` calibrate the columns per file: headers are centred over left-aligned data,
+  so each label takes the last data column at or before it, under a left-to-right constraint.
+- `drop_repeated_lines` removes page furniture by text **and** position, so a running footer goes
+  while a wrapped "HOUSTON, TX 77095" stays.
+- Michigan and IIBC answer 403/500 to a user agent naming this project, so requests send a plain
+  browser UA and identify the project in `X-Contact`.
 
 ## AI extraction (corporate pages)
 `pipeline/sources/_extract.py`: frozen prompt `prompts/EXTRACTION-PROMPT.md` (hash recorded),
