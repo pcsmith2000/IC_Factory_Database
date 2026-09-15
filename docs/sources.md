@@ -35,7 +35,31 @@ Three of the eleven sources publish no list at all, and two more (`pa_dced`, `mh
 no street address — their rows cannot pass tier T0 alone and reach a plant address only by
 matching another source. That is the measured state of the input, not a defect in the pipeline.
 
-### Where the bytes come from
+### Where the bytes come from — the run never scrapes
+Fetching the web and running the pipeline are separate jobs on purpose. A quarterly run must not
+be able to fail because a state site is down, changed layout, or added a WAF rule; and three of
+these sources cannot be fetched at all. So the store is the input, and the run only transforms
+what is in it.
+
+```
+setup (a person, whenever a source publishes)      the run (quarterly, deterministic)
+  python -m pipeline.sources.refresh --all    →    Blob: ic-sources/<id>/<date>/<file>   →   Layers 1-8
+  or upload a file by hand to the same path
+```
+
+- `python -m pipeline.sources.refresh --list` — what the store holds per source, newest first
+- `python -m pipeline.sources.refresh tx_tdlr iibc` — download and store named sources
+- `python -m pipeline.sources.refresh --all` — every source that has a working fetcher
+
+A source with no fetcher (no list published, or a browser/POST/FOIL is needed) is ingested the
+same way: put the file at `ic-sources/<source_id>/<YYYY-MM-DD>/` and the next run picks it up.
+Layer 1 hands a parser everything in that folder, so parsers select their file by extension and a
+stray upload is never parsed as the source.
+
+`archive.mode: blob-only` in config is that default. `acquire: web-first` on one source opts it
+back into fetching during a run, with the stored copy as the fallback.
+
+### Modes
 The store is the ingest surface, not just a backup. Per source, `acquire:` in the registry
 (default `archive.mode` in config):
 

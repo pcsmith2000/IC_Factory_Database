@@ -51,7 +51,7 @@ sources:
     traps:
       - The list lives under Plan Review, not the Premanufactured Units program page (dead end).
       - Typos verbatim ("Shangahi").
-    acquire: blob-only                       # no list published; obtain from the Bureau and upload to the archive
+    acquire_note: no list published; obtain from the Bureau and upload to the archive
     status: active
 
   - id: ma_bbrs
@@ -64,7 +64,7 @@ sources:
     status_basis: on_current_list
     traps:
       - Undated PDF; still lists Kullman, Excel Homes, Modtech — defunct 10+ years. Status is inferred.
-    acquire: blob-only                       # no list published and mass.gov blocks automation; upload to the archive
+    acquire_note: no list published and mass.gov blocks automation; upload to the archive
     status: active
 
   - id: or_bcd
@@ -78,7 +78,7 @@ sources:
     traps:
       - Registers per manufacturing location (cleanest match to our unit of record).
       - The official "list" PDF contains no data; use the licence search.
-    acquire: blob-only                       # licence search needs a browser; upload the exported result
+    acquire_note: licence search needs a browser; upload the exported result
     status: active
 
   - id: fl_bcis
@@ -93,7 +93,7 @@ sources:
       - POST-only search; defeats plain fetch.
       - 852 rows are names only. Do not promote unmatched names to facilities.
       - Material is not structured data; it lives in plan documents.
-    acquire: blob-only                       # POST-only search; upload the exported result
+    acquire_note: POST-only search; upload the exported result
     status: active
 
   - id: ny_dos
@@ -106,7 +106,7 @@ sources:
     status_basis: on_current_list
     traps:
       - Approval-centric, not plant-centric; extraction not clean. FOIL request drafted.
-    acquire: blob-only                       # no list published and dos.ny.gov blocks automation; upload the FOIL response
+    acquire_note: no list published and dos.ny.gov blocks automation; upload the FOIL response
     status: active
 
   - id: in_dhs

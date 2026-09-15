@@ -6,8 +6,10 @@ storage:
 
 archive:                                   # raw files, off the runner. Vercel Blob when BLOB_READ_WRITE_TOKEN is set
   engine: vercel_blob                      # (IC_ARCHIVE=off disables). Keys: <prefix>/<source>/<date>/<file> + manifest.json
-  mode: web-first                          # web-first: fetch, archive, fall back to the newest archived copy
-                                           # if the site fails. Per source, `acquire: blob-only` never fetches.
+  mode: blob-only                          # THE RUN NEVER SCRAPES. Layer 1 reads the files already in the
+                                           # store; populating the store is a separate, deliberate step:
+                                           #   python -m pipeline.sources.refresh <source_id|--all>
+                                           # `acquire: web-first` per source opts one back into fetching.
   prefix: ic-sources
   access: public                           # must match how the Blob store itself was created;
                                            # a mismatch is rejected ('Cannot use private access on a public store')

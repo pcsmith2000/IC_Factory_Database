@@ -15,7 +15,7 @@ source. That is recorded rather than worked around.
 from __future__ import annotations
 import re
 from pathlib import Path
-from ._common import (http_get, pdf_lines, drop_repeated_lines, detect_columns, slice_columns,
+from ._common import (pick, http_get, pdf_lines, drop_repeated_lines, detect_columns, slice_columns,
                       contract_row, require)
 
 URL = "https://www.manufacturedhousing.org/wp-content/uploads/2024/10/Plant-List-10_3_24.pdf"
@@ -29,7 +29,9 @@ def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
 
 
 def parse(paths: list[Path], source: dict) -> list[dict]:
-    path = paths[0]
+    wanted = pick(paths, ".pdf")
+    require(bool(wanted), paths[0], "no PDF among " + str([p.name for p in paths]))
+    path = wanted[0]
     lines = pdf_lines(path)
     cols = detect_columns(lines, LABELS, path)
     out = []

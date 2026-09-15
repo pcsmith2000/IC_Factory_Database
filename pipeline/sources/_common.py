@@ -358,6 +358,17 @@ def iso_date(s: str) -> str:
     return ""
 
 
+def pick(paths: list[Path], *extensions: str) -> list[Path]:
+    """The files a parser actually wants, by extension.
+
+    A parser is handed everything in the source's folder, and that folder holds more than the data:
+    the page a fetcher read to discover the download link, and whatever a person uploaded by hand.
+    Selecting by extension keeps a stray file from being parsed as the source.
+    """
+    exts = tuple(e.lower() for e in extensions)
+    return [p for p in paths if p.suffix.lower() in exts]
+
+
 def require(cond: bool, path: Path, why: str) -> None:
     if not cond:
         raise LayoutChanged(f"{why} — inspect the archived file {path}")

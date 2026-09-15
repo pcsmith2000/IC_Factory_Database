@@ -12,7 +12,7 @@ certified_as_of_date; a row registered in no listed year keeps on_current_list a
 from __future__ import annotations
 import re
 from pathlib import Path
-from ._common import http_get, contract_row, require
+from ._common import http_get, pick, contract_row, require
 
 PAGE = "https://interstateibc.org/manufacturers/"
 YEAR = re.compile(r"^(19|20)\d{2}$")
@@ -24,7 +24,9 @@ def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
 
 def parse(paths: list[Path], source: dict) -> list[dict]:
     from bs4 import BeautifulSoup
-    path = paths[0]
+    wanted = pick(paths, ".html", ".htm")
+    require(bool(wanted), paths[0], "no HTML among " + str([p.name for p in paths]))
+    path = wanted[0]
     soup = BeautifulSoup(path.read_text(encoding="utf-8", errors="replace"), "html.parser")
     table = header = None
     for t in soup.find_all("table"):

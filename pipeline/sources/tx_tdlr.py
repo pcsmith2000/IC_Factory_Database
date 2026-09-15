@@ -17,7 +17,7 @@ TX is the only class A source with expiry dates, so status_basis is dated_expiry
 from __future__ import annotations
 import re
 from pathlib import Path
-from ._common import (http_get, pdf_lines, drop_repeated_lines, detect_columns, slice_columns,
+from ._common import (pick, http_get, pdf_lines, drop_repeated_lines, detect_columns, slice_columns,
                       contract_row, split_address, iso_date, require)
 
 INDEX = "https://www.tdlr.texas.gov/ihb/ihblists.htm"
@@ -58,8 +58,10 @@ def _records(lines: list[list[dict]], cols) -> list[dict]:
 
 
 def parse(paths: list[Path], source: dict) -> list[dict]:
+    wanted = pick(paths, ".pdf")
+    require(bool(wanted), paths[0], "no PDF among " + str([p.name for p in paths]))
     out, seen = [], set()
-    for path in paths:
+    for path in wanted:
         status = FILES.get(path.name, path.stem)
         lines = pdf_lines(path)
         cols = detect_columns(lines, LABELS, path)

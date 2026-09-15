@@ -12,7 +12,7 @@ approved to ship in; source typos are kept verbatim.
 from __future__ import annotations
 import re
 from pathlib import Path
-from ._common import http_get, xlsx_rows, csv_rows, contract_row, split_city_state_zip, require, LayoutChanged
+from ._common import http_get, pick, xlsx_rows, csv_rows, contract_row, split_city_state_zip, require, LayoutChanged
 
 LANDING = "https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/"
 
@@ -39,7 +39,9 @@ def _pick(row: dict, *names: str) -> str:
 
 
 def parse(paths: list[Path], source: dict) -> list[dict]:
-    path = paths[0]
+    wanted = pick(paths, ".csv", ".xlsx", ".xls")
+    require(bool(wanted), paths[0], "no CSV or XLSX among " + str([p.name for p in paths]))
+    path = wanted[0]
     rows = csv_rows(path) if path.suffix.lower() == ".csv" else xlsx_rows(path)
     require(bool(rows), path, "XLSX has no data rows")
     out = []
