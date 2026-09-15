@@ -6,8 +6,11 @@ storage:
 
 archive:                                   # raw files, off the runner. Vercel Blob when BLOB_READ_WRITE_TOKEN is set
   engine: vercel_blob                      # (IC_ARCHIVE=off disables). Keys: <prefix>/<source>/<date>/<file> + manifest.json
+  mode: web-first                          # web-first: fetch, archive, fall back to the newest archived copy
+                                           # if the site fails. Per source, `acquire: blob-only` never fetches.
   prefix: ic-sources
-  access: private
+  access: public                           # must match how the Blob store itself was created;
+                                           # a mismatch is rejected ('Cannot use private access on a public store')
   max_file_mb: 100                         # larger files are recorded by sha256 only (EPA zip: its filtered slice is archived instead)
 
 warehouse:

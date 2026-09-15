@@ -35,6 +35,32 @@ Three of the eleven sources publish no list at all, and two more (`pa_dced`, `mh
 no street address — their rows cannot pass tier T0 alone and reach a plant address only by
 matching another source. That is the measured state of the input, not a defect in the pipeline.
 
+### Where the bytes come from
+The store is the ingest surface, not just a backup. Per source, `acquire:` in the registry
+(default `archive.mode` in config):
+
+| mode | behaviour |
+|---|---|
+| `web-first` (default) | download from the public site → **store it in Blob** → parse the copy just stored. The raw file is archived *before* parsing, so a layout change leaves the file that broke the parser in the store instead of losing it with the exception. If the site or the parser fails and the store holds an earlier copy, that copy is parsed and the run record says so. |
+| `blob-only` | never touch the site: parse the newest copy in the store. This is how a source that publishes no downloadable list, or blocks automation, enters the pipeline. |
+
+So a blocked or manual source is ingested by putting the file in the store by hand:
+
+```
+ic-sources/<source_id>/<YYYY-MM-DD>/<file>
+```
+
+then re-running. `mi_lara`, `ma_bbrs`, `ny_dos`, `or_bcd` and `fl_bcis` are already set to
+`blob-only` for exactly this reason. With nothing uploaded they fail with the path to use:
+
+    ma_bbrs: this source is not fetched automatically, and the archive holds no copy under
+    ic-sources/ma_bbrs/<date>/ — upload the file there, then re-run
+
+**Verified live 2026-09-15** against the store `store_g2MeXjLrepizhumm`: a probe round trip
+(put → read back by size → delete); four sources archived (14 files, ~1.3 MB); a stored PDF
+fetched back byte-identical by sha256; `blob-only` parsing 334 Texas rows with the local cache
+deleted first; and a simulated site outage falling back to the stored copy.
+
 ### What the live run changed in the code
 - PDF lists are whitespace-aligned tables, not line blocks. `_common.pdf_lines`, `detect_columns`
   and `slice_columns` calibrate the columns per file: headers are centred over left-aligned data,

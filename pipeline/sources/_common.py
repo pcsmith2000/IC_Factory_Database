@@ -15,7 +15,7 @@ what the parser expects raises LayoutChanged pointing at the archived file — i
 a plausible-looking partial result.
 """
 from __future__ import annotations
-import csv, hashlib, io, json, re, urllib.request
+import csv, hashlib, io, json, re, time, urllib.error, urllib.request
 from datetime import date
 from pathlib import Path
 from ..contract import COLUMNS
@@ -39,7 +39,7 @@ class NeedsBrowser(Exception):
 
 # ---------------------------------------------------------------- fetching
 def http_get(url: str, archive_dir: Path, filename: str | None = None, *, data: bytes | None = None,
-             headers: dict | None = None, timeout: int = 120) -> Path:
+             headers: dict | None = None, timeout: int = 120, retries: int = 3) -> Path:
     """GET (or POST when data is given), archive the response body, return the archived path.
     Writes <archive_dir>/<filename> and a sidecar .meta.json with url, status, sha256, size."""
     archive_dir.mkdir(parents=True, exist_ok=True)
@@ -48,8 +48,20 @@ def http_get(url: str, archive_dir: Path, filename: str | None = None, *, data: 
         "User-Agent": USER_AGENT, "X-Contact": CONTACT,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9", **(headers or {})})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        body = resp.read(); status = resp.status; ctype = resp.headers.get("Content-Type", "")
+    # Retry 5xx and transport errors: several of these sites answer an intermittent 500 under
+    # repeated requests (IIBC does). A 4xx is not retried — it means the request itself is wrong.
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                body = resp.read(); status = resp.status; ctype = resp.headers.get("Content-Type", "")
+            break
+        except urllib.error.HTTPError as e:
+            if e.code < 500 or attempt == retries:
+                raise
+        except urllib.error.URLError:
+            if attempt == retries:
+                raise
+        time.sleep(2 ** attempt)
     out = archive_dir / name
     out.write_bytes(body)
     (archive_dir / f"{name}.meta.json").write_text(json.dumps({

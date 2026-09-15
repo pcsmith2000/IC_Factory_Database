@@ -80,6 +80,52 @@ class VercelBlobArchive:
         self._call(f"{BLOB_API}/delete", method="POST", data=json.dumps({"urls": urls}).encode(),
                    what=f"delete {len(urls)} object(s)", headers={"content-type": "application/json"}, timeout=120)
 
+    # ---- reads: the store as an input, not just a sink
+    def list_prefix(self, prefix: str) -> list[dict]:
+        """Every blob under a prefix, following the cursor. [{pathname, url, size}, ...]"""
+        out, cursor = [], None
+        while True:
+            q = {"prefix": prefix, "limit": "1000", **({"cursor": cursor} if cursor else {})}
+            r = self._call(f"{BLOB_API}/?{urllib.parse.urlencode(q)}", method="GET", what=f"list {prefix}", timeout=120)
+            out += r.get("blobs", [])
+            cursor = r.get("cursor")
+            if not (r.get("hasMore") and cursor):
+                return out
+
+    def download(self, url: str, dest: Path) -> Path:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        req = urllib.request.Request(url, headers={"authorization": f"Bearer {self.token}"})
+        try:
+            with urllib.request.urlopen(req, timeout=600) as resp:
+                dest.write_bytes(resp.read())
+        except urllib.error.HTTPError as e:
+            raise ArchiveError(f"blob download {url}: HTTP {e.code}") from e
+        return dest
+
+    def dates_for(self, source_id: str) -> list[str]:
+        """Dated folders held for a source, newest first."""
+        pre = f"{self.prefix}/{source_id}/"
+        dates = {b["pathname"][len(pre):].split("/")[0] for b in self.list_prefix(pre) if "/" in b["pathname"][len(pre):]}
+        return sorted((d for d in dates if d), reverse=True)
+
+    def fetch_folder(self, source_id: str, date_str: str, dest_dir: Path) -> list[Path]:
+        """Download one dated folder into dest_dir and return the SOURCE files.
+
+        The archive's own bookkeeping is downloaded too but not returned: manifest.json and the
+        per-file .meta.json sidecars describe the pull, and handing them to a parser expecting a
+        PDF is how "No /Root object" happens.
+        """
+        pre = f"{self.prefix}/{source_id}/{date_str}/"
+        paths = []
+        for b in self.list_prefix(pre):
+            rel = b["pathname"][len(pre):]
+            if not rel:
+                continue
+            got = self.download(b["url"], dest_dir / rel)
+            if rel != "manifest.json" and not rel.endswith(".meta.json"):
+                paths.append(got)
+        return sorted(paths)
+
     def archive_dir(self, source_id: str, day_dir: Path) -> dict:
         """Upload every file under <day_dir> (one source, one date); write and upload manifest.json."""
         files = []
