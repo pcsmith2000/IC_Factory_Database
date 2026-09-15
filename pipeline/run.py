@@ -83,6 +83,14 @@ def main(argv=None) -> int:
         rows += list(csv.DictReader(open(p, newline="", encoding="utf-8")))
     for r in rows:
         r["no_fixed_plant"] = r.get("no_fixed_plant") == "True"
+    if not rows:
+        # No source rows at all is an input failure, not an empty dataset. Without this the run
+        # goes green on nothing: every gate passes vacuously, Layer 8 tags a release with
+        # published_count 0, and the workflow opens a release PR for it. That is exactly what
+        # `--layers 2-8` does in CI, where ic-csv/*.csv is gitignored and so never checked out.
+        return halt("layer 2", f"no rows from any source — {csv_dir.name}/ held no contract CSV to "
+                               f"normalise. With --layers 2-8 the run reads ic-csv/, which is "
+                               f"gitignored and absent on a fresh checkout: run layers 1-8 instead.")
 
     # ---- Layer 3 (class B only)
     needs = {s["id"] for s in sources if s.get("needs_classify")}

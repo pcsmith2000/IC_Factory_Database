@@ -8,7 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       layers:
-        description: "layer range, e.g. 2-8 to skip acquisition"
+        # 2-8 reads ic-csv/, which is gitignored — on a CI checkout it is empty, so the run has no
+        # input and halts at Layer 2. 2-8 is a local-only convenience; in CI use 1-8.
+        description: "layer range. Use 1-8 in CI: 2-8 reads gitignored ic-csv/ and has no input here"
         default: "1-8"
       rerun:
         description: "identical inputs — G3 must issue zero ids"
