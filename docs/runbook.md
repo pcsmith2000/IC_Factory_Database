@@ -21,9 +21,17 @@
   `control/seeds.csv` with a note (the resort and marina).
 
 ## Adding a source
-Add an entry to `registry/sources.yaml` with class, method, `needs_classify`, traps and
-`status: queued`. Write `pipeline/sources/<id>.py` from `_template.py`. Flip to `active`.
-It is pulled next run. Nothing else changes.
+Add an entry to `registry/sources.yaml` with class, method, `url`, `needs_classify`, traps and
+`status: queued`. Write `pipeline/sources/<id>.py` from `_template.py` (fetch / parse / pull).
+Check it alone: `python -m pipeline.sources.check <id>`. Flip to `active`. It is pulled next
+run. Nothing else changes. Status of every fetcher: `docs/sources.md`.
+
+## A source fails at Layer 1
+The run record lists it under `layers.1_acquire.failed` with the exception. `LayoutChanged`
+names the archived file under `.cache/ic-sources/<id>/<date>/` — open it, fix the parser, re-check
+with `--file`. `NeedsBrowser` means the deterministic route is gone (or_bcd) or the source is
+not public (ny_dos, FOIL) — the source stays active and the run stays red until it is resolved;
+do not flip it to `queued` to get green.
 
 ## Changing the prompt
 Edit `prompts/CLASSIFIER-PROMPT.md`. Run `python -m pipeline.run --layers 2-8` with class-B

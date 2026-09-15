@@ -62,11 +62,11 @@ def main(argv=None) -> int:
         for s in sources:
             try:
                 pulled.append(str(acquire.pull_source(s, cfg, csv_dir, ROOT / cfg["storage"]["local_cache"])))
-            except acquire.SourceNotImplemented as e:
+            except (acquire.SourceNotImplemented, acquire.SourceFailed) as e:
                 failed[s["id"]] = str(e)
         record["layers"]["1_acquire"] = {"pulled": pulled, "failed": failed}
         if failed:
-            return halt("layer 1", f"{len(failed)} active sources have no fetcher: {sorted(failed)}")
+            return halt("layer 1", f"{len(failed)} active sources did not pull: " + "; ".join(f"{k} — {v}" for k, v in sorted(failed.items())))
 
     # ---- Layer 2
     last_run = _last_run_dir(ROOT / "run_records")

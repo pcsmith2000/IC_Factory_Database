@@ -58,6 +58,8 @@ registry/known-gaps.yaml       out-of-band states with the cause on record
 prompts/CLASSIFIER-PROMPT.md   frozen; changing it is a versioned change that G5 must re-pass
 control/                       triaged control list + checksum · seeds for G5 · crosswalk · operator assertions
 pipeline/                      one module per layer, plus gates.py, warehouse.py and run.py
+pipeline/sources/              one fetcher per source id (fetch → archive → parse); _common.py toolkit; check.py harness
+prompts/EXTRACTION-PROMPT.md   frozen; AI transcription of prose location pages (corporate_locations)
 ic-csv/                        contract CSVs, one per source per run (generated)
 run_records/                   one JSON per run: inputs, versions, gate results, metrics
 build/ic_factory.sqlite        the warehouse (generated): assertions, golden table, provenance views
@@ -83,6 +85,7 @@ in `registry/config.yaml`, keyed `ic-sources/<source>/<date>_raw.*`.
 pip install -e ".[dev]"
 python -m pipeline.run --registry registry/sources.yaml --dry-run      # plan only
 python -m pipeline.run --registry registry/sources.yaml --layers 2-8   # from existing ic-csv/
+python -m pipeline.sources.check tx_tdlr                              # one source: fetch, parse, validate
 python -m pipeline.warehouse provenance IC-00001                       # golden fields → source → document row
 pytest
 ```
@@ -92,5 +95,7 @@ pytest
 Scaffold of the v4 process. Layers 2, 5, 5b, 6 (all five gates), 7 and 8 run end to end
 against the contract, and Layer 8 loads the SQLite warehouse (`docs/warehouse.md`); Layer 3 carries the regimented classifier call; Layer 4 (entity
 resolution) passes rows through flagged NOT-ATTEMPTED and reports resolution_rate = 0 so the
-gap is visible; no source fetchers are written yet (Layer 1 halts loudly, by design). The measured figures in the
+gap is visible; Layer 1 has a fetcher for every active source (`docs/sources.md`), written against
+endpoints found by search and not yet run live — the first `python -m pipeline.sources.check <id>`
+on a networked machine is the check. The measured figures in the
 docs are from the 2026-09-09 build (5,026 facilities after dedupe, 96% in-scope recall).

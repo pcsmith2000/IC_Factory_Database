@@ -16,8 +16,9 @@ sources:
     name: Pennsylvania DCED industrialized housing — plant list
     class: A
     method: download
+    url: https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/   # XLSX link discovered on this page each run
     needs_classify: false
-    url: https://dced.pa.gov/  # landing page is the durable bookmark; CSV endpoint sits under a theme path
+    url: https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/   # XLSX link discovered on this page each run
     carries: [plant_address, evaluation_agency, inspection_agency]
     status_basis: on_current_list
     traps:
@@ -30,6 +31,7 @@ sources:
     name: Texas TDLR industrialized housing — certified and registered manufacturers
     class: A
     method: download
+    url: https://www.tdlr.texas.gov/ihb/ihblists.htm   # three PDFs under /ihb/pdf/, all pulled
     needs_classify: false
     carries: [plant_address, expiry_date]
     status_basis: dated_expiry
@@ -42,6 +44,7 @@ sources:
     name: Michigan — premanufactured units (list is under Plan Review)
     class: A
     method: download
+    url: https://www.michigan.gov/lara/bureau-list/bcc/sections/plan-review/premanufactured-units/premanufactured-units-program
     needs_classify: false
     carries: [plant_address]
     status_basis: on_current_list
@@ -54,6 +57,7 @@ sources:
     name: Massachusetts BBRS manufactured buildings
     class: A
     method: download
+    url: https://www.mass.gov/info-details/manufactured-building-program   # certified-manufacturers document discovered on this page
     needs_classify: false
     carries: [plant_address]
     status_basis: on_current_list
@@ -65,6 +69,7 @@ sources:
     name: Oregon BCD prefabricated structures — by manufacturing location
     class: A
     method: browser
+    url: https://www.oregon.gov/bcd/permit-services/prefab/Documents/prefab-registered-manufacturers.pdf   # fallback; licence data file tried first
     needs_classify: false
     carries: [plant_address]
     status_basis: on_current_list
@@ -77,6 +82,7 @@ sources:
     name: Florida BCIS manufactured buildings
     class: A
     method: browser
+    url: https://floridabuilding.org/mb/mb_default.aspx   # organisation search reached from this menu (WebForms POST)
     needs_classify: false
     carries: [plant_name, material_system_in_plan_docs_only]
     status_basis: on_current_list
@@ -90,6 +96,7 @@ sources:
     name: New York DOS factory manufactured buildings
     class: A
     method: download
+    url: https://dos.ny.gov/code/factory-manufactured-buildings-modular   # no list published; the FOIL response is the source
     needs_classify: false
     carries: [approval_records]
     status_basis: on_current_list
@@ -136,6 +143,7 @@ sources:
     name: EPA Facility Registry Service — national file
     class: B
     method: bulk
+    url: https://ofmext.epa.gov/FLA/www3/state_files/national_combined.zip   # ~730 MB
     needs_classify: true
     carries: [lat_long, naics, program_ids]
     status_basis: none
@@ -163,8 +171,9 @@ sources:
     name: IIBC registered manufacturers
     class: C
     method: fetch
+    url: https://interstateibc.org/manufacturers/
     needs_classify: false
-    url: https://interstateibc.org/manufacturers
+    url: https://interstateibc.org/manufacturers/
     carries: [plant_address]
     status_basis: on_current_list
     traps:
@@ -175,6 +184,7 @@ sources:
     name: MHI HUD-code plant list
     class: C
     method: fetch
+    url: https://www.manufacturedhousing.org/wp-content/uploads/2024/10/Plant-List-10_3_24.pdf   # dated file name: update when MHI posts a new list
     needs_classify: false
     carries: [plant_code, plant_address]
     status_basis: on_current_list
@@ -190,7 +200,23 @@ sources:
     ai_extraction: true
     carries: [plant_address]
     status_basis: on_current_list
-    companies: [Builders FirstSource, UFP, 84 Lumber, Stark Truss, Truss Co, Parr, ABS]
+    pages:                                   # one per company; a missing url is reported, never guessed
+    - company: Builders FirstSource
+      url: https://www.bldr.com/location/all-locations
+      follow: {href: "/location/", text: "truss|manufactur|component"}   # ~570 locations; only plant pages are followed
+    - company: UFP Site Built
+      url: https://ufpsitebuilt.com/our-locations
+      follow: {href: "/our-locations/"}
+    - company: 84 Lumber
+      url: https://www.84lumber.com/manufacturing/
+    - company: Stark Truss
+      url: https://www.starktruss.com/locations/
+    - company: The Truss Company
+      url: https://www.thetrussco.com/locations/
+    - company: Parr Truss
+      url: https://parr.com/locations/
+    - company: ABS
+      url:                                   # not identified; "Automated Building Components" (abctruss.com) is the nearest match — confirm before use
     traps:
       - Prose pages; extraction only — verbatim check against the archived page.
       - Targets the biased sample; it is a roster, not a regulator.

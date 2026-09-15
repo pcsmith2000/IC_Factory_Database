@@ -5,9 +5,10 @@ Deterministic for classes A and B (download / bulk / scripted browser). For sour
 call transcribes the page into the contract schema; the page hash and raw model response are
 archived beside the CSV so the extraction can be audited.
 
-v1.0 ships the harness and the per-source dispatch; individual fetchers are added one file at
-a time under pipeline/sources/<source_id>.py, each exposing `pull(source, cfg) -> list[dict]`.
-A source with no fetcher fails loudly — it is never skipped silently.
+Each fetcher lives at pipeline/sources/<source_id>.py and exposes fetch() / parse() / pull()
+(see pipeline/sources/_common.py). A source with no fetcher, or whose fetcher cannot produce
+rows, fails loudly and is listed in the run record — it is never skipped silently. Check one
+source on its own with `python -m pipeline.sources.check <source_id> [--file <downloaded file>]`.
 """
 from __future__ import annotations
 import importlib, json
@@ -20,13 +21,22 @@ class SourceNotImplemented(Exception):
     pass
 
 
+class SourceFailed(Exception):
+    """A fetcher exists but could not produce rows: layout changed, needs a browser, network error."""
+
+
 def pull_source(source: dict, cfg: dict, out_dir: Path, archive_dir: Path) -> Path:
     sid = source["id"]
     try:
         mod = importlib.import_module(f"pipeline.sources.{sid}")
     except ModuleNotFoundError as e:
         raise SourceNotImplemented(f"{sid}: no fetcher at pipeline/sources/{sid}.py") from e
-    rows = mod.pull(source, cfg, archive_dir / sid / date.today().isoformat())
+    try:
+        rows = mod.pull(source, cfg, archive_dir / sid / date.today().isoformat())
+    except SourceNotImplemented:
+        raise
+    except Exception as e:  # LayoutChanged, NeedsBrowser, HTTP/URL errors — recorded per source, halts Layer 1 loudly
+        raise SourceFailed(f"{sid}: {type(e).__name__}: {e}") from e
     for r in rows:
         r.setdefault("source_id", sid)
         r.setdefault("retrieved_date", date.today().isoformat())
