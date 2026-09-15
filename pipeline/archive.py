@@ -5,7 +5,7 @@ names the store explicitly; otherwise it is read out of the token). Objects are 
 <prefix>/<source_id>/<date>/<file> (the layout registry/config.yaml has always described), access
 private, overwrite allowed (a re-run on the same day replaces the same keys). A manifest.json per
 source/date lists every file with size and sha256, including files too large to upload — the
-EPA national_combined.zip (~730 MB) is recorded by hash and skipped; the fetcher archives the
+EPA national_combined.zip (1.27 GB) is recorded by hash and skipped; the fetcher archives the
 filtered slice it actually used instead (pipeline/sources/epa_frs.py).
 
 The request contract is the one @vercel/blob 2.x `put()` sends (read from the SDK source):

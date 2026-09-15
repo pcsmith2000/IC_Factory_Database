@@ -38,7 +38,7 @@ def _reduce_oversize(mod, files: list[Path], source: dict, cfg: dict, arch) -> s
 
     archive_dir records an oversize file by hash and does NOT upload it, so archiving the raw
     download would leave the store holding a manifest and nothing the run could read back
-    ("archive folder is empty"). EPA's national_combined.zip (~730 MB) is the case this exists
+    ("archive folder is empty"). EPA's national_combined.zip (1.27 GB) is the case this exists
     for: parse() writes national_combined.filtered.zip beside it — the rows actually used plus
     SOURCE.json carrying the original url, size and sha256 — and that slice parses identically.
     """
