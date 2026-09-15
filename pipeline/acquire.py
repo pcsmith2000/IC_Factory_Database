@@ -15,6 +15,7 @@ import importlib, json
 from datetime import date
 from pathlib import Path
 from .contract import COLUMNS, write_rows
+from . import archive as _archive
 
 
 class SourceNotImplemented(Exception):
@@ -46,8 +47,16 @@ def pull_source(source: dict, cfg: dict, out_dir: Path, archive_dir: Path) -> Pa
             r.setdefault(c, "")
     out = out_dir / f"{sid}.csv"
     write_rows(out, rows, COLUMNS)
-    (out_dir / f"{sid}.pull.json").write_text(json.dumps({
-        "source_id": sid, "rows": len(rows), "retrieved": date.today().isoformat(),
-        "method": source.get("method"), "ai_extraction": bool(source.get("ai_extraction")),
-    }, indent=2))
+    pull = {"source_id": sid, "rows": len(rows), "retrieved": date.today().isoformat(),
+            "method": source.get("method"), "ai_extraction": bool(source.get("ai_extraction"))}
+    arch = _archive.open_archive(cfg)
+    day_dir = archive_dir / sid / date.today().isoformat()
+    if arch is not None and day_dir.exists():
+        try:
+            pull["archive"] = arch.archive_dir(sid, day_dir)
+        except _archive.ArchiveError as e:
+            raise SourceFailed(f"{sid}: raw archive upload failed — {e}") from e
+    else:
+        pull["archive"] = {"engine": "none", "note": "BLOB_READ_WRITE_TOKEN not set — raw files stay on this machine only"}
+    (out_dir / f"{sid}.pull.json").write_text(json.dumps(pull, indent=2))
     return out

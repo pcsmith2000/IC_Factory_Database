@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # One-time GCP setup for the IC Factory Database pipeline. Run as a project owner/editor.
+# NOTE (2026-09): the warehouse is Neon Postgres and raw archives are Vercel Blob; this script is kept
+# for the later Cloud Run Jobs / Cloud SQL move. The bucket and BigQuery steps are no longer on the path.
 # Usage: PROJECT=my-gcp-project REPO=pcsmith2000/IC_Factory_Database bash docs/gcp-setup.sh
 set -euo pipefail
 : "${PROJECT:?set PROJECT}"; : "${REPO:?set REPO owner/name}"

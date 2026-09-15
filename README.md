@@ -67,8 +67,9 @@ docs/                          pipeline design, assumptions register, contract, 
 .github/workflows/             ci.yml (tests on every push) · run.yml (quarterly pipeline run)
 ```
 
-Raw source archives and bulk downloads are **not** in git — they go to the GCS bucket named
-in `registry/config.yaml`, keyed `ic-sources/<source>/<date>_raw.*`.
+Raw source archives and bulk downloads are **not** in git — they go to a private Vercel Blob
+store (`archive:` in `registry/config.yaml`), keyed `ic-sources/<source>/<date>/<file>` with a
+per-pull manifest. The warehouse is Neon Postgres via `DATABASE_URL`, SQLite locally.
 
 ## Standing rules
 

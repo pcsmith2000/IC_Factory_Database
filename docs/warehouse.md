@@ -95,8 +95,14 @@ a wrong golden value is an assertion not yet recorded in `control/operator_asser
 5. Optional: a Neon branch per experiment (`neon checkout dev-survivorship-v2`) to try a
    survivorship or normalisation change against a copy of the release without touching it.
 
-## GCP resources to create once (raw archives; later)
-1. GCS bucket `ic-factory-database` (raw archives, bulk downloads, classifier response archives)
+## Raw archives — Vercel Blob
+Not in the warehouse: the files Layer 1 fetched go to a private Vercel Blob store
+(`pipeline/archive.py`, `archive:` in config) keyed `ic-sources/<source>/<date>/<file>`, with a
+`manifest.json` (size, sha256, blob URL) per source and date. `ref_source_row.source_document`
+plus the run date is the key into it. Secret: `BLOB_READ_WRITE_TOKEN`.
+
+## GCP resources to create once (later, for Cloud Run Jobs)
+1. ~~GCS bucket~~ — raw archives live in Vercel Blob; a GCS uploader is a drop-in if that changes
 2. ~~BigQuery dataset `ic_factory`~~ — superseded by Neon / Cloud SQL for PostgreSQL
 3. Service account `ic-pipeline@<project>.iam.gserviceaccount.com`
 4. Workload Identity Federation pool + provider trusting repo `pcsmith2000/IC_Factory_Database`

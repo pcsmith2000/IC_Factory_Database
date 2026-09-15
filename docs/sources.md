@@ -11,6 +11,8 @@ python -m pipeline.sources.check tx_tdlr             # fetch + parse + validate 
 python -m pipeline.sources.check tx_tdlr --file ~/Downloads/2-Certified_Manufacturers_List.pdf   # parse only
 ```
 
+After each pull the raw files are uploaded to Vercel Blob when `BLOB_READ_WRITE_TOKEN` is set
+(`pipeline/archive.py`); the EPA zip is recorded by hash and its filtered slice archived instead.
 A fetcher that meets a layout it was not written for raises `LayoutChanged` naming the
 archived file; one that needs a scripted browser raises `NeedsBrowser`. Both are recorded per
 source in the run record and halt Layer 1. Nothing is skipped silently and nothing is guessed.
@@ -43,5 +45,6 @@ counted. Needs `ANTHROPIC_API_KEY`.
 | WebForms POST (no login) | fl_bcis |
 | `ANTHROPIC_API_KEY` | corporate_locations (extraction), Layer 3 classification |
 | `CENSUS_API_KEY` | Layer 7 frame refresh only (not a Layer 1 source) |
+| `BLOB_READ_WRITE_TOKEN` | raw-file archive to Vercel Blob after every pull (optional locally; the run record says when it is off) |
 | Playwright (`pip install -e ".[acquire]"` + `playwright install chromium`) | or_bcd if the data file route fails |
 | FOIL response file | ny_dos |

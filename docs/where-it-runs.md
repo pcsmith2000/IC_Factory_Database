@@ -1,7 +1,8 @@
 # Where it runs
 
-GitHub is the system of record and the orchestrator. Google Cloud is compute and storage.
-They connect through Workload Identity Federation — no long-lived key is stored anywhere.
+GitHub is the system of record and the orchestrator. Neon holds the warehouse, Vercel Blob
+the raw archives; Google Cloud (Cloud Run Jobs, later Cloud SQL) is the eventual compute home.
+GitHub ↔ GCP connects through Workload Identity Federation — no long-lived key is stored anywhere.
 
 ## GitHub
 
@@ -17,9 +18,12 @@ They connect through Workload Identity Federation — no long-lived key is store
 
 ## Google Cloud
 
-- **GCS bucket** (`registry/config.yaml → storage.gcs_bucket`): raw archives at
-  `ic-sources/<source>/<date>_raw.*`, bulk files fetched at run time, classifier response
-  archives. Never in git.
+- **Raw archives: Vercel Blob** (`registry/config.yaml → archive`), when `BLOB_READ_WRITE_TOKEN`
+  is set: every file Layer 1 fetched at `ic-sources/<source>/<date>/<file>`, private, plus a
+  `manifest.json` per source and date with size and sha256 of every file. Files over
+  `archive.max_file_mb` (the EPA zip) are recorded by hash only; the EPA fetcher archives the
+  filtered slice it used instead. Never in git. Moving this to a GCS bucket later is one
+  uploader class (`pipeline/archive.py`) — the key layout stays.
 - **Cloud Run Jobs** for the heavy steps when the Actions runner is not enough (6-hour cap,
   7 GB): the EPA FRS bulk parse, Playwright sweeps of the certification directories,
   classifier batches. The workflow launches the job and waits; the container is built once
@@ -32,10 +36,11 @@ They connect through Workload Identity Federation — no long-lived key is store
 
 ## Setup once
 
-1. Create the bucket and a service account with `storage.objectAdmin` on it.
-2. Configure Workload Identity Federation for this repo; set repo variables
+1. Create a private Vercel Blob store; copy its read-write token.
+2. Add repo secrets `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`, `BLOB_READ_WRITE_TOKEN` (Vercel Blob),
+   and either `DATABASE_URL` + `DATABASE_URL_UNPOOLED` or the Neon GitHub integration (Neon).
+3. Later, for Cloud Run Jobs: Workload Identity Federation for this repo; repo variables
    `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT`.
-3. Add repo secrets `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`, `DATABASE_URL`, `DATABASE_URL_UNPOOLED` (Neon).
 4. Pick one scheduler. This repo keeps the cron in Actions so the run, its failure and its
    release PR are in one place; Cloud Scheduler is not used.
 

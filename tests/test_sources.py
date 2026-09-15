@@ -1,7 +1,7 @@
 """Parser tests on synthetic fixtures. The live endpoints are exercised by
 `python -m pipeline.sources.check <id>` on a machine with network access; these tests pin the
 parsing contract so a layout change shows up as a failing test, not a plausible partial pull."""
-import csv, io, zipfile
+import csv, io, json, zipfile
 from pathlib import Path
 import openpyxl
 from pipeline.contract import validate_rows
@@ -97,6 +97,14 @@ def test_epa_zip_is_filtered_by_naics_and_flags_osha(tmp_path: Path):
     assert rows[1]["notes"] == "OSHA-OIS" and rows[0]["notes"] == ""
     assert rows[0]["row_position"] == "1" and rows[1]["row_position"] == "3"
     assert validate_rows("epa_frs", rows) == []
+    # the archivable slice: only the kept ids, plus the identity of the zip they came from
+    with zipfile.ZipFile(tmp_path / "national_combined.filtered.zip") as zs:
+        fac = list(csv.DictReader(io.TextIOWrapper(zs.open("NATIONAL_FACILITY_FILE.CSV"), encoding="utf-8")))
+        assert [r["REGISTRY_ID"] for r in fac] == ["1", "3", "4"]
+        prog = list(csv.DictReader(io.TextIOWrapper(zs.open("NATIONAL_PROGRAM_FILE.CSV"), encoding="utf-8")))
+        assert [r["REGISTRY_ID"] for r in prog] == ["3", "1"]
+        src = json.loads(zs.read("SOURCE.json"))
+        assert src["file"] == "national_combined.zip" and len(src["sha256"]) == 64 and src["rows_kept"] == 3
 
 
 def test_extraction_verbatim_check_drops_values_not_on_page():

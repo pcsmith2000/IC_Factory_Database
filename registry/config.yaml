@@ -2,8 +2,13 @@
 # (GitHub Actions secrets locally exported, or GCP Secret Manager in Cloud Run).
 
 storage:
-  gcs_bucket: ic-factory-database          # raw archives: gs://<bucket>/ic-sources/<source>/<date>_raw.*
-  local_cache: .cache/ic-sources           # where a local run stages downloads
+  local_cache: .cache/ic-sources           # where a run stages downloads: <source>/<date>/<file>
+
+archive:                                   # raw files, off the runner. Vercel Blob when BLOB_READ_WRITE_TOKEN is set
+  engine: vercel_blob                      # (IC_ARCHIVE=off disables). Keys: <prefix>/<source>/<date>/<file> + manifest.json
+  prefix: ic-sources
+  access: private
+  max_file_mb: 100                         # larger files are recorded by sha256 only (EPA zip: its filtered slice is archived instead)
 
 warehouse:
   engine: sqlite                           # local default. DATABASE_URL in the env selects postgres (Neon now,
