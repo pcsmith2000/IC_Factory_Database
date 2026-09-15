@@ -1,5 +1,30 @@
 # Runbook
 
+## Before the first run — the hand-placed inputs
+Everything else is generated. These five are placed by a person, in one "data commit":
+
+| file | what | where it comes from |
+|---|---|---|
+| `control/control-triaged.csv` | 241-row held-out control list with `triage` | the 2026-09-09 build |
+| `control/seeds.csv` | ~30 IC + ~30 NOT-IC contract rows with `seed_label` | the 2026-09-09 build (`row_hash` may be blank; `--fix` derives it) |
+| `control/frame_state_totals.csv` | `state,establishments` for the four core NAICS codes | Census CBP, vintage in `registry/config.yaml` |
+| `prompts/CLASSIFIER-PROMPT.md` | the frozen prompt | `process/CLASSIFIER-PROMPT.md`, 2026-09-09 version |
+| `control/crosswalk.csv`, `control/operator_assertions.csv` | optional; explicit links and human corrections | grow over time |
+
+Then, in the same commit:
+```
+python -m pipeline.control check --fix     # validates columns, triage values, counts vs config; derives seed row_hash; rewrites control.sha256
+pytest -q
+```
+`check` fails on any drift between the files and `registry/config.yaml` (`control.total_rows`,
+`control.in_scope_rows`, `classifier.seeded_*`, `frame.establishments_total`) so the numbers in
+config and the files can never disagree silently. G4 verifies the checksum on every run.
+
+`id_registry.json` starts empty: the first run issues IC-numbers from IC-00001. Numbers from the
+2026-09-09 build are not imported (its signatures were computed by different normalisation);
+that build is compared to the first release with `pipeline/compare.py`, not merged into it.
+
+
 ## A normal quarter
 1. `run.yml` fires. Watch it. Green → a release PR appears.
 2. Download the workflow artifact. Review `dedupe_audit_<date>.csv`: fill the `decision`

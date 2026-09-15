@@ -85,6 +85,7 @@ in `registry/config.yaml`, keyed `ic-sources/<source>/<date>_raw.*`.
 pip install -e ".[dev]"
 python -m pipeline.run --registry registry/sources.yaml --dry-run      # plan only
 python -m pipeline.run --registry registry/sources.yaml --layers 2-8   # from existing ic-csv/
+python -m pipeline.control check --fix                                # hand-placed inputs: validate + checksum
 python -m pipeline.sources.check tx_tdlr                              # one source: fetch, parse, validate
 python -m pipeline.warehouse provenance IC-00001                       # golden fields → source → document row
 pytest

@@ -24,3 +24,5 @@ jobs:
         run: python -m pipeline.run --dry-run
       - name: control checksum matches
         run: cd control && sha256sum -c control.sha256
+      - name: hand-placed inputs are consistent with config (informational until the data commit)
+        run: python -m pipeline.control check || true
