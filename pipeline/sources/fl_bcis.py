@@ -39,22 +39,42 @@ def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
     menu = http_get(source.get("url") or MENU, archive_dir, "menu.html")
     html = menu.read_text(encoding="utf-8", errors="replace")
     links = [h for h, t in re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', html, re.I | re.S)
-             if re.search(r"organi[sz]ation|manufacturer", re.sub("<[^>]+>", " ", t), re.I) and re.search(r"search", h + t, re.I)]
+             if re.search(r"organi[sz]ation|manufacturer", re.sub("<[^>]+>", " ", t), re.I)
+             and re.search(r"se?a?rch", h + t, re.I)]   # the menu link is mb_org_srch.aspx — "srch", not "search"
     require(bool(links), menu, "no organisation/manufacturer search link on the MB menu")
     search_url = urllib.parse.urljoin(MENU, links[0])
     page = http_get(search_url, archive_dir, "search_form.html")
-    action, fields = _form(page.read_text(encoding="utf-8", errors="replace"))
+    form_html = page.read_text(encoding="utf-8", errors="replace")
+    action, fields = _form(form_html)
     require("__VIEWSTATE" in fields, page, "search page is not the WebForms form expected (no __VIEWSTATE)")
     btn = next((k for k in fields if re.search(r"search|find|submit", k, re.I) and not k.startswith("__")), None)
-    require(btn is not None, page, "no search button input found in the form")
+    if btn is None:
+        # No submit input on this page: the search button is an anchor that posts back through
+        # __doPostBack('btnSearch$lnkBtnLingual', ''). Driving the postback IS the submit — the
+        # target is read off the page, not assumed, so a renamed control still fails loudly.
+        m = re.search(r"__doPostBack\('([^']*(?:search|find|submit)[^']*)'", form_html, re.I)
+        require(m is not None, page, "no search button input and no __doPostBack search target in the form")
+        fields["__EVENTTARGET"], fields["__EVENTARGUMENT"] = m.group(1), ""
     body = urllib.parse.urlencode(fields).encode()
     results = http_get(urllib.parse.urljoin(search_url, action or search_url), archive_dir, "results.html", data=body,
                        headers={"Content-Type": "application/x-www-form-urlencoded", "Referer": search_url})
+    _reject_error_page(results)
     return [results]
+
+
+def _reject_error_page(path: Path) -> None:
+    """BCIS answers a failed postback with HTTP 200 and a 'System Error' page that still contains
+    tables — so an unguarded parse turns the error text into rows. Refuse it here instead."""
+    body = path.read_text(encoding="utf-8", errors="replace")   # whole page: BCIS renders the error mid-document
+    require(not re.search(r"system error|unexpected system error", body, re.I), path,
+            "BCIS returned its System Error page, not results — the WebForms postback was rejected "
+            "(ASP.NET session state). Export the organisation search by hand and upload it to "
+            "ic-sources/fl_bcis/<date>/")
 
 
 def parse(paths: list[Path], source: dict) -> list[dict]:
     path = paths[-1]
+    _reject_error_page(path)
     html = path.read_text(encoding="utf-8", errors="replace")
     tables = [t for t in html_tables(html) if len(t) > 5]
     require(bool(tables), path, "no results table with more than 5 rows — the POST did not return the manufacturer list")

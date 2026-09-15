@@ -19,6 +19,7 @@ from datetime import date
 from pathlib import Path
 from .. import archive as _archive
 from ..registry import load_yaml, active_sources
+from ..acquire import _sig   # parse() takes (files, source) or (files, source, cfg)
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -28,7 +29,31 @@ def refresh_one(source: dict, cfg: dict, arch, cache: Path) -> dict:
     mod = importlib.import_module(f"pipeline.sources.{sid}")
     day_dir = cache / sid / date.today().isoformat()
     files = mod.fetch(source, cfg, day_dir)
-    return {"source_id": sid, "files": len(files), **arch.archive_dir(sid, day_dir)}
+    reduced = _reduce_oversize(mod, files, source, cfg, arch)
+    return {"source_id": sid, "files": len(files), "reduced": reduced, **arch.archive_dir(sid, day_dir)}
+
+
+def _reduce_oversize(mod, files: list[Path], source: dict, cfg: dict, arch) -> str:
+    """Replace a payload that is over archive.max_file_mb with the reduced artifact parse() writes.
+
+    archive_dir records an oversize file by hash and does NOT upload it, so archiving the raw
+    download would leave the store holding a manifest and nothing the run could read back
+    ("archive folder is empty"). EPA's national_combined.zip (~730 MB) is the case this exists
+    for: parse() writes national_combined.filtered.zip beside it — the rows actually used plus
+    SOURCE.json carrying the original url, size and sha256 — and that slice parses identically.
+    """
+    over = [p for p in files if p.exists() and p.stat().st_size > arch.max_bytes]
+    if not over:
+        return ""
+    before = {p.resolve() for p in over[0].parent.rglob("*") if p.is_file()}
+    mod.parse(files, source, cfg) if len(_sig(mod.parse)) == 3 else mod.parse(files, source)
+    made = sorted(p for p in over[0].parent.rglob("*") if p.is_file() and p.resolve() not in before)
+    if not made:
+        raise RuntimeError(f"{source['id']}: {over[0].name} is over the {arch.max_bytes >> 20} MB archive cap "
+                           f"and parse() wrote no reduced artifact to archive in its place")
+    for p in over:
+        p.unlink()   # its identity survives in the slice's SOURCE.json and the .meta.json sidecar
+    return f"{', '.join(p.name for p in over)} (over cap) -> {', '.join(p.name for p in made)}"
 
 
 def main(argv=None) -> int:

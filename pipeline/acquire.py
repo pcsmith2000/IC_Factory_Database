@@ -24,6 +24,7 @@ from pathlib import Path
 from .contract import COLUMNS, write_rows
 from inspect import signature as _sig_of
 from . import archive as _archive
+from . import ai_enabled
 
 
 def _sig(fn):
@@ -38,8 +39,14 @@ class SourceFailed(Exception):
     """A fetcher exists but could not produce rows: layout changed, needs a browser, network error."""
 
 
+class SourceSkipped(Exception):
+    """Deliberately not pulled this run (IC_AI=off vs. an `ai_extraction` source). Not a failure."""
+
+
 def pull_source(source: dict, cfg: dict, out_dir: Path, archive_dir: Path) -> Path:
     sid = source["id"]
+    if source.get("ai_extraction") and not ai_enabled():
+        raise SourceSkipped(f"{sid}: ai_extraction source and IC_AI=off — no rows from this source this run")
     try:
         mod = importlib.import_module(f"pipeline.sources.{sid}")
     except ModuleNotFoundError as e:

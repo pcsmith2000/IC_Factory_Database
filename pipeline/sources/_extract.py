@@ -39,7 +39,7 @@ def extract_locations(page_text: str, *, company: str, page_url: str, cfg: dict,
     """Returns {"locations": [...kept...], "dropped": [...], "model": ..., "prompt_hash": ..., "cached": bool}."""
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
-        raise RuntimeError("extract_locations: no ANTHROPIC_API_KEY — set it, or pass --file with a pre-extracted JSON")
+        raise RuntimeError("extract_locations: no ANTHROPIC_API_KEY — set it, pass --file with a pre-extracted JSON, or set IC_AI=off to skip ai_extraction sources")
     import anthropic  # pinned in pyproject
     prompt = prompt_path.read_text()
     model, temperature = cfg["classifier"]["model"], cfg["classifier"]["temperature"]

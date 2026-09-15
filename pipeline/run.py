@@ -11,7 +11,7 @@ import argparse, csv, json, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, acquire, validate, classify, resolve, reconcile, golden, gates, measure, warehouse
+from . import __version__, ai_enabled, acquire, validate, classify, resolve, reconcile, golden, gates, measure, warehouse
 from .registry import load_yaml, active_sources, sha256_file, registry_version
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -58,13 +58,17 @@ def main(argv=None) -> int:
 
     # ---- Layer 1
     if 1 in layers:
-        pulled, failed = [], {}
+        pulled, failed, skipped = [], {}, {}
         for s in sources:
             try:
                 pulled.append(str(acquire.pull_source(s, cfg, csv_dir, ROOT / cfg["storage"]["local_cache"])))
+            except acquire.SourceSkipped as e:
+                skipped[s["id"]] = str(e)
             except (acquire.SourceNotImplemented, acquire.SourceFailed) as e:
                 failed[s["id"]] = str(e)
-        record["layers"]["1_acquire"] = {"pulled": pulled, "failed": failed}
+        record["layers"]["1_acquire"] = {"pulled": pulled, "failed": failed, "skipped": skipped}
+        for sid, why in sorted(skipped.items()):
+            print(f"  SKIP {sid}: {why}")
         if failed:
             return halt("layer 1", f"{len(failed)} active sources did not pull: " + "; ".join(f"{k} — {v}" for k, v in sorted(failed.items())))
 
@@ -86,21 +90,43 @@ def main(argv=None) -> int:
     labels, cls_meta = {}, None
     if 3 in layers and needs:
         core = set(cfg["frame"]["naics"])
+        # Candidate generation is deterministic (keyword x NAICS matrix) and runs either way — it is
+        # the measurable half of Layer 3, and with the classifier off it is what the review queue holds.
         cand = classify.candidates([r for r in rows if r["source_id"] in needs], core)
-        cls_meta = classify.run(cand, cfg["classifier"], seeds, out / "classify_cache", ROOT / cfg["classifier"]["prompt_path"])
-        labels = cls_meta["labels"]
-        record["layers"]["3_classify"] = {k: v for k, v in cls_meta.items() if k != "labels"}
-        keep, review, drop = [], [], 0
-        for r in rows:
-            if r["source_id"] not in needs:
-                keep.append(r); continue
-            lab = labels.get(r["row_hash"], {}).get("label")
-            if lab == "IC": keep.append(r)
-            elif lab == "UNCERTAIN": review.append(r)
-            else: drop += 1
-        _write_csv(out / "review_queue.csv", review)
-        record["layers"]["3_classify"].update({"ic": len(keep), "uncertain": len(review), "not_ic_or_uncandidated": drop})
-        rows = keep
+        if ai_enabled():
+            cls_meta = classify.run(cand, cfg["classifier"], seeds, out / "classify_cache", ROOT / cfg["classifier"]["prompt_path"])
+            labels = cls_meta["labels"]
+            record["layers"]["3_classify"] = {k: v for k, v in cls_meta.items() if k != "labels"}
+            keep, review, drop = [], [], 0
+            for r in rows:
+                if r["source_id"] not in needs:
+                    keep.append(r); continue
+                lab = labels.get(r["row_hash"], {}).get("label")
+                if lab == "IC": keep.append(r)
+                elif lab == "UNCERTAIN": review.append(r)
+                else: drop += 1
+            _write_csv(out / "review_queue.csv", review)
+            record["layers"]["3_classify"].update({"ic": len(keep), "uncertain": len(review), "not_ic_or_uncandidated": drop})
+            rows = keep
+        else:
+            # IC_AI=off. Nothing is labelled, so nothing may be admitted as IC and nothing may be
+            # dropped as NOT-IC: every candidate goes to the review queue and the rest of the run
+            # proceeds on the sources that need no classifier. Placeholder, and it says so.
+            cand_hashes = {r["row_hash"] for r in cand}
+            keep = [r for r in rows if r["source_id"] not in needs]
+            review = [r for r in rows if r["source_id"] in needs and r["row_hash"] in cand_hashes]
+            noncand = sum(1 for r in rows if r["source_id"] in needs and r["row_hash"] not in cand_hashes)
+            _write_csv(out / "review_queue.csv", review)
+            record["layers"]["3_classify"] = {
+                "skipped": "IC_AI=off — classifier not run", "sources": sorted(needs),
+                "rows_from_those_sources": sum(1 for r in rows if r["source_id"] in needs),
+                "n_candidates": len(cand), "uncertain": len(review), "not_candidated": noncand,
+                "ic": 0, "note": "candidate generation is deterministic and did run; every candidate "
+                                 "is parked in review_queue.csv awaiting a classified run",
+            }
+            print(f"  SKIP layer 3 classifier (IC_AI=off): {len(cand)} deterministic candidates "
+                  f"from {sorted(needs)} parked in review_queue.csv")
+            rows = keep
 
     # ---- Layer 4
     crosswalk = _load_crosswalk(ROOT / "control" / "crosswalk.csv")
@@ -158,6 +184,7 @@ def main(argv=None) -> int:
         "tag": f"v{__version__}+reg.{record['registry_version']}+ids.{sha256_file(ROOT / 'id_registry.json')[:8]}+ctl.{(record['control_sha'] or 'none')[:8]}+surv.{sha256_file(ROOT / 'registry' / 'survivorship.yaml')[:8]}"
                + (f"+prompt.{cls_meta['prompt_hash']}+model.{cls_meta['model']}" if cls_meta else ""),
         "finished": datetime.now(timezone.utc).isoformat(),
+        "ai": "on" if ai_enabled() else "off — deterministic sources only, classifier and ai_extraction skipped",
     }
     try:
         wh = warehouse.open_warehouse(cfg, ROOT)

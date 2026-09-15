@@ -1,0 +1,31 @@
+{
+ "pipeline_version": "1.0.0",
+ "started": "2026-09-15T19:44:21.789212+00:00",
+ "registry_version": "efcd7be",
+ "registry_file_sha": "fd2ff5c585115e0bfae8f293d731ea2ef275b57fad1d53fa7c246ee2f4fbe31b",
+ "control_sha": "02c9a3d7695ff3110d1eac891ed14165ee2cc0fca46732b04483b5bed524235e",
+ "layers": {
+  "1_acquire": {
+   "pulled": [
+    "/home/user/IC_Factory_Database/ic-csv/pa_dced.csv",
+    "/home/user/IC_Factory_Database/ic-csv/tx_tdlr.csv",
+    "/home/user/IC_Factory_Database/ic-csv/iibc.csv",
+    "/home/user/IC_Factory_Database/ic-csv/mhi_plants.csv"
+   ],
+   "failed": {
+    "mi_lara": "mi_lara: this source is not fetched automatically, and the archive holds no copy under ic-sources/mi_lara/<date>/ \u2014 upload the file there, then re-run",
+    "ma_bbrs": "ma_bbrs: this source is not fetched automatically, and the archive holds no copy under ic-sources/ma_bbrs/<date>/ \u2014 upload the file there, then re-run",
+    "or_bcd": "or_bcd: this source is not fetched automatically, and the archive holds no copy under ic-sources/or_bcd/<date>/ \u2014 upload the file there, then re-run",
+    "fl_bcis": "fl_bcis: this source is not fetched automatically, and the archive holds no copy under ic-sources/fl_bcis/<date>/ \u2014 upload the file there, then re-run",
+    "ny_dos": "ny_dos: this source is not fetched automatically, and the archive holds no copy under ic-sources/ny_dos/<date>/ \u2014 upload the file there, then re-run",
+    "epa_frs": "epa_frs: this source is not fetched automatically, and the archive holds no copy under ic-sources/epa_frs/<date>/ \u2014 upload the file there, then re-run"
+   },
+   "skipped": {
+    "corporate_locations": "corporate_locations: ai_extraction source and IC_AI=off \u2014 no rows from this source this run"
+   }
+  }
+ },
+ "gates": [],
+ "halted_at": "layer 1",
+ "halt_reason": "6 active sources did not pull: epa_frs \u2014 epa_frs: this source is not fetched automatically, and the archive holds no copy under ic-sources/epa_frs/<date>/ \u2014 upload the file there, then re-run; fl_bcis \u2014 fl_bcis: this source is not fetched automatically, and the archive holds no copy under ic-sources/fl_bcis/<date>/ \u2014 upload the file there, then re-run; ma_bbrs \u2014 ma_bbrs: this source is not fetched automatically, and the archive holds no copy under ic-sources/ma_bbrs/<date>/ \u2014 upload the file there, then re-run; mi_lara \u2014 mi_lara: this source is not fetched automatically, and the archive holds no copy under ic-sources/mi_lara/<date>/ \u2014 upload the file there, then re-run; ny_dos \u2014 ny_dos: this source is not fetched automatically, and the archive holds no copy under ic-sources/ny_dos/<date>/ \u2014 upload the file there, then re-run; or_bcd \u2014 or_bcd: this source is not fetched automatically, and the archive holds no copy under ic-sources/or_bcd/<date>/ \u2014 upload the file there, then re-run"
+}

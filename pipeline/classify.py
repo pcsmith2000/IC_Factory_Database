@@ -68,7 +68,7 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
     """
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
-        raise RuntimeError("classify_batch: no ANTHROPIC_API_KEY — run through the harness or set the key")
+        raise RuntimeError("classify_batch: no ANTHROPIC_API_KEY — set the key, or set IC_AI=off for a deterministic run")
     import anthropic  # pinned in pyproject
     client = anthropic.Anthropic(api_key=key)
     payload = [{"i": i, "name": r["name_verbatim"], "address": r.get("address_verbatim", ""),

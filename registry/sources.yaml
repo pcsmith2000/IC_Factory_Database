@@ -147,7 +147,7 @@ sources:
     name: EPA Facility Registry Service — national file
     class: B
     method: bulk
-    url: https://ofmext.epa.gov/FLA/www3/state_files/national_combined.zip   # ~730 MB
+    url: https://ordsext.epa.gov/FLA/www3/state_files/national_combined.zip   # ~730 MB
     needs_classify: true
     carries: [lat_long, naics, program_ids]
     status_basis: none
