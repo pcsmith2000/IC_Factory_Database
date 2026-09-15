@@ -18,7 +18,6 @@ sources:
     method: download
     url: https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/   # XLSX link discovered on this page each run
     needs_classify: false
-    url: https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/   # XLSX link discovered on this page each run
     carries: [plant_address, evaluation_agency, inspection_agency]
     status_basis: on_current_list
     traps:
