@@ -49,10 +49,22 @@ classifier:
   # bake-off runs at temperature 0, same prompt, same seeds — and it needed a re-ask on roughly a
   # quarter of the 100-row batches in production.
   #
-  # amazon/nova-lite has scored 97% / 97% on three separate observations, needed zero re-asks, and
-  # answers in ~10s against ~16s. It is also half the price: ~$0.14 a full run against ~$0.27.
-  # G5 still guards every run, which is exactly how the previous pin was caught.
-  model: amazon/nova-lite
+  # Bake-off over the 60 seeds, 2026-09-16, two scores each (pipeline/bakeoff.py):
+  #   ling-3.0-flash   100/97   $0.04   13s    qwen3.7-flash    100/97   $0.07   80s
+  #   gpt-oss-20b      100/100  $0.08   82s    deepseek-v4-flash 100/100 $0.11  100s
+  #   nova-lite         97/97   $0.14   10s    nova-micro       100/63  FAIL
+  #   nemotron-nano-9b   77/77  FAIL           gpt-oss-120b     100/87  FAIL
+  #
+  # ling-3.0-flash strictly dominates nova-lite: better precision, same recall, 3.5x cheaper, same
+  # speed. The three 100/100 models are 6-10x slower per call, which is three hours a run against
+  # thirty-five minutes — a bad trade for three recall points on 60 seeds.
+  #
+  # Caveat on that table: the bake-off scores 60 seeds as ONE batch, so its re-ask column read 0
+  # for every model including gpt-oss-120b, which needed a re-ask on ~24% of the 100-row batches
+  # in run 35156659530. Treat a zero there as "not measured", not "reliable".
+  #
+  # G5 still guards every run, which is exactly how gpt-oss-120b was caught.
+  model: inclusionai/ling-3.0-flash
   temperature: 0
   batch_size: 100
   # Seconds to wait between model calls. 0 is right on paid credits. The Vercel gateway's FREE
