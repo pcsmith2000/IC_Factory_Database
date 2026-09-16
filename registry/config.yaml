@@ -51,6 +51,11 @@ classifier:
   model: openai/gpt-oss-120b
   temperature: 0
   batch_size: 100
+  # Seconds to wait between model calls. 0 is right on paid credits. The Vercel gateway's FREE
+  # tier rate-limits per model, and run 35155322818 hit it partway through the 131 batches — if
+  # you are on free credits, pacing may get a run through where full speed will not. It cannot
+  # beat a daily cap, only a burst one.
+  batch_pause_seconds: 0
   seeded_positives: 30
   seeded_negatives: 30
   labels: [IC, NOT-IC, UNCERTAIN]

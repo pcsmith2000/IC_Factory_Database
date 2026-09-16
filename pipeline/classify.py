@@ -10,7 +10,7 @@ AI_GATEWAY_API_KEY is set, else the Anthropic API directly. Both speak the Messa
 `classify_batch` is unchanged by the choice; only the model id is spelled differently.
 """
 from __future__ import annotations
-import hashlib, json, math, os, re
+import hashlib, json, math, os, re, time
 from pathlib import Path
 
 from . import ai_client_and_model
@@ -270,20 +270,47 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
     return out
 
 
+class ClassifierUnavailable(RuntimeError):
+    """The provider would not serve the run. Not a defect in the pipeline or the data."""
+
+
 def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_path: Path) -> dict:
-    """Classify candidates + seeds. Returns labels keyed by row_hash and the seed scoring input."""
+    """Classify candidates + seeds. Returns labels keyed by row_hash and the seed scoring input.
+
+    Batches are cached by content hash, so a re-run only pays for what did not finish. Keeping
+    cache_dir across attempts is the difference between resuming a 131-batch run and restarting it.
+    """
     prompt = prompt_path.read_text()
     model, temp, bs = cfg["model"], cfg["temperature"], cfg["batch_size"]
+    pace = float(cfg.get("batch_pause_seconds") or 0)
     cache_dir.mkdir(parents=True, exist_ok=True)
     labels: dict[str, dict] = {}
-    for batch in batches(rows, seeds, bs):
+    todo = batches(rows, seeds, bs)
+    done = 0
+    for n, batch in enumerate(todo):
         k = batch_key(batch, model, prompt)
         cached = cache_dir / f"{k}.json"
         if cached.exists():
             res = json.loads(cached.read_text())
         else:
-            res = classify_batch(batch, prompt, model, temp)
+            if pace and n:
+                time.sleep(pace)
+            try:
+                res = classify_batch(batch, prompt, model, temp)
+            except Exception as e:
+                # A provider that will not serve us is not a pipeline defect, and a 40-line
+                # traceback buries the one sentence that matters. Run 35155322818 spent four
+                # minutes classifying and then hit the gateway's free-tier limit; the log ended in
+                # an SDK stack rather than "add credits". Say which it is, and how far we got.
+                if type(e).__name__ in ("RateLimitError", "PermissionDeniedError", "AuthenticationError"):
+                    raise ClassifierUnavailable(
+                        f"{type(e).__name__} from the provider after {done} of {len(todo)} batches "
+                        f"({len(labels)} rows labelled, cached in {cache_dir}). "
+                        f"This is an account limit, not a data or code problem — the run cannot "
+                        f"finish until it is lifted.\n  {str(e)[:400]}") from e
+                raise
             cached.write_text(json.dumps(res))
+        done += 1
         for o in res:
             labels[o["row_hash"]] = o
     _, resolved, provider = ai_client_and_model(model)
