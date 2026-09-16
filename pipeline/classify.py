@@ -230,7 +230,7 @@ MAX_BATCH_ATTEMPTS = 3
 
 
 def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float,
-                   usage_out: dict | None = None) -> list[dict]:
+                   usage_out: dict | None = None, stats: dict | None = None) -> list[dict]:
     """One batch, classified completely. Returns [{row_hash, label, confidence, type, reason}].
 
     Goes to whichever provider pipeline.ai_client_and_model resolves — the Vercel AI Gateway when
@@ -246,12 +246,19 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
     trouble = ""
     for attempt in range(MAX_BATCH_ATTEMPTS):
         sub = [rows[i] for i in pending]
+        if stats is not None and attempt:
+            # A re-ask is the quality signal worth surfacing: a model needing them on every batch
+            # is a model to replace, and that is invisible if retries succeed silently.
+            stats["reasks"] = stats.get("reasks", 0) + 1
+            stats["reasked_rows"] = stats.get("reasked_rows", 0) + len(sub)
         try:
             got = _call_once(sub, prompt, model,
                              temperature if not attempt else max(temperature, 0.0) + 0.2 * attempt,
                              usage_out, repair=bool(attempt))
         except BatchContractError as e:
             trouble = str(e)
+            if stats is not None:
+                stats["contract_errors"] = stats.get("contract_errors", 0) + 1
             continue
         for local, o in got.items():
             labels[pending[local]] = o
@@ -286,17 +293,30 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
     cache_dir.mkdir(parents=True, exist_ok=True)
     labels: dict[str, dict] = {}
     todo = batches(rows, seeds, bs)
-    done = 0
-    for n, batch in enumerate(todo):
+    _, resolved, provider = ai_client_and_model(model)
+    # Layer 3 is the only layer that takes an hour, and it used to print nothing until it was over:
+    # a run was indistinguishable from a hang, and whether the model was answering well was
+    # unknowable until the end. One line per batch costs nothing and makes both visible live.
+    # stdout must be unbuffered for it to stream in CI — the workflow sets PYTHONUNBUFFERED.
+    say = lambda m: print(m, flush=True)
+    say(f"  layer 3: {len(rows)} candidates + {len(seeds)} seeds in {len(todo)} batches of <= {bs}"
+        f" · {resolved} via {provider} · temperature {temp}")
+    tally: dict[str, int] = {}
+    stats: dict[str, int] = {}
+    t0, called, cached_n = time.time(), 0, 0
+    for n, batch in enumerate(todo, 1):
         k = batch_key(batch, model, prompt)
         cached = cache_dir / f"{k}.json"
-        if cached.exists():
-            res = json.loads(cached.read_text())
+        hit = cached.exists()
+        t1, retried = time.time(), 0
+        if hit:
+            res = json.loads(cached.read_text()); cached_n += 1
         else:
-            if pace and n:
+            if pace and called:
                 time.sleep(pace)
+            before = dict(stats)
             try:
-                res = classify_batch(batch, prompt, model, temp)
+                res = classify_batch(batch, prompt, model, temp, stats=stats)
             except Exception as e:
                 # A provider that will not serve us is not a pipeline defect, and a 40-line
                 # traceback buries the one sentence that matters. Run 35155322818 spent four
@@ -304,15 +324,28 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
                 # an SDK stack rather than "add credits". Say which it is, and how far we got.
                 if type(e).__name__ in ("RateLimitError", "PermissionDeniedError", "AuthenticationError"):
                     raise ClassifierUnavailable(
-                        f"{type(e).__name__} from the provider after {done} of {len(todo)} batches "
+                        f"{type(e).__name__} from the provider at batch {n} of {len(todo)} "
                         f"({len(labels)} rows labelled, cached in {cache_dir}). "
                         f"This is an account limit, not a data or code problem — the run cannot "
                         f"finish until it is lifted.\n  {str(e)[:400]}") from e
+                say(f"  {n:>4}/{len(todo)}  FAILED after {time.time()-t1:.0f}s: {type(e).__name__}")
                 raise
-            cached.write_text(json.dumps(res))
-        done += 1
+            cached.write_text(json.dumps(res)); called += 1
+            retried = stats.get("reasks", 0) - before.get("reasks", 0)
         for o in res:
             labels[o["row_hash"]] = o
+            tally[o.get("label", "?")] = tally.get(o.get("label", "?"), 0) + 1
+        done_frac = n / len(todo)
+        elapsed = time.time() - t0
+        eta = (elapsed / done_frac - elapsed) if done_frac else 0
+        note = "cached" if hit else f"{time.time()-t1:5.1f}s" + (f" +{retried} re-ask" if retried else "")
+        say(f"  {n:>4}/{len(todo)}  {len(batch):>3} rows  {note:<16}"
+            f"  IC {tally.get('IC',0):>5}  NOT-IC {tally.get('NOT-IC',0):>5}"
+            f"  UNC {tally.get('UNCERTAIN',0):>4}   eta {eta/60:4.1f}m")
+    ic = tally.get("IC", 0)
+    say(f"  layer 3 done in {(time.time()-t0)/60:.1f}m: {called} calls, {cached_n} cached, "
+        f"{stats.get('reasks', 0)} re-asks, {stats.get('contract_errors', 0)} unusable responses · "
+        f"IC {ic} ({ic/max(1,len(labels)):.0%}) of {len(labels)} labelled")
     _, resolved, provider = ai_client_and_model(model)
     return {"labels": labels, "model": resolved, "provider": provider, "temperature": temp,
             "prompt_hash": prompt_hash(prompt_path), "n_candidates": len(rows), "n_seeds": len(seeds)}
