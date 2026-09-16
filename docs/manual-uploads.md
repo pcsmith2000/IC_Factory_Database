@@ -5,14 +5,23 @@ blocks automation, or hides the list behind a search that needs a browser. `pipe
 still parses them — the file just has to be put in the store first. Until each one is there,
 Layer 1 halts the whole run (`run.py` halts if *any* active source fails).
 
-Upload each file to the Blob store under:
+The store is the Vercel Blob store the pipeline already reads from — the same one holding
+`pa_dced`, `tx_tdlr`, `iibc`, `mhi_plants` and `epa_frs`.
 
-    ic-sources/<source_id>/<YYYY-MM-DD>/<filename>
+**Upload with the CLI, not the dashboard.** Files are keyed
+`ic-sources/<source_id>/<YYYY-MM-DD>/<filename>`, and a file at the wrong key is invisible to the
+run — which then reports the source as EMPTY, with nothing to say why. This builds the key and
+the manifest for you:
 
-The date folder is yours to choose; the run reads the **newest** one. The extension matters —
-each parser branches on it, so the table below gives the formats that parser actually accepts.
-Nothing else needs to be set: `manifest.json` is not required for a hand-uploaded folder, and
-`.meta.json` sidecars are ignored on read.
+    export BLOB_READ_WRITE_TOKEN=...          # the store's read-write token
+    python -m pipeline.archive put or_bcd ~/Downloads/prefab-licences.csv
+    python -m pipeline.archive put ma_bbrs ~/Downloads/certified-manufacturers.pdf
+
+Pass several files at once if a source needs them, and `--date YYYY-MM-DD` to write a folder
+other than today's. The run reads the **newest** date folder.
+
+The extension matters — each parser branches on it, so the table below gives the formats that
+parser actually accepts.
 
 Check what the store holds at any time with:
 
@@ -105,6 +114,7 @@ Keep source typos verbatim ("Shangahi") — Layer 2 expects them.
 
 ## After uploading
 
+    python -m pipeline.archive verify             # proves the token and store, leaves nothing behind
     python -m pipeline.sources.refresh --list     # confirm each shows a date, not EMPTY
 
 Then re-run. A source whose file is present but unparseable fails loudly at Layer 1 with the

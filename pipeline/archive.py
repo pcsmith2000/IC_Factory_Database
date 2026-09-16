@@ -191,6 +191,37 @@ def _verify(a: VercelBlobArchive) -> int:
     return 0
 
 
+def _put(a: VercelBlobArchive, source_id: str, files: list[str], date_str: str | None) -> int:
+    """Upload hand-obtained files for one source, keyed the way the run expects to read them.
+
+    The five sources that publish nothing fetchable (docs/manual-uploads.md) enter the pipeline
+    this way. Constructing <prefix>/<source_id>/<date>/<file> by hand in a dashboard is the easy
+    thing to get wrong — and a file at the wrong key is invisible to the run, which then reports
+    the source as EMPTY. This builds the key and the manifest the same way a fetch would.
+    """
+    import shutil, tempfile
+    from datetime import date as _date
+    day = date_str or _date.today().isoformat()
+    paths = [Path(f) for f in files]
+    missing = [p for p in paths if not p.is_file()]
+    if missing:
+        print("no such file: " + ", ".join(str(p) for p in missing), file=sys.stderr); return 1
+    with tempfile.TemporaryDirectory() as d:
+        day_dir = Path(d) / day
+        day_dir.mkdir()
+        for p in paths:
+            shutil.copy2(p, day_dir / p.name)
+        r = a.archive_dir(source_id, day_dir)
+    print(f"  {source_id}  {r['uploaded']} file(s), {r['bytes']} bytes → {a.prefix}/{source_id}/{day}/")
+    for p in paths:
+        print(f"      {p.name}")
+    if r["skipped"]:
+        print(f"  WARNING {r['skipped']} file(s) over archive.max_file_mb were recorded by hash but NOT "
+              f"uploaded — the run cannot read those back", file=sys.stderr)
+    print(f"\nconfirm with:  python -m pipeline.sources.refresh --list")
+    return 0
+
+
 def main(argv=None) -> int:
     import argparse
     from .registry import load_yaml
@@ -198,6 +229,9 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m pipeline.archive")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("verify", help="put a probe file, read it back, delete it — proves the token and store")
+    pu = sub.add_parser("put", help="upload hand-obtained files for one source (see docs/manual-uploads.md)")
+    pu.add_argument("source_id"); pu.add_argument("file", nargs="+")
+    pu.add_argument("--date", help="date folder to write (default: today)")
     ls = sub.add_parser("list", help="print the manifest one pull recorded")
     ls.add_argument("source_id"); ls.add_argument("date")
     args = ap.parse_args(argv)
@@ -208,6 +242,8 @@ def main(argv=None) -> int:
         print("no archive: BLOB_READ_WRITE_TOKEN is not set (or IC_ARCHIVE=off)", file=sys.stderr); return 1
     if args.cmd == "verify":
         return _verify(a)
+    if args.cmd == "put":
+        return _put(a, args.source_id, args.file, args.date)
     key = f"{a.prefix}/{args.source_id}/{args.date}/manifest.json"
     local = root / cfg["storage"]["local_cache"] / args.source_id / args.date / "manifest.json"
     if local.exists():
