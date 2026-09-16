@@ -153,9 +153,9 @@ def main(argv=None) -> int:
             # gateway rate-limited or could not reach has not been measured at all, and recording
             # that as a failure would retire a candidate on the strength of an account limit.
             kind = "UNTESTED" if _is_infrastructure(e) else "FAIL"
-            print(f"  {gateway_model_id(m):<44} {kind}  {type(e).__name__}: {str(e)[:60]}")
+            print(f"  {gateway_model_id(m):<44} {kind}  {type(e).__name__}: {str(e)[:230]}")
             results.append({"model": gateway_model_id(m), "passed": False, "untested": kind == "UNTESTED",
-                            "error": f"{type(e).__name__}: {str(e)[:52]}",
+                            "error": f"{type(e).__name__}: {str(e)[:150]}",
                             "precision": 0.0, "recall": 0.0, "full_run_cost": None})
 
     print(f"\n{'':9}{'model':<42}{'prec':>7}{'recall':>8}{'seed $':>9}{'run $':>9}")

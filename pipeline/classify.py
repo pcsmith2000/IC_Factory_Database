@@ -120,7 +120,12 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
     m = re.search(r"\[.*\]", text, re.S)
     if not m:
-        raise RuntimeError("classify_batch: no JSON array in response")
+        # Say what came back. "No JSON array" alone cannot distinguish a model that refused, one
+        # that wrote prose, one that returned a bare object, and one that was cut off at
+        # max_tokens — and those call for different fixes.
+        raise RuntimeError(f"classify_batch: no JSON array in response "
+                           f"(stop_reason={getattr(msg, 'stop_reason', '?')}, {len(text)} chars): "
+                           f"{text[:180]!r}")
     out = json.loads(m.group(0))
     if len(out) != len(rows):
         raise RuntimeError(f"classify_batch: {len(out)} labels for {len(rows)} rows")
