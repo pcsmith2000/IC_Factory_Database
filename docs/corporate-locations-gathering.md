@@ -134,6 +134,23 @@ For 84 Lumber and Parr Truss the CSVs go **beyond** the archive: only the index 
 fetched, and the rows cite per-location URLs that were never archived. Those 68 rows have no page
 snapshot behind them and never did; their provenance is the `source_url` on each row.
 
+## Corrections applied to the 2026-09-16 transcription
+
+Three defects were found on audit and fixed in place:
+
+| file | rows | defect | fix |
+|---|---|---|---|
+| `84-lumber.csv` | 32 | `name` held the city (`Bessemer, AL`), because the door-shop page lists sites by city only | named `84 Lumber Door Shop - <City>` |
+| `the-truss-company.csv` | 8 | same — `name` was `Sumner, WA` | named `The Truss Company - <Place>`, taking the place from the page's own "The Sumner facility" wording, which is not always the city (Medford's plant is in White City) |
+| `stark-truss.csv` | 14 | `kind` held a staff job title, `Plant Manager` | cleared; the page gives no facility type, and `evidence` already says so |
+
+Every constructed name carries `[name constructed: the page lists this site by city only]` in
+`evidence`, so a name that did not come off the page verbatim says so. Renaming reissues those
+facilities' ids — 32 were issued on the next run — which is expected and why the note matters.
+
+A name that is really a city is not cosmetic: `name+city` is one of the reconciliation signatures,
+so 39 facilities named after their own cities would have collided with each other downstream.
+
 ## What this changes
 
 The folder currently holds 126 archived HTML pages from an automated fetch. Transcribed CSVs take
