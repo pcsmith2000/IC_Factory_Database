@@ -41,7 +41,11 @@ classifier:
   # at ~$0.02 a run; whether any clears precision 0.95 / recall 0.90 on the 60 seeds is a question
   # for the bake-off, not for whoever edits this line. Written first-party style; the gateway form
   # (anthropic/claude-haiku-4.5) is derived in pipeline.ai_client_and_model.
-  model: claude-haiku-4-5
+  # Measured 2026-09-16 by `python -m pipeline.bakeoff` over the 60 seeds: precision 97%,
+  # recall 100%, $0.0028 for the seed batch, ~$0.06 per full run. The only candidate scored that
+  # cleared the gate. amazon/nova-micro answered but missed 11 of 30 plants (recall 63%); three
+  # cheaper models were never measured because the gateway free tier rate-limited them.
+  model: openai/gpt-oss-120b
   temperature: 0
   batch_size: 100
   seeded_positives: 30

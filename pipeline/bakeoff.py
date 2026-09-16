@@ -57,6 +57,19 @@ def catalogue(retries: int = 3) -> dict[str, tuple[float, float]]:
     return out
 
 
+def _is_infrastructure(e: Exception) -> bool:
+    """True when the gateway never let the model answer — rate limit, auth, transport, 5xx.
+
+    Distinct from a model that answered badly. The free tier rate-limits per model, so a bake-off
+    long enough to be useful will hit this, and an account limit is not evidence about a model.
+    """
+    name = type(e).__name__
+    if name in ("RateLimitError", "APIConnectionError", "APITimeoutError", "InternalServerError",
+                "AuthenticationError", "PermissionDeniedError", "NotFoundError"):
+        return True
+    return any(t in str(e) for t in ("429", "rate-limited", "rate limit", "503", "502", "504"))
+
+
 def _cost(price: tuple[float, float], tin: int, tout: int) -> float:
     return price[0] * tin + price[1] * tout
 
@@ -129,20 +142,29 @@ def main(argv=None) -> int:
         try:
             results.append(score(m, seeds, prompt, temp, prices))
         except Exception as e:
-            # A model that cannot hold the output contract has failed the bake-off, not crashed it.
-            print(f"  {gateway_model_id(m):<44} ERROR  {type(e).__name__}: {str(e)[:70]}")
-            results.append({"model": gateway_model_id(m), "passed": False, "error": str(e)[:70],
+            # A model that cannot hold the output contract has failed the bake-off. A model the
+            # gateway rate-limited or could not reach has not been measured at all, and recording
+            # that as a failure would retire a candidate on the strength of an account limit.
+            kind = "UNTESTED" if _is_infrastructure(e) else "FAIL"
+            print(f"  {gateway_model_id(m):<44} {kind}  {type(e).__name__}: {str(e)[:60]}")
+            results.append({"model": gateway_model_id(m), "passed": False, "untested": kind == "UNTESTED",
+                            "error": f"{type(e).__name__}: {str(e)[:52]}",
                             "precision": 0.0, "recall": 0.0, "full_run_cost": None})
 
-    print(f"\n{'':4}{'model':<42}{'prec':>7}{'recall':>8}{'seed $':>9}{'run $':>9}")
-    for r in sorted(results, key=lambda x: (not x["passed"], x.get("full_run_cost") or 9e9)):
-        mark = "PASS" if r["passed"] else "FAIL"
+    print(f"\n{'':9}{'model':<42}{'prec':>7}{'recall':>8}{'seed $':>9}{'run $':>9}")
+    for r in sorted(results, key=lambda x: (not x["passed"], x.get("untested", False),
+                                            x.get("full_run_cost") or 9e9)):
+        mark = "PASS" if r["passed"] else ("UNTESTED" if r.get("untested") else "FAIL")
         sc = f"${r['seed_cost']:.4f}" if r.get("seed_cost") is not None else "-"
         fc = f"${r['full_run_cost']:.2f}" if r.get("full_run_cost") is not None else "-"
-        print(f"{mark:<4}{r['model']:<42}{r['precision']:>6.0%}{r['recall']:>8.0%}{sc:>9}{fc:>9}"
+        print(f"{mark:<9}{r['model']:<42}{r['precision']:>6.0%}{r['recall']:>8.0%}{sc:>9}{fc:>9}"
               + (f"   {r['error']}" if r.get("error") else ""))
     winner = next((r for r in sorted(results, key=lambda x: x.get("full_run_cost") or 9e9) if r["passed"]), None)
+    untested = [r["model"] for r in results if r.get("untested")]
     print()
+    if untested:
+        print(f"not measured ({len(untested)}): {', '.join(untested)}")
+        print("  rate limit or transport, not a verdict — re-run these before ruling them out\n")
     if winner:
         print(f"cheapest model clearing G5: {winner['model']}  (${winner['full_run_cost']:.2f} per full run)")
         print(f"pin it in registry/config.yaml as classifier.model")
