@@ -34,7 +34,14 @@ control:
 
 classifier:
   prompt_path: prompts/CLASSIFIER-PROMPT.md
-  model: claude-sonnet-4-5                 # pinned; recorded in every run record
+  # PROVISIONAL — replace with whatever `python -m pipeline.bakeoff` measures. Recorded in every
+  # run record and in the release tag, so changing it is a versioned change G5 must re-pass.
+  # claude-sonnet-4-5 was pinned here and is strictly dominated: $1.80 per full run against $1.20
+  # for the newer claude-sonnet-5 and $0.60 for this. The gateway also carries open-weight models
+  # at ~$0.02 a run; whether any clears precision 0.95 / recall 0.90 on the 60 seeds is a question
+  # for the bake-off, not for whoever edits this line. Written first-party style; the gateway form
+  # (anthropic/claude-haiku-4.5) is derived in pipeline.ai_client_and_model.
+  model: claude-haiku-4-5
   temperature: 0
   batch_size: 100
   seeded_positives: 30

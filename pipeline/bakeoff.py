@@ -1,0 +1,143 @@
+"""Pick the classifier model by measurement instead of argument.
+
+G5 already is an eval harness: 60 hand-labelled seeds, precision >= 0.95, recall >= 0.90. This
+runs candidate models over those seeds alone — one batch, ~60 rows — scores each with the same
+gate the release uses, and prices it against the gateway's own published rates. The cheapest
+model that clears the gate is the answer; everything above it is money spent on nothing.
+
+    python -m pipeline.bakeoff --models anthropic/claude-haiku-4.5,openai/gpt-oss-20b
+    python -m pipeline.bakeoff --list            # candidates, cheapest first, no calls made
+    python -m pipeline.bakeoff --estimate        # what a full run would cost, no calls made
+
+Needs AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY). Each scored model costs roughly a cent: the
+seeds are ~60 rows, against ~2,982 for a full run. Scoring ten models is cheaper than one run.
+
+The seeds are graded here in a single 60-row batch, which is NOT the shape a real run uses —
+classify.batches() spreads them two per batch through the candidates. A model that clears the
+gate here is a candidate, not a proven choice; the proof is a full run's own G5.
+"""
+from __future__ import annotations
+import argparse, json, sys, urllib.request
+from pathlib import Path
+
+from . import ai_client_and_model, gateway_model_id
+from .classify import classify_batch, prompt_hash
+from .gates import g5_classifier_eval
+from .registry import load_yaml
+
+ROOT = Path(__file__).resolve().parent.parent
+MODELS_URL = "https://ai-gateway.vercel.sh/v1/models"
+# Full-run shape, measured on the 2026-09-16 candidate set: 30 batches of ~100, ~5k in / ~3k out
+# each. Used only to turn a per-seed price into the number that matters, cost per quarterly run.
+FULL_RUN_INPUT_TOKENS = 150_000
+FULL_RUN_OUTPUT_TOKENS = 90_000
+
+
+def catalogue() -> dict[str, tuple[float, float]]:
+    """{model_id: (input $/token, output $/token)} from the gateway. Needs no authentication."""
+    with urllib.request.urlopen(MODELS_URL, timeout=60) as r:
+        data = json.load(r)["data"]
+    out = {}
+    for m in data:
+        p = m.get("pricing") or {}
+        if m.get("type") == "language" and p.get("input"):
+            out[m["id"]] = (float(p["input"]), float(p.get("output") or 0))
+    return out
+
+
+def _cost(price: tuple[float, float], tin: int, tout: int) -> float:
+    return price[0] * tin + price[1] * tout
+
+
+def score(model: str, seeds: list[dict], prompt: str, temperature: float,
+          prices: dict) -> dict:
+    """One model over the seed set: the G5 verdict, plus what it cost and would cost."""
+    usage: dict = {}
+    labels_list = classify_batch(seeds, prompt, model, temperature, usage_out=usage)
+    labels = {o["row_hash"]: o for o in labels_list}
+    gate = g5_classifier_eval(labels, seeds, 0.95, 0.90)
+    d = gate.details or {}
+    mid = gateway_model_id(model)
+    price = prices.get(mid)
+    tin, tout = usage.get("input_tokens", 0), usage.get("output_tokens", 0)
+    return {
+        "model": mid, "passed": gate.passed, "precision": d.get("precision", 0.0),
+        "recall": d.get("recall", 0.0), "tp": d.get("tp"), "fp": d.get("fp"), "fn": d.get("fn"),
+        "unlabelled": sum(1 for s in seeds if s["row_hash"] not in labels),
+        "seed_tokens": (tin, tout),
+        "seed_cost": _cost(price, tin, tout) if price else None,
+        "full_run_cost": _cost(price, FULL_RUN_INPUT_TOKENS, FULL_RUN_OUTPUT_TOKENS) if price else None,
+    }
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(prog="python -m pipeline.bakeoff")
+    ap.add_argument("--models", help="comma-separated gateway model ids; default: config's pinned model")
+    ap.add_argument("--list", action="store_true", help="candidates by full-run cost, make no calls")
+    ap.add_argument("--estimate", action="store_true", help="price the named models, make no calls")
+    args = ap.parse_args(argv)
+
+    cfg = load_yaml(ROOT / "registry" / "config.yaml")
+    prices = catalogue()
+
+    if args.list:
+        ranked = sorted(prices.items(), key=lambda kv: _cost(kv[1], FULL_RUN_INPUT_TOKENS, FULL_RUN_OUTPUT_TOKENS))
+        print(f"{'full run':>9}  model")
+        for mid, pr in ranked[:40]:
+            print(f"${_cost(pr, FULL_RUN_INPUT_TOKENS, FULL_RUN_OUTPUT_TOKENS):>8.2f}  {mid}")
+        return 0
+
+    models = [m.strip() for m in (args.models or cfg["classifier"]["model"]).split(",") if m.strip()]
+
+    if args.estimate:
+        print(f"{'full run':>9}  model")
+        for m in models:
+            mid = gateway_model_id(m)
+            pr = prices.get(mid)
+            print(f"${_cost(pr, FULL_RUN_INPUT_TOKENS, FULL_RUN_OUTPUT_TOKENS):>8.2f}  {mid}" if pr
+                  else f"{'?':>9}  {mid}  (not in the gateway catalogue)")
+        return 0
+
+    seeds_path = ROOT / "control" / "seeds.csv"
+    import csv
+    seeds = list(csv.DictReader(open(seeds_path, newline="", encoding="utf-8")))
+    if not seeds:
+        print("control/seeds.csv is empty — nothing to score against", file=sys.stderr); return 1
+    prompt = (ROOT / cfg["classifier"]["prompt_path"]).read_text()
+    temp = cfg["classifier"]["temperature"]
+    print(f"{len(seeds)} seeds · prompt {prompt_hash(ROOT / cfg['classifier']['prompt_path'])} · "
+          f"gate: precision >= 95%, recall >= 90%\n")
+
+    results = []
+    for m in models:
+        try:
+            ai_client_and_model(m)   # fail fast and identically for every model
+        except RuntimeError as e:
+            print(e, file=sys.stderr); return 1
+        try:
+            results.append(score(m, seeds, prompt, temp, prices))
+        except Exception as e:
+            # A model that cannot hold the output contract has failed the bake-off, not crashed it.
+            print(f"  {gateway_model_id(m):<44} ERROR  {type(e).__name__}: {str(e)[:70]}")
+            results.append({"model": gateway_model_id(m), "passed": False, "error": str(e)[:70],
+                            "precision": 0.0, "recall": 0.0, "full_run_cost": None})
+
+    print(f"\n{'':4}{'model':<42}{'prec':>7}{'recall':>8}{'seed $':>9}{'run $':>9}")
+    for r in sorted(results, key=lambda x: (not x["passed"], x.get("full_run_cost") or 9e9)):
+        mark = "PASS" if r["passed"] else "FAIL"
+        sc = f"${r['seed_cost']:.4f}" if r.get("seed_cost") is not None else "-"
+        fc = f"${r['full_run_cost']:.2f}" if r.get("full_run_cost") is not None else "-"
+        print(f"{mark:<4}{r['model']:<42}{r['precision']:>6.0%}{r['recall']:>8.0%}{sc:>9}{fc:>9}"
+              + (f"   {r['error']}" if r.get("error") else ""))
+    winner = next((r for r in sorted(results, key=lambda x: x.get("full_run_cost") or 9e9) if r["passed"]), None)
+    print()
+    if winner:
+        print(f"cheapest model clearing G5: {winner['model']}  (${winner['full_run_cost']:.2f} per full run)")
+        print(f"pin it in registry/config.yaml as classifier.model")
+    else:
+        print("no candidate cleared G5 — widen the field, or improve the prompt and re-score")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

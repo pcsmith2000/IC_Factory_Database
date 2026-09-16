@@ -5,12 +5,15 @@ in prompts/CLASSIFIER-PROMPT.md; the model id, temperature and prompt hash are r
 run record. Batches are keyed by content hash so a re-run is a no-op for unchanged rows.
 Seeded positives/negatives are hidden in every batch and scored by gate G5.
 
-Today the classify() call is executed through the Cowork harness; the target is the Messages
-API. Both go through the same `classify_batch` signature so swapping is one function.
+The provider is resolved once, in pipeline.ai_client_and_model: the Vercel AI Gateway when
+AI_GATEWAY_API_KEY is set, else the Anthropic API directly. Both speak the Messages API, so
+`classify_batch` is unchanged by the choice; only the model id is spelled differently.
 """
 from __future__ import annotations
 import hashlib, json, math, os, re
 from pathlib import Path
+
+from . import ai_client_and_model
 
 LABELS = {"IC", "NOT-IC", "UNCERTAIN"}
 
@@ -85,18 +88,16 @@ def batches(rows: list[dict], seeds: list[dict], size: int) -> list[list[dict]]:
     return [sorted(b, key=lambda r: r["row_hash"]) for b in out if b]
 
 
-def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float) -> list[dict]:
+def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float,
+                   usage_out: dict | None = None) -> list[dict]:
     """One regimented model call. Returns [{row_hash, label, confidence, type, reason}] in row order.
 
-    Target implementation (Messages API) — enabled when ANTHROPIC_API_KEY is set. Output is
-    validated against the label set before it is accepted; a malformed response is an error,
+    Goes to whichever provider pipeline.ai_client_and_model resolves — the Vercel AI Gateway when
+    AI_GATEWAY_API_KEY is set, else the Anthropic API — over the Messages API either way. Output
+    is validated against the label set before it is accepted; a malformed response is an error,
     never a silent default.
     """
-    key = os.environ.get("ANTHROPIC_API_KEY")
-    if not key:
-        raise RuntimeError("classify_batch: no ANTHROPIC_API_KEY — set the key, or set IC_AI=off for a deterministic run")
-    import anthropic  # pinned in pyproject
-    client = anthropic.Anthropic(api_key=key)
+    client, model, _ = ai_client_and_model(model)
     payload = [{"i": i, "name": r["name_verbatim"], "address": r.get("address_verbatim", ""),
                 "city": r.get("city_verbatim", ""), "state": r.get("state_verbatim", ""),
                 "naics": r.get("naics_verbatim", "")} for i, r in enumerate(rows)]
@@ -109,6 +110,9 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
                    "{i, label, confidence, type, reason} with label in IC|NOT-IC|UNCERTAIN, "
                    "confidence 0-1, reason <= 12 words.\n\n" + json.dumps(payload)}],
     )
+    if usage_out is not None and getattr(msg, "usage", None) is not None:
+        usage_out["input_tokens"] = usage_out.get("input_tokens", 0) + (msg.usage.input_tokens or 0)
+        usage_out["output_tokens"] = usage_out.get("output_tokens", 0) + (msg.usage.output_tokens or 0)
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
     m = re.search(r"\[.*\]", text, re.S)
     if not m:
@@ -139,5 +143,6 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
             cached.write_text(json.dumps(res))
         for o in res:
             labels[o["row_hash"]] = o
-    return {"labels": labels, "model": model, "temperature": temp, "prompt_hash": prompt_hash(prompt_path),
-            "n_candidates": len(rows), "n_seeds": len(seeds)}
+    _, resolved, provider = ai_client_and_model(model)
+    return {"labels": labels, "model": resolved, "provider": provider, "temperature": temp,
+            "prompt_hash": prompt_hash(prompt_path), "n_candidates": len(rows), "n_seeds": len(seeds)}
