@@ -64,7 +64,11 @@ sources:
     traps:
       - Undated PDF; still lists Kullman, Excel Homes, Modtech — defunct 10+ years. Status is inferred.
     acquire_note: no list published and mass.gov blocks automation; upload to the archive
-    status: active
+    # QUEUED 2026-09-16: the mass.gov certified-manufacturers PDF is gone from the programme
+    # page. Options on the table: a Wayback capture, the 09-08 contract CSV, or a request to
+    # BBRS. Active with no obtainable file halts Layer 1 for every other source, so it waits
+    # here until one of those lands. Massachusetts is absent from coverage until then.
+    status: queued
 
   - id: or_bcd
     name: Oregon BCD prefabricated structures — by manufacturing location
@@ -106,7 +110,10 @@ sources:
     traps:
       - Approval-centric, not plant-centric; extraction not clean. FOIL request drafted.
     acquire_note: no list published and dos.ny.gov blocks automation; upload the FOIL response
-    status: active
+    # QUEUED 2026-09-16: DOS publishes no list and the FOIL response has not come back. Active
+    # with no obtainable file halts Layer 1 for every other source, so it waits here until the
+    # FOIL lands. New York is absent from coverage until then.
+    status: queued
 
   - id: in_dhs
     name: Indiana DHS industrialized building systems registry
