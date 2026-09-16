@@ -115,6 +115,7 @@ def g4_control_isolation(control_path: Path, checksum_path: Path, rows: list[dic
 # ---------------------------------------------------------------- G5
 def g5_classifier_eval(labels: dict[str, dict], seeds: list[dict], min_p: float, min_r: float) -> GateResult:
     tp = fp = fn = tn = 0
+    unlabelled = [s["row_hash"] for s in seeds if s["row_hash"] not in labels]
     for s in seeds:
         lab = labels.get(s["row_hash"], {}).get("label")
         truth = s["seed_label"]
@@ -122,6 +123,14 @@ def g5_classifier_eval(labels: dict[str, dict], seeds: list[dict], min_p: float,
         elif truth == "IC": fn += 1
         elif lab == "IC": fp += 1
         else: tn += 1
+    if unlabelled:
+        # A seed the classifier never answered was scoring as a true negative, so a model that
+        # silently dropped NOT-IC rows was credited with getting them right. Not answering is not
+        # a correct answer; the audit is void if any seed went unlabelled.
+        return GateResult("G5 classifier eval", False,
+                          f"{len(unlabelled)} of {len(seeds)} seeds came back unlabelled — the audit "
+                          f"is incomplete, not passing",
+                          {"unlabelled": len(unlabelled), "tp": tp, "fp": fp, "fn": fn, "tn": tn})
     p = tp / (tp + fp) if tp + fp else 0.0
     r = tp / (tp + fn) if tp + fn else 0.0
     if not seeds:

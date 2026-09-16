@@ -120,10 +120,21 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
     out = json.loads(m.group(0))
     if len(out) != len(rows):
         raise RuntimeError(f"classify_batch: {len(out)} labels for {len(rows)} rows")
-    for o, r in zip(out, rows):
+    # Map by the index the model echoes back, never by position. Zipping the response onto the
+    # batch assumes an ordering the model was only asked for, and a model that answers all 100 in
+    # a different order would have every label attached to the wrong establishment — right count,
+    # valid labels, nothing raised. Requiring i to be a permutation makes that a loud failure.
+    seen: set[int] = set()
+    for o in out:
+        i = o.get("i")
+        if not isinstance(i, int) or not 0 <= i < len(rows):
+            raise RuntimeError(f"classify_batch: index {i!r} outside 0..{len(rows) - 1}")
+        if i in seen:
+            raise RuntimeError(f"classify_batch: index {i} returned twice")
+        seen.add(i)
         if o.get("label") not in LABELS:
             raise RuntimeError(f"classify_batch: bad label {o.get('label')!r}")
-        o["row_hash"] = r["row_hash"]
+        o["row_hash"] = rows[i]["row_hash"]
     return out
 
 
