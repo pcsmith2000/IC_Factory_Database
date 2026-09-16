@@ -101,6 +101,9 @@ def main(argv=None) -> int:
     ap.add_argument("--models", help="comma-separated gateway model ids; default: config's pinned model")
     ap.add_argument("--list", action="store_true", help="candidates by full-run cost, make no calls")
     ap.add_argument("--estimate", action="store_true", help="price the named models, make no calls")
+    ap.add_argument("--delay", type=float, default=20.0,
+                    help="seconds between models (default 20). The gateway burst-limits a run that "
+                         "scores several back to back, and a 429 costs a verdict.")
     args = ap.parse_args(argv)
 
     cfg = load_yaml(ROOT / "registry" / "config.yaml")
@@ -134,8 +137,11 @@ def main(argv=None) -> int:
     print(f"{len(seeds)} seeds · prompt {prompt_hash(ROOT / cfg['classifier']['prompt_path'])} · "
           f"gate: precision >= 95%, recall >= 90%\n")
 
+    import time
     results = []
-    for m in models:
+    for n, m in enumerate(models):
+        if n:
+            time.sleep(args.delay)   # pace ourselves rather than collect 429s and call them results
         try:
             ai_client_and_model(m)   # fail fast and identically for every model
         except RuntimeError as e:
