@@ -33,10 +33,22 @@ FULL_RUN_INPUT_TOKENS = 150_000
 FULL_RUN_OUTPUT_TOKENS = 90_000
 
 
-def catalogue() -> dict[str, tuple[float, float]]:
-    """{model_id: (input $/token, output $/token)} from the gateway. Needs no authentication."""
-    with urllib.request.urlopen(MODELS_URL, timeout=60) as r:
-        data = json.load(r)["data"]
+def catalogue(retries: int = 3) -> dict[str, tuple[float, float]]:
+    """{model_id: (input $/token, output $/token)} from the gateway. Needs no authentication.
+
+    Retried like every other network read here — a transport blip fetching the price list should
+    not throw away a bake-off that is about to spend money on model calls.
+    """
+    import time
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(MODELS_URL, timeout=60) as r:
+                data = json.load(r)["data"]
+            break
+        except Exception:
+            if attempt == retries:
+                raise
+            time.sleep(2 ** attempt)
     out = {}
     for m in data:
         p = m.get("pricing") or {}

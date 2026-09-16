@@ -49,7 +49,8 @@ def extract_locations(page_text: str, *, company: str, page_url: str, cfg: dict,
         raw = json.loads(raw_path.read_text()); cached = True
     else:
         resp = client.messages.create(
-            model=model, max_tokens=16000, temperature=temperature, system=prompt,
+            # temperature via extra_body — see the note in pipeline/classify.py
+            model=model, max_tokens=16000, extra_body={"temperature": temperature}, system=prompt,
             messages=[{"role": "user", "content": f"Company: {company}\nPage: {page_url}\n\nPAGE TEXT:\n{page_text}"}],
             output_config={"format": {"type": "json_schema", "schema": SCHEMA}},
         )

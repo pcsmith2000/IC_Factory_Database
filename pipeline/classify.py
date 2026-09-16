@@ -103,8 +103,12 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
                 "naics": r.get("naics_verbatim", "")} for i, r in enumerate(rows)]
     # ~30 output tokens per row (label, confidence, type, a <=12-word reason). A flat 4000 left a
     # 100-row batch ~25% headroom, and overflow truncates the JSON array into a hard error.
+    # temperature goes through extra_body: the Anthropic SDK dropped it from messages.create()
+    # (current first-party models reject sampling parameters outright), but the gateway's Messages
+    # API still documents and honours it, and determinism is worth having on a classifier.
     msg = client.messages.create(
-        model=model, max_tokens=min(32000, 64 * len(rows) + 1000), temperature=temperature,
+        model=model, max_tokens=min(32000, 64 * len(rows) + 1000),
+        extra_body={"temperature": temperature},
         system=prompt,
         messages=[{"role": "user", "content": "Classify each establishment. Return a JSON array of "
                    "{i, label, confidence, type, reason} with label in IC|NOT-IC|UNCERTAIN, "
