@@ -11,7 +11,7 @@ import argparse, csv, json, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import __version__, ai_enabled, acquire, validate, classify, resolve, reconcile, golden, gates, measure, warehouse
+from . import __version__, ai_enabled, ai_client_and_model, acquire, validate, classify, resolve, reconcile, golden, gates, measure, warehouse
 from .registry import load_yaml, active_sources, sha256_file, registry_version
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -46,6 +46,19 @@ def main(argv=None) -> int:
     }
     sources = active_sources(reg)
     print(f"IC pipeline {__version__} · registry {record['registry_version']} · {len(sources)} active sources · layers {sorted(layers)}")
+
+    # Preflight the AI credential before a single byte is downloaded. Without this the first call
+    # that needs a key is Layer 3, an hour and a 1.27 GB EPA pull later, and the run dies having
+    # thrown away the whole acquisition for a missing environment variable.
+    if 3 in layers and ai_enabled() and not args.dry_run:
+        try:
+            _, _model, _provider = ai_client_and_model(cfg["classifier"]["model"])
+            print(f"  ai on · classifier {_model} via {_provider}")
+        except RuntimeError as e:
+            print(f"HALT before layer 1: {e}", file=sys.stderr)
+            print("       set AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY), or run with IC_AI=off",
+                  file=sys.stderr)
+            return 2
 
     def halt(where: str, why: str) -> int:
         record["halted_at"] = where; record["halt_reason"] = why

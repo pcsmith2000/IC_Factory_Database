@@ -17,7 +17,7 @@ on:
         type: boolean
         default: false
       ai:
-        description: "model calls: off = deterministic sources only (no ANTHROPIC_API_KEY needed)"
+        description: "model calls: off = deterministic sources only (no AI_GATEWAY_API_KEY needed)"
         type: choice
         options: ["off", "on"]
         default: "off"
@@ -87,7 +87,14 @@ jobs:
             run_records/
 
       - name: Open release PR
+        # continue-on-error because the branch push and the PR creation are separate permissions.
+        # Run 35124740879 pushed release/35124740879 fine and then failed the whole job on
+        # "GitHub Actions is not permitted to create or approve pull requests" — a repo setting,
+        # not a pipeline failure, and it marked a run whose gates all passed as failed. The branch
+        # is the release artifact; the PR is a convenience on top of it.
+        id: pr
         if: success()
+        continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
           branch: release/${{ github.run_id }}
@@ -98,3 +105,22 @@ jobs:
           add-paths: |
             id_registry.json
             run_records/*.json
+
+      - name: Say where the release is
+        if: success()
+        run: |
+          branch="release/${{ github.run_id }}"
+          if [ "${{ steps.pr.outcome }}" = "success" ]; then
+            echo "Release PR: ${{ steps.pr.outputs.pull-request-url }}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### Release branch pushed, but no PR was opened"
+              echo ""
+              echo "Branch: \`$branch\`"
+              echo ""
+              echo "Open it by hand: <${{ github.server_url }}/${{ github.repository }}/compare/$branch?expand=1>"
+              echo ""
+              echo "To have the workflow do this itself, tick **Allow GitHub Actions to create and"
+              echo "approve pull requests** in Settings -> Actions -> General -> Workflow permissions."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
