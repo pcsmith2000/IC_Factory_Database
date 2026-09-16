@@ -8,12 +8,30 @@ from pipeline.registry import load_yaml
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_v1_headers_only_state_is_reported_not_hidden():
+def test_the_repo_state_is_reported_not_hidden():
+    """What the committed control/ actually is right now, stated as problems rather than passing quietly."""
     probs = control.check(load_yaml(ROOT / "registry" / "config.yaml"))
-    assert any("control-triaged.csv: EMPTY" in p for p in probs)
+    # the list is transcribed (241 rows) but not triaged, so recall cannot be measured yet
+    assert any("241 of 241 rows have no triage" in p for p in probs)
+    assert any("0 in-scope rows but config control.in_scope_rows = 213" in p for p in probs)
     assert any("seeds.csv: EMPTY" in p for p in probs)
+    assert any("frame_state_totals.csv: EMPTY" in p for p in probs)
     assert any("placeholder" in p for p in probs)
-    assert not any("sha256" in p and "hashes to" in p for p in probs)   # checksum matches the committed headers-only file
+    assert not any("sha256" in p and "hashes to" in p for p in probs)   # checksum matches the committed file
+
+
+def test_untriaged_rows_collapse_to_one_problem_not_one_per_row(tmp_path: Path, monkeypatch):
+    """241 identical per-row errors would bury every other finding."""
+    import shutil, csv as _csv
+    for d in ("control", "prompts"):
+        (tmp_path / d).mkdir()
+    for f in (ROOT / "control").glob("*"):
+        shutil.copy(f, tmp_path / "control" / f.name)
+    shutil.copy(ROOT / "prompts" / "CLASSIFIER-PROMPT.md", tmp_path / "prompts")
+    monkeypatch.setattr(control, "ROOT", tmp_path)
+    probs = control.check(load_yaml(ROOT / "registry" / "config.yaml"))
+    assert sum(1 for p in probs if "rows have no triage" in p) == 1
+    assert not any("triage ''" in p for p in probs), "no per-row triage errors once the column is wholly empty"
 
 
 def test_fix_derives_seed_row_hash_and_rewrites_checksum(tmp_path: Path, monkeypatch):

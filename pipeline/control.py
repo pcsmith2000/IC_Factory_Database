@@ -49,6 +49,13 @@ def check(cfg: dict, fix: bool = False) -> list[str]:
             problems.append(f"{p.name} line {i}: blank name")
         if r.get("state") and not STATE.match(r["state"].strip().upper()):
             problems.append(f"{p.name} line {i}: state {r['state']!r} is not a 2-letter code")
+    untriaged = [i for i, r in enumerate(rows, 2) if not (r.get("triage") or "").strip()]
+    if untriaged:
+        # Collapse the whole-column case: 241 identical per-row errors hide every other problem.
+        problems = [x for x in problems if "triage ''" not in x]
+        problems.append(f"{p.name}: {len(untriaged)} of {len(rows)} rows have no triage — the list is transcribed but "
+                        f"not yet triaged, so Layer 7 counts 0 in-scope rows and recall stays 0/0. Triage is the "
+                        f"sign-off step (AI proposes, a human signs off); values: {sorted(TRIAGE)}")
     in_scope = sum(1 for r in rows if r.get("triage", "").startswith("in_scope"))
     exp_total, exp_in = cfg["control"].get("total_rows"), cfg["control"].get("in_scope_rows")
     if rows and exp_total and len(rows) != exp_total:
