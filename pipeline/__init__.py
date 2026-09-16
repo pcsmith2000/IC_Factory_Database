@@ -44,12 +44,16 @@ def ai_client_and_model(model: str) -> tuple[object, str, str]:
     """
     import anthropic  # pinned in pyproject; imported here so the module loads without it
 
+    # The SDK default of 2 retries is not enough against the gateway's burst limiting: Layer 1
+    # sends one extraction call per archived page — 126 of them for corporate_locations — with no
+    # retry of its own, and a single 429 partway through fails the source and halts the whole run.
+    # Retries here cover every caller, classifier and extractor alike.
     gateway = os.environ.get("AI_GATEWAY_API_KEY")
     if gateway:
-        return (anthropic.Anthropic(api_key=gateway, base_url=AI_GATEWAY_BASE_URL),
+        return (anthropic.Anthropic(api_key=gateway, base_url=AI_GATEWAY_BASE_URL, max_retries=8),
                 gateway_model_id(model), "vercel_ai_gateway")
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         raise RuntimeError("no AI_GATEWAY_API_KEY and no ANTHROPIC_API_KEY — set one, "
                            "or set IC_AI=off for a deterministic run")
-    return anthropic.Anthropic(api_key=key), anthropic_model_id(model), "anthropic"
+    return anthropic.Anthropic(api_key=key, max_retries=8), anthropic_model_id(model), "anthropic"
