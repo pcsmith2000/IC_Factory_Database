@@ -146,3 +146,27 @@ def test_retries_raise_the_temperature(monkeypatch):
     monkeypatch.setattr(classify, "_call_once", fake)
     classify.classify_batch([{"row_hash": "h0", "name_verbatim": "X"}], "p", "m", 0)
     assert temps == [0, 0.2, 0.4]
+
+
+def test_a_seed_that_is_also_a_candidate_is_classified_once(monkeypatch, tmp_path):
+    # Run 35156659530 classified all 60 seeds twice — once as candidates, once as seeds — and
+    # 7 came back with different labels on the two passes. G5 then scored 93% or 89% on the same
+    # run depending only on which copy landed last. A gate whose verdict depends on batch ordering
+    # is not measuring the model.
+    shared = [{"row_hash": f"h{i}", "name_verbatim": f"PLANT {i}"} for i in range(4)]
+    seeds = [dict(r, seed_label="IC") for r in shared[:2]]     # two rows are BOTH
+    seen: list[str] = []
+
+    def fake(sub, prompt, model, temperature, usage_out, repair):
+        seen.extend(r["row_hash"] for r in sub)
+        return {i: {"i": i, "label": "IC"} for i in range(len(sub))}
+
+    monkeypatch.setattr(classify, "_call_once", fake)
+    monkeypatch.setattr(classify, "ai_client_and_model", lambda m: (None, m, "test"))
+    prompt = tmp_path / "p.md"; prompt.write_text("p")
+    meta = classify.run(shared, {"model": "m", "temperature": 0, "batch_size": 100},
+                        seeds, tmp_path / "cache", prompt)
+    assert sorted(seen) == ["h0", "h1", "h2", "h3"]      # each row exactly once
+    assert len(seen) == len(set(seen))
+    assert meta["seeds_also_candidates"] == 2
+    assert set(meta["labels"]) == {"h0", "h1", "h2", "h3"}

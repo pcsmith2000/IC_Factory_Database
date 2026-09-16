@@ -293,6 +293,16 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
     pace = float(cfg.get("batch_pause_seconds") or 0)
     cache_dir.mkdir(parents=True, exist_ok=True)
     labels: dict[str, dict] = {}
+    # The seeds were drawn from the very pool they are hidden in, so a row that is both is
+    # classified TWICE — once as an ordinary candidate, once as a seed — and `labels[row_hash]`
+    # keeps whichever batch happened to finish last. In run 35156659530 all 60 seeds were
+    # duplicates and 7 of them came back with different labels on their two passes, which made
+    # G5's verdict depend on batch ordering rather than on the model: the same labels scored 93%
+    # precision or 89% depending only on which copy won. Classify each row once. The seed copy is
+    # the one kept, because that is the copy the audit reads.
+    seed_hashes = {s["row_hash"] for s in seeds}
+    overlap = [r for r in rows if r["row_hash"] in seed_hashes]
+    rows = [r for r in rows if r["row_hash"] not in seed_hashes]
     todo = batches(rows, seeds, bs)
     _, resolved, provider = ai_client_and_model(model)
     # Layer 3 is the only layer that takes an hour, and it used to print nothing until it was over:
@@ -301,7 +311,8 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
     # stdout must be unbuffered for it to stream in CI — the workflow sets PYTHONUNBUFFERED.
     say = lambda m: print(m, flush=True)
     say(f"  layer 3: {len(rows)} candidates + {len(seeds)} seeds in {len(todo)} batches of <= {bs}"
-        f" · {resolved} via {provider} · temperature {temp}")
+        f" · {resolved} via {provider} · temperature {temp}"
+        + (f" ({len(overlap)} seeds were already candidates — classified once, as seeds)" if overlap else ""))
     if hb:
         hb.beat("3_classify", model=resolved, provider=provider, batches_total=len(todo),
                 batches_done=0, candidates=len(rows), seeds=len(seeds))
@@ -358,4 +369,5 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
         f"IC {ic} ({ic/max(1,len(labels)):.0%}) of {len(labels)} labelled")
     _, resolved, provider = ai_client_and_model(model)
     return {"labels": labels, "model": resolved, "provider": provider, "temperature": temp,
+            "seeds_also_candidates": len(overlap),
             "prompt_hash": prompt_hash(prompt_path), "n_candidates": len(rows), "n_seeds": len(seeds)}
