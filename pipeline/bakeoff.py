@@ -71,6 +71,26 @@ def _is_infrastructure(e: Exception) -> bool:
     return any(t in str(e) for t in ("429", "rate-limited", "rate limit", "503", "502", "504"))
 
 
+def _combine(runs: list[dict]) -> dict:
+    """Fold repeated scores of one model into one verdict, reported at its worst.
+
+    A model passes only if every run passed, and the figures shown are the minimum seen. Run-to-run
+    variance is real at temperature 0 — the same model cleared recall 100% and then 83% on
+    consecutive scores — and a mean would hide exactly the instability that matters for a gate a
+    release depends on.
+    """
+    r = dict(runs[0])
+    r["runs"] = len(runs)
+    r["passed"] = all(x["passed"] for x in runs)
+    r["precision"] = min(x["precision"] for x in runs)
+    r["recall"] = min(x["recall"] for x in runs)
+    r["recall_range"] = (min(x["recall"] for x in runs), max(x["recall"] for x in runs))
+    r["precision_range"] = (min(x["precision"] for x in runs), max(x["precision"] for x in runs))
+    costs = [x["seed_cost"] for x in runs if x.get("seed_cost") is not None]
+    r["seed_cost"] = sum(costs) / len(costs) if costs else None
+    return r
+
+
 def _cost(price: tuple[float, float], tin: int, tout: int) -> float:
     return price[0] * tin + price[1] * tout
 
@@ -101,6 +121,9 @@ def main(argv=None) -> int:
     ap.add_argument("--models", help="comma-separated gateway model ids; default: config's pinned model")
     ap.add_argument("--list", action="store_true", help="candidates by full-run cost, make no calls")
     ap.add_argument("--estimate", action="store_true", help="price the named models, make no calls")
+    ap.add_argument("--repeat", type=int, default=3,
+                    help="scores per model (default 3). One is not a verdict: gpt-oss-120b scored "
+                         "recall 100%% then 83%% on consecutive runs at temperature 0.")
     ap.add_argument("--delay", type=float, default=20.0,
                     help="seconds between models (default 20). The gateway burst-limits a run that "
                          "scores several back to back, and a 429 costs a verdict.")
@@ -147,7 +170,12 @@ def main(argv=None) -> int:
         except RuntimeError as e:
             print(e, file=sys.stderr); return 1
         try:
-            results.append(score(m, seeds, prompt, temp, prices))
+            runs = []
+            for k in range(args.repeat):
+                if k:
+                    time.sleep(args.delay)
+                runs.append(score(m, seeds, prompt, temp, prices))
+            results.append(_combine(runs))
         except Exception as e:
             # A model that cannot hold the output contract has failed the bake-off. A model the
             # gateway rate-limited or could not reach has not been measured at all, and recording
@@ -164,8 +192,13 @@ def main(argv=None) -> int:
         mark = "PASS" if r["passed"] else ("UNTESTED" if r.get("untested") else "FAIL")
         sc = f"${r['seed_cost']:.4f}" if r.get("seed_cost") is not None else "-"
         fc = f"${r['full_run_cost']:.2f}" if r.get("full_run_cost") is not None else "-"
+        spread = ""
+        for label, key in (("recall", "recall_range"), ("prec", "precision_range")):
+            rg = r.get(key)
+            if rg and rg[0] != rg[1]:
+                spread += f"   {label} {rg[0]:.0%}-{rg[1]:.0%} over {r['runs']} runs"
         print(f"{mark:<9}{r['model']:<42}{r['precision']:>6.0%}{r['recall']:>8.0%}{sc:>9}{fc:>9}"
-              + (f"   {r['error']}" if r.get("error") else ""))
+              + (f"   {r['error']}" if r.get("error") else "") + spread)
     winner = next((r for r in sorted(results, key=lambda x: x.get("full_run_cost") or 9e9) if r["passed"]), None)
     untested = [r["model"] for r in results if r.get("untested")]
     print()
