@@ -51,7 +51,9 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
           DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          # Variable is the right home for it (not sensitive, and a secret would be masked to ***
+          # in the logs), but accept a secret too: getting this wrong fails silently to sqlite.
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
         run: |
           if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
           python .github/scripts/neon_connection_string.py
