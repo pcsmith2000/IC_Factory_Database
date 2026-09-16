@@ -185,7 +185,15 @@ def main(argv=None) -> int:
             for k in range(args.repeat):
                 if k:
                     time.sleep(args.delay)
-                runs.append(score(m, seeds, prompt, temp, prices))
+                t0 = time.time()
+                r = score(m, seeds, prompt, temp, prices)
+                runs.append(r)
+                # Say it as it happens. A bake-off is minutes of sleeping between calls, and with
+                # only a final table it is indistinguishable from a hang — which is exactly how an
+                # hour went missing watching run 35156659530.
+                print(f"  {gateway_model_id(m):<44} score {k+1}/{args.repeat}  "
+                      f"{'pass' if r['passed'] else 'FAIL'}  prec {r['precision']:.0%}  "
+                      f"recall {r['recall']:.0%}  {r['reasks']} re-ask  {time.time()-t0:.0f}s", flush=True)
             results.append(_combine(runs))
         except Exception as e:
             # A model that cannot hold the output contract has failed the bake-off. A model the
