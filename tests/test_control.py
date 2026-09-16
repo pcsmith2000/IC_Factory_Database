@@ -11,7 +11,10 @@ ROOT = Path(__file__).resolve().parent.parent
 def test_unplaced_control_inputs_are_reported_not_hidden():
     probs = control.check(load_yaml(ROOT / "registry" / "config.yaml"))
     assert any("control-triaged.csv: EMPTY" in p for p in probs)
-    assert any("frame_state_totals.csv: EMPTY" in p for p in probs)
+    # frame_state_totals.csv is placed now; that it raises nothing covers its own rules — the
+    # state,establishments columns, two-letter states, integer counts, and the config floor the
+    # total must clear.
+    assert not any("frame_state_totals.csv" in p for p in probs), [p for p in probs if "frame_state" in p]
     # the classifier prompt is placed now, so the assertion that earns its keep is that neither it
     # nor the seeds raise anything — control.check is what stands between a half-placed control
     # directory and a release
