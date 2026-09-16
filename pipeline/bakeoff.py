@@ -60,8 +60,9 @@ def catalogue(retries: int = 3) -> dict[str, tuple[float, float]]:
 def _is_infrastructure(e: Exception) -> bool:
     """True when the gateway never let the model answer — rate limit, auth, transport, 5xx.
 
-    Distinct from a model that answered badly. The free tier rate-limits per model, so a bake-off
-    long enough to be useful will hit this, and an account limit is not evidence about a model.
+    Distinct from a model that answered badly. Scoring several models back to back trips the
+    gateway's burst limit — the 429 names a tier, but the same model answers on a later call — and
+    a rate limit reached by our own pacing is not evidence about a model.
     """
     name = type(e).__name__
     if name in ("RateLimitError", "APIConnectionError", "APITimeoutError", "InternalServerError",
