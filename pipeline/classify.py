@@ -114,27 +114,70 @@ def batches(rows: list[dict], seeds: list[dict], size: int) -> list[list[dict]]:
     return [sorted(b, key=lambda r: r["row_hash"]) for b in out if b]
 
 
-def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float,
-                   usage_out: dict | None = None) -> list[dict]:
-    """One regimented model call. Returns [{row_hash, label, confidence, type, reason}] in row order.
+class BatchContractError(RuntimeError):
+    """The model answered, but not in the shape the output contract requires.
 
-    Goes to whichever provider pipeline.ai_client_and_model resolves — the Vercel AI Gateway when
-    AI_GATEWAY_API_KEY is set, else the Anthropic API — over the Messages API either way. Output
-    is validated against the label set before it is accepted; a malformed response is an error,
-    never a silent default.
+    Separate from a transport or rate-limit error: the call succeeded and cost money, the content
+    is just unusable. Worth retrying with a different sample; not worth retrying identically.
+    """
+
+
+def _objects(text: str) -> list[dict]:
+    """Every JSON object in the response, salvaging one by one when the array will not parse.
+
+    A single unescaped quote inside one `reason` makes json.loads reject all 100 labels, and the
+    99 objects either side of it are still perfectly good JSON. Run 35154164293 died exactly here
+    — batch 1 of 131, after the EPA pull was already paid for — so scan brace-balanced spans and
+    keep what decodes: a defect in one row costs that row, not the batch and not the run.
+    """
+    m = re.search(r"\[.*\]", text, re.S)
+    body = m.group(0) if m else text
+    try:
+        got = json.loads(body)
+        if isinstance(got, list):
+            return [o for o in got if isinstance(o, dict)]
+    except json.JSONDecodeError:
+        pass
+    dec, out, i = json.JSONDecoder(), [], 0
+    while True:
+        j = body.find("{", i)
+        if j < 0:
+            return out
+        try:
+            o, i = dec.raw_decode(body, j)
+        except json.JSONDecodeError:
+            i = j + 1
+            continue
+        if isinstance(o, dict):
+            out.append(o)
+
+
+def _call_once(rows: list[dict], prompt: str, model: str, temperature: float,
+               usage_out: dict | None, repair: bool) -> dict[int, dict]:
+    """One model call. Returns {index into rows: label object}, validated. Never partial-credits
+    a bad label: an object that fails the contract is dropped and the caller re-asks for that row.
     """
     client, model, _ = ai_client_and_model(model)
     payload = [{"i": i, "name": r["name_verbatim"], "address": r.get("address_verbatim", ""),
                 "city": r.get("city_verbatim", ""), "state": r.get("state_verbatim", ""),
                 "naics": r.get("naics_verbatim", "")} for i, r in enumerate(rows)]
+    user = ("Classify each establishment. Return a JSON array of "
+            "{i, label, confidence, type, reason} with label in IC|NOT-IC|UNCERTAIN, "
+            "confidence 0-1, reason <= 12 words.\n"
+            # The quote rule is here and not in the frozen prompt on purpose: it is an encoding
+            # constraint on the transport, not a judgement about what is IC, and the frozen
+            # prompt's hash is in every release tag.
+            "Use no double quotes inside any string value — write plain words only.\n\n"
+            + json.dumps(payload))
+    if repair:
+        user = ("Your previous answer was not valid JSON. Return ONLY the array, no commentary, "
+                "and no double quotes inside any string value.\n\n" + user)
     # ~30 output tokens per row (label, confidence, type, a <=12-word reason). A flat 4000 left a
     # 100-row batch ~25% headroom, and overflow truncates the JSON array into a hard error.
     # temperature goes through extra_body: the Anthropic SDK dropped it from messages.create()
     # (current first-party models reject sampling parameters outright), but the gateway's Messages
     # API still documents and honours it, and determinism is worth having on a classifier.
-    user = ("Classify each establishment. Return a JSON array of "
-            "{i, label, confidence, type, reason} with label in IC|NOT-IC|UNCERTAIN, "
-            "confidence 0-1, reason <= 12 words.\n\n" + json.dumps(payload))
+    #
     # A model that reasons before answering spends the budget thinking first: nemotron-nano wrote
     # 12,990 characters of deliberation and hit the ceiling before the array, gpt-5-nano returned
     # nothing at all. Both looked like broken output contracts and were really a ceiling set too
@@ -158,32 +201,72 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
         usage_out["input_tokens"] = usage_out.get("input_tokens", 0) + (msg.usage.input_tokens or 0)
         usage_out["output_tokens"] = usage_out.get("output_tokens", 0) + (msg.usage.output_tokens or 0)
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-    m = re.search(r"\[.*\]", text, re.S)
-    if not m:
+    got = _objects(text)
+    if not got:
         # Say what came back. "No JSON array" alone cannot distinguish a model that refused, one
         # that wrote prose, one that returned a bare object, and one that was cut off at
         # max_tokens — and those call for different fixes.
-        raise RuntimeError(f"classify_batch: no JSON array in response "
-                           f"(stop_reason={getattr(msg, 'stop_reason', '?')}, {len(text)} chars): "
-                           f"{text[:180]!r}")
-    out = json.loads(m.group(0))
-    if len(out) != len(rows):
-        raise RuntimeError(f"classify_batch: {len(out)} labels for {len(rows)} rows")
+        raise BatchContractError(f"no usable JSON objects in response "
+                                 f"(stop_reason={getattr(msg, 'stop_reason', '?')}, {len(text)} chars): "
+                                 f"{text[:180]!r}")
     # Map by the index the model echoes back, never by position. Zipping the response onto the
     # batch assumes an ordering the model was only asked for, and a model that answers all 100 in
     # a different order would have every label attached to the wrong establishment — right count,
-    # valid labels, nothing raised. Requiring i to be a permutation makes that a loud failure.
-    seen: set[int] = set()
-    for o in out:
+    # valid labels, nothing raised.
+    out: dict[int, dict] = {}
+    for o in got:
         i = o.get("i")
-        if not isinstance(i, int) or not 0 <= i < len(rows):
-            raise RuntimeError(f"classify_batch: index {i!r} outside 0..{len(rows) - 1}")
-        if i in seen:
-            raise RuntimeError(f"classify_batch: index {i} returned twice")
-        seen.add(i)
+        if not isinstance(i, int) or not 0 <= i < len(rows) or i in out:
+            continue
         if o.get("label") not in LABELS:
-            raise RuntimeError(f"classify_batch: bad label {o.get('label')!r}")
+            continue
+        out[i] = o
+    if not out:
+        raise BatchContractError(f"{len(got)} objects returned, none with a usable index and label")
+    return out
+
+
+MAX_BATCH_ATTEMPTS = 3
+
+
+def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float,
+                   usage_out: dict | None = None) -> list[dict]:
+    """One batch, classified completely. Returns [{row_hash, label, confidence, type, reason}].
+
+    Goes to whichever provider pipeline.ai_client_and_model resolves — the Vercel AI Gateway when
+    AI_GATEWAY_API_KEY is set, else the Anthropic API — over the Messages API either way.
+
+    Every row comes back labelled or the batch raises. A run is ~131 batches, so a defect rate of
+    one batch in a hundred still fails every run: the rows the model garbled are re-asked rather
+    than the whole run abandoned. Retries raise the temperature, because at temperature 0 asking
+    the same question again returns the same broken answer — an identical retry is not a retry.
+    """
+    labels: dict[int, dict] = {}
+    pending = list(range(len(rows)))
+    trouble = ""
+    for attempt in range(MAX_BATCH_ATTEMPTS):
+        sub = [rows[i] for i in pending]
+        try:
+            got = _call_once(sub, prompt, model,
+                             temperature if not attempt else max(temperature, 0.0) + 0.2 * attempt,
+                             usage_out, repair=bool(attempt))
+        except BatchContractError as e:
+            trouble = str(e)
+            continue
+        for local, o in got.items():
+            labels[pending[local]] = o
+        pending = [i for i in range(len(rows)) if i not in labels]
+        if not pending:
+            break
+        trouble = f"{len(pending)} of {len(rows)} rows came back unusable"
+    if pending:
+        raise RuntimeError(f"classify_batch: {len(pending)} of {len(rows)} rows still unlabelled "
+                           f"after {MAX_BATCH_ATTEMPTS} attempts — {trouble}")
+    out = []
+    for i in range(len(rows)):
+        o = labels[i]
         o["row_hash"] = rows[i]["row_hash"]
+        out.append(o)
     return out
 
 

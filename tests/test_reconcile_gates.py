@@ -1,3 +1,4 @@
+import pytest
 import json
 from pathlib import Path
 from pipeline import reconcile, gates, classify
@@ -85,3 +86,63 @@ def test_core_and_keyword_paths_still_hold():
     assert _cand("321992", "ANY NAME AT ALL")[0]["_candidate_reason"] == "core naics 321992"
     assert _cand("327390", "ACME PRECAST CONCRETE")[0]["_candidate_reason"].endswith("× 3273")
     assert _cand("332312", "PLAIN STEEL CO") == []
+
+
+# Layer 3 output contract. A run is ~131 batches, so anything that fails one batch fails the run.
+
+def test_salvages_objects_when_one_reason_breaks_the_array():
+    # The shape that killed CI run 35154164293: an unescaped quote inside one `reason`. The array
+    # will not parse, but the objects either side of it are valid JSON.
+    bad = ('[{"i":0,"label":"IC","confidence":0.9,"type":"panel","reason":"panel plant"},'
+           ' {"i":1,"label":"NOT-IC","confidence":0.8,"type":"none","reason":"makes 2" pipe"},'
+           ' {"i":2,"label":"IC","confidence":0.9,"type":"truss_component","reason":"truss"}]')
+    import json as _json
+    with pytest.raises(_json.JSONDecodeError):
+        _json.loads(bad)
+    assert [o["i"] for o in classify._objects(bad)] == [0, 2]
+
+def test_objects_handles_clean_prose_and_empty():
+    assert classify._objects('[{"i":0,"label":"IC"}]') == [{"i": 0, "label": "IC"}]
+    assert classify._objects("I cannot help with that.") == []
+
+def test_batch_reasks_only_the_rows_that_came_back_broken(monkeypatch):
+    rows = [{"row_hash": f"h{i}", "name_verbatim": f"PLANT {i}"} for i in range(3)]
+    calls = []
+
+    def fake(sub, prompt, model, temperature, usage_out, repair):
+        calls.append((len(sub), repair))
+        if len(calls) == 1:                      # row 1 garbled, 0 and 2 fine
+            return {0: {"i": 0, "label": "IC"}, 2: {"i": 2, "label": "NOT-IC"}}
+        return {0: {"i": 0, "label": "UNCERTAIN"}}
+
+    monkeypatch.setattr(classify, "_call_once", fake)
+    out = classify.classify_batch(rows, "p", "m", 0)
+    assert [o["row_hash"] for o in out] == ["h0", "h1", "h2"]
+    assert out[1]["label"] == "UNCERTAIN"        # the re-ask filled the hole
+    assert calls == [(3, False), (1, True)]      # second call carried only the missing row
+
+def test_batch_raises_rather_than_leave_a_row_unlabelled(monkeypatch):
+    # A row the model never labels must not pass silently: run.py reads a missing label as NOT-IC
+    # and drops the establishment, so swallowing this would quietly shrink the dataset.
+    def never(sub, prompt, model, temperature, usage_out, repair):
+        raise classify.BatchContractError("model refused")
+
+    monkeypatch.setattr(classify, "_call_once", never)
+    rows = [{"row_hash": f"h{i}", "name_verbatim": "X"} for i in range(2)]
+    with pytest.raises(RuntimeError, match="2 of 2 rows still unlabelled"):
+        classify.classify_batch(rows, "p", "m", 0)
+
+def test_retries_raise_the_temperature(monkeypatch):
+    # At temperature 0 the same question returns the same broken answer, so an identical retry is
+    # not a retry at all.
+    temps = []
+
+    def fake(sub, prompt, model, temperature, usage_out, repair):
+        temps.append(temperature)
+        if len(temps) < 3:
+            raise classify.BatchContractError("no usable JSON objects in response")
+        return {0: {"i": 0, "label": "IC"}}
+
+    monkeypatch.setattr(classify, "_call_once", fake)
+    classify.classify_batch([{"row_hash": "h0", "name_verbatim": "X"}], "p", "m", 0)
+    assert temps == [0, 0.2, 0.4]
