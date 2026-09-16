@@ -83,7 +83,7 @@ database exists to find, and 8,814 of its rows are being discarded on the streng
 ## The recommendation: stop pre-filtering on names
 
 Keyword pre-filtering is a false economy here. It exists to keep the classifier cheap, and the
-classifier is not expensive: the measured cost is **$0.06 per 2,922 rows**. Classifying the whole
+classifier is not expensive: the measured cost was **$0.06 per 2,922 rows**. Classifying the whole
 99,883-row slice would cost roughly **$2 per run** — for a job that runs quarterly, about $8 a
 year, against a filter that is currently discarding known-good plants silently.
 
@@ -99,6 +99,65 @@ Options, cheapest first:
 
 Option 2 or 3 also changes what G5 is measuring: the seeds were drawn from the current candidate
 pool, and widening the pool widens the population the gate is meant to represent.
+
+## What was done: option 2, 2026-09-16
+
+`classify.WIDE_NAICS_FAMILIES = {"3219", "3212"}`. Every row in those two families is a candidate
+regardless of what it is called; the core-NAICS and keyword × family rules are unchanged, and each
+row still records why it was admitted in `_candidate_reason` (`wide family 3219`).
+
+Measured against the same archived slice:
+
+| | before | after |
+|---|---|---|
+| Core NAICS | 2,266 | 2,266 |
+| Wide family (3219, 3212) | — | 10,172 |
+| Keyword × family | 656 | 535 |
+| **Candidates** | **2,922** | **12,973** |
+| Cost per run, `openai/gpt-oss-120b` | $0.06 | **$0.27** |
+
+The keyword count falls from 656 to 535 because 121 of those rows were in 3219 or 3212 already and
+are now admitted on the family instead — the same rows, credited to the stronger reason.
+
+EPA is the only active source with `needs_classify: true` (`osha_enforcement` is queued), so 12,973
+is the whole pool, not the EPA share of it. `pipeline/bakeoff.py`'s full-run token constants were
+re-measured to match; any full-run price quoted before this change is about a quarter of the truth.
+
+### What it recovers, and what it does not
+
+Recovered — in EPA, previously dropped, now candidates:
+
+| company | NAICS | admitted as |
+|---|---|---|
+| Shelter Systems | 321211 | wide family 3212 |
+| Toll Integrated Systems | 321911 | wide family 3219 |
+| Pacific Wall Systems (3 records) | 321918, 321999 | wide family 3219 |
+| 84 Lumber, Richmond door shop | 321911 | wide family 3219 |
+
+Still dropped, and this is the honest limit of option 2 — all three are outside 3219 and 3212:
+
+| company | NAICS | why |
+|---|---|---|
+| Banker Steel (7 records) | 332312 | fabricated structural metal; no keyword in the name |
+| 84 Lumber (the 423310 and 2362 records) | 423310, 2362 | wholesale and project rows |
+| North Georgia Truss Systems | 236210 | has `truss`, but the matrix pairs it only with 3212/3219 |
+
+Option 1 (pair `truss` with `2362`, add `wall system` / `building system` / `structural`) would
+reach North Georgia Truss Systems and probably Banker Steel. It was not done here. Option 3
+(classify the whole slice, ~$2 a run) remains the only choice that stops the name filter making a
+silent judgement at all.
+
+### Two consequences to keep in view
+
+G5's 60 seeds were drawn from the 2,922-row pool. They now stand for a pool 4.4× larger and
+differently composed — mostly unremarkable 3219 and 3212 rows the seeds do not represent. The gate
+still guards every run, but its population and the run's have drifted apart; re-seeding from the
+widened pool is the fix, and is not done.
+
+And the frame is still four NAICS codes totalling 2,750 establishments, which is what Layer 7
+divides by. This change deliberately finds plants outside those codes, so coverage can now exceed
+100% without the database being complete. That is a scope decision — widen `frame.naics`, or say
+plainly that coverage measures the four core codes only — and it is the user's, not a tuning knob.
 
 ## One thing this does not fix
 

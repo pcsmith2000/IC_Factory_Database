@@ -34,15 +34,30 @@ KEYWORD_NAICS = {
 }
 PLACENAME_COLLISIONS = {"trussville", "old forge", "campanello"}
 
+# Families admitted WHOLE, without asking what the row is called. 3219 (other wood product
+# manufacturing) and 3212 (veneer, plywood and engineered wood) are where the truss, panel and
+# component plants this database exists to find actually sit, and the name filter was discarding
+# them on the strength of their names: Shelter Systems, Toll Integrated Systems and Pacific Wall
+# Systems are all on the validated list, all in these families, and none of them says what it
+# makes in its name (docs/epa-coverage.md). Real manufacturers are named after people and places.
+#
+# This costs ~10,000 extra rows on the EPA slice, taking the classifier from ~2,900 to ~13,000 and
+# a run from $0.06 to ~$0.27 — cheap against a filter making a silent, untested judgement before
+# the judgement. The placename guard does NOT apply here: it exists to stop a keyword firing on a
+# town called Trussville, and in these families the name is not the reason for admission.
+WIDE_NAICS_FAMILIES = {"3219", "3212"}
+
 
 def candidates(rows: list[dict], core_naics: set[str]) -> list[dict]:
-    """Return rows that are in a core NAICS code, or match keyword × NAICS family."""
+    """Return rows in a core NAICS code, in a wide family, or matching keyword × NAICS family."""
     out = []
     for r in rows:
         naics = (r.get("naics_verbatim") or "").strip()
         name = (r.get("name_verbatim") or "").lower()
         if naics in core_naics:
             r["_candidate_reason"] = f"core naics {naics}"; out.append(r); continue
+        if naics[:4] in WIDE_NAICS_FAMILIES:
+            r["_candidate_reason"] = f"wide family {naics[:4]}"; out.append(r); continue
         if any(p in name for p in PLACENAME_COLLISIONS):
             continue
         for pat, fams in KEYWORD_NAICS.items():
@@ -73,11 +88,12 @@ def batch_key(rows: list[dict], model: str = "", prompt: str = "") -> str:
 def batches(rows: list[dict], seeds: list[dict], size: int) -> list[list[dict]]:
     """Split candidates into batches with the seeds spread evenly through them.
 
-    `rows + seeds` chunked in order piles every seed into the final batch — with 2922 candidates
-    and 60 seeds that last batch was 73% seeds, so the graded rows were the only ones the model
-    ever saw in seed-dense context, and the audit measured a situation no real batch is in. Deal
-    both round-robin instead, so each batch carries its share, then order each batch by row_hash:
-    deterministic (the cache key depends on it) but uncorrelated with which rows are seeds.
+    `rows + seeds` chunked in order piles every seed into the final batch — with the candidate
+    pool at 2,922 rows and 60 seeds that last batch was 73% seeds, so the graded rows were the
+    only ones the model ever saw in seed-dense context, and the audit measured a situation no real
+    batch is in. Deal both round-robin instead, so each batch carries its share, then order each
+    batch by row_hash: deterministic (the cache key depends on it) but uncorrelated with which
+    rows are seeds.
     """
     n = max(1, math.ceil((len(rows) + len(seeds)) / size))
     out: list[list[dict]] = [[] for _ in range(n)]

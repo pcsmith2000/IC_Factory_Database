@@ -10,7 +10,7 @@ model that clears the gate is the answer; everything above it is money spent on 
     python -m pipeline.bakeoff --estimate        # what a full run would cost, no calls made
 
 Needs AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY). Each scored model costs roughly a cent: the
-seeds are ~60 rows, against ~2,982 for a full run. Scoring ten models is cheaper than one run.
+seeds are ~60 rows, against ~12,973 for a full run. Scoring ten models is cheaper than one run.
 
 The seeds are graded here in a single 60-row batch, which is NOT the shape a real run uses —
 classify.batches() spreads them two per batch through the candidates. A model that clears the
@@ -27,10 +27,13 @@ from .registry import load_yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 MODELS_URL = "https://ai-gateway.vercel.sh/v1/models"
-# Full-run shape, measured on the 2026-09-16 candidate set: 30 batches of ~100, ~5k in / ~3k out
-# each. Used only to turn a per-seed price into the number that matters, cost per quarterly run.
-FULL_RUN_INPUT_TOKENS = 150_000
-FULL_RUN_OUTPUT_TOKENS = 90_000
+# Full-run shape, measured on the 2026-09-16 candidate set AFTER families 3219 and 3212 were
+# admitted whole (classify.WIDE_NAICS_FAMILIES): ~13,000 rows in ~130 batches of 100, with the
+# frozen prompt re-sent each batch. Before the widening it was 2,922 rows in 30 batches, 150k in
+# / 90k out — so any full-run price quoted before 2026-09-16 is roughly a quarter of the truth.
+# Used only to turn a per-seed price into the number that matters, cost per quarterly run.
+FULL_RUN_INPUT_TOKENS = 660_000
+FULL_RUN_OUTPUT_TOKENS = 400_000
 
 
 def catalogue(retries: int = 3) -> dict[str, tuple[float, float]]:

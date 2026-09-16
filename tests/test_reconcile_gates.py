@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from pipeline import reconcile, gates
+from pipeline import reconcile, gates, classify
 from pipeline.contract import COLUMNS, normalise
 
 def _row(sid, name, addr, city, st, **kw):
@@ -43,3 +43,31 @@ def test_g5_scores_seeds():
     r = gates.g5_classifier_eval(labels, seeds, 0.95, 0.90)
     assert r.details["precision"] == 1.0 and r.details["recall"] == 0.5 and not r.passed
     assert not gates.g5_classifier_eval({}, [], 0.95, 0.90).passed   # unaudited AI step fails
+
+
+# Layer 3 candidate generation. Deterministic, runs with the classifier off, and decides what the
+# model is ever allowed to see — a row dropped here is never judged, only silently absent.
+
+CORE = {"321991", "321992", "332311", "321214"}
+_cand = lambda naics, name: classify.candidates(
+    [{"naics_verbatim": naics, "name_verbatim": name}], CORE)
+
+def test_wide_families_are_candidates_whatever_the_row_is_called():
+    # Real plants on the validated list, all in 3219/3212, none saying so in its name. Before the
+    # widening every one of these was dropped before the classifier (docs/epa-coverage.md).
+    for naics, name in (("321211", "SHELTER SYSTEMS"), ("321911", "TOLL INTEGRATED SYSTEMS"),
+                        ("321918", "317715012 - PACIFIC WALL SYSTEMS INC")):
+        got = _cand(naics, name)
+        assert got and got[0]["_candidate_reason"].startswith("wide family"), name
+
+def test_widening_does_not_reach_outside_3219_and_3212():
+    # The honest limit: these three are also on the validated list, also in EPA, and still dropped.
+    # 332312 and 423310 carry no keyword; NORTH GEORGIA has `truss` but 2362 is not paired with it.
+    assert _cand("332312", "BANKER STEEL - ORLANDO") == []
+    assert _cand("423310", "84 LUMBER COMPANY") == []
+    assert _cand("236210", "NORTH GEORGIA TRUSS SYSTEMS") == []
+
+def test_core_and_keyword_paths_still_hold():
+    assert _cand("321992", "ANY NAME AT ALL")[0]["_candidate_reason"] == "core naics 321992"
+    assert _cand("327390", "ACME PRECAST CONCRETE")[0]["_candidate_reason"].endswith("× 3273")
+    assert _cand("332312", "PLAIN STEEL CO") == []
