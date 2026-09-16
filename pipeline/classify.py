@@ -106,19 +106,28 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
     # temperature goes through extra_body: the Anthropic SDK dropped it from messages.create()
     # (current first-party models reject sampling parameters outright), but the gateway's Messages
     # API still documents and honours it, and determinism is worth having on a classifier.
-    msg = client.messages.create(
-        # A model that reasons before answering spends the budget thinking first: nemotron-nano
-        # wrote 12,990 characters of deliberation and hit the ceiling before the array, gpt-5-nano
-        # returned nothing at all. Both looked like broken output contracts and were really a
-        # ceiling set too low. Output tokens bill for what is generated, so headroom is free on
-        # models that do not use it.
-        model=model, max_tokens=min(32000, max(16000, 64 * len(rows) + 1000)),
-        extra_body={"temperature": temperature},
-        system=prompt,
-        messages=[{"role": "user", "content": "Classify each establishment. Return a JSON array of "
-                   "{i, label, confidence, type, reason} with label in IC|NOT-IC|UNCERTAIN, "
-                   "confidence 0-1, reason <= 12 words.\n\n" + json.dumps(payload)}],
-    )
+    user = ("Classify each establishment. Return a JSON array of "
+            "{i, label, confidence, type, reason} with label in IC|NOT-IC|UNCERTAIN, "
+            "confidence 0-1, reason <= 12 words.\n\n" + json.dumps(payload))
+    # A model that reasons before answering spends the budget thinking first: nemotron-nano wrote
+    # 12,990 characters of deliberation and hit the ceiling before the array, gpt-5-nano returned
+    # nothing at all. Both looked like broken output contracts and were really a ceiling set too
+    # low. Output tokens bill for what is generated, so headroom is free where it goes unused.
+    want = min(32000, max(16000, 64 * len(rows) + 1000))
+    for attempt in range(2):
+        try:
+            msg = client.messages.create(model=model, max_tokens=want,
+                                         extra_body={"temperature": temperature},
+                                         system=prompt, messages=[{"role": "user", "content": user}])
+            break
+        except Exception as e:
+            # Output ceilings are per model and the gateway only says so on rejection — that floor
+            # started 400ing nova-lite, whose cap is 10000. Take the limit out of the refusal and
+            # retry once, rather than make every caller carry a per-model table.
+            cap = re.search(r"model limit of (\d+)", str(e))
+            if attempt or not cap:
+                raise
+            want = int(cap.group(1))
     if usage_out is not None and getattr(msg, "usage", None) is not None:
         usage_out["input_tokens"] = usage_out.get("input_tokens", 0) + (msg.usage.input_tokens or 0)
         usage_out["output_tokens"] = usage_out.get("output_tokens", 0) + (msg.usage.output_tokens or 0)
