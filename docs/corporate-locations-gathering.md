@@ -111,6 +111,29 @@ import collections; print(collections.Counter(r['source_document'] for r in rows
 A CSV that produces no rows, or is missing `name`/`city`/`state`, fails loudly at Layer 1 with the
 file named — that is the signal to fix the CSV, not to re-upload the same thing.
 
+## Coverage of the 2026-09-16 transcription, verified
+
+126 pages were archived; the six CSVs carry 210 rows. Every archived page is accounted for:
+
+| | pages | rows |
+|---|---|---|
+| builders-firstsource | 96 | 94 |
+| ufp-site-built | 26 | 25 |
+| 84-lumber | 1 | 54 |
+| stark-truss | 1 | 15 |
+| parr-truss | 1 | 14 |
+| the-truss-company | 1 | 8 |
+
+Four archived pages are cited by no row, and all four are correct omissions: three are the
+`all-locations` / `our-locations` index pages, which are directories rather than plants, and the
+fourth is `location-arizona-truss-design-ewp-multifamily-phoetrad`, which is a suite-number sales
+office — *"Our Mesa, AZ office supports customers and business partners"* — with no manufacturing
+claim on the page. That is the exclusion rule above working as intended.
+
+For 84 Lumber and Parr Truss the CSVs go **beyond** the archive: only the index page was ever
+fetched, and the rows cite per-location URLs that were never archived. Those 68 rows have no page
+snapshot behind them and never did; their provenance is the `source_url` on each row.
+
 ## What this changes
 
 The folder currently holds 126 archived HTML pages from an automated fetch. Transcribed CSVs take
