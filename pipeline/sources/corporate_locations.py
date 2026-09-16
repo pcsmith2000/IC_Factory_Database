@@ -70,6 +70,8 @@ def _from_csv(path: Path, source: dict) -> list[dict]:
     require(not missing, path, f"pre-extracted CSV is missing columns {missing}; "
                                f"expected {PRE_EXTRACTED_COLUMNS}")
     out = []
+    # Position is per file, so revising one company's CSV cannot shift the row numbers recorded
+    # against every other company.
     for i, r in enumerate(rows, 1):
         name = (r.get("name") or "").strip()
         if not name:
@@ -85,13 +87,19 @@ def _from_csv(path: Path, source: dict) -> list[dict]:
     return out
 
 
+
 def parse(paths: list[Path], source: dict, cfg: dict | None = None) -> list[dict]:
     from ..registry import load_yaml
     cfg = cfg or load_yaml(ROOT / "registry" / "config.yaml")
-    # A transcribed CSV wins outright: if the reading is already done, do not pay for it again.
-    pre = [p for p in paths if p.suffix.lower() == ".csv"]
+    # Transcribed CSVs win outright: if the reading is already done, do not pay for it again.
+    # One file per company, so a company whose page changed is re-transcribed and re-uploaded on
+    # its own — the others keep their rows, their positions and the file they came from.
+    pre = sorted((p for p in paths if p.suffix.lower() == ".csv"), key=lambda p: p.name)
     if pre:
-        return _from_csv(pre[0], source)
+        out: list[dict] = []
+        for f in pre:
+            out += _from_csv(f, source)
+        return out
     out, audit, pos = [], [], 0
     for path in paths:
         company = path.parent.name.replace("-", " ")

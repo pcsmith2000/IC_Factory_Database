@@ -9,14 +9,24 @@ That is the slowest and most failure-prone thing Layer 1 does, and a single rate
 anywhere in the sequence fails the source and halts the whole run.
 
 **So don't gather pages. Gather rows.** If the reading is already done, the run just loads it:
-`parse()` prefers a `locations.csv` in the source's folder and skips extraction entirely — no
+`parse()` prefers transcribed CSVs in the source's folder and skips extraction entirely — no
 model calls, no structured-output dependency, no rate limits.
 
 ---
 
 ## What to produce
 
-One CSV, exactly these columns, header row included:
+**One CSV per company**, named for the company: `builders-firstsource.csv`, `stark-truss.csv`,
+`parr-truss.csv` and so on. Every CSV in the folder is read and the rows concatenated.
+
+One file per company is the point. A company that redesigns its locations page is re-transcribed
+and re-uploaded on its own; every other company keeps its rows, its row positions, and the file
+name recorded against them. Each row carries the file it came from in `source_document` and the
+page it came from in `source_url`, so a value in the warehouse can always be walked back to the
+company, the file and the page. Row positions are numbered within each file, so revising one
+company cannot shift the numbers recorded against another.
+
+Each file has exactly these columns, header row included:
 
 ```
 company,name,address,city,state,zip,kind,evidence,source_url
@@ -69,12 +79,16 @@ and useful; a row with a street you reconstructed is not.
 
 ```bash
 export BLOB_READ_WRITE_TOKEN=...
-python -m pipeline.archive put corporate_locations locations.csv
+python -m pipeline.archive put corporate_locations *.csv        # all of them, one date folder
 ```
 
-That writes `ic-sources/corporate_locations/<today>/locations.csv` and the manifest. The run reads
-the **newest** date folder, so a later, better CSV supersedes an earlier one without deleting
-anything.
+That writes each file to `ic-sources/corporate_locations/<today>/` with a manifest.
+
+The run reads the **newest** date folder and every CSV in it, which is the one thing to be careful
+about: a date folder is the complete set, not a patch. Re-uploading a single revised company into
+a new date folder would leave the others behind. To update one company, put its new CSV alongside
+copies of the current ones — `archive put` takes several files in one call, and
+`python -m pipeline.archive list corporate_locations <date>` shows what a folder holds.
 
 Confirm it landed:
 
@@ -89,8 +103,9 @@ python -c "
 from pathlib import Path; from pipeline.sources import corporate_locations as cl
 from pipeline.registry import load_yaml
 src = next(s for s in load_yaml(Path('registry/sources.yaml'))['sources'] if s['id']=='corporate_locations')
-rows = cl.parse([Path('locations.csv')], src)
-print(len(rows), 'rows'); print(rows[0])"
+rows = cl.parse(sorted(Path('.').glob('*.csv')), src)
+print(len(rows), 'rows')
+import collections; print(collections.Counter(r['source_document'] for r in rows))"
 ```
 
 A CSV that produces no rows, or is missing `name`/`city`/`state`, fails loudly at Layer 1 with the
@@ -98,8 +113,8 @@ file named — that is the signal to fix the CSV, not to re-upload the same thin
 
 ## What this changes
 
-The folder currently holds 126 archived HTML pages from an automated fetch. A `locations.csv`
-takes precedence over them; the pages stay as provenance and cost nothing. Rows loaded this way
+The folder currently holds 126 archived HTML pages from an automated fetch. Transcribed CSVs take
+precedence over them; the pages stay as provenance and cost nothing. Rows loaded this way
 are marked `transcribed from the company page, not model-extracted` in `notes`, so the warehouse
 can always tell them apart from anything a fetcher parsed itself.
 
