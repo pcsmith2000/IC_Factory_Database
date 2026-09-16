@@ -91,6 +91,8 @@ def _combine(runs: list[dict]) -> dict:
     r["precision_range"] = (min(x["precision"] for x in runs), max(x["precision"] for x in runs))
     costs = [x["seed_cost"] for x in runs if x.get("seed_cost") is not None]
     r["seed_cost"] = sum(costs) / len(costs) if costs else None
+    r["reasks"] = sum(x.get("reasks", 0) for x in runs)
+    r["contract_errors"] = sum(x.get("contract_errors", 0) for x in runs)
     return r
 
 
@@ -102,7 +104,12 @@ def score(model: str, seeds: list[dict], prompt: str, temperature: float,
           prices: dict) -> dict:
     """One model over the seed set: the G5 verdict, plus what it cost and would cost."""
     usage: dict = {}
-    labels_list = classify_batch(seeds, prompt, model, temperature, usage_out=usage)
+    # Re-asks are a first-class result, not a detail. gpt-oss-120b cleared G5 and still needed a
+    # re-ask on roughly a quarter of the 100-row batches in run 35160444815 — every one recovered,
+    # but each costs an extra call, and a model that cannot hold the output contract is a model to
+    # replace. A score that hides that is measuring half the question.
+    contract: dict = {}
+    labels_list = classify_batch(seeds, prompt, model, temperature, usage_out=usage, stats=contract)
     labels = {o["row_hash"]: o for o in labels_list}
     gate = g5_classifier_eval(labels, seeds, 0.95, 0.90)
     d = gate.details or {}
@@ -114,6 +121,7 @@ def score(model: str, seeds: list[dict], prompt: str, temperature: float,
         "recall": d.get("recall", 0.0), "tp": d.get("tp"), "fp": d.get("fp"), "fn": d.get("fn"),
         "unlabelled": sum(1 for s in seeds if s["row_hash"] not in labels),
         "seed_tokens": (tin, tout),
+        "reasks": contract.get("reasks", 0), "contract_errors": contract.get("contract_errors", 0),
         "seed_cost": _cost(price, tin, tout) if price else None,
         "full_run_cost": _cost(price, FULL_RUN_INPUT_TOKENS, FULL_RUN_OUTPUT_TOKENS) if price else None,
     }
@@ -189,7 +197,7 @@ def main(argv=None) -> int:
                             "error": f"{type(e).__name__}: {str(e)[:150]}",
                             "precision": 0.0, "recall": 0.0, "full_run_cost": None})
 
-    print(f"\n{'':9}{'model':<42}{'prec':>7}{'recall':>8}{'seed $':>9}{'run $':>9}")
+    print(f"\n{'':9}{'model':<42}{'prec':>7}{'recall':>8}{'seed $':>9}{'run $':>9}{'re-ask':>8}")
     for r in sorted(results, key=lambda x: (not x["passed"], x.get("untested", False),
                                             x.get("full_run_cost") or 9e9)):
         mark = "PASS" if r["passed"] else ("UNTESTED" if r.get("untested") else "FAIL")
@@ -200,7 +208,8 @@ def main(argv=None) -> int:
             rg = r.get(key)
             if rg and rg[0] != rg[1]:
                 spread += f"   {label} {rg[0]:.0%}-{rg[1]:.0%} over {r['runs']} runs"
-        print(f"{mark:<9}{r['model']:<42}{r['precision']:>6.0%}{r['recall']:>8.0%}{sc:>9}{fc:>9}"
+        ra = f"{r.get('reasks', 0)}" + (f"/{r['contract_errors']}!" if r.get("contract_errors") else "")
+        print(f"{mark:<9}{r['model']:<42}{r['precision']:>6.0%}{r['recall']:>8.0%}{sc:>9}{fc:>9}{ra:>8}"
               + (f"   {r['error']}" if r.get("error") else "") + spread)
     winner = next((r for r in sorted(results, key=lambda x: x.get("full_run_cost") or 9e9) if r["passed"]), None)
     untested = [r["model"] for r in results if r.get("untested")]

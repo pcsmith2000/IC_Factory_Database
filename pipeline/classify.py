@@ -281,7 +281,8 @@ class ClassifierUnavailable(RuntimeError):
     """The provider would not serve the run. Not a defect in the pipeline or the data."""
 
 
-def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_path: Path) -> dict:
+def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_path: Path,
+        hb=None) -> dict:
     """Classify candidates + seeds. Returns labels keyed by row_hash and the seed scoring input.
 
     Batches are cached by content hash, so a re-run only pays for what did not finish. Keeping
@@ -301,6 +302,9 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
     say = lambda m: print(m, flush=True)
     say(f"  layer 3: {len(rows)} candidates + {len(seeds)} seeds in {len(todo)} batches of <= {bs}"
         f" · {resolved} via {provider} · temperature {temp}")
+    if hb:
+        hb.beat("3_classify", model=resolved, provider=provider, batches_total=len(todo),
+                batches_done=0, candidates=len(rows), seeds=len(seeds))
     tally: dict[str, int] = {}
     stats: dict[str, int] = {}
     t0, called, cached_n = time.time(), 0, 0
@@ -342,6 +346,12 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
         say(f"  {n:>4}/{len(todo)}  {len(batch):>3} rows  {note:<16}"
             f"  IC {tally.get('IC',0):>5}  NOT-IC {tally.get('NOT-IC',0):>5}"
             f"  UNC {tally.get('UNCERTAIN',0):>4}   eta {eta/60:4.1f}m")
+        if hb:
+            # Throttled inside the heartbeat; this is the line an outside watcher actually reads,
+            # because GitHub serves no logs for a job that is still running.
+            hb.beat("3_classify", batches_done=n, rows_labelled=len(labels), labels=dict(tally),
+                    eta_s=round(eta), secs_per_batch=round(elapsed / n, 1),
+                    reasks=stats.get("reasks", 0), contract_errors=stats.get("contract_errors", 0))
     ic = tally.get("IC", 0)
     say(f"  layer 3 done in {(time.time()-t0)/60:.1f}m: {called} calls, {cached_n} cached, "
         f"{stats.get('reasks', 0)} re-asks, {stats.get('contract_errors', 0)} unusable responses · "

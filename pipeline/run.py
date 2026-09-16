@@ -11,6 +11,7 @@ import argparse, csv, json, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .heartbeat import Heartbeat
 from . import __version__, ai_enabled, ai_client_and_model, acquire, validate, classify, resolve, reconcile, golden, gates, measure, warehouse
 from .registry import load_yaml, active_sources, sha256_file, registry_version
 
@@ -60,8 +61,16 @@ def main(argv=None) -> int:
                   file=sys.stderr)
             return 2
 
+    # Published to the blob store so a run can be watched from outside while it is still going.
+    # GitHub serves no logs for an in-progress job, so without this the only way to read a live
+    # run's state was to cancel it. Inert when no blob token is set; never raises.
+    hb = Heartbeat(cfg)
+    hb.beat("starting", force=True, registry_version=record["registry_version"],
+            pipeline_version=__version__, layers=sorted(layers), ai="on" if ai_enabled() else "off")
+
     def halt(where: str, why: str) -> int:
         record["halted_at"] = where; record["halt_reason"] = why
+        hb.failed(f"halted at {where}: {why}", phase=where)
         _write_record(record); print(f"HALT at {where}: {why}", file=sys.stderr); return 2
 
     if args.dry_run:
@@ -70,6 +79,7 @@ def main(argv=None) -> int:
         _write_record(record); return 0
 
     # ---- Layer 1
+    hb.beat("1_acquire")
     if 1 in layers:
         pulled, failed, skipped = [], {}, {}
         for s in sources:
@@ -86,6 +96,7 @@ def main(argv=None) -> int:
             return halt("layer 1", f"{len(failed)} active sources did not pull: " + "; ".join(f"{k} — {v}" for k, v in sorted(failed.items())))
 
     # ---- Layer 2
+    hb.beat("2_validate")
     last_run = _last_run_dir(ROOT / "run_records")
     v = validate.run(csv_dir, norm_dir, last_run, cfg["validate"]["row_count_drift_tolerance"])
     record["layers"]["2_validate"] = v
@@ -115,7 +126,8 @@ def main(argv=None) -> int:
         # the measurable half of Layer 3, and with the classifier off it is what the review queue holds.
         cand = classify.candidates([r for r in rows if r["source_id"] in needs], core)
         if ai_enabled():
-            cls_meta = classify.run(cand, cfg["classifier"], seeds, out / "classify_cache", ROOT / cfg["classifier"]["prompt_path"])
+            cls_meta = classify.run(cand, cfg["classifier"], seeds, out / "classify_cache",
+                                    ROOT / cfg["classifier"]["prompt_path"], hb=hb)
             labels = cls_meta["labels"]
             record["layers"]["3_classify"] = {k: v for k, v in cls_meta.items() if k != "labels"}
             keep, review, drop = [], [], 0
@@ -150,10 +162,12 @@ def main(argv=None) -> int:
             rows = keep
 
     # ---- Layer 4
+    hb.beat("4_resolve")
     crosswalk = _load_crosswalk(ROOT / "control" / "crosswalk.csv")
     record["layers"]["4_resolve"] = resolve.run(rows, crosswalk.get("rows", {}))
 
     # ---- Layer 5
+    hb.beat("5_reconcile")
     rec = reconcile.run(rows, ROOT / "id_registry.json")
     facilities = rec["facilities"]
     record["layers"]["5_reconcile"] = {k: v for k, v in rec.items() if k not in {"facilities", "rows"}}
@@ -172,6 +186,7 @@ def main(argv=None) -> int:
                                      "survivorship_version": rules.get("version"), "operator_assertions": sum(1 for a in asserts if a["source_id"] == "operator")}
 
     # ---- Layer 6
+    hb.beat("6_gates")
     g = cfg["gates"]
     results = [
         gates.g1_dedupe(facilities, g["g1_dedupe_max_rate"], g["g1_thresholds"], out / f"dedupe_audit_{started:%Y-%m-%d}.csv"),
@@ -189,6 +204,7 @@ def main(argv=None) -> int:
         return halt("layer 6", "; ".join(f"{r.gate} — {r.summary}" for r in failed))
 
     # ---- Layer 7
+    hb.beat("7_measure")
     frame_path = ROOT / "control" / "frame_state_totals.csv"
     control_rows = list(csv.DictReader(open(ROOT / cfg["control"]["path"], newline=""))) if (ROOT / cfg["control"]["path"]).exists() else []
     m = {"recall": measure.recall(control_rows, facilities, crosswalk.get("control", {}))}
@@ -199,6 +215,7 @@ def main(argv=None) -> int:
     record["layers"]["7_measure"] = m
 
     # ---- Layer 8
+    hb.beat("8_warehouse")
     g1 = results[0].details
     record["release"] = {
         "published_count": g1.get("corrected_count", len(facilities)), "raw_count": len(facilities),
@@ -221,6 +238,9 @@ def main(argv=None) -> int:
         return halt("layer 8", str(e))
     _write_record(record)
     print(f"RELEASE {record['release']['tag']} · {record['release']['published_count']} facilities")
+    hb.done(phase="released", release_tag=record["release"]["tag"],
+            published_count=record["release"]["published_count"],
+            gates=[{"id": g.get("id"), "passed": g.get("passed")} for g in record.get("gates", [])])
     return 0
 
 
