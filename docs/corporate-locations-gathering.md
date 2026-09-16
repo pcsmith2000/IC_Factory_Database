@@ -119,4 +119,10 @@ are marked `transcribed from the company page, not model-extracted` in `notes`, 
 can always tell them apart from anything a fetcher parsed itself.
 
 With a CSV in place this source no longer needs `IC_AI=on` to work, which removes it as a blocker
-on the first classified run.
+on the first classified run. Layer 1 checks the archive for transcribed CSVs before deciding an
+`ai_extraction` source needs a model, so a deterministic run picks them up too.
+
+**Upload to `ic-sources/corporate_locations/<date>/`.** The 2026-09-16 transcription first landed
+under an `ic-csv/` prefix, which nothing reads — `ic-csv/` is a *local* directory in the repo, not
+a store prefix, so the files were inert and the source silently contributed nothing. Use
+`python -m pipeline.archive put`, which builds the key for you, rather than the dashboard.

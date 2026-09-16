@@ -43,15 +43,37 @@ class SourceSkipped(Exception):
     """Deliberately not pulled this run (IC_AI=off vs. an `ai_extraction` source). Not a failure."""
 
 
+def _has_transcribed_rows(arch, sid: str) -> bool:
+    """True when the newest archived folder holds transcribed CSVs.
+
+    An `ai_extraction` source reads prose, so it normally needs a model. But if someone has
+    already done the reading by hand and uploaded it, `parse()` prefers those CSVs and makes no
+    model call at all — the source is deterministic this run. Deciding that from the registry
+    flag alone, before looking in the store, is what made a fully transcribed source vanish from
+    an IC_AI=off run with all of its data sitting in the archive.
+    """
+    if arch is None:
+        return False
+    try:
+        dates = arch.dates_for(sid)
+        if not dates:
+            return False
+        pre = f"{arch.prefix}/{sid}/{dates[0]}/"
+        return any(b["pathname"][len(pre):].lower().endswith(".csv") for b in arch.list_prefix(pre))
+    except Exception:
+        return False          # store unreachable: fall back to the conservative skip
+
+
 def pull_source(source: dict, cfg: dict, out_dir: Path, archive_dir: Path) -> Path:
     sid = source["id"]
-    if source.get("ai_extraction") and not ai_enabled():
-        raise SourceSkipped(f"{sid}: ai_extraction source and IC_AI=off — no rows from this source this run")
     try:
         mod = importlib.import_module(f"pipeline.sources.{sid}")
     except ModuleNotFoundError as e:
         raise SourceNotImplemented(f"{sid}: no fetcher at pipeline/sources/{sid}.py") from e
     arch = _archive.open_archive(cfg)
+    if source.get("ai_extraction") and not ai_enabled() and not _has_transcribed_rows(arch, sid):
+        raise SourceSkipped(f"{sid}: ai_extraction source, IC_AI=off, and no transcribed CSV in the "
+                            f"archive — no rows from this source this run")
     day_dir = archive_dir / sid / date.today().isoformat()
     mode = source.get("acquire") or (cfg.get("archive") or {}).get("mode", "web-first")
     note, archived = "", None
