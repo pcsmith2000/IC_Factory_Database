@@ -107,7 +107,12 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
     # (current first-party models reject sampling parameters outright), but the gateway's Messages
     # API still documents and honours it, and determinism is worth having on a classifier.
     msg = client.messages.create(
-        model=model, max_tokens=min(32000, 64 * len(rows) + 1000),
+        # A model that reasons before answering spends the budget thinking first: nemotron-nano
+        # wrote 12,990 characters of deliberation and hit the ceiling before the array, gpt-5-nano
+        # returned nothing at all. Both looked like broken output contracts and were really a
+        # ceiling set too low. Output tokens bill for what is generated, so headroom is free on
+        # models that do not use it.
+        model=model, max_tokens=min(32000, max(16000, 64 * len(rows) + 1000)),
         extra_body={"temperature": temperature},
         system=prompt,
         messages=[{"role": "user", "content": "Classify each establishment. Return a JSON array of "
