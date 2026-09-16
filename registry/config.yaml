@@ -43,12 +43,16 @@ classifier:
   # (anthropic/claude-haiku-4.5) is derived in pipeline.ai_client_and_model.
   # Measured by `python -m pipeline.bakeoff` over the 60 seeds, ~$0.06 per full run.
   #
-  # UNSTABLE, and the number to distrust is any single score. This model cleared the gate at
-  # precision 97% / recall 100% on 2026-09-16, then FAILED it at 96% / 83% on the next run —
-  # same prompt, same seeds, temperature 0. amazon/nova-lite scored 97% / 97% at half the price
-  # ($0.03) but on one observation, which the variance above says is not a verdict either.
-  # Re-score both with --repeat before trusting this pin; G5 still guards every real run.
-  model: openai/gpt-oss-120b
+  # Measured, not argued. openai/gpt-oss-120b was pinned here and FAILED G5 on the first real
+  # classified run (35156659530): precision 93%, recall 83% over the 60 seeds, after labelling all
+  # 13,117 candidates. It is unstable rather than bad — scored 100/93 then 100/87 on consecutive
+  # bake-off runs at temperature 0, same prompt, same seeds — and it needed a re-ask on roughly a
+  # quarter of the 100-row batches in production.
+  #
+  # amazon/nova-lite has scored 97% / 97% on three separate observations, needed zero re-asks, and
+  # answers in ~10s against ~16s. It is also half the price: ~$0.14 a full run against ~$0.27.
+  # G5 still guards every run, which is exactly how the previous pin was caught.
+  model: amazon/nova-lite
   temperature: 0
   batch_size: 100
   # Seconds to wait between model calls. 0 is right on paid credits. The Vercel gateway's FREE
