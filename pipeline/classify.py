@@ -9,7 +9,7 @@ Today the classify() call is executed through the Cowork harness; the target is 
 API. Both go through the same `classify_batch` signature so swapping is one function.
 """
 from __future__ import annotations
-import hashlib, json, os, re
+import hashlib, json, math, os, re
 from pathlib import Path
 
 LABELS = {"IC", "NOT-IC", "UNCERTAIN"}
@@ -52,11 +52,37 @@ def prompt_hash(prompt_path: Path) -> str:
     return hashlib.sha256(prompt_path.read_bytes()).hexdigest()[:12]
 
 
-def batch_key(rows: list[dict]) -> str:
+def batch_key(rows: list[dict], model: str = "", prompt: str = "") -> str:
+    """Cache key for one batch. Includes the model and the prompt, not just the rows.
+
+    Keying on row hashes alone meant a cached result was reused after the model or the frozen
+    prompt changed — the run record would name the new model while the labels came from the old
+    one, and a model comparison would silently score whichever model ran first.
+    """
     h = hashlib.sha256()
     for r in rows:
         h.update(r["row_hash"].encode())
+    h.update(b"\x1f"); h.update(model.encode())
+    h.update(b"\x1f"); h.update(hashlib.sha256(prompt.encode()).digest())
     return h.hexdigest()[:16]
+
+
+def batches(rows: list[dict], seeds: list[dict], size: int) -> list[list[dict]]:
+    """Split candidates into batches with the seeds spread evenly through them.
+
+    `rows + seeds` chunked in order piles every seed into the final batch — with 2922 candidates
+    and 60 seeds that last batch was 73% seeds, so the graded rows were the only ones the model
+    ever saw in seed-dense context, and the audit measured a situation no real batch is in. Deal
+    both round-robin instead, so each batch carries its share, then order each batch by row_hash:
+    deterministic (the cache key depends on it) but uncorrelated with which rows are seeds.
+    """
+    n = max(1, math.ceil((len(rows) + len(seeds)) / size))
+    out: list[list[dict]] = [[] for _ in range(n)]
+    for i, r in enumerate(rows):
+        out[i % n].append(r)
+    for i, sd in enumerate(seeds):
+        out[i % n].append(sd)
+    return [sorted(b, key=lambda r: r["row_hash"]) for b in out if b]
 
 
 def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float) -> list[dict]:
@@ -74,8 +100,10 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
     payload = [{"i": i, "name": r["name_verbatim"], "address": r.get("address_verbatim", ""),
                 "city": r.get("city_verbatim", ""), "state": r.get("state_verbatim", ""),
                 "naics": r.get("naics_verbatim", "")} for i, r in enumerate(rows)]
+    # ~30 output tokens per row (label, confidence, type, a <=12-word reason). A flat 4000 left a
+    # 100-row batch ~25% headroom, and overflow truncates the JSON array into a hard error.
     msg = client.messages.create(
-        model=model, max_tokens=4000, temperature=temperature,
+        model=model, max_tokens=min(32000, 64 * len(rows) + 1000), temperature=temperature,
         system=prompt,
         messages=[{"role": "user", "content": "Classify each establishment. Return a JSON array of "
                    "{i, label, confidence, type, reason} with label in IC|NOT-IC|UNCERTAIN, "
@@ -101,10 +129,8 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
     model, temp, bs = cfg["model"], cfg["temperature"], cfg["batch_size"]
     cache_dir.mkdir(parents=True, exist_ok=True)
     labels: dict[str, dict] = {}
-    pool = rows + seeds
-    for i in range(0, len(pool), bs):
-        batch = pool[i:i + bs]
-        k = batch_key(batch)
+    for batch in batches(rows, seeds, bs):
+        k = batch_key(batch, model, prompt)
         cached = cache_dir / f"{k}.json"
         if cached.exists():
             res = json.loads(cached.read_text())
