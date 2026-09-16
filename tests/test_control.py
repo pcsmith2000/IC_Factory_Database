@@ -8,12 +8,17 @@ from pipeline.registry import load_yaml
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_v1_headers_only_state_is_reported_not_hidden():
+def test_unplaced_control_inputs_are_reported_not_hidden():
     probs = control.check(load_yaml(ROOT / "registry" / "config.yaml"))
     assert any("control-triaged.csv: EMPTY" in p for p in probs)
-    assert any("seeds.csv: EMPTY" in p for p in probs)
+    assert any("frame_state_totals.csv: EMPTY" in p for p in probs)
     assert any("placeholder" in p for p in probs)
-    assert not any("sha256" in p and "hashes to" in p for p in probs)   # checksum matches the committed headers-only file
+    # seeds.csv is placed now, so its absence is no longer the thing to assert — that it raises no
+    # problem at all is, because that covers every seed rule at once: the columns, the IC/NOT-IC
+    # label set, the non-blank fields, status_basis, the >=30/>=30 counts, and the row_hash each
+    # seed must carry to be found by G5.
+    assert not any("seeds.csv" in p for p in probs), [p for p in probs if "seeds.csv" in p]
+    assert not any("sha256" in p and "hashes to" in p for p in probs)   # checksum still matches control-triaged.csv
 
 
 def test_fix_derives_seed_row_hash_and_rewrites_checksum(tmp_path: Path, monkeypatch):
