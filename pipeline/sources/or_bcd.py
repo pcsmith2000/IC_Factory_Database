@@ -45,10 +45,13 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
                 blob = " ".join(str(v) for v in r.values()).lower()
                 if "prefab" not in blob:
                     continue
+                # The licence-search export names its columns licnbr / full_name / addr1..addr4 /
+                # zipcode / lic_status / expiration_date — no column contains "address" or "number",
+                # so matching only on those silently yielded blank addresses and blank ids.
                 get = lambda *ks: next((v for k, v in r.items() if any(x in k.lower() for x in ks)), "")
-                out.append(contract_row(source, i, name=get("business", "name", "licensee"), address=get("address", "street"), city=get("city"),
+                out.append(contract_row(source, i, name=get("business", "name", "licensee"), address=get("addr", "address", "street"), city=get("city"),
                                         state=get("state"), zip_code=get("zip"), source_url=SEARCH_PAGE, source_document=path.name,
-                                        source_identifier=get("license", "registration", "number"), status=get("status"),
+                                        source_identifier=get("licnbr", "license", "registration", "number"), status=get("status"),
                                         expiry_date=_iso(get("expir")), status_basis="dated_expiry" if _iso(get("expir")) else None))
             if out:
                 return out

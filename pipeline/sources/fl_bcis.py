@@ -15,6 +15,12 @@ import re, urllib.parse
 from pathlib import Path
 from ._common import http_get, html_tables, contract_row, require, LayoutChanged
 
+def _iso(d: str) -> str:
+    """MM/DD/YYYY -> ISO, else "" — BCIS leaves the date blank on pending applications."""
+    m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", (d or "").strip())
+    return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}" if m else ""
+
+
 MENU = "https://floridabuilding.org/mb/mb_default.aspx"
 
 
@@ -72,24 +78,63 @@ def _reject_error_page(path: Path) -> None:
             "ic-sources/fl_bcis/<date>/")
 
 
+# The results grid is an ASP.NET DataGrid whose controls carry stable ids: one
+# grdReport__ctl<N>_hlnkOrgName anchor per organisation, with its status, valid-to date and FBC
+# number in siblings keyed by the same _ctl<N>_. Reading those ids is far steadier than picking a
+# table by size — the page nests ~800 layout tables and the largest of them is a layout wrapper,
+# so the generic "biggest table" shape returned the page furniture as rows.
+_REC = re.compile(r'id="grdReport__ctl(\d+)_hlnkOrgName"[^>]*>(.*?)</a>', re.I | re.S)
+_FIELD = r'id="grdReport__ctl{n}_{f}"[^>]*>(.*?)</span>'
+_ORGNUM = re.compile(r"FBC\s*Organization\s*Number\s*</b>\s*([A-Za-z0-9\-]+)", re.I)
+_ORGTYPE = re.compile(r"Org\s*Type\s*</b>\s*([^<]+)", re.I)
+_PAGES = re.compile(r'id="pagTopPager_lblCurrentPage"[^>]*>(\d+)</span>\s*&nbsp;/\s*<span[^>]*id="pagTopPager_lblTotalPages"[^>]*>(\d+)</span>', re.I | re.S)
+
+
+def _untag(x: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", x or "")).replace("&amp;", "&").strip()
+
+
 def parse(paths: list[Path], source: dict) -> list[dict]:
     path = paths[-1]
     _reject_error_page(path)
     html = path.read_text(encoding="utf-8", errors="replace")
-    tables = [t for t in html_tables(html) if len(t) > 5]
-    require(bool(tables), path, "no results table with more than 5 rows — the POST did not return the manufacturer list")
-    table = max(tables, key=len)
-    hdr = [c.lower() for c in table[0]]
-    name_i = next((i for i, h in enumerate(hdr) if re.search(r"name|organi[sz]ation|manufacturer", h)), 0)
-    get = lambda cells, pat: next((cells[i] for i, h in enumerate(hdr) if re.search(pat, h) and i < len(cells)), "")
+    require("grdReport" in html, path, "no grdReport results grid on the page — this is not the "
+                                       "organisation-list result (see docs/manual-uploads.md)")
+    recs = list(_REC.finditer(html))
+    require(bool(recs), path, "grdReport is present but holds no organisation rows")
+    pg = _PAGES.search(html)
+    page_note = ""
+    if pg and len(recs) < int(pg.group(2)):
+        # The grid renders every row and paginates in the browser, so a saved page normally holds
+        # the whole list even though the pager still reads "1 / 48". Fewer rows than there are
+        # pages is the case that cannot be a full export — flag only that, on every row, rather
+        # than labelling a complete 959-row save "partial" because a widget says page 1.
+        page_note = f"PARTIAL EXPORT: {len(recs)} rows saved but the pager reports {pg.group(2)} pages"
     out = []
-    for i, cells in enumerate(table[1:], 1):
-        if not cells or not cells[name_i].strip():
+    for i, m in enumerate(recs, 1):
+        n, name = m.group(1), _untag(m.group(2))
+        if not name:
             continue
-        out.append(contract_row(source, i, name=cells[name_i], address=get(cells, "address|street"), city=get(cells, "city"),
-                                state=get(cells, "state"), zip_code=get(cells, "zip"), source_url=MENU, source_document=path.name,
-                                source_identifier=get(cells, "number|id|cert"), status=get(cells, "status|type"),
-                                notes="" if get(cells, "address|street") else "names-only source: no plant address published"))
+        block = html[m.end():recs[i].start() if i < len(recs) else len(html)]
+        fld = lambda f: _untag((re.search(_FIELD.format(n=n, f=f), block, re.I | re.S) or [None, ""])[1]
+                               if re.search(_FIELD.format(n=n, f=f), block, re.I | re.S) else "")
+        num = _ORGNUM.search(block)
+        typ = _ORGTYPE.search(block)
+        expiry = fld("lblValidToDate")
+        notes = "names-only source: no plant address published"
+        if typ:
+            notes += f"; org type: {_untag(typ.group(1))}"
+        if page_note:
+            notes += f"; {page_note}"
+        out.append(contract_row(source, i, name=name, address="", city="", state="", zip_code="",
+                                source_url=MENU, source_document=path.name,
+                                source_identifier=num.group(1) if num else "",
+                                status=fld("lblOrgStatus"), expiry_date=_iso(expiry),
+                                # The registry calls this source on_current_list, but the grid
+                                # carries a real valid-to date and a status of its own, and most
+                                # rows are Expired/Denied/Inactive — treating presence on the list
+                                # as liveness would mark 400+ dead registrations active.
+                                status_basis="dated_expiry" if _iso(expiry) else None, notes=notes))
     return out
 
 

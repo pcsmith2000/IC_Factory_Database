@@ -52,16 +52,29 @@ class VercelBlobArchive:
         h.update(extra or {})
         return h
 
-    def _call(self, url: str, *, method: str, what: str, data: bytes | None = None, headers: dict | None = None, timeout: int = 600):
-        req = urllib.request.Request(url, data=data, method=method, headers=self._headers(headers))
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                raw = resp.read()
-                return json.loads(raw) if raw else {}
-        except urllib.error.HTTPError as e:
-            raise ArchiveError(f"blob {what}: HTTP {e.code} {e.read()[:300]!r}") from e
-        except urllib.error.URLError as e:
-            raise ArchiveError(f"blob {what}: {e.reason}") from e
+    def _call(self, url: str, *, method: str, what: str, data: bytes | None = None, headers: dict | None = None,
+              timeout: int = 600, retries: int = 3):
+        """One Blob API call, retrying 5xx, 429 and transport errors the way http_get does.
+
+        Layer 1 halts the whole run when any source fails, so an unretried blip here costs the
+        acquisition of every other source too — a single [SSL: UNEXPECTED_EOF_WHILE_READING]
+        listing one prefix is enough. A 4xx other than 429 is not retried: it means the request
+        itself is wrong. Every method here is idempotent (PUT sends x-allow-overwrite, and the
+        rest are reads or a keyed delete), so a retried call cannot double-apply.
+        """
+        for attempt in range(retries + 1):
+            req = urllib.request.Request(url, data=data, method=method, headers=self._headers(headers))
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    raw = resp.read()
+                    return json.loads(raw) if raw else {}
+            except urllib.error.HTTPError as e:
+                if (e.code < 500 and e.code != 429) or attempt == retries:
+                    raise ArchiveError(f"blob {what}: HTTP {e.code} {e.read()[:300]!r}") from e
+            except urllib.error.URLError as e:
+                if attempt == retries:
+                    raise ArchiveError(f"blob {what}: {e.reason}") from e
+            time.sleep(2 ** attempt)
 
     def put(self, path: Path, pathname: str) -> dict:
         body = path.read_bytes()
