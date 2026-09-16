@@ -7,7 +7,7 @@ so G3 tests id stability. Every run writes run_records/<timestamp>.json whatever
 successful release also loads the warehouse (pipeline/warehouse.py — SQLite now, BigQuery later).
 """
 from __future__ import annotations
-import argparse, csv, json, sys
+import argparse, csv, json, os, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -35,6 +35,11 @@ def main(argv=None) -> int:
 
     reg = load_yaml(ROOT / args.registry)
     cfg = load_yaml(ROOT / args.config)
+    # Compare models without churning the committed pin. Flipping registry/config.yaml for every
+    # A/B puts the model in the git history as a decision when it was only a trial, and the
+    # release tag already records which model actually ran.
+    if os.environ.get("IC_CLASSIFIER_MODEL"):
+        cfg["classifier"]["model"] = os.environ["IC_CLASSIFIER_MODEL"]
     layers = _layers(args.layers)
     started = datetime.now(timezone.utc)
     out = ROOT / args.out; out.mkdir(exist_ok=True)

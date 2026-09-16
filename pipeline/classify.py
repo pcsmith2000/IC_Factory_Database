@@ -138,6 +138,9 @@ def _objects(text: str) -> list[dict]:
             return [o for o in got if isinstance(o, dict)]
     except json.JSONDecodeError:
         pass
+    got = _relaxed(body)
+    if got:
+        return got
     dec, out, i = json.JSONDecoder(), [], 0
     while True:
         j = body.find("{", i)
@@ -152,6 +155,41 @@ def _objects(text: str) -> list[dict]:
             out.append(o)
 
 
+_BARE_KEY = re.compile(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:')
+_BARE_VAL = re.compile(r'(:\s*)(?!["\[{])([^,}\]]+?)(\s*[,}\]])')
+_NUMERIC = re.compile(r'^-?\d+(\.\d+)?$')
+
+
+def _relaxed(body: str) -> list[dict]:
+    """Recover the JavaScript-object dialect some models answer in, or return [].
+
+    amazon/nova-lite answered run 35162970190 with
+
+        [{i: 0, label: NOT-IC, confidence: 0.9, type: none, reason: pallet systems}, ...]
+
+    — every judgement correct, no quotes anywhere. json.loads rejects it and so does raw_decode,
+    so all 101 rows in the batch were lost and the run died. Quoting the bare keys and bare string
+    values costs nothing and turns a fatal batch into a labelled one. Numbers, booleans and null
+    are left alone so 0.9 does not become "0.9".
+
+    This is a safety net, not a licence: the user message asks for strict JSON first, and anything
+    recovered here still goes through the same index and label validation as everything else.
+    """
+    if '"' in body[:400]:
+        return []                      # looks like real JSON that failed for some other reason
+    def _val(m):
+        head, raw, tail = m.group(1), m.group(2).strip(), m.group(3)
+        if _NUMERIC.match(raw) or raw in ("true", "false", "null"):
+            return f"{head}{raw}{tail}"
+        return f'{head}"{raw}"{tail}'
+    try:
+        fixed = _BARE_VAL.sub(_val, _BARE_KEY.sub(r'\1"\2":', body))
+        got = json.loads(fixed)
+        return [o for o in got if isinstance(o, dict)] if isinstance(got, list) else []
+    except Exception:
+        return []
+
+
 def _call_once(rows: list[dict], prompt: str, model: str, temperature: float,
                usage_out: dict | None, repair: bool) -> dict[int, dict]:
     """One model call. Returns {index into rows: label object}, validated. Never partial-credits
@@ -164,14 +202,22 @@ def _call_once(rows: list[dict], prompt: str, model: str, temperature: float,
     user = ("Classify each establishment. Return a JSON array of "
             "{i, label, confidence, type, reason} with label in IC|NOT-IC|UNCERTAIN, "
             "confidence 0-1, reason <= 12 words.\n"
-            # The quote rule is here and not in the frozen prompt on purpose: it is an encoding
-            # constraint on the transport, not a judgement about what is IC, and the frozen
+            # These rules are here and not in the frozen prompt on purpose: they are encoding
+            # constraints on the transport, not judgements about what is IC, and the frozen
             # prompt's hash is in every release tag.
-            "Use no double quotes inside any string value — write plain words only.\n\n"
+            #
+            # The wording matters. "Use no double quotes inside any string value" — added to stop
+            # gpt-oss-120b emitting unescaped quotes in `reason` — was read by nova-lite as "emit
+            # no double quotes at all", and it returned {i: 0, label: NOT-IC, ...}: correct
+            # judgements in a dialect json.loads rejects. Run 35162970190 died on it. Say which
+            # quotes are required before saying which are forbidden.
+            "Return strict JSON. Every key and every string value must be wrapped in double "
+            "quotes. Do not use a double quote *inside* a value — write plain words there.\n\n"
             + json.dumps(payload))
     if repair:
-        user = ("Your previous answer was not valid JSON. Return ONLY the array, no commentary, "
-                "and no double quotes inside any string value.\n\n" + user)
+        user = ("Your previous answer was not valid JSON. Return ONLY the array. Every key and "
+                "every string value must be wrapped in double quotes, and no value may contain "
+                "a double quote.\n\n" + user)
     # ~30 output tokens per row (label, confidence, type, a <=12-word reason). A flat 4000 left a
     # 100-row batch ~25% headroom, and overflow truncates the JSON array into a hard error.
     # temperature goes through extra_body: the Anthropic SDK dropped it from messages.create()

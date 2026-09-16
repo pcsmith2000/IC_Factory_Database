@@ -170,3 +170,25 @@ def test_a_seed_that_is_also_a_candidate_is_classified_once(monkeypatch, tmp_pat
     assert len(seen) == len(set(seen))
     assert meta["seeds_also_candidates"] == 2
     assert set(meta["labels"]) == {"h0", "h1", "h2", "h3"}
+
+
+def test_recovers_the_unquoted_dialect_that_killed_run_8():
+    # amazon/nova-lite answered run 35162970190 in a JavaScript object dialect — every judgement
+    # correct, not a quote in sight — and json.loads rejected all 101 rows in the batch, three
+    # attempts running, killing the run. The instruction that provoked it ("use no double quotes
+    # inside any string value", meant for gpt-oss-120b's unescaped quotes) is fixed in the user
+    # message; this is the net under it.
+    real = ('[{i: 0, label: NOT-IC, confidence: 0.9, type: none, reason: pallet systems}, '
+            '{i: 2, label: IC, confidence: 0.95, type: truss_component, reason: roof truss plant}]')
+    got = classify._objects(real)
+    assert [o["i"] for o in got] == [0, 2]
+    assert got[0]["label"] == "NOT-IC" and got[1]["label"] == "IC"
+    # numbers must not be turned into strings by the repair
+    assert got[0]["confidence"] == 0.9 and not isinstance(got[0]["confidence"], str)
+
+def test_relaxed_parsing_never_touches_real_json():
+    strict = '[{"i":0,"label":"IC","confidence":1,"type":"panel","reason":"x"}]'
+    assert classify._objects(strict) == [{"i": 0, "label": "IC", "confidence": 1,
+                                          "type": "panel", "reason": "x"}]
+    assert classify._relaxed(strict) == []      # declines anything already quoted
+    assert classify._objects("I cannot help with that.") == []

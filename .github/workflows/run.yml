@@ -16,6 +16,9 @@ on:
         description: "identical inputs — G3 must issue zero ids"
         type: boolean
         default: false
+      model:
+        description: "classifier model override, e.g. amazon/nova-lite. Blank = the pin in registry/config.yaml"
+        default: ""
       ai:
         description: "model calls: off = deterministic sources only (no AI_GATEWAY_API_KEY needed)"
         type: choice
@@ -76,6 +79,7 @@ jobs:
           # off skips Layer 3 classification and `ai_extraction` sources, and records both as
           # skipped. The scheduled quarterly run is a full run; only a dispatch can turn AI off.
           IC_AI: ${{ github.event.inputs.ai || 'on' }}
+          IC_CLASSIFIER_MODEL: ${{ github.event.inputs.model }}
         run: |
           python -m pipeline.run \
             --layers "${{ github.event.inputs.layers || '1-8' }}" \
