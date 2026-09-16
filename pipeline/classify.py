@@ -24,13 +24,23 @@ KEYWORD_NAICS = {
     r"\bprefab":               {"3219", "3212", "3323", "2362", "2381", "4233"},
     r"\bmanufactured hom":     {"3219"},
     r"\bpanel(s|ized|ised)?\b":{"3219", "3212", "3323"},
-    r"\btruss":                {"3212", "3219"},
+    r"\btruss":                {"3212", "3219", "2362"},
     r"\bprecast\b":            {"3273", "3272"},
     r"\bmass timber|\bglulam|\bclt\b|\bcross.laminated": {"3212", "3211"},
     r"\bsip(s)?\b|\bstructural insulated": {"3219", "3212"},
     r"\bmetal building|\bpre.?engineered": {"3323"},
     r"\bcomponent":            {"3212", "3219"},
     r"\bvolumetric|\bpod(s)?\b": {"3219", "3323"},
+    # Named after the product, in families the other keywords never reach. "Building systems" is
+    # what a pre-engineered metal building manufacturer calls itself — NCI, Ceco, Schulte and
+    # Schulte's neighbours are all 3323 and all invisible to every rule above.
+    r"\bwall system":          {"3323", "3273", "2362", "2381", "4233", "3211"},
+    r"\bbuilding system":      {"3323", "3273", "2362", "2381", "4233", "3211"},
+    # Deliberately narrow. `structural` in 3323 is mostly steel fabricators, and fabricated
+    # structural steel for a building IS a building system — but so is a bridge girder, and the
+    # name alone cannot tell them apart. That judgement is the classifier's, which is the point:
+    # this rule buys the rows a hearing, it does not label them.
+    r"\bstructural\b":         {"3323", "2362"},
 }
 PLACENAME_COLLISIONS = {"trussville", "old forge", "campanello"}
 

@@ -60,12 +60,26 @@ def test_wide_families_are_candidates_whatever_the_row_is_called():
         got = _cand(naics, name)
         assert got and got[0]["_candidate_reason"].startswith("wide family"), name
 
-def test_widening_does_not_reach_outside_3219_and_3212():
-    # The honest limit: these three are also on the validated list, also in EPA, and still dropped.
-    # 332312 and 423310 carry no keyword; NORTH GEORGIA has `truss` but 2362 is not paired with it.
+def test_truss_pairs_with_2362_but_the_placename_guard_still_holds():
+    # Truss plants are routinely coded to building construction, not manufacturing. Pairing the
+    # keyword with 2362 recovers 12 of them from the EPA slice — including a validated company —
+    # while the guard keeps the town of Trussville, AL out of all 44 rows that carry its name.
+    assert _cand("236210", "NORTH GEORGIA TRUSS SYSTEMS")[0]["_candidate_reason"].endswith("× 2362")
+    assert _cand("236220", "MAGBEE TRUSS PLANT")[0]["_candidate_reason"].endswith("× 2362")
+    assert _cand("236220", "TRUSSVILLE LIBRARY") == []
+
+def test_product_name_keywords_reach_3323():
+    # Pre-engineered metal building makers call themselves "building systems" and sit in 3323,
+    # which no other rule reaches by name.
+    assert _cand("332312", "CECO BUILDING SYSTEMS")[0]["_candidate_reason"].endswith("× 3323")
+    assert _cand("332321", "MIAMI WALL SYSTEMS, INC.")[0]["_candidate_reason"].endswith("× 3323")
+
+def test_what_neither_option_reaches():
+    # The honest limit. Banker Steel is a real plant on the validated list, in EPA, coded 332312,
+    # and carries no keyword at all — no name rule reaches it, and it is outside 3219/3212.
+    # Only classifying the whole slice would put it in front of the model.
     assert _cand("332312", "BANKER STEEL - ORLANDO") == []
     assert _cand("423310", "84 LUMBER COMPANY") == []
-    assert _cand("236210", "NORTH GEORGIA TRUSS SYSTEMS") == []
 
 def test_core_and_keyword_paths_still_hold():
     assert _cand("321992", "ANY NAME AT ALL")[0]["_candidate_reason"] == "core naics 321992"

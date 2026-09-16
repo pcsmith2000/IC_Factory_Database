@@ -142,10 +142,7 @@ Still dropped, and this is the honest limit of option 2 — all three are outsid
 | 84 Lumber (the 423310 and 2362 records) | 423310, 2362 | wholesale and project rows |
 | North Georgia Truss Systems | 236210 | has `truss`, but the matrix pairs it only with 3212/3219 |
 
-Option 1 (pair `truss` with `2362`, add `wall system` / `building system` / `structural`) would
-reach North Georgia Truss Systems and probably Banker Steel. It was not done here. Option 3
-(classify the whole slice, ~$2 a run) remains the only choice that stops the name filter making a
-silent judgement at all.
+Option 1 was done next, in the same session — see below.
 
 ### Two consequences to keep in view
 
@@ -166,3 +163,58 @@ is the denominator Layer 7 divides by. Widening candidate generation finds plant
 four codes, so coverage can rise above 100% without the database being complete. If the scope
 really is broader than the four core codes, the frame should say so — otherwise the coverage
 number quietly measures something other than what it claims.
+
+## What was done: option 1, 2026-09-16
+
+`truss` now pairs with `2362`, and three product-name keywords were added: `wall system`,
+`building system` and `structural`. On top of the widening, this takes candidates from 12,973 to
+**13,117** — 144 rows, a rounding error on cost, so the run stays at ~$0.27.
+
+| new rule | rows | what it finds |
+|---|---|---|
+| `structural` × 3323, 2362 | 89 | steel fabricators — Fritz, Barro, Ahlborn, Trinity |
+| `building system` × 3323, 2362, 3273, 2381 | 35 | NCI, Ceco, Schulte, New Millennium, Clark Dietrich |
+| `truss` × 2362 | 12 | Georgia Truss, Magbee Truss Plant, A1 Truss, Carnesville Truss Plant |
+| `wall system` × 3323, 3273, 2381, 4233 | 8 | BASF, Superior, Miami, Engineered Wall Systems |
+
+### Why `truss` × 2362 is only 12 rows
+
+44 rows in 2362 carry the string `truss`. **32 of them are the town of Trussville, Alabama** —
+a library, a mini-storage, a high-school stadium, a Kia dealership. `PLACENAME_COLLISIONS` catches
+those before the keyword loop, which is exactly the job it was added for, and the 12 that survive
+are almost all plainly truss plants. The guard is doing real work here; adding this pairing
+without it would have been a precision disaster.
+
+One row slips past it: `NEW DAY TRUSSVILE`, a misspelling the guard's exact-substring match
+doesn't see. It reaches the classifier, which is where a judgement call belongs.
+
+`structural` is the loosest of the four and was paired deliberately narrowly. Fabricated
+structural steel for a building *is* a building system; for a bridge it is not, and the name alone
+cannot separate them. 89 rows is a cheap price for putting that question to the classifier instead
+of answering it with a regex.
+
+### A correction to what option 1 was sold on
+
+The options list above said option 1 would "recover the named cases" and "probably Banker Steel".
+Measured, it recovers **North Georgia Truss Systems** and nothing else from the missed eleven.
+Banker Steel's seven EPA records are named `BANKER STEEL - ORLANDO`, `BANKER STEEL SOUTH PLANT`
+and so on: **there is no keyword in any of them**, so no name rule can reach them, and 332312 is
+outside the two wide families. The same is true of 84 Lumber's 423310 record.
+
+That is the standing limit of options 1 and 2 together. Both widen *which names and codes* get a
+hearing; neither helps a plant whose name says nothing about what it makes. Only option 3 —
+classify the whole 99,883-row slice, ~$2 a run — removes the name filter as a silent judgement.
+Banker Steel is the concrete argument for it.
+
+### Where candidate generation stands
+
+| | rows |
+|---|---|
+| Wide family 3219 | 8,877 |
+| Wide family 3212 | 1,295 |
+| Core NAICS | 2,266 |
+| `precast` × 3273 | 488 |
+| All other keyword × family | 191 |
+| **Candidates** | **13,117** of 99,883 (13%) |
+
+Against 2,922 (2.9%) before either option.
