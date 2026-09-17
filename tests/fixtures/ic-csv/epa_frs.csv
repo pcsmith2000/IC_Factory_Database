@@ -1,0 +1,8 @@
+source_id,source_url,source_document,retrieved_date,row_position,name_verbatim,address_verbatim,city_verbatim,state_verbatim,zip_verbatim,country,source_identifier,naics_verbatim,status_verbatim,status_basis,expiry_date,lat,lon,notes
+epa_frs,https://example.invalid/fixture,FIXTURE.CSV,2026-09-17,1,PENINSULA TRUSS LLC,100 MAIN ST,SILVERDALE,WA,00000,UNITED STATES,FX0001,321214,,none,,,,
+epa_frs,https://example.invalid/fixture,FIXTURE.CSV,2026-09-17,2,LOUWS TRUSS INC,200 OAK AVE,BELLINGHAM,WA,00000,UNITED STATES,FX0002,321214,,none,,,,
+epa_frs,https://example.invalid/fixture,FIXTURE.CSV,2026-09-17,3,CLAYTON HOMES OF WAKARUSA,300 ELM RD,WAKARUSA,IN,00000,UNITED STATES,FX0003,321991,,none,,,,
+epa_frs,https://example.invalid/fixture,FIXTURE.CSV,2026-09-17,4,"FLORIDA PLYWOODS, INC.",400 PINE ST,GREENVILLE,FL,00000,UNITED STATES,FX0004,321212,,none,,,,
+epa_frs,https://example.invalid/fixture,FIXTURE.CSV,2026-09-17,5,DOVER MILLWORK INC,500 CEDAR LN,HARRINGTON,DE,00000,UNITED STATES,FX0005,321918,,none,,,,
+epa_frs,https://example.invalid/fixture,FIXTURE.CSV,2026-09-17,6,ACME MODULAR BUILDINGS,600 BIRCH WAY,AUSTIN,TX,00000,UNITED STATES,FX0006,321992,,none,,,,
+epa_frs,https://example.invalid/fixture,FIXTURE.CSV,2026-09-17,7,SMITH PANEL SYSTEMS,700 ASH BLVD,DENVER,CO,00000,UNITED STATES,FX0007,321992,,none,,,,

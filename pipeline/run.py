@@ -55,7 +55,13 @@ def main(argv=None) -> int:
     # neither flag, so releases still land in run_records/. (Six tracked records were deleted by a
     # cleanup glob aimed at exactly these strays; the fix is to stop creating them.)
     rec_dir = out if (args.limit or args.out != ap.get_default("out")) else None
-    csv_dir, norm_dir = ROOT / "ic-csv", out / "normalised"
+    # IC_CSV_DIR mirrors IC_WAREHOUSE_PATH: the contract CSVs live in ic-csv/ for a real run, and
+    # a test or a side-by-side experiment can point Layer 2 somewhere else without writing into the
+    # working tree. Without it the classified path could not be exercised offline at all, which is
+    # why three defects on that path (product_type dropped, no audit input, review_queue missing
+    # the model's reasoning) reached a release before anyone noticed.
+    csv_dir = Path(os.environ["IC_CSV_DIR"]) if os.environ.get("IC_CSV_DIR") else ROOT / "ic-csv"
+    norm_dir = out / "normalised"
     record = {
         "pipeline_version": __version__, "started": started.isoformat(),
         "registry_version": registry_version(ROOT), "registry_file_sha": sha256_file(ROOT / args.registry),
