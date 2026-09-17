@@ -103,14 +103,23 @@ sources:
 - id: in_dhs
   name: Indiana DHS industrialized building systems registry
   class: A
-  method: browser
+  method: fetch
   needs_classify: false
   carries:
   - plant_address
+  - manufacturer_id
   status_basis: on_current_list
   traps:
-  - Densest modular corridor in the country; IN ranks 3rd in facilities without being a source yet.
-  status: queued
+  - 'NOT an Indiana list: Indiana registers every manufacturer selling into the state, so the roster is national — 409 US
+    plants across 46 states.'
+  - 'Marked method: browser and left queued for months. It is a plain-HTML Struts app; no browser needed.'
+  - Serves Windows-1252. Decoding as UTF-8 turned 'Mécanitec' into mojibake in the company's own name.
+  - 'Keeps tombstones in place: one listing is a manufacturer named DELETE at a street address of DELETE.'
+  - ZIPs are dirty (six and nine digits, some absent). Validate the STATE against the US list, never the ZIP — requiring a
+    clean ZIP threw away six real plants.
+  - Covers volumetric modular and mobile structures, not components. It overlaps the ADL control list by exactly one row.
+  status: active
+  url: https://oas.dhs.in.gov/dfbs/code/main.do
 - id: nc_osfm
   name: North Carolina OSFM modular search
   class: A

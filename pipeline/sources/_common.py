@@ -20,6 +20,14 @@ from datetime import date
 from pathlib import Path
 from ..contract import COLUMNS
 
+# The 50 states plus DC. Lives here because more than one source needs to tell a US city line from
+# a Canadian one, and two copies of this set would eventually disagree.
+US_STATES = frozenset("""
+AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY
+NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC
+""".split())
+
+
 # Several state sites sit behind a WAF that rejects any unfamiliar product token: Michigan answered
 # 403 and IIBC 500 to a UA naming this project, including when it was appended to a browser string.
 # The UA is therefore a plain mainstream one, and the project identifies itself in X-Contact, which

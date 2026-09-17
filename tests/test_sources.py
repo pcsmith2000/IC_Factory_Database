@@ -295,3 +295,40 @@ def test_mass_timber_entries_ignore_the_pages_own_prose():
                   "Quality Buildings", "(Fabricator)", "Lancaster, PA"])
     assert [x["name"] for x in e] == ["Mercer", "Quality Buildings"]
     assert e[0]["locations"] == ["Conway, AR;", "Spokane, WA"]
+
+
+def test_indiana_keeps_a_us_plant_whose_zip_is_dirty_or_missing():
+    """Requiring a clean 5-digit ZIP threw away six real plants.
+
+    "Marco Island, FL" carries none at all, "Hitchcock, TX 775636" has six digits and
+    "Aubrey, TX 762278030" has nine unhyphenated. Those are typos in a state register, not evidence
+    that the row is not a plant. The ZIP is kept exactly as filed.
+    """
+    from pipeline.sources.in_dhs import _listings
+    page = ('<div class="listing"><h3><a href="?method=view&manufacturerNameId=1">Alt Construction</a></h3>'
+            '<p class="listingInfo">992 Winterbery Dr<br />Marco Island, FL<br /></p>'
+            '<div class="listing"><h3><a href="?method=view&manufacturerNameId=2">Parkline</a></h3>'
+            '<p class="listingInfo">5235 Delaney Rd<br />Hitchcock, TX 775636<br /></p>')
+    got = {r["name"]: (r["city"], r["state"], r["zip"], r["foreign"]) for r in _listings(page)}
+    assert got["Alt Construction"] == ("Marco Island", "FL", "", False)
+    assert got["Parkline"] == ("Hitchcock", "TX", "775636", False)
+
+
+def test_indiana_tells_a_us_city_line_from_a_canadian_one_by_the_state_code():
+    """"Hamilton, ON" fails the US-state test and "Marco Island, FL" passes it — no second pattern
+    for postal codes to keep in sync."""
+    from pipeline.sources.in_dhs import _listings
+    page = ('<div class="listing"><h3><a href="?method=view&manufacturerNameId=3">Philip Doyle</a></h3>'
+            '<p class="listingInfo">75 Covington St<br />Hamilton, ON<br /></p>')
+    r = _listings(page)[0]
+    assert r["foreign"] is True and r["city"] == "" and r["state"] == ""
+
+
+def test_indiana_finds_the_city_line_past_a_po_box():
+    """"3549 Highway 16 North / P O Box 428 / Denver, NC 28037" — the box must not become the town."""
+    from pipeline.sources.in_dhs import _listings
+    page = ('<div class="listing"><h3><a href="?method=view&manufacturerNameId=4">Boegh</a></h3>'
+            '<p class="listingInfo">3549 Highway 16 North<br />P O Box 428<br />Denver, NC 28037<br /></p>')
+    r = _listings(page)[0]
+    assert (r["street"], r["city"], r["state"]) == ("3549 Highway 16 North", "Denver", "NC")
+    assert r["extra"] == "P O Box 428"
