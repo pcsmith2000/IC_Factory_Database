@@ -510,6 +510,8 @@ sources:
   class: excluded
   reason: Plant lists are prose in Item 1, overlap with MHI/corporate pulls is severe. Useful only for dating existing records,
     not discovery.
+  traps:
+  - 'Re-read 2026-09-17 for the enrichment pass, not discovery: Item 2 Properties in the 10-Ks of the listed IC manufacturers is a TABLE of plants with square footage and owned/leased — Cavco (CIK 278166, ~31 home plants), Skyline Champion (SKY, ~40), Legacy Housing (LEGH), Nobility Homes (NOBH), UFP Industries (UFPI, site-built components plants), Builders FirstSource (BLDR, truss/panel plants counted by state), Nucor (NUE, Vulcraft joist/deck plants), Gibraltar/Cornerstone. It is the only public source of sq_ft per plant for those groups and the only source of segment revenue, capacity utilisation and plant-count changes year on year. EDGAR full-text search (efts.sec.gov) and the per-CIK atom feed both answer 200 through the proxy with a contact User-Agent. Plan: fetch the latest 10-K per CIK, parse the Properties table, emit sq_ft/operating_status onto facilities already held via the golden survivorship rules — never a new facility.'
   status: excluded
 - id: lead_addresses
   name: Street addresses found for existing T0 leads (enrichment pass)
