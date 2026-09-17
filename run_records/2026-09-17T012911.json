@@ -1,0 +1,514 @@
+{
+ "pipeline_version": "1.0.0",
+ "started": "2026-09-17T01:29:11.861902+00:00",
+ "registry_version": "22389a4",
+ "registry_file_sha": "b7ec6d00e79489a494deafdb3428f4a5408ea824b530076f94c18d4dbcf23898",
+ "control_sha": "02c9a3d7695ff3110d1eac891ed14165ee2cc0fca46732b04483b5bed524235e",
+ "layers": {
+  "1_acquire": {
+   "pulled": [
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/pa_dced.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/tx_tdlr.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mi_lara.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/or_bcd.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/fl_bcis.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/epa_frs.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/iibc.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mhi_plants.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/corporate_locations.csv"
+   ],
+   "failed": {},
+   "skipped": {}
+  },
+  "2_validate": {
+   "sources": {
+    "corporate_locations": {
+     "rows": 210,
+     "with_street_key": 178,
+     "no_fixed_plant": 0
+    },
+    "epa_frs": {
+     "rows": 99883,
+     "with_street_key": 80582,
+     "no_fixed_plant": 0
+    },
+    "fl_bcis": {
+     "rows": 959,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "iibc": {
+     "rows": 286,
+     "with_street_key": 280,
+     "no_fixed_plant": 0
+    },
+    "mhi_plants": {
+     "rows": 150,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "mi_lara": {
+     "rows": 172,
+     "with_street_key": 172,
+     "no_fixed_plant": 0
+    },
+    "or_bcd": {
+     "rows": 164,
+     "with_street_key": 143,
+     "no_fixed_plant": 0
+    },
+    "pa_dced": {
+     "rows": 115,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "tx_tdlr": {
+     "rows": 334,
+     "with_street_key": 324,
+     "no_fixed_plant": 0
+    }
+   },
+   "halted": [],
+   "problems": {}
+  },
+  "3_classify": {
+   "model": "inception/mercury-2.5",
+   "provider": "vercel_ai_gateway",
+   "temperature": 0,
+   "seeds_also_candidates": 60,
+   "prompt_hash": "275e1a45a6be",
+   "n_candidates": 13057,
+   "n_seeds": 60,
+   "ic": 4618,
+   "uncertain": 215,
+   "not_ic_or_uncandidated": 97440
+  },
+  "4_resolve": {
+   "rows": 4618,
+   "resolved_by_crosswalk": 0,
+   "resolution_rate": 0.0,
+   "layer_built": false
+  },
+  "5_reconcile": {
+   "ids_issued": 0,
+   "n_facilities": 4065,
+   "tiers": {
+    "T1": 2370,
+    "T0": 1457,
+    "T3": 61,
+    "T2": 177
+   }
+  },
+  "5b_golden": {
+   "assertions": 25753,
+   "golden_rows": 4065,
+   "conflicts": 1140,
+   "survivorship_version": 1,
+   "operator_assertions": 0
+  },
+  "7_measure": {
+   "recall": {
+    "in_scope": 0,
+    "found": 0,
+    "recall": 0.0,
+    "by_method": {}
+   },
+   "coverage_bias": {
+    "counted_facilities": 2608,
+    "frame_total": 2750,
+    "states": {
+     "AK": {
+      "ours": 2,
+      "frame": 14,
+      "coverage": 0.14285714285714285,
+      "bias": 0.15
+     },
+     "AL": {
+      "ours": 81,
+      "frame": 79,
+      "coverage": 1.0253164556962024,
+      "bias": 1.08
+     },
+     "AR": {
+      "ours": 22,
+      "frame": 41,
+      "coverage": 0.5365853658536586,
+      "bias": 0.57
+     },
+     "AZ": {
+      "ours": 46,
+      "frame": 55,
+      "coverage": 0.8363636363636363,
+      "bias": 0.88
+     },
+     "CA": {
+      "ours": 203,
+      "frame": 182,
+      "coverage": 1.1153846153846154,
+      "bias": 1.18
+     },
+     "CO": {
+      "ours": 56,
+      "frame": 62,
+      "coverage": 0.9032258064516129,
+      "bias": 0.95
+     },
+     "CT": {
+      "ours": 5,
+      "frame": 13,
+      "coverage": 0.38461538461538464,
+      "bias": 0.41
+     },
+     "DE": {
+      "ours": 6,
+      "frame": 6,
+      "coverage": 1.0,
+      "bias": 1.05
+     },
+     "FL": {
+      "ours": 123,
+      "frame": 177,
+      "coverage": 0.6949152542372882,
+      "bias": 0.73
+     },
+     "GA": {
+      "ours": 119,
+      "frame": 121,
+      "coverage": 0.9834710743801653,
+      "bias": 1.04
+     },
+     "HI": {
+      "ours": 8,
+      "frame": 6,
+      "coverage": 1.3333333333333333,
+      "bias": 1.41
+     },
+     "IA": {
+      "ours": 35,
+      "frame": 26,
+      "coverage": 1.3461538461538463,
+      "bias": 1.42
+     },
+     "ID": {
+      "ours": 37,
+      "frame": 49,
+      "coverage": 0.7551020408163265,
+      "bias": 0.8
+     },
+     "IL": {
+      "ours": 47,
+      "frame": 62,
+      "coverage": 0.7580645161290323,
+      "bias": 0.8
+     },
+     "IN": {
+      "ours": 89,
+      "frame": 90,
+      "coverage": 0.9888888888888889,
+      "bias": 1.04
+     },
+     "KS": {
+      "ours": 33,
+      "frame": 24,
+      "coverage": 1.375,
+      "bias": 1.45
+     },
+     "KY": {
+      "ours": 37,
+      "frame": 66,
+      "coverage": 0.5606060606060606,
+      "bias": 0.59
+     },
+     "LA": {
+      "ours": 25,
+      "frame": 35,
+      "coverage": 0.7142857142857143,
+      "bias": 0.75
+     },
+     "MA": {
+      "ours": 17,
+      "frame": 15,
+      "coverage": 1.1333333333333333,
+      "bias": 1.2
+     },
+     "MD": {
+      "ours": 19,
+      "frame": 18,
+      "coverage": 1.0555555555555556,
+      "bias": 1.11
+     },
+     "ME": {
+      "ours": 11,
+      "frame": 28,
+      "coverage": 0.39285714285714285,
+      "bias": 0.41
+     },
+     "MI": {
+      "ours": 63,
+      "frame": 64,
+      "coverage": 0.984375,
+      "bias": 1.04
+     },
+     "MN": {
+      "ours": 75,
+      "frame": 56,
+      "coverage": 1.3392857142857142,
+      "bias": 1.41
+     },
+     "MO": {
+      "ours": 54,
+      "frame": 80,
+      "coverage": 0.675,
+      "bias": 0.71
+     },
+     "MS": {
+      "ours": 22,
+      "frame": 24,
+      "coverage": 0.9166666666666666,
+      "bias": 0.97
+     },
+     "MT": {
+      "ours": 19,
+      "frame": 36,
+      "coverage": 0.5277777777777778,
+      "bias": 0.56
+     },
+     "NC": {
+      "ours": 117,
+      "frame": 117,
+      "coverage": 1.0,
+      "bias": 1.05
+     },
+     "ND": {
+      "ours": 10,
+      "frame": 14,
+      "coverage": 0.7142857142857143,
+      "bias": 0.75
+     },
+     "NE": {
+      "ours": 20,
+      "frame": 27,
+      "coverage": 0.7407407407407407,
+      "bias": 0.78
+     },
+     "NH": {
+      "ours": 9,
+      "frame": 10,
+      "coverage": 0.9,
+      "bias": 0.95
+     },
+     "NJ": {
+      "ours": 31,
+      "frame": 22,
+      "coverage": 1.4090909090909092,
+      "bias": 1.49
+     },
+     "NM": {
+      "ours": 10,
+      "frame": 8,
+      "coverage": 1.25,
+      "bias": 1.32
+     },
+     "NV": {
+      "ours": 14,
+      "frame": 23,
+      "coverage": 0.6086956521739131,
+      "bias": 0.64
+     },
+     "NY": {
+      "ours": 40,
+      "frame": 48,
+      "coverage": 0.8333333333333334,
+      "bias": 0.88
+     },
+     "OH": {
+      "ours": 56,
+      "frame": 97,
+      "coverage": 0.5773195876288659,
+      "bias": 0.61
+     },
+     "OK": {
+      "ours": 27,
+      "frame": 41,
+      "coverage": 0.6585365853658537,
+      "bias": 0.69
+     },
+     "OR": {
+      "ours": 143,
+      "frame": 58,
+      "coverage": 2.4655172413793105,
+      "bias": 2.6
+     },
+     "PA": {
+      "ours": 102,
+      "frame": 180,
+      "coverage": 0.5666666666666667,
+      "bias": 0.6
+     },
+     "SC": {
+      "ours": 46,
+      "frame": 49,
+      "coverage": 0.9387755102040817,
+      "bias": 0.99
+     },
+     "SD": {
+      "ours": 15,
+      "frame": 24,
+      "coverage": 0.625,
+      "bias": 0.66
+     },
+     "TN": {
+      "ours": 81,
+      "frame": 90,
+      "coverage": 0.9,
+      "bias": 0.95
+     },
+     "TX": {
+      "ours": 287,
+      "frame": 261,
+      "coverage": 1.0996168582375478,
+      "bias": 1.16
+     },
+     "UT": {
+      "ours": 31,
+      "frame": 41,
+      "coverage": 0.7560975609756098,
+      "bias": 0.8
+     },
+     "VA": {
+      "ours": 68,
+      "frame": 55,
+      "coverage": 1.2363636363636363,
+      "bias": 1.3
+     },
+     "VT": {
+      "ours": 10,
+      "frame": 9,
+      "coverage": 1.1111111111111112,
+      "bias": 1.17
+     },
+     "WA": {
+      "ours": 120,
+      "frame": 61,
+      "coverage": 1.9672131147540983,
+      "bias": 2.07
+     },
+     "WI": {
+      "ours": 85,
+      "frame": 63,
+      "coverage": 1.3492063492063493,
+      "bias": 1.42
+     },
+     "WV": {
+      "ours": 12,
+      "frame": 12,
+      "coverage": 1.0,
+      "bias": 1.05
+     },
+     "WY": {
+      "ours": 7,
+      "frame": 11,
+      "coverage": 0.6363636363636364,
+      "bias": 0.67
+     }
+    },
+    "out_of_band": {
+     "KY": 0.59,
+     "MN": 1.41,
+     "OH": 0.61,
+     "OR": 2.6,
+     "PA": 0.6,
+     "WA": 2.07,
+     "WI": 1.42
+    },
+    "mean_abs_bias": 0.313,
+    "out_of_band_causes": {
+     "KY": "No component roster published.",
+     "MN": "NO CAUSE ON RECORD",
+     "OH": "No component roster published; ohiowoodproducts.com robots-blocked and compromised (2026-09-09).",
+     "OR": "NO CAUSE ON RECORD",
+     "PA": "NO CAUSE ON RECORD",
+     "WA": "NO CAUSE ON RECORD",
+     "WI": "NO CAUSE ON RECORD"
+    }
+   }
+  }
+ },
+ "gates": [
+  {
+   "gate": "G1 dedupe audit",
+   "passed": true,
+   "tested": true,
+   "summary": "456 pairs, 164 collapses = 4.0% (max 10%); corrected count 3901; ABOVE the 2% target this gate is calibrated to \u2014 passing only because the ceiling is relaxed while Layer 4 is a stub",
+   "details": {
+    "pairs": 456,
+    "collapses": 164,
+    "rate": 0.04034440344403444,
+    "corrected_count": 3901,
+    "review_csv": "/home/runner/work/IC_Factory_Database/IC_Factory_Database/build/dedupe_audit_2026-09-17.csv",
+    "target_rate": 0.02,
+    "would_fail_target": true
+   }
+  },
+  {
+   "gate": "G2 false-merge check",
+   "passed": true,
+   "tested": true,
+   "summary": "0 false merges in 365 merged clusters",
+   "details": {
+    "flagged": {},
+    "merged_clusters": 365
+   }
+  },
+  {
+   "gate": "G3 id stability",
+   "passed": true,
+   "tested": false,
+   "summary": "untested: 0 ids issued on a first run; stability needs --rerun over identical inputs",
+   "details": {
+    "ids_issued": 0
+   }
+  },
+  {
+   "gate": "G4 control isolation",
+   "passed": true,
+   "tested": true,
+   "summary": "checksum ok; 0 rows with control provenance",
+   "details": {}
+  },
+  {
+   "gate": "G5 classifier eval",
+   "passed": true,
+   "tested": true,
+   "summary": "precision 100% (min 90%), recall 87% (min 85%), n=60; precision at 20% base rate ~100%",
+   "details": {
+    "tp": 26,
+    "fp": 0,
+    "fn": 4,
+    "tn": 30,
+    "precision": 1.0,
+    "recall": 0.8666666666666667,
+    "base_rate": 0.2,
+    "precision_at_base_rate": 1.0
+   }
+  }
+ ],
+ "halted_at": null,
+ "release": {
+  "published_count": 3901,
+  "raw_count": 4065,
+  "tag": "v1.0.0+reg.22389a4+ids.1b5b11bd+ctl.02c9a3d7+surv.4b4845d9+prompt.275e1a45a6be+model.inception/mercury-2.5",
+  "finished": "2026-09-17T01:53:27.611771+00:00",
+  "ai": "on",
+  "warehouse": {
+   "engine": "postgres",
+   "path": "postgresql://neondb_owner:***@ep-floral-water-avxgt1jq.c-11.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require",
+   "release_tag": "v1.0.0+reg.22389a4+ids.1b5b11bd+ctl.02c9a3d7+surv.4b4845d9+prompt.275e1a45a6be+model.inception/mercury-2.5",
+   "assertions_appended": 25753,
+   "golden_rows": 4065,
+   "conflicts": 1140,
+   "source_rows": 4618,
+   "assertions_total": 61338
+  }
+ }
+}
