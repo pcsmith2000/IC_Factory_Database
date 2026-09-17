@@ -528,14 +528,20 @@ sources:
   name: Georgia DCA approved industrialized building manufacturers
   class: A
   method: download
-  needs_classify: false
+  acquire: blob-only
+  needs_classify: true
   carries:
   - plant_address
+  - explicit_status
   status_basis: on_current_list
-  url: https://dca.georgia.gov/document/document/active-directory-51525/download
+  url: https://dca.georgia.gov/document/fact-sheets/approved-industrialized-building-manufacturers/download
   traps:
-  - 'Found 2026-09-17 while enriching ProMod Manufacturing (Ellaville GA). A state directory that carries Name, Phone AND Address per manufacturer — most state registries carry no street. Two PDFs: the approved-manufacturers fact sheet and the active directory. Like IN/NC/NY it is probably a national roster of everyone selling into Georgia. Not yet fetched.'
-  status: queued
+  - 'A NATIONAL roster with STREETS: Georgia approves everyone who ships into the state, and every row carries Name, Phone, Address, Occupancy. 101 manufacturers across 20+ states; 58 carry a website. Found 2026-09-17 while enriching ProMod Manufacturing.'
+  - 'A browser print of a web table, and its text order is not its visual order. Read by COLUMN x-position from the header, never as text; a record is complete on its "(City, ST)" tag plus a City-ST-ZIP in the address column, judged with the email/phone/URL that share the column stripped first.'
+  - 'Occupancy is what the manufacturer is APPROVED TO SELL INTO GEORGIA, not what it makes: Trachte is approved for Storage and makes pre-engineered metal buildings. So occupancy rides in notes as evidence and the classifier decides — needs_classify: true. 28 of 101 are storage/hazardous/utility-only.'
+  - 'Two records occasionally print as one (a name tail wraps after its record is complete). Detected as two City-ST-ZIPs in one address column and HELD BACK rather than published wrong; the note counts them.'
+  - 'The second PDF, active-directory-51525, is a 2MB scanned image: zero extractable text. Archived beside the first; not parsed.'
+  status: active
 - id: mo_psc
   name: Missouri PSC manufactured housing manufacturers (active modular)
   class: A
