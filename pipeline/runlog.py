@@ -26,7 +26,8 @@ OUT = RECORDS / "RUNLOG.csv"
 COLUMNS = ["run", "started", "minutes", "ai", "model", "prompt", "sources", "n_sources",
            "input_tokens", "output_tokens", "batches_called", "batches_cached", "classify_minutes",
            "candidates", "ic", "uncertain", "raw_clusters", "published", "located", "t0_leads",
-           "recall", "recall_located", "recall_sealed", "control_rows", "gates", "halted_at"]
+           "recall", "recall_located", "recall_sealed", "control_rows", "ceiling",
+           "ingested_but_lost", "never_ingested", "gates", "halted_at"]
 
 
 def _minutes(started: str | None, finished: str | None) -> str:
@@ -80,6 +81,13 @@ def row_for(path: Path) -> dict:
         "recall_located": pct(rc.get("recall_located")),
         "recall_sealed": pct(((rc.get("sealed") or {}).get("recall"))),
         "control_rows": rc.get("in_scope", ""),
+        # The recall this database could reach if every ingested-but-lost plant were recovered and
+        # nothing else changed. Blank for runs made before Layer 7 could tell the two apart — those
+        # runs really did report "not in any source we hold" without checking, and back-filling a
+        # number here would hide that.
+        "ceiling": pct((gap := (rc.get("source_gap") or {})).get("ceiling")),
+        "ingested_but_lost": gap.get("ingested_but_lost", ""),
+        "never_ingested": gap.get("never_ingested", ""),
         "gates": " ".join(f"{g['gate'].split()[0]}{'+' if g.get('passed') else '-'}" for g in gates),
         "halted_at": d.get("halted_at") or "",
     }
@@ -102,7 +110,7 @@ def main(argv=None) -> int:
     print(f"{OUT.relative_to(ROOT)}: {len(rows)} runs")
     if a.print:
         keep = ["run", "minutes", "ai", "model", "input_tokens", "published", "recall",
-                "recall_located", "recall_sealed", "gates"]
+                "recall_located", "recall_sealed", "ceiling", "gates"]
         widths = {k: max(len(k), *(len(str(r.get(k, ""))) for r in rows)) for k in keep} if rows else {}
         print("  " + "  ".join(k.ljust(widths[k]) for k in keep))
         for r in rows:
