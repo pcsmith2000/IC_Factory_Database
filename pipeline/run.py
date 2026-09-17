@@ -223,6 +223,9 @@ def main(argv=None) -> int:
 
     # ---- Layer 7
     hb.beat("7_measure")
+    if 7 not in layers:
+        print(f"  layers {sorted(layers)}: stopping before layer 7")
+        _write_record(record); return 0
     frame_path = ROOT / "control" / "frame_state_totals.csv"
     control_rows = list(csv.DictReader(open(ROOT / cfg["control"]["path"], newline=""))) if (ROOT / cfg["control"]["path"]).exists() else []
     m = {"recall": measure.recall(control_rows, facilities, crosswalk.get("control", {}))}
@@ -233,6 +236,16 @@ def main(argv=None) -> int:
     record["layers"]["7_measure"] = m
 
     # ---- Layer 8
+    if 8 not in layers:
+        # --layers only ever gated layers 1 and 3; everything downstream ran regardless, so
+        # `--layers 1-7` still loaded the warehouse. Runs 35163831460 and 35164672039 were
+        # dispatched as 1-7 precisely to keep them out of Neon while another run published, and
+        # that guarantee did not exist. A flag that silently ignores the one layer with external
+        # side effects is worse than no flag.
+        print(f"  layers {sorted(layers)}: stopping before layer 8, nothing written to the warehouse")
+        hb.done(phase="stopped_before_warehouse", gates=[{"id": r.gate, "passed": r.passed} for r in results])
+        _write_record(record)
+        return 0
     hb.beat("8_warehouse")
     g1 = results[0].details
     record["release"] = {

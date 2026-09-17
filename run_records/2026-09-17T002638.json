@@ -1,0 +1,159 @@
+{
+ "pipeline_version": "1.0.0",
+ "started": "2026-09-17T00:26:38.725123+00:00",
+ "registry_version": "c2e08a4",
+ "registry_file_sha": "b7ec6d00e79489a494deafdb3428f4a5408ea824b530076f94c18d4dbcf23898",
+ "control_sha": "02c9a3d7695ff3110d1eac891ed14165ee2cc0fca46732b04483b5bed524235e",
+ "layers": {
+  "1_acquire": {
+   "pulled": [
+    "/home/user/IC_Factory_Database/ic-csv/pa_dced.csv",
+    "/home/user/IC_Factory_Database/ic-csv/tx_tdlr.csv",
+    "/home/user/IC_Factory_Database/ic-csv/mi_lara.csv",
+    "/home/user/IC_Factory_Database/ic-csv/or_bcd.csv",
+    "/home/user/IC_Factory_Database/ic-csv/fl_bcis.csv",
+    "/home/user/IC_Factory_Database/ic-csv/epa_frs.csv",
+    "/home/user/IC_Factory_Database/ic-csv/iibc.csv",
+    "/home/user/IC_Factory_Database/ic-csv/mhi_plants.csv",
+    "/home/user/IC_Factory_Database/ic-csv/corporate_locations.csv"
+   ],
+   "failed": {},
+   "skipped": {}
+  },
+  "2_validate": {
+   "sources": {
+    "corporate_locations": {
+     "rows": 210,
+     "with_street_key": 178,
+     "no_fixed_plant": 0
+    },
+    "epa_frs": {
+     "rows": 99883,
+     "with_street_key": 80582,
+     "no_fixed_plant": 0
+    },
+    "fl_bcis": {
+     "rows": 959,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "iibc": {
+     "rows": 286,
+     "with_street_key": 280,
+     "no_fixed_plant": 0
+    },
+    "mhi_plants": {
+     "rows": 150,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "mi_lara": {
+     "rows": 172,
+     "with_street_key": 172,
+     "no_fixed_plant": 0
+    },
+    "or_bcd": {
+     "rows": 164,
+     "with_street_key": 143,
+     "no_fixed_plant": 0
+    },
+    "pa_dced": {
+     "rows": 115,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "tx_tdlr": {
+     "rows": 334,
+     "with_street_key": 324,
+     "no_fixed_plant": 0
+    }
+   },
+   "halted": [],
+   "problems": {}
+  },
+  "3_classify": {
+   "model": "inception/mercury-2.5",
+   "provider": "vercel_ai_gateway",
+   "temperature": 0,
+   "seeds_also_candidates": 9,
+   "prompt_hash": "275e1a45a6be",
+   "n_candidates": 991,
+   "n_seeds": 60,
+   "ic": 2634,
+   "uncertain": 41,
+   "not_ic_or_uncandidated": 99598
+  },
+  "4_resolve": {
+   "rows": 2634,
+   "resolved_by_crosswalk": 0,
+   "resolution_rate": 0.0,
+   "layer_built": false
+  },
+  "5_reconcile": {
+   "ids_issued": 0,
+   "n_facilities": 2329,
+   "tiers": {
+    "T1": 873,
+    "T0": 1285,
+    "T3": 3,
+    "T2": 168
+   }
+  },
+  "5b_golden": {
+   "assertions": 12061,
+   "golden_rows": 2329,
+   "conflicts": 698,
+   "survivorship_version": 1,
+   "operator_assertions": 0
+  }
+ },
+ "gates": [
+  {
+   "gate": "G1 dedupe audit",
+   "passed": true,
+   "summary": "337 pairs, 95 collapses = 4.1% (max 10%); corrected count 2234",
+   "details": {
+    "pairs": 337,
+    "collapses": 95,
+    "rate": 0.040790038643194505,
+    "corrected_count": 2234,
+    "review_csv": "/home/user/IC_Factory_Database/build-probe-inception-mercury-2.5/dedupe_audit_2026-09-17.csv"
+   }
+  },
+  {
+   "gate": "G2 false-merge check",
+   "passed": true,
+   "summary": "0 clusters with >1 street key",
+   "details": {
+    "flagged": {}
+   }
+  },
+  {
+   "gate": "G3 id stability",
+   "passed": true,
+   "summary": "first run: 0 ids issued (not a re-run; stability not tested)",
+   "details": {}
+  },
+  {
+   "gate": "G4 control isolation",
+   "passed": true,
+   "summary": "checksum ok; 0 rows with control provenance",
+   "details": {}
+  },
+  {
+   "gate": "G5 classifier eval",
+   "passed": false,
+   "summary": "precision 93% (min 95%), recall 90% (min 90%), n=60",
+   "details": {
+    "tp": 27,
+    "fp": 2,
+    "fn": 3,
+    "tn": 28,
+    "precision": 0.9310344827586207,
+    "recall": 0.9
+   }
+  }
+ ],
+ "halted_at": "layer 6",
+ "halt_reason": "G5 classifier eval \u2014 precision 93% (min 95%), recall 90% (min 90%), n=60"
+}
