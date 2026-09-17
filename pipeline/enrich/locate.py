@@ -136,7 +136,12 @@ def _page_states_the_address(url: str, address: str, timeout: int = 20) -> tuple
             body = r.read(2_000_000).decode("utf-8", "replace")
     except (urllib.error.URLError, OSError, ValueError):
         return None, ""
-    text = _re.sub(r"\s+", " ", _re.sub(r"<[^>]+>", " ", body))
+    # decode entities before stripping tags: a snippet reading "&nbsp;/&nbsp;&nbsp;Store Details"
+    # is stored as evidence and read by a person, and &nbsp; is not what the page says
+    import html as _html
+    text = _re.sub(r"\s+", " ", _html.unescape(_re.sub(r"<(script|style)[^>]*>.*?</\1>", " ",
+                                                       body, flags=_re.S | _re.I)))
+    text = _re.sub(r"\s+", " ", _re.sub(r"<[^>]+>", " ", text))
     norm = lambda s: _re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
     page, want = norm(text), norm(address)
 

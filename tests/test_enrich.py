@@ -334,3 +334,22 @@ def test_the_stored_quote_comes_from_the_page_not_the_model(monkeypatch):
     ev = rep["assertions"][0]["evidence"]
     assert "Visit us at 1200 Industrial Blvd" in ev
     assert "Change My Store" not in ev
+
+
+def test_the_snippet_is_readable_text_not_markup(monkeypatch):
+    """The snippet is stored as evidence and read by a person. Scripts, styles and undecoded
+    entities are not what the page says."""
+    page = ("<html><head><style>.a{color:red}</style>"
+            "<script>var x='1200 Fake St';</script></head>"
+            "<body><p>Store&nbsp;Details&nbsp;/&nbsp;Visit us at 1200 Industrial Blvd, Waco.</p>"
+            "</body></html>")
+    class R:
+        def read(self, n=None): return page.encode()
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: R())
+    ok, snip = locate._page_states_the_address("https://x.example", "1200 Industrial Blvd")
+    assert ok is True
+    assert "&nbsp;" not in snip and "color:red" not in snip and "var x=" not in snip
+    assert "Visit us at 1200 Industrial Blvd" in snip
