@@ -107,3 +107,38 @@ in no prompt's candidate pool, and the classifier cannot be the lever.
 One correction to the figures this run reports: its `source_gap` reads a 49.4% ceiling because run
 25 was dispatched from a commit predating the state-aware fix to `sources_holding`. The honest
 ceiling is 44.4%.
+
+## Run 27 — the crosswalk, pass 1b and the scope triage, measured on their own
+
+    prompt dd4369b1ffae (v1.8) · 19 sources · all five gates pass
+    IC 1,966 (projected) UNCERTAIN 131 · 1,418,004 in / 837,733 out
+    recall 41.0% (98 of 239)   located 35.56%   sealed 42.11%
+    by method: crosswalk 3 · name+city 30 · name+state 8 · name 9 · name-prefix 48
+    facilities 4,205 · T0 1,375 · T2+T3 624 (run 26: 581)
+
+Like-for-like with run 26 on the 239-row control: 40.6% → 41.0%. The three crosswalk rows count,
+which is the mechanism Peter's finding asked for working end to end. Corroboration — plants two or
+more sources agree on — rose 581 → 624, +7%.
+
+**Sealed fell one row, 17 → 16 (44.7% → 42.1%), and dev rose.** Run 27 predates the precision
+fixes, so it is not the removed door-shop or Ontario false positives. The candidates are pass 1b
+freeing or taking a facility under one-to-one matching, or the ~8% of classifier labels that flip
+between identical runs. Which one is not knowable from the record alone; it needs run 27's
+control-status.csv, and it is written here as unexplained rather than explained away.
+
+v1.8 on its second run: IC ~1,966 against v1.4's 1,969 and UNCERTAIN 131 against 366. The prompt is
+holding recall at baseline on roughly a third of the review queue, which was the one gain left in
+it. No further prompt edits.
+
+## Stop-rule ledger (3-minute loop)
+
+| pass | run | recall | Δ abs | corroboration T2+T3 |
+|---|---|---|---|---|
+| baseline | 25 | 38.59% | — | 527 (run 22 basis) |
+| 1 | 26 | 40.25% (40.6% on 239) | +1.7 | 581 |
+| 2 | 27 | 41.0% | +0.4 | 624 |
+| 3 | 28 | pending — carries 27 lead addresses, ga_dca (99 rows), four precision fixes | | |
+
+Rule: stop at 90% fuzzy match, or when four additional passes together yield under 3% — unless
+corroboration is still improving significantly, in which case continue until it stops. Two passes
+in: +2.4 points on matching, +18% on corroboration.
