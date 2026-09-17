@@ -318,3 +318,52 @@ def test_id_registry_never_renumbers_an_existing_signature(tmp_path: Path):
     assert reopened.issued_this_run == 0        # nothing new — this is what a re-run must show
     assert reopened.get("TX|S|5elm") != first   # a genuinely new signature still gets a new id
     assert reopened.issued_this_run == 1
+
+
+# ------------------------------------------------- G1 and the multi-plant company
+def _fac(fid, name, city, street, state="TX", tier="T1"):
+    return {"facility_id": fid, "name": name, "city_norm": city, "street_key": street,
+            "state": state, "tier": tier}
+
+
+def test_g1_does_not_collapse_two_sites_of_one_company_in_one_city(tmp_path: Path):
+    """TAS Energy has five Houston plants; TXLA Systems five in Huffman. Same name, same city,
+    different street — different establishments. Every one of the 58 'duplicate' pairs among
+    located facilities in the 2026-09-17 run was this shape, and all 58 were false."""
+    facs = [_fac("IC-1", "TAS ENERGY INC.", "houston", "9450 w wingfoot rd"),
+            _fac("IC-2", "TAS ENERGY INC.", "houston", "2920 airport blvd")]
+    r = gates.g1_dedupe(facs, 0.10, {"street_key": 0.95, "name_city": 0.90, "fuzzy": 0.80},
+                        tmp_path / "audit.csv", target_rate=0.02)
+    assert r.details["collapses"] == 0
+    assert r.details["rate"] == 0.0
+    # still surfaced for review, just below the collapse threshold
+    assert r.details["pairs"] == 1
+    assert "DIFFERENT street" in (tmp_path / "audit.csv").read_text()
+
+
+def test_g1_still_collapses_a_real_duplicate_with_no_address(tmp_path: Path):
+    """The fix must not blind the gate: same name and city with no street on either side is
+    still the duplicate it always was."""
+    facs = [_fac("IC-1", "COZY CABINS LLC", "new holland", "", tier="T0"),
+            _fac("IC-2", "Cozy Cabins", "new holland", "", tier="T0")]
+    r = gates.g1_dedupe(facs, 0.10, {"street_key": 0.95, "name_city": 0.90, "fuzzy": 0.80},
+                        tmp_path / "a.csv", target_rate=0.02)
+    assert r.details["collapses"] == 1
+
+
+def test_g1_still_collapses_the_same_street_seen_twice(tmp_path: Path):
+    facs = [_fac("IC-1", "MODULAR BUILDERS", "rochester", "3089 ft wayne rd"),
+            _fac("IC-2", "Modular Builders Inc", "rochester", "3089 ft wayne rd")]
+    r = gates.g1_dedupe(facs, 0.10, {"street_key": 0.95, "name_city": 0.90, "fuzzy": 0.80},
+                        tmp_path / "a.csv", target_rate=0.02)
+    assert r.details["collapses"] == 1
+
+
+def test_g1_still_merges_an_addressless_row_into_an_addressed_one(tmp_path: Path):
+    """One side knows the street, the other only the city. That is one plant, and the gate
+    must keep saying so — this is the shape the addressless sources produce."""
+    facs = [_fac("IC-1", "DEER RUN CABINS", "campbellsville", "100 main st"),
+            _fac("IC-2", "Deer Run Cabins", "campbellsville", "", tier="T0")]
+    r = gates.g1_dedupe(facs, 0.10, {"street_key": 0.95, "name_city": 0.90, "fuzzy": 0.80},
+                        tmp_path / "a.csv", target_rate=0.02)
+    assert r.details["collapses"] == 1

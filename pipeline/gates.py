@@ -51,14 +51,31 @@ def g1_dedupe(facilities: list[dict], max_rate: float, thresholds: dict, out_csv
         for i in range(len(fs)):
             for j in range(i + 1, len(fs)):
                 a, b = fs[i], fs[j]
-                if a.get("street_key") and a.get("street_key") == b.get("street_key"):
-                    continue
+                ka, kb = a.get("street_key"), b.get("street_key")
+                if ka and ka == kb:
+                    continue                       # already paired by the street detector above
                 na, nb = norm_name(a["name"]), norm_name(b["name"])
                 if not na or not nb:
                     continue
-                if na == nb and _sim(a["city_norm"], b["city_norm"]) >= 0.85:
+                name_city = na == nb and _sim(a["city_norm"], b["city_norm"]) >= 0.85
+                fuzzy = _sim(na, nb) >= 0.90 and _sim(a["city_norm"], b["city_norm"]) >= 0.85
+                if not (name_city or fuzzy):
+                    continue
+                if ka and kb:
+                    # Both sides carry a street address and the addresses are DIFFERENT. A company
+                    # with several plants in one city is the normal case, not a duplicate: TAS
+                    # Energy has five Houston sites and TXLA Systems five in Huffman, and every one
+                    # of the 58 "duplicate" pairs among located facilities in the 2026-09-17 run
+                    # was this shape — the entire 3.8% was false. Two known, different addresses
+                    # are evidence of two establishments. Still reported, because normalisation can
+                    # split one plant ("100 Main St" / "100 N Main Street"), but below the collapse
+                    # threshold so it is a review item and not a correction.
+                    pairs.append((a, b, thresholds.get("same_name_other_street", 0.40),
+                                  "same name + city, DIFFERENT street — distinct sites unless "
+                                  "normalisation split one"))
+                elif name_city:
                     pairs.append((a, b, thresholds["name_city"], "identical name + near-identical city"))
-                elif _sim(na, nb) >= 0.90 and _sim(a["city_norm"], b["city_norm"]) >= 0.85:
+                else:
                     pairs.append((a, b, thresholds["fuzzy"], "fuzzy name + fuzzy city"))
     # merge groups via union-find over pairs ≥ 0.90 → collapses
     parent = {f["facility_id"]: f["facility_id"] for f in facilities}
