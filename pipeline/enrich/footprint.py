@@ -102,7 +102,6 @@ def measure(points: list[dict], release: str = DEFAULT_RELEASE,
             out.append({**p, "building_sqft": None, "reason": "outside every Overture file bbox"})
         else:
             by_file.setdefault(f, []).append(p)
-    con = _connect()
     files = list(by_file)
     if max_files is not None and len(files) > max_files:
         for f in files[max_files:]:
@@ -110,6 +109,9 @@ def measure(points: list[dict], release: str = DEFAULT_RELEASE,
                 out.append({**p, "building_sqft": None,
                             "reason": "deferred: file ceiling reached"})
         files = files[:max_files]
+    if not files:
+        return out                      # nothing to read, so do not open a connection
+    con = _connect()
     for f in files:
         ps = by_file[f]
         where = " OR ".join(f"(bbox.xmin BETWEEN {p['lon']-box_deg} AND {p['lon']+box_deg} AND "
