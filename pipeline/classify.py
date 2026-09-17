@@ -46,6 +46,12 @@ KEYWORD_NAICS = {
     # name alone cannot tell them apart. That judgement is the classifier's, which is the point:
     # this rule buys the rows a hearing, it does not label them.
     r"\bstructural\b":         {"3323", "2362"},
+    # A structural steel fabricator is named after its metal, not its product: BANKER STEEL is four
+    # plants on the control list (Lynchburg x2, Orlando, Rock Hill), every one an EPA FRS row on
+    # 332312, and none reached the classifier because "structural" is not in the name. 1,710 of
+    # the 13,638 rows in 3323 say steel, joist or iron works; 60 were already candidates. Same
+    # bargain as `structural`: a hearing, not a label — a bridge shop is the classifier's to drop.
+    r"\bsteel\b|\bjoist|\biron ?works": {"3323"},
 }
 PLACENAME_COLLISIONS = {"trussville", "old forge", "campanello"}
 
@@ -61,6 +67,13 @@ PLACENAME_COLLISIONS = {"trussville", "old forge", "campanello"}
 # the judgement. The placename guard does NOT apply here: it exists to stop a keyword firing on a
 # town called Trussville, and in these families the name is not the reason for admission.
 WIDE_NAICS_FAMILIES = {"3219", "3212"}
+
+# Six-digit codes admitted whole, for the same reason. 327390 (other concrete product
+# manufacturing) is where precast sits — precast panels are a control segment, and CLARK PACIFIC
+# is six FRS rows on 327390 of which exactly one, the ADELANTO PRECAST PLANT, said "precast" and
+# was heard (and labelled IC). The other five, Woodland among them, never were. 2,017 rows, 293
+# already candidates; septic tanks and burial vaults are in here too and are the classifier's.
+WIDE_NAICS_CODES = {"327390"}
 
 
 def candidates(rows: list[dict], core_naics: set[str], always: set[str] = frozenset()) -> list[dict]:
@@ -84,6 +97,8 @@ def candidates(rows: list[dict], core_naics: set[str], always: set[str] = frozen
             r["_candidate_reason"] = f"core naics {naics}"; out.append(r); continue
         if naics[:4] in WIDE_NAICS_FAMILIES:
             r["_candidate_reason"] = f"wide family {naics[:4]}"; out.append(r); continue
+        if naics in WIDE_NAICS_CODES:
+            r["_candidate_reason"] = f"wide code {naics}"; out.append(r); continue
         if any(p in name for p in PLACENAME_COLLISIONS):
             continue
         for pat, fams in KEYWORD_NAICS.items():

@@ -76,16 +76,19 @@ def test_product_name_keywords_reach_3323():
     assert _cand("332321", "MIAMI WALL SYSTEMS, INC.")[0]["_candidate_reason"].endswith("× 3323")
 
 def test_what_neither_option_reaches():
-    # The honest limit. Banker Steel is a real plant on the validated list, in EPA, coded 332312,
-    # and carries no keyword at all — no name rule reaches it, and it is outside 3219/3212.
-    # Only classifying the whole slice would put it in front of the model.
-    assert _cand("332312", "BANKER STEEL - ORLANDO") == []
+    # The honest limit, moved once. Banker Steel is four control plants in EPA on 332312 and used
+    # to carry no keyword any rule read; the steel/joist/iron-works rule now buys it a hearing.
+    # What still has none: a fabricator named after nothing, and a lumber yard outside every family.
+    assert _cand("332312", "BANKER STEEL - ORLANDO")[0]["_candidate_reason"].endswith("× 3323")
+    assert _cand("332312", "ACME FABRICATORS") == []
     assert _cand("423310", "84 LUMBER COMPANY") == []
 
 def test_core_and_keyword_paths_still_hold():
     assert _cand("321992", "ANY NAME AT ALL")[0]["_candidate_reason"] == "core naics 321992"
-    assert _cand("327390", "ACME PRECAST CONCRETE")[0]["_candidate_reason"].endswith("× 3273")
-    assert _cand("332312", "PLAIN STEEL CO") == []
+    # 327390 is admitted whole now, so the precast keyword is no longer what admits it.
+    assert _cand("327390", "ACME PRECAST CONCRETE")[0]["_candidate_reason"] == "wide code 327390"
+    assert _cand("327331", "ACME PRECAST CONCRETE")[0]["_candidate_reason"].endswith("× 3273")
+    assert _cand("332312", "PLAIN FABRICATION CO") == []
 
 
 # Layer 3 output contract. A run is ~131 batches, so anything that fails one batch fails the run.
