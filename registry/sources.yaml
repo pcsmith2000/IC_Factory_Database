@@ -304,7 +304,12 @@ sources:
     Washington and Western Australia. Filter by LABEL, never by code.
   - Result cells run name-then-address and many names carry a comma ('Basin Precast, Inc. 34956 Co Rd 126'), so the street
     starts at its house number, not after the name.
-  status: active
+  - '2026-09-17 sweep: selecting a state and clicking submit does NOT filter the grid. 46 pages archived, 42 of them the empty
+    form at exactly 80,648 bytes; the 10 plants that came back are the page''s own default region (CO/ID/MT/UT). Correct option
+    values and a settle delay for the dropdown''s own postback both made no difference. The form wants more than the state:
+    try the query-type dropdown (''Search by PCI Certified Plant Location'') or a certification category first. parse() now
+    refuses a sweep where half the states come back empty.'
+  status: queued_needs_work
   url: https://www.pci.org/PCIMS/Directories/Certified_Plants_Search.aspx
 - id: mbi_members
   name: MBI member directory

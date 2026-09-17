@@ -163,13 +163,27 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
                 state=r["state"], zip_code=r["zip"], source_url=URL,
                 source_document=path.name, source_identifier=f"{r['street']}|{r['zip']}",
                 notes=f"PCI certification {r['category']}; produces {r['products']}"[:200]))
+    # A state page with no rows at all is the failure this source is most likely to have, and the
+    # one least likely to announce itself: the 2026-09-17 sweep archived 46 pages, 42 of them the
+    # empty form at exactly 80,648 bytes, and returned 10 plants from the four states the page
+    # happens to default to. It would have published "10 plants across 46 states", which is false.
+    # A roster that is empty for most of the country is a broken query, not a thin industry.
+    with_rows = sum(1 for path in pages
+                    if _rows(path.read_text(encoding="utf-8", errors="replace")))
+    if with_rows <= len(pages) // 2:
+        raise LayoutChanged(
+            f"only {with_rows} of {len(pages)} state pages returned any row. Selecting a state and "
+            "submitting is not filtering the grid — the plants that do come back are the page's "
+            "own default region (CO/ID/MT/UT), not a search result. The form needs more than the "
+            "state dropdown: try setting the query type to 'Search by PCI Certified Plant "
+            "Location' first, or supplying a certification category or product.")
     if not out:
         raise LayoutChanged(
             f"{len(pages)} state pages archived and none yielded a building-precast plant — either "
             "the grid markup changed or every submit returned the regional default")
-    out[0]["notes"] += (f" | {len(out)} building-precast plants across {len(pages)} states; "
-                        f"{infrastructure} certified plants skipped as infrastructure precast "
-                        "(rail ties, culverts, pipe, piles)")
+    out[0]["notes"] += (f" | {len(out)} building-precast plants from {with_rows} of {len(pages)} "
+                        f"state pages; {infrastructure} certified plants skipped as infrastructure "
+                        "precast (rail ties, culverts, pipe, piles)")
     return out
 
 

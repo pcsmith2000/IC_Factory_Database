@@ -495,3 +495,20 @@ def test_pci_sweeps_us_states_by_label_not_by_code():
             '<option value="AB:::2">Alberta</option>'
             '<option value="MT:::26">Montana</option></select>')
     assert _options(page) == [("WA:::78", "WA"), ("MT:::26", "MT")]
+
+
+def test_pci_refuses_a_sweep_that_is_empty_for_most_states(tmp_path):
+    """The 2026-09-17 sweep archived 46 pages, 42 of them the empty form, and would have published
+    "10 plants across 46 states" from the page's own default region. A roster that is empty for
+    most of the country is a broken query, not a thin industry."""
+    import pytest
+    from pipeline.sources import pci_certified as P
+    from pipeline.sources._common import LayoutChanged
+    row = ('<tr class="rgRow"><td>Wells 2145 E Crown Prince Blvd, Brighton, CO 80603 '
+           'Certification Category: AC Products Produced: Double Tees</td><td>Wells</td></tr>')
+    (tmp_path / "state-CO.html").write_text(row)
+    for st in ("TX", "PA", "CA"):
+        (tmp_path / f"state-{st}.html").write_text("<table></table>")
+    with pytest.raises(LayoutChanged, match="only 1 of 4 state pages"):
+        P.parse(sorted(tmp_path.glob("*.html")), {"id": "pci_certified", "url": P.URL,
+                                                  "status_basis": "certified"})
