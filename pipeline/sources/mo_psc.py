@@ -30,6 +30,10 @@ from ._common import US_STATES, LayoutChanged, contract_row, drop_repeated_lines
 
 INDEX = "https://psc.mo.gov/ManufacturedHousing/Manufacturer_Information"
 HEADER = ("Registration", "Business", "Address", "City", "State", "Zip", "Phone")
+# The header groups as printed: two of them are two words, and a boundary belongs between the LAST
+# word of the left group and the FIRST word of the right — midpoints between first words put the
+# Registration/Name boundary inside the name, and "ADVENTURE HOMES LLC" read as "HOMES LLC".
+GROUPS = (("Registration", "#"), ("Business", "Name"), ("Address",), ("City",), ("State",), ("Zip",), ("Phone",))
 SEGMENT = {"MOD": "modular", "HUD": "HUD-code manufactured homes"}
 
 
@@ -43,8 +47,13 @@ def _columns(lines: list[list[dict]]) -> list[float]:
     for line in lines:
         words = [w["text"] for w in line]
         if all(h in words for h in HEADER):
-            xs = [next(w["x0"] for w in line if w["text"] == h) for h in HEADER]
-            return [(a + b) / 2 for a, b in zip(xs, xs[1:])]
+            def x1_of(word):  return next(w["x1"] for w in line if w["text"] == word)
+            def x0_of(word):  return next(w["x0"] for w in line if w["text"] == word)
+            bounds = []
+            for left, right in zip(GROUPS, GROUPS[1:]):
+                last = left[-1] if left[-1] in words else left[0]      # "#" may print as part of "Registration#"
+                bounds.append((x1_of(last) + x0_of(right[0])) / 2)
+            return bounds
     raise LayoutChanged("no 'Registration # Business Name Address City State Zip Phone' header — the PSC table changed")
 
 

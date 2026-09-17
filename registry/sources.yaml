@@ -543,18 +543,21 @@ sources:
   - 'The second PDF, active-directory-51525, is a 2MB scanned image: zero extractable text. Archived beside the first; not parsed.'
   status: active
 - id: mo_psc
-  name: Missouri PSC manufactured housing manufacturers (active modular)
+  name: Missouri PSC registered manufacturers (modular and HUD-code)
   class: A
-  method: download
+  method: fetch
+  acquire: blob-only
   needs_classify: false
   carries:
   - plant_address
   - manufacturer_id
   status_basis: on_current_list
-  url: https://psc.mo.gov/CMSInternetData/ManufacturedHousing/Manufacturer/ACTIVE%20MOD%202-10-25.pdf
+  url: https://psc.mo.gov/ManufacturedHousing/Manufacturer_Information
   traps:
-  - 'Found 2026-09-17 while enriching ProMod Manufacturing. A PDF with Registration #, Business Name, Address, City, State, Zip, Phone per manufacturer — a registry WITH streets. Filename carries a date (2-10-25), so the URL will rotate; discover it from the PSC manufactured-housing page rather than pinning it. Not yet fetched.'
-  status: queued
+  - 'TWO lists, both national and both with a street on every row: ACTIVE MOD (135 modular registrations) and ACTIVE HUD (67 HUD-code, NAICS 321991). 202 rows across TX 43, IN 28, AL 19, TN 14, GA 14, WI 10, MO 10. 17 give a PO Box, which correctly yields no street key.'
+  - 'The PDF filename carries a date and the previous URL 404s within months: discover the links from Manufacturer_Information, never pin them. Verified 2026-09-17: the 2-10-25 link recorded that morning was already gone; 6-2-26 and 9-15-25 are current.'
+  - 'Read by COLUMN from the header, with each boundary at the midpoint between the last word of one header group and the first of the next. Midpoints between first words put the Registration/Name boundary inside the name and truncated "ADVENTURE HOMES LLC" to "HOMES LLC"; header x0 alone shifted every column one to the left and the HUD list yielded nothing.'
+  status: active
 - id: forest_products_locator
   name: Secondary Forest Products Locator (forestproductslocator.org)
   class: C
