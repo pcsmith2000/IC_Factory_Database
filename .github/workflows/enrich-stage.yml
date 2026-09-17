@@ -53,10 +53,12 @@ jobs:
           EOF
 
       - name: Run stage ${{ inputs.stage }}
+        # Each credential accepts the canonical name or this repo's IC_DB_ naming, as run.yml does:
+        # an unset secret reads as an empty string, so `||` falls through to the next spelling.
         env:
-          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
-          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.IC_DB_GEOCODIO_API_KEY }}
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
         run: python -m pipeline.enrich.run "${{ inputs.stage }}" --out enrich ${{ inputs.args }}
 
       - name: Publish what this stage wrote

@@ -49,13 +49,35 @@ class LocateUnavailable(RuntimeError):
     pass
 
 
+AI_GATEWAY_BASE_URL = "https://ai-gateway.vercel.sh"
+
+
 def _client(model: str):
+    """Prefer the shared resolver from layers 1-8; fall back to the gateway contract directly.
+
+    `pipeline.ai_client_and_model` is the one place provider choice belongs, and once the layers
+    1-8 branch lands it wins here automatically. Until then this stage would be unrunnable, so it
+    falls back to the same contract that helper implements: the Vercel AI Gateway serves Anthropic's
+    Messages API, so the SDK is unchanged and only the base URL and the model id spelling differ —
+    the gateway qualifies by provider and dots the minor version (anthropic/claude-sonnet-5).
+    """
     try:
         from .. import ai_client_and_model
-    except ImportError as e:      # provided by layers 1-8; this stage does not define its own
-        raise LocateUnavailable("pipeline.ai_client_and_model is missing — it comes from the "
-                                "layers 1-8 branch; merge it before running stage 9") from e
-    return ai_client_and_model(model)
+        return ai_client_and_model(model)
+    except ImportError:
+        pass
+    import os
+    import anthropic
+    gateway = os.environ.get("AI_GATEWAY_API_KEY")
+    if gateway:
+        return (anthropic.Anthropic(api_key=gateway, base_url=AI_GATEWAY_BASE_URL, max_retries=8),
+                model if "/" in model else f"anthropic/{model}", "vercel_ai_gateway")
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
+        raise LocateUnavailable("stage 9 needs AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY); "
+                                "set --limit 0 to skip the AI stage entirely")
+    return (anthropic.Anthropic(api_key=key, max_retries=8),
+            model.split("/", 1)[-1].replace(".", "-"), "anthropic")
 
 
 def _extract_json(text: str) -> dict | None:
