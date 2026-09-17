@@ -76,8 +76,15 @@ resolve what it is currently being asked to.
 
 ## If a decision is needed sooner
 
-- **Score G5 over k passes** and require the mean to clear the bar. Cost is k× the seed batch,
-  which is cents, and it collapses the variance without touching the threshold.
+- **Score G5 over k passes** and require the mean to clear the bar. This collapses the variance
+  without touching the threshold: at k=3 the standard error of the mean falls by √3.
+  It is **not** cheap, and an earlier draft of this document said it was. The seeds cannot be
+  re-scored as their own batch: `classify.batches()` deals them round-robin through the candidate
+  batches on purpose, because a batch of 60 seeds is 50% IC while a production batch is ~15%, and
+  scoring them in seed-dense context is exactly the base-rate distortion that made nova-lite read
+  97/97 on a 60-seed bake-off and then miss 24 of 30 IC seeds at production shape. Seeds must be
+  graded in the context they are hidden in, so k passes means k full runs: about 25 minutes and
+  ~$0.27 each, not cents.
 - **Judge prompts on population rates** (the table under *What survives*), not on row diffs, until
   the seed set grows.
 - **Do not re-run a failing prompt hoping for a better draw.** That is selecting on noise, and it
