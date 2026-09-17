@@ -78,6 +78,25 @@ state level only. The denominator. Refresh annually and record the vintage in co
 **v1.0 shipped these as headers only.** Seeds and frame totals were added from the 2026-09-09
 build; `control-triaged.csv` was filled on 2026-09-17 with the ADL list.
 
+## A lead counts as being on the list
+
+Layer 7 reports two numbers and they answer different questions. `recall` is what the database
+knows exists — a T0 lead is a named plant in the warehouse, tiered and queryable, waiting only for
+a street address. `recall_located` is what it could drive somebody to. The headline is `recall`,
+because the control list asks whether an establishment is on our list, not whether we can post it
+a letter. On run 35243029519 that is 83/241 = 34% found, of which 65 are located.
+
+Both stay reported. The reason the split exists at all is that a roster of bare names is the
+cheapest source there is, so the one number most likely to be inflated by accident is the found
+count — SBCA's TMAT directory would have added 73 names with no address and moved `recall`
+several points on its own. Seeing `recall` climb while `recall_located` sits still is the signal
+that a source added names rather than plants.
+
+`address-lookup-worklist.csv` holds the control rows that are on the list without a street — 18 of
+them — for the enrichment pass that runs after Layer 8. The warehouse population behind it is
+1,454 T0 leads, 508 of which already carry a city and state and so have a town to search within;
+944 are a name alone.
+
 ## `untriaged-worklist.csv` — the rows that need a human, not another source
 
 35 of the 203 dev rows carry no category, no city and no state: a bare company name. 31 of those

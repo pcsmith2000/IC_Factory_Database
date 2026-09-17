@@ -1,242 +1,242 @@
-control_id,name,city,state,reason,split,status,matched_by,matched_facility,matched_state,matched_tier,why_missing
-ADL-001,Silver Creek Modular,Perris,CA,Steel Volumetric Modular,dev,MISSING,,,,,in a raw source but not published
-ADL-002,Z Modular,Chandler,AZ,Steel Volumetric Modular,dev,LEAD ONLY,name,Z Modular LLC,,T0,
-ADL-003,Modlogiq,New Holland,PA,Steel Volumetric Modular,sealed,LEAD ONLY,name+city,MODLOGIQ,PA,T0,
-ADL-004,Fullstack Modular,Carson,CA,Steel Volumetric Modular,dev,MISSING,,,,,not in any source we hold
-ADL-005,Mandeville Modular,Palmdale,CA,Steel Volumetric Modular,sealed,HAVE,name+city,"Mandeville Modular, Inc.",CA,T1,
-ADL-006,MMY Modular,Louisville,KY,Steel Volumetric Modular,dev,MISSING,,,,,not in any source we hold
-ADL-007,Modern Living Solutions / Greystar,Knox,PA,Steel Volumetric Modular,dev,LEAD ONLY,name-prefix,Modern Living Solutions,PA,T0,
-ADL-008,BLOX,Bessemer,AL,Steel Volumetric Modular,sealed,HAVE,name+city,"BLOX, LLC",AL,T2,
-ADL-009,Modular Steel Systems,Bloomsburg,PA,Steel-based Panels,sealed,HAVE,name+city,MODULAR STEEL SYSTEMS INC,PA,T3,
-ADL-010,VBC,Berwick,PA,Wood Volumetric Modular,dev,MISSING,,,,,not in any source we hold
-ADL-011,VBC,Tracy,VA,Wood Volumetric Modular,dev,MISSING,,,,,not in any source we hold
-ADL-012,Vantem Global,Clio,SC,Wood Volumetric Modular,dev,MISSING,,,,,not in any source we hold
-ADL-013,Autovol,Nampa,ID,Wood Volumetric Modular,sealed,HAVE,name+city,Autovol,ID,T1,
-ADL-014,Plant prefab,Tejon Ranch,CA,Wood Volumetric Modular,dev,HAVE,name+state,Plant Prefab,CA,T1,
-ADL-015,Fading West,Buena Vista,CO,Wood Volumetric Modular,dev,HAVE,name-prefix,"FADING WEST BUILDING SYSTEMS, LLC",CO,T2,
-ADL-016,Biltwise,Greenwood,SC,Wood Volumetric Modular,dev,LEAD ONLY,name-prefix,BiltWise Structures LLC,,T0,
-ADL-017,Signature Building Systems,Moosic,PA,Wood Volumetric Modular,sealed,LEAD ONLY,name+city,Signature Building Systems,PA,T0,
-ADL-018,Ritz Craft PA 1,Mifflinburg,PA,Wood Volumetric Modular,dev,HAVE,name-prefix,RITZ-CRAFT CORPORATION,PA,T3,
-ADL-019,Ritz Craft MI,Jonesville,MI,Wood Volumetric Modular,dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-020,Icon Legacy,Selinsgrove,PA,Wood Volumetric Modular,dev,LEAD ONLY,name-prefix,ICON LEGACY CUSTOM MODULAR HOMES,,T0,
-ADL-021,Professional Building Systems,Middleburg,PA,Wood Volumetric Modular,dev,LEAD ONLY,name-prefix,Professional Building Systems of NC,,T0,
-ADL-022,Studiobuilt,Cuero,TX,Wood Volumetric Modular,dev,MISSING,,,,,not in any source we hold
-ADL-023,Apex Homes,Middleburg,PA,Wood Volumetric Modular,sealed,LEAD ONLY,name+city,Apex Homes,PA,T0,
-ADL-024,Cardinal Homes,Wylliesburg,VA,Wood Volumetric Modular,dev,HAVE,name+city,CARDINAL HOMES INC,VA,T1,
-ADL-025,Cavco Industries R-Anell,Crouse,NC,Wood Volumetric Modular,dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-026,Rochester Homes,Rochester,IN,Wood Volumetric Modular,dev,HAVE,name+city,"ROCHESTER HOMES, INC.",IN,T2,
-ADL-027,Cavco - Penn West,Emlenton,PA,Wood Volumetric Modular,dev,MISSING,,,,,not in any source we hold
-ADL-028,DuraPod - North Wales,North Wales,PA,Bathroom Pods,dev,MISSING,,,,,not in any source we hold
-ADL-029,DuraPod - Chalfont,Chalfont,PA,Bathroom Pods,dev,MISSING,,,,,not in any source we hold
-ADL-030,B&T Manufacturing,RAPID CITY,SD,Bathroom Pods,dev,MISSING,,,,,not in any source we hold
-ADL-031,SurePod (subsidiary of DPR),ORLANDO,FL,Bathroom Pods,dev,MISSING,,,,,not in any source we hold
-ADL-032,SurePod West (subsidairy of DPR),PHOENIX,AZ,Bathroom Pods,dev,MISSING,,,,,not in any source we hold
-ADL-033,BathSystems,HOUSTON,TX,Bathroom Pods,dev,MISSING,,,,,not in any source we hold
-ADL-034,Baker Triangle Prefab,RICHARDSON,TX,Closed LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-035,MASTECH PANEL SYSTEMS,LEWISBURG,PA,Closed LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-036,COMPLETE WALL STRATEGIES / TCM ENTERPRISES,HUTCHINSON,KS,Closed LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-037,TJ WIES PREFAB,O FALLON,MO,Closed LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-038,GRAYHAWK LLC,ELIZABETHTOWN,KY,Closed LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-039,Atlantic PreFab,Wilton,NH,Closed LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-040,Steele Truss & Panel,Plattsville,NY,Open LGS Panel,dev,HAVE,name-prefix,STEELE TRUSS CO,NY,T1,
-ADL-041,Forge CFS Components,Norcross,GA,Open LGS Panel,sealed,MISSING,,,,,not in any source we hold
-ADL-042,Steel Panel Truss,Kissimmee,FL,Open LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-043,United Structures of Georgia,Cairo,GA,Open LGS Panel,dev,LEAD ONLY,name-prefix,United Structures Inc.,,T0,
-ADL-044,Ladabuild,GRAND JUNCTION,CO,Open LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-045,Offsitek,BESSEMER CITY,NC,Open LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-046,US FRAME FACTORY,BRADENTON,FL,Open LGS Panel,dev,MISSING,,,,,not in any source we hold
-ADL-047,Blueprint Robotics - Baltimore,BALTIMORE,MD,Closed Wood Panel,dev,MISSING,,,,,in a raw source but not published
-ADL-048,Blueprint Robotics - Windsor,WINDSOR,CT,Closed Wood Panel,dev,MISSING,,,,,in a raw source but not published
-ADL-049,Bensonwood,Walpole,NH,Closed Wood Panel,dev,HAVE,name-prefix,BENSONWOOD MFG. FAC.,NH,T1,
-ADL-050,Bensonwood - Tektoniks & Unity Homes,KEENE,NH,Closed Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-051,Dvele Modular,MESA,AZ,Closed Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-052,BPUBLIC PREFAB,SANTA,NM,Closed Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-053,YANKEE BARN HOMES,NORTHWOOD,NH,Closed Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-054,LANDMARK HOME AND LAND COMPANY,CLEARWATER,FL,Closed Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-055,CAPE COD PANEL,HYANNIS,MA,Open Wood Panel,dev,HAVE,name+city,"CAPE COD PANEL, LLC",MA,T1,
-ADL-056,BARDEN BUILDING PRODUCTS / NORTH AMERICAN TRUSS,MIDDLEPORT,NY,Open Wood Panel,sealed,MISSING,,,,,not in any source we hold
-ADL-057,DC STRUCTURES,PORTLAND,OR,Open Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-058,TIMBERQUEST,SOUTH LAKE TAHOE,CA,Open Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-059,ACQBUILT INC,EDMONTON,AB,Open Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-060,84 Lumber,Winchester,VA,Open Wood Panel,dev,HAVE,name-prefix,84 Lumber — Winchester Truss Plant,VA,T1,
-ADL-061,Annadale Millwork,Winchester,VA,Open Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-062,Van Metre Companies,Winchester,VA,Open Wood Panel,sealed,MISSING,,,,,not in any source we hold
-ADL-063,Builders FirstSource,Arlington,WA,Open Wood Panel,dev,HAVE,name-prefix,Builders FirstSource — Arlington WA Truss,WA,T1,
-ADL-064,Innovative Construction Group,Florence,SC,Open Wood Panel,dev,MISSING,,,,,not in any source we hold
-ADL-065,Freres Engineered Wood,Lyons,OR,Mass Timber (CLT),dev,LEAD ONLY,name+city,Freres Engineered Wood,OR,T0,
-ADL-066,Sterling Structural - IL,Phoenix,IL,Mass Timber (CLT),dev,MISSING,,,,,not in any source we hold
-ADL-067,Sterling Structural - TX,LUFKIN,TX,Mass Timber (CLT),dev,MISSING,,,,,not in any source we hold
-ADL-068,Mercer Mass Timber - WA,Spokane,WA,Mass Timber (CLT),dev,MISSING,,,,,not in any source we hold
-ADL-069,Mercer Mass Timber - AR,Conway,AR,Mass Timber (CLT),dev,MISSING,,,,,not in any source we hold
-ADL-070,Mercer Mass Timber - BC,OKANAGAN FALLS,BC,Mass Timber (CLT),dev,MISSING,,,,,not in any source we hold
-ADL-071,SmartLam - AL,Dothan,AL,Mass Timber (CLT),dev,LEAD ONLY,name-prefix,SmartLam,AL,T0,
-ADL-072,SmartLam - OR,Columbia Falls,OR,Mass Timber (CLT),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-073,DR Johnson,Riddle,OR,Mass Timber (CLT),dev,MISSING,,,,,in a raw source but not published
-ADL-074,Vaagen Timbers,COLVILLE,WA,Mass Timber (CLT),sealed,MISSING,,,,,not in any source we hold
-ADL-075,TimberLab - Middleburg,Millersburg,OR,Mass Timber (CLT),sealed,LEAD ONLY,name-prefix,TimberLab,OR,T0,
-ADL-076,TimberLab - Portland,Portland,OR,Mass Timber (CLT),dev,LEAD ONLY,name-prefix,TimberLab,OR,T0,
-ADL-077,SUPERIOR WALLS - ADVANCED CONCRETE SYSTEMS,MIDDLEBURG,PA,Precast Concrete panel,dev,MISSING,,,,,in a raw source but not published
-ADL-078,SUPERIOR WALLS - WEAVER PRECAST,EPHRATA,PA,Precast Concrete panel,dev,MISSING,,,,,in a raw source but not published
-ADL-079,CLARK PACIFIC - WOODLAND PLANT,WOODLAND,CA,Precast Concrete panel,dev,MISSING,,,,,in a raw source but not published
-ADL-080,TITAN WALL,ELIZABETHTOWN,PA,MgO Panel,dev,MISSING,,,,,not in any source we hold
-ADL-081,FISCHERSIPS,LOUISVILLE,KY,SIP / ICF (Other Composite panel),dev,HAVE,name+city,FischerSIPS,KY,T1,
-ADL-082,INSULSPAN SIPS BY PLASTI-FAB,BLISSFIELD,MI,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-083,GENERAL PANEL CORPORATION,GRENADA,MS,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-084,R-CONTROL SIP/AFM CORPORATION,LAKEVILLE,MN,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-085,ACME PANEL COMPANY,RADFORD,VA,SIP / ICF (Other Composite panel),dev,HAVE,name+city,ACME Panel Company,VA,T1,
-ADL-086,R-CONTROL SIP/BIG SKY,BELGRADE,MT,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-087,R-CONTROL SIP/BRANCH RIVER PLASTICS,SMITHFIELD,RI,SIP / ICF (Other Composite panel),sealed,HAVE,name+city,R-Control SIP / Branch River Plastics,RI,T1,
-ADL-088,LAMIT BY ARMSTRONG,HEBRON,OH,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-089,PREMIER SIPS,PUYALLUP,WA,SIP / ICF (Other Composite panel),sealed,MISSING,,,,,not in any source we hold
-ADL-090,THE MURUS COMPANY INC,MANSFIELD,PA,SIP / ICF (Other Composite panel),dev,HAVE,name+city,THE MURUS COMPANY,PA,T1,
-ADL-091,EXTREME PANEL TECHNOLOGIES INC,COTTONWOOD,MN,SIP / ICF (Other Composite panel),dev,HAVE,name+city,Extreme Panel Technologies,MN,T1,
-ADL-092,INNOVA PANEL,OPA LOCKA,FL,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-093,R-CONTROL SIP/THERMAFOAM ARKANSAS LLC,JACKSONVILLE,AR,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-094,ENERCEPT INC,WATERTOWN,SD,SIP / ICF (Other Composite panel),dev,HAVE,name+city,ENERCEPT INC,SD,T1,
-ADL-095,URBAN INDUSTRIES INC,GALION,OH,SIP / ICF (Other Composite panel),sealed,HAVE,name-prefix,"Urban Industries of Ohio, Inc.",OH,T1,
-ADL-096,FOARD PANEL INC,WEST CHESTERFIELD,NH,SIP / ICF (Other Composite panel),dev,LEAD ONLY,name+city,"Foard Panel, Inc.",NH,T0,
-ADL-097,PORTERSIPS DIVISION OF PORTER CORP,HOLLAND,MI,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-098,R-CONTROL SIP/PREMIER BUILDING SYSTEMS,PUYALLUP,WA,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-099,INSULSPAN SIPS,BLISSFIELD,MI,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-100,ENERGY PANEL STRUCTURES INC,GRAETTINGER,IA,SIP / ICF (Other Composite panel),dev,HAVE,name+city,ENERGY PANEL STRUCTURES INC,IA,T1,
-ADL-101,PORTER SIPS DIVISION OF PORTERCORP,COLUMBIA,MS,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-102,ECO-PANELS LLC,MOCKSVILLE,NC,SIP / ICF (Other Composite panel),dev,HAVE,name+city,ECO-PANELS LLC,NC,T1,
-ADL-103,TIMBERBUILT,NORTH COLLINS,NY,SIP / ICF (Other Composite panel),dev,MISSING,,,,,not in any source we hold
-ADL-104,BRANCH TECHNOLOGY,CHATTANOOGA,TN,3D Printing,dev,MISSING,,,,,not in any source we hold
-ADL-105,PANEL BUILT INC,BLAIRSVILLE,GA,Relocatable Modular,sealed,HAVE,name+city,"PANEL BUILT, INC.",GA,T1,
-ADL-106,PACIFIC WALL SYSTEMS,SEATTLE,WA,Exterior Envelope Panels,sealed,MISSING,,,,,not in any source we hold
-ADL-107,STO PANEL TECHNOLOGY / STO PANEL AFFILIATES,ATLANTA,GA,Exterior Envelope Panels,dev,MISSING,,,,,not in any source we hold
-ADL-108,Bankersteel - Lynchburg (Main plant 1619 Wythe Road),LYNCHBURG,VA,Steel Structural Components,dev,MISSING,,,,,not in any source we hold
-ADL-109,Bankersteel - Lynchburg (South plant 351 Rangoon St),LYNCHBURG,VA,Steel Structural Components,dev,MISSING,,,,,not in any source we hold
-ADL-110,Bankersteel - South Plainfield,SOUTH PLAINFIELD,NJ,Steel Structural Components,dev,MISSING,,,,,not in any source we hold
-ADL-111,Bankersteel - Orlando,ORLANDO,FL,Steel Structural Components,dev,MISSING,,,,,in a raw source but not published
-ADL-112,Bankersteel - Rock Hill,ROCK HILL,SC,Steel Structural Components,dev,MISSING,,,,,in a raw source but not published
-ADL-113,Angle Truss,Tavares,FL,Steel Structural Components,dev,MISSING,,,,,not in any source we hold
-ADL-114,Florida Steel Frame & Truss Mfg,Tampa,FL,Steel Structural Components,dev,MISSING,,,,,not in any source we hold
-ADL-115,Cascade Manufacturing,Dublin,GA,Steel Structural Components,dev,MISSING,,,,,not in any source we hold
-ADL-116,Contract Building Components,Covington,GA,Steel Structural Components,dev,MISSING,,,,,not in any source we hold
-ADL-117,Metalite Truss Systems of FL,West Palm Beach,FL,Steel Structural Components,dev,MISSING,,,,,not in any source we hold
-ADL-118,Contract Building Components,Statesville,NC,Steel Structural Components,dev,MISSING,,,,,not in any source we hold
-ADL-119,Timplex Corp,Sussex,NJ,Steel Structural Components,sealed,MISSING,,,,,not in any source we hold
-ADL-120,Clearspan Components,Meridian,MS,Wood Structural Components (trusses etc),dev,MISSING,,,,,in a raw source but not published
-ADL-121,Builders FirstSource,Shelby,AL,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Shelby AL Truss,AL,T1,
-ADL-122,Arizona Building Supply,Glendale,AZ,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-123,Arizona Building Supply,Yuma,AZ,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-124,Builders FirstSource,Casa Grande,AZ,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Casa Grande AZ Truss,AZ,T3,
-ADL-125,FrameTec,Camp Verde,AZ,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-126,"Trussworks, LLC",Kingman,AZ,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-127,Better Built Truss,Ripon,CA,Wood Structural Components (trusses etc),dev,HAVE,name+city,BETTER BUILT TRUSS,CA,T1,
-ADL-128,Builders FirstSource,Perris,CA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Hughson CA Truss,CA,T3,
-ADL-129,Builders FirstSource,Olivehurst,CA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Olivehurst CA Truss,CA,T3,
-ADL-130,Builders FirstSource,Sanger,CA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Perris CA Truss,CA,T2,
-ADL-131,NorCal Lumber Company,Marysville,CA,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-132,Pacific StrucFrame,Barstow,CA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,not in any source we hold
-ADL-133,Ridgefield Building Supply,East Haven,CT,Wood Structural Components (trusses etc),sealed,MISSING,,,,,not in any source we hold
-ADL-134,Stark Truss,Bridgeville,DE,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-135,A-1 Industries of Florida,Fort Pierce,FL,Wood Structural Components (trusses etc),sealed,MISSING,,,,,not in any source we hold
-ADL-136,American Builders Supply,Winter Haven,FL,Wood Structural Components (trusses etc),dev,MISSING,,,,,in a raw source but not published
-ADL-137,American Builders Supply,Tampa,FL,Wood Structural Components (trusses etc),dev,MISSING,,,,,in a raw source but not published
-ADL-138,Builders FirstSource,Orlando,FL,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — DeFuniak Springs FL Truss,FL,T1,
-ADL-139,Builders FirstSource,Lake City,FL,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Groveland FL Truss,FL,T1,
-ADL-140,Builders FirstSource,Plant City,FL,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Lake City FL Truss,FL,T2,
-ADL-141,Innovative Construction Group,Green Cove Springs,FL,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-142,True House,Jacksonville,FL,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,True House — Jacksonville Plant,FL,T1,
-ADL-143,True House,Crecent City,FL,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,True House — Crescent City Plant,FL,T1,
-ADL-144,Builders FirstSource,Norcross,GA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Acworth GA Truss,GA,T1,
-ADL-145,North Georgia Truss Systems,Cartersville,GA,Wood Structural Components (trusses etc),dev,MISSING,,,,,in a raw source but not published
-ADL-146,Universal Forest Products,Folkston,GA,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-147,"Southern Components, Inc.",Shrevport,LA,Wood Structural Components (trusses etc),dev,MISSING,,,,,in a raw source but not published
-ADL-148,Builders FirstSource,New Bedford,MA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — New Bedford MA Truss Panel,MA,T3,
-ADL-149,Cornerstone Building,Uxbridge,MA,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-150,NVR Building Products,Thurmont,MD,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-151,Shelter Systems,Westminster,MD,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-152,Stark Truss,Baltimore,MD,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-153,Mainely Trusses,Fairfield,ME,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-154,84 Lumber,Kings Mountain,NC,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,84 Lumber — Kings Mountain Truss Plant,NC,T1,
-ADL-155,Atlantic Building Systems,Fairmont,NC,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-156,Builders FirstSource,Albermarle,NC,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Albemarle NC Truss,NC,T1,
-ADL-157,Carolina Structural Systems,Star,NC,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-158,Longleaf,West End,NC,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,LONGLEAF TRUSS,NC,T1,
-ADL-159,The Building Center,Gastonia,NC,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-160,Universal Forest Products,Stanfield,NC,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-161,LaValley Building,Newport,NH,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-162,Builders FirstSource,Ballston Spa,NY,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-163,NextGen Building Components,Farmington,NY,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-164,PDJ Components,Chester,NY,Wood Structural Components (trusses etc),dev,HAVE,name+city,"PDJ COMPONENTS, INC.",NY,T1,
-ADL-165,SR Sloan,Whitesboro,NY,Wood Structural Components (trusses etc),sealed,HAVE,name+city,"S.R. SLOAN, INC.",NY,T1,
-ADL-166,Universal Forest Products,Hudson,NY,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-167,Builders FirstSource,Beaverton,OR,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Beaverton OR Truss,OR,T1,
-ADL-168,Oregon Truss Company,Dayton,OR,Wood Structural Components (trusses etc),sealed,HAVE,name+city,OREGON TRUSS CO INC,OR,T1,
-ADL-169,Parr Truss,Cornelius,OR,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,PARR Truss Cornelius,OR,T1,
-ADL-170,Parr Truss,Redmond,OR,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,PARR Truss Harrisburg,OR,T3,
-ADL-171,The Truss Company,Eugene,OR,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-172,The Truss Company,Redmond,OR,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-173,84 Lumber,Coal Center,PA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,84 Lumber — Coal Center Truss Plant,PA,T1,
-ADL-174,Builders FirstSource,Paradise,PA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Paradise PA Truss,PA,T1,
-ADL-175,Iron City Steel Component,Pittsburgh,PA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,not in any source we hold
-ADL-176,Montgomery Truss & Panel,Grove City,PA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,not in any source we hold
-ADL-177,Precision Wall & Truss,Landisville,PA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,not in any source we hold
-ADL-178,Toll Integrated Systems,Morrisville,PA,Wood Structural Components (trusses etc),dev,MISSING,,,,,in a raw source but not published
-ADL-179,York P-B Truss,York,PA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,not in any source we hold
-ADL-180,Trussco Manufacturing,North Kingstown,RI,Wood Structural Components (trusses etc),sealed,MISSING,,,,,not in any source we hold
-ADL-181,Atlantic Building Systems,Moncks Corner,SC,Wood Structural Components (trusses etc),dev,MISSING,,,,,not in any source we hold
-ADL-182,Builders FirstSource,Yemassee,SC,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Loris SC,SC,T1,
-ADL-183,Panel Truss,Townville,SC,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-184,Stark Truss,Summerville,SC,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-185,Universal Forest Products,Conway,SC,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-186,84 Lumber,Houston,TX,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-187,Builders FirstSource,Conroe,TX,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Carrollton TX Truss - By Appointment Only,TX,T1,
-ADL-188,Builders FirstSource,Carrollton,TX,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Conroe TX Truss,TX,T1,
-ADL-189,"Longhorn Truss, LLC",Mabank,TX,Wood Structural Components (trusses etc),sealed,MISSING,,,,,not in any source we hold
-ADL-190,"Trussworks, LLC",Mabank,TX,Wood Structural Components (trusses etc),dev,HAVE,name+state,"TRUSSWORKS, LLC",TX,T1,
-ADL-191,Apex Truss,Warsaw,VA,Wood Structural Components (trusses etc),dev,MISSING,,,,,"company in database, THIS PLANT not"
-ADL-192,Builders FirstSource,Elkwood,VA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Fredericksburg VA Truss,VA,T3,
-ADL-193,Builders FirstSource,Fredericksburg,VA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — Winchester VA Truss,VA,T1,
-ADL-194,Builders FirstSource,West Point,VA,Wood Structural Components (trusses etc),dev,HAVE,name-prefix,Builders FirstSource — West Point VA Truss,VA,T1,
-ADL-195,Louws Truss,Burlington,WA,Wood Structural Components (trusses etc),sealed,HAVE,name+state,LOUWS TRUSS INC,WA,T1,
-ADL-196,The Truss Company,Sumner,WA,Wood Structural Components (trusses etc),dev,LEAD ONLY,name+city,THE TRUSS COMPANY,WA,T0,
-ADL-197,The Truss Company,Burlington,WA,Wood Structural Components (trusses etc),dev,HAVE,name+state,TRUSS COMPANY,WA,T1,
-ADL-198,The Truss Company,Centralia,WA,Wood Structural Components (trusses etc),dev,HAVE,name+state,TRUSS COMPANY,WA,T1,
-ADL-199,Aura Dwellings & Hospitality,,,,dev,MISSING,,,,,not in any source we hold
-ADL-200,ATCO Structures and Logistics (USA) Inc,,,,dev,LEAD ONLY,name-prefix,ATCO Structures and Logistics,,T0,
-ADL-201,House Factory,,,,dev,MISSING,,,,,not in any source we hold
-ADL-202,BYLD Inc.,,,,dev,MISSING,,,,,not in any source we hold
-ADL-203,Novarum Homes,,,,dev,MISSING,,,,,not in any source we hold
-ADL-204,Steel Tech USA,,,,dev,MISSING,,,,,not in any source we hold
-ADL-205,Modutize,,,,dev,MISSING,,,,,not in any source we hold
-ADL-206,ATCO Structures,,,,dev,HAVE,name-prefix,ATCO Structures & Logistics (USA) Inc.,TX,T2,
-ADL-207,US Offsite,,,,dev,HAVE,name-prefix,"US-Offsite Holdings, LLC",CA,T1,
-ADL-208,DORCE Prefabricated & Construction,,,,dev,MISSING,,,,,not in any source we hold
-ADL-209,Falcon Structures,,,,dev,LEAD ONLY,name,Falcon Structures,,T0,
-ADL-210,OCCA OFFSITE,,,,dev,MISSING,,,,,not in any source we hold
-ADL-211,Module,,,,sealed,MISSING,,,,,not in any source we hold
-ADL-212,Ramtech Building Systems,,,,sealed,HAVE,name,"Ramtech Building Systems, Inc.",TX,T1,
-ADL-213,"Neopod Systems, LLC.",,,,sealed,LEAD ONLY,name,Neopod Systems LLC,,T0,
-ADL-214,"The Twiin Group, LLC",,,,dev,MISSING,,,,,not in any source we hold
-ADL-215,"Fornidos Home Systems, Inc.",,,,dev,MISSING,,,,,not in any source we hold
-ADL-216,ICON,,,,dev,MISSING,,,,,not in any source we hold
-ADL-217,Synergy Modular,,,,sealed,MISSING,,,,,not in any source we hold
-ADL-218,Wind River Built,,,,dev,HAVE,name,Wind River Built,TN,T1,
-ADL-219,Off-Site,,,,dev,MISSING,,,,,in a raw source but not published
-ADL-220,Azure Printed Homes,,,,dev,MISSING,,,,,not in any source we hold
-ADL-221,Assembly OSM,,,,sealed,MISSING,,,,,not in any source we hold
-ADL-222,Stella Domo,,,,dev,HAVE,name,"Stella Domo, LLC",TX,T2,
-ADL-223,NEXGEN Building Products,,,,dev,MISSING,,,,,not in any source we hold
-ADL-224,Nibbi Prefab,,,,dev,MISSING,,,,,not in any source we hold
-ADL-225,GHOST FACTORY,,,,dev,MISSING,,,,,not in any source we hold
-ADL-226,G-pod,,,,dev,MISSING,,,,,not in any source we hold
-ADL-227,Irontown Modular,,,,dev,HAVE,name,Irontown Modular,UT,T2,
-ADL-228,Blue Horse Building,,,,dev,MISSING,,,,,not in any source we hold
-ADL-229,Tiny Home Tours,,,,dev,MISSING,,,,,not in any source we hold
-ADL-230,Impresa Modular,,,,dev,MISSING,,,,,not in any source we hold
-ADL-231,Green Canopy NODE,,,,dev,MISSING,,,,,not in any source we hold
-ADL-232,Reframe Systems Inc,,,,dev,HAVE,name,Reframe Systems Inc,MA,T1,
-ADL-233,Stream Modular,,,,sealed,MISSING,,,,,not in any source we hold
-ADL-234,True Volumetric Corp,,,,dev,HAVE,name,True Volumetric Corp,ON,T1,
-ADL-235,SBCA,,,,sealed,MISSING,,,,,not in any source we hold
-ADL-236,"ASSEMBLAGEworks, Inc.",,,,sealed,MISSING,,,,,not in any source we hold
-ADL-237,Promise Robotics,,,,dev,MISSING,,,,,not in any source we hold
-ADL-238,Housing Growth Partners,,,,dev,MISSING,,,,,not in any source we hold
-ADL-239,"Rmax, a Sika Company",,,,dev,MISSING,,,,,not in any source we hold
-ADL-240,Slab to Ridge,,,,dev,MISSING,,,,,not in any source we hold
-ADL-241,4Ward Solutions Group,,,,dev,MISSING,,,,,not in any source we hold
+control_id,name,city,state,reason,split,status,has_address,matched_by,matched_facility,matched_state,matched_tier,why_missing
+ADL-001,Silver Creek Modular,Perris,CA,Steel Volumetric Modular,dev,MISSING,,,,,,in a raw source but not published
+ADL-002,Z Modular,Chandler,AZ,Steel Volumetric Modular,dev,HAVE,no — needs address lookup,name,Z Modular LLC,,T0,
+ADL-003,Modlogiq,New Holland,PA,Steel Volumetric Modular,sealed,HAVE,no — needs address lookup,name+city,MODLOGIQ,PA,T0,
+ADL-004,Fullstack Modular,Carson,CA,Steel Volumetric Modular,dev,MISSING,,,,,,not in any source we hold
+ADL-005,Mandeville Modular,Palmdale,CA,Steel Volumetric Modular,sealed,HAVE,yes,name+city,"Mandeville Modular, Inc.",CA,T1,
+ADL-006,MMY Modular,Louisville,KY,Steel Volumetric Modular,dev,MISSING,,,,,,not in any source we hold
+ADL-007,Modern Living Solutions / Greystar,Knox,PA,Steel Volumetric Modular,dev,HAVE,no — needs address lookup,name-prefix,Modern Living Solutions,PA,T0,
+ADL-008,BLOX,Bessemer,AL,Steel Volumetric Modular,sealed,HAVE,yes,name+city,"BLOX, LLC",AL,T2,
+ADL-009,Modular Steel Systems,Bloomsburg,PA,Steel-based Panels,sealed,HAVE,yes,name+city,MODULAR STEEL SYSTEMS INC,PA,T3,
+ADL-010,VBC,Berwick,PA,Wood Volumetric Modular,dev,MISSING,,,,,,not in any source we hold
+ADL-011,VBC,Tracy,VA,Wood Volumetric Modular,dev,MISSING,,,,,,not in any source we hold
+ADL-012,Vantem Global,Clio,SC,Wood Volumetric Modular,dev,MISSING,,,,,,not in any source we hold
+ADL-013,Autovol,Nampa,ID,Wood Volumetric Modular,sealed,HAVE,yes,name+city,Autovol,ID,T1,
+ADL-014,Plant prefab,Tejon Ranch,CA,Wood Volumetric Modular,dev,HAVE,yes,name+state,Plant Prefab,CA,T1,
+ADL-015,Fading West,Buena Vista,CO,Wood Volumetric Modular,dev,HAVE,yes,name-prefix,"FADING WEST BUILDING SYSTEMS, LLC",CO,T2,
+ADL-016,Biltwise,Greenwood,SC,Wood Volumetric Modular,dev,HAVE,no — needs address lookup,name-prefix,BiltWise Structures LLC,,T0,
+ADL-017,Signature Building Systems,Moosic,PA,Wood Volumetric Modular,sealed,HAVE,no — needs address lookup,name+city,Signature Building Systems,PA,T0,
+ADL-018,Ritz Craft PA 1,Mifflinburg,PA,Wood Volumetric Modular,dev,HAVE,yes,name-prefix,RITZ-CRAFT CORPORATION,PA,T3,
+ADL-019,Ritz Craft MI,Jonesville,MI,Wood Volumetric Modular,dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-020,Icon Legacy,Selinsgrove,PA,Wood Volumetric Modular,dev,HAVE,no — needs address lookup,name-prefix,ICON LEGACY CUSTOM MODULAR HOMES,,T0,
+ADL-021,Professional Building Systems,Middleburg,PA,Wood Volumetric Modular,dev,HAVE,no — needs address lookup,name-prefix,Professional Building Systems of NC,,T0,
+ADL-022,Studiobuilt,Cuero,TX,Wood Volumetric Modular,dev,MISSING,,,,,,not in any source we hold
+ADL-023,Apex Homes,Middleburg,PA,Wood Volumetric Modular,sealed,HAVE,no — needs address lookup,name+city,Apex Homes,PA,T0,
+ADL-024,Cardinal Homes,Wylliesburg,VA,Wood Volumetric Modular,dev,HAVE,yes,name+city,CARDINAL HOMES INC,VA,T1,
+ADL-025,Cavco Industries R-Anell,Crouse,NC,Wood Volumetric Modular,dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-026,Rochester Homes,Rochester,IN,Wood Volumetric Modular,dev,HAVE,yes,name+city,"ROCHESTER HOMES, INC.",IN,T2,
+ADL-027,Cavco - Penn West,Emlenton,PA,Wood Volumetric Modular,dev,MISSING,,,,,,not in any source we hold
+ADL-028,DuraPod - North Wales,North Wales,PA,Bathroom Pods,dev,MISSING,,,,,,not in any source we hold
+ADL-029,DuraPod - Chalfont,Chalfont,PA,Bathroom Pods,dev,MISSING,,,,,,not in any source we hold
+ADL-030,B&T Manufacturing,RAPID CITY,SD,Bathroom Pods,dev,MISSING,,,,,,not in any source we hold
+ADL-031,SurePod (subsidiary of DPR),ORLANDO,FL,Bathroom Pods,dev,MISSING,,,,,,not in any source we hold
+ADL-032,SurePod West (subsidairy of DPR),PHOENIX,AZ,Bathroom Pods,dev,MISSING,,,,,,not in any source we hold
+ADL-033,BathSystems,HOUSTON,TX,Bathroom Pods,dev,MISSING,,,,,,not in any source we hold
+ADL-034,Baker Triangle Prefab,RICHARDSON,TX,Closed LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-035,MASTECH PANEL SYSTEMS,LEWISBURG,PA,Closed LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-036,COMPLETE WALL STRATEGIES / TCM ENTERPRISES,HUTCHINSON,KS,Closed LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-037,TJ WIES PREFAB,O FALLON,MO,Closed LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-038,GRAYHAWK LLC,ELIZABETHTOWN,KY,Closed LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-039,Atlantic PreFab,Wilton,NH,Closed LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-040,Steele Truss & Panel,Plattsville,NY,Open LGS Panel,dev,HAVE,yes,name-prefix,STEELE TRUSS CO,NY,T1,
+ADL-041,Forge CFS Components,Norcross,GA,Open LGS Panel,sealed,MISSING,,,,,,not in any source we hold
+ADL-042,Steel Panel Truss,Kissimmee,FL,Open LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-043,United Structures of Georgia,Cairo,GA,Open LGS Panel,dev,HAVE,no — needs address lookup,name-prefix,United Structures Inc.,,T0,
+ADL-044,Ladabuild,GRAND JUNCTION,CO,Open LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-045,Offsitek,BESSEMER CITY,NC,Open LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-046,US FRAME FACTORY,BRADENTON,FL,Open LGS Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-047,Blueprint Robotics - Baltimore,BALTIMORE,MD,Closed Wood Panel,dev,MISSING,,,,,,in a raw source but not published
+ADL-048,Blueprint Robotics - Windsor,WINDSOR,CT,Closed Wood Panel,dev,MISSING,,,,,,in a raw source but not published
+ADL-049,Bensonwood,Walpole,NH,Closed Wood Panel,dev,HAVE,yes,name-prefix,BENSONWOOD MFG. FAC.,NH,T1,
+ADL-050,Bensonwood - Tektoniks & Unity Homes,KEENE,NH,Closed Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-051,Dvele Modular,MESA,AZ,Closed Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-052,BPUBLIC PREFAB,SANTA,NM,Closed Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-053,YANKEE BARN HOMES,NORTHWOOD,NH,Closed Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-054,LANDMARK HOME AND LAND COMPANY,CLEARWATER,FL,Closed Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-055,CAPE COD PANEL,HYANNIS,MA,Open Wood Panel,dev,HAVE,yes,name+city,"CAPE COD PANEL, LLC",MA,T1,
+ADL-056,BARDEN BUILDING PRODUCTS / NORTH AMERICAN TRUSS,MIDDLEPORT,NY,Open Wood Panel,sealed,MISSING,,,,,,not in any source we hold
+ADL-057,DC STRUCTURES,PORTLAND,OR,Open Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-058,TIMBERQUEST,SOUTH LAKE TAHOE,CA,Open Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-059,ACQBUILT INC,EDMONTON,AB,Open Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-060,84 Lumber,Winchester,VA,Open Wood Panel,dev,HAVE,yes,name-prefix,84 Lumber — Winchester Truss Plant,VA,T1,
+ADL-061,Annadale Millwork,Winchester,VA,Open Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-062,Van Metre Companies,Winchester,VA,Open Wood Panel,sealed,MISSING,,,,,,not in any source we hold
+ADL-063,Builders FirstSource,Arlington,WA,Open Wood Panel,dev,HAVE,yes,name-prefix,Builders FirstSource — Arlington WA Truss,WA,T1,
+ADL-064,Innovative Construction Group,Florence,SC,Open Wood Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-065,Freres Engineered Wood,Lyons,OR,Mass Timber (CLT),dev,HAVE,no — needs address lookup,name+city,Freres Engineered Wood,OR,T0,
+ADL-066,Sterling Structural - IL,Phoenix,IL,Mass Timber (CLT),dev,MISSING,,,,,,not in any source we hold
+ADL-067,Sterling Structural - TX,LUFKIN,TX,Mass Timber (CLT),dev,MISSING,,,,,,not in any source we hold
+ADL-068,Mercer Mass Timber - WA,Spokane,WA,Mass Timber (CLT),dev,MISSING,,,,,,not in any source we hold
+ADL-069,Mercer Mass Timber - AR,Conway,AR,Mass Timber (CLT),dev,MISSING,,,,,,not in any source we hold
+ADL-070,Mercer Mass Timber - BC,OKANAGAN FALLS,BC,Mass Timber (CLT),dev,MISSING,,,,,,not in any source we hold
+ADL-071,SmartLam - AL,Dothan,AL,Mass Timber (CLT),dev,HAVE,no — needs address lookup,name-prefix,SmartLam,AL,T0,
+ADL-072,SmartLam - OR,Columbia Falls,OR,Mass Timber (CLT),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-073,DR Johnson,Riddle,OR,Mass Timber (CLT),dev,MISSING,,,,,,in a raw source but not published
+ADL-074,Vaagen Timbers,COLVILLE,WA,Mass Timber (CLT),sealed,MISSING,,,,,,not in any source we hold
+ADL-075,TimberLab - Middleburg,Millersburg,OR,Mass Timber (CLT),sealed,HAVE,no — needs address lookup,name-prefix,TimberLab,OR,T0,
+ADL-076,TimberLab - Portland,Portland,OR,Mass Timber (CLT),dev,HAVE,no — needs address lookup,name-prefix,TimberLab,OR,T0,
+ADL-077,SUPERIOR WALLS - ADVANCED CONCRETE SYSTEMS,MIDDLEBURG,PA,Precast Concrete panel,dev,MISSING,,,,,,in a raw source but not published
+ADL-078,SUPERIOR WALLS - WEAVER PRECAST,EPHRATA,PA,Precast Concrete panel,dev,MISSING,,,,,,in a raw source but not published
+ADL-079,CLARK PACIFIC - WOODLAND PLANT,WOODLAND,CA,Precast Concrete panel,dev,MISSING,,,,,,in a raw source but not published
+ADL-080,TITAN WALL,ELIZABETHTOWN,PA,MgO Panel,dev,MISSING,,,,,,not in any source we hold
+ADL-081,FISCHERSIPS,LOUISVILLE,KY,SIP / ICF (Other Composite panel),dev,HAVE,yes,name+city,FischerSIPS,KY,T1,
+ADL-082,INSULSPAN SIPS BY PLASTI-FAB,BLISSFIELD,MI,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-083,GENERAL PANEL CORPORATION,GRENADA,MS,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-084,R-CONTROL SIP/AFM CORPORATION,LAKEVILLE,MN,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-085,ACME PANEL COMPANY,RADFORD,VA,SIP / ICF (Other Composite panel),dev,HAVE,yes,name+city,ACME Panel Company,VA,T1,
+ADL-086,R-CONTROL SIP/BIG SKY,BELGRADE,MT,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-087,R-CONTROL SIP/BRANCH RIVER PLASTICS,SMITHFIELD,RI,SIP / ICF (Other Composite panel),sealed,HAVE,yes,name+city,R-Control SIP / Branch River Plastics,RI,T1,
+ADL-088,LAMIT BY ARMSTRONG,HEBRON,OH,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-089,PREMIER SIPS,PUYALLUP,WA,SIP / ICF (Other Composite panel),sealed,MISSING,,,,,,not in any source we hold
+ADL-090,THE MURUS COMPANY INC,MANSFIELD,PA,SIP / ICF (Other Composite panel),dev,HAVE,yes,name+city,THE MURUS COMPANY,PA,T1,
+ADL-091,EXTREME PANEL TECHNOLOGIES INC,COTTONWOOD,MN,SIP / ICF (Other Composite panel),dev,HAVE,yes,name+city,Extreme Panel Technologies,MN,T1,
+ADL-092,INNOVA PANEL,OPA LOCKA,FL,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-093,R-CONTROL SIP/THERMAFOAM ARKANSAS LLC,JACKSONVILLE,AR,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-094,ENERCEPT INC,WATERTOWN,SD,SIP / ICF (Other Composite panel),dev,HAVE,yes,name+city,ENERCEPT INC,SD,T1,
+ADL-095,URBAN INDUSTRIES INC,GALION,OH,SIP / ICF (Other Composite panel),sealed,HAVE,yes,name-prefix,"Urban Industries of Ohio, Inc.",OH,T1,
+ADL-096,FOARD PANEL INC,WEST CHESTERFIELD,NH,SIP / ICF (Other Composite panel),dev,HAVE,no — needs address lookup,name+city,"Foard Panel, Inc.",NH,T0,
+ADL-097,PORTERSIPS DIVISION OF PORTER CORP,HOLLAND,MI,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-098,R-CONTROL SIP/PREMIER BUILDING SYSTEMS,PUYALLUP,WA,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-099,INSULSPAN SIPS,BLISSFIELD,MI,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-100,ENERGY PANEL STRUCTURES INC,GRAETTINGER,IA,SIP / ICF (Other Composite panel),dev,HAVE,yes,name+city,ENERGY PANEL STRUCTURES INC,IA,T1,
+ADL-101,PORTER SIPS DIVISION OF PORTERCORP,COLUMBIA,MS,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-102,ECO-PANELS LLC,MOCKSVILLE,NC,SIP / ICF (Other Composite panel),dev,HAVE,yes,name+city,ECO-PANELS LLC,NC,T1,
+ADL-103,TIMBERBUILT,NORTH COLLINS,NY,SIP / ICF (Other Composite panel),dev,MISSING,,,,,,not in any source we hold
+ADL-104,BRANCH TECHNOLOGY,CHATTANOOGA,TN,3D Printing,dev,MISSING,,,,,,not in any source we hold
+ADL-105,PANEL BUILT INC,BLAIRSVILLE,GA,Relocatable Modular,sealed,HAVE,yes,name+city,"PANEL BUILT, INC.",GA,T1,
+ADL-106,PACIFIC WALL SYSTEMS,SEATTLE,WA,Exterior Envelope Panels,sealed,MISSING,,,,,,not in any source we hold
+ADL-107,STO PANEL TECHNOLOGY / STO PANEL AFFILIATES,ATLANTA,GA,Exterior Envelope Panels,dev,MISSING,,,,,,not in any source we hold
+ADL-108,Bankersteel - Lynchburg (Main plant 1619 Wythe Road),LYNCHBURG,VA,Steel Structural Components,dev,MISSING,,,,,,not in any source we hold
+ADL-109,Bankersteel - Lynchburg (South plant 351 Rangoon St),LYNCHBURG,VA,Steel Structural Components,dev,MISSING,,,,,,not in any source we hold
+ADL-110,Bankersteel - South Plainfield,SOUTH PLAINFIELD,NJ,Steel Structural Components,dev,MISSING,,,,,,not in any source we hold
+ADL-111,Bankersteel - Orlando,ORLANDO,FL,Steel Structural Components,dev,MISSING,,,,,,in a raw source but not published
+ADL-112,Bankersteel - Rock Hill,ROCK HILL,SC,Steel Structural Components,dev,MISSING,,,,,,in a raw source but not published
+ADL-113,Angle Truss,Tavares,FL,Steel Structural Components,dev,MISSING,,,,,,not in any source we hold
+ADL-114,Florida Steel Frame & Truss Mfg,Tampa,FL,Steel Structural Components,dev,MISSING,,,,,,not in any source we hold
+ADL-115,Cascade Manufacturing,Dublin,GA,Steel Structural Components,dev,MISSING,,,,,,not in any source we hold
+ADL-116,Contract Building Components,Covington,GA,Steel Structural Components,dev,MISSING,,,,,,not in any source we hold
+ADL-117,Metalite Truss Systems of FL,West Palm Beach,FL,Steel Structural Components,dev,MISSING,,,,,,not in any source we hold
+ADL-118,Contract Building Components,Statesville,NC,Steel Structural Components,dev,MISSING,,,,,,not in any source we hold
+ADL-119,Timplex Corp,Sussex,NJ,Steel Structural Components,sealed,MISSING,,,,,,not in any source we hold
+ADL-120,Clearspan Components,Meridian,MS,Wood Structural Components (trusses etc),dev,MISSING,,,,,,in a raw source but not published
+ADL-121,Builders FirstSource,Shelby,AL,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Shelby AL Truss,AL,T1,
+ADL-122,Arizona Building Supply,Glendale,AZ,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-123,Arizona Building Supply,Yuma,AZ,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-124,Builders FirstSource,Casa Grande,AZ,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Casa Grande AZ Truss,AZ,T3,
+ADL-125,FrameTec,Camp Verde,AZ,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-126,"Trussworks, LLC",Kingman,AZ,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-127,Better Built Truss,Ripon,CA,Wood Structural Components (trusses etc),dev,HAVE,yes,name+city,BETTER BUILT TRUSS,CA,T1,
+ADL-128,Builders FirstSource,Perris,CA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Hughson CA Truss,CA,T3,
+ADL-129,Builders FirstSource,Olivehurst,CA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Olivehurst CA Truss,CA,T3,
+ADL-130,Builders FirstSource,Sanger,CA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Perris CA Truss,CA,T2,
+ADL-131,NorCal Lumber Company,Marysville,CA,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-132,Pacific StrucFrame,Barstow,CA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,,not in any source we hold
+ADL-133,Ridgefield Building Supply,East Haven,CT,Wood Structural Components (trusses etc),sealed,MISSING,,,,,,not in any source we hold
+ADL-134,Stark Truss,Bridgeville,DE,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-135,A-1 Industries of Florida,Fort Pierce,FL,Wood Structural Components (trusses etc),sealed,MISSING,,,,,,not in any source we hold
+ADL-136,American Builders Supply,Winter Haven,FL,Wood Structural Components (trusses etc),dev,MISSING,,,,,,in a raw source but not published
+ADL-137,American Builders Supply,Tampa,FL,Wood Structural Components (trusses etc),dev,MISSING,,,,,,in a raw source but not published
+ADL-138,Builders FirstSource,Orlando,FL,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — DeFuniak Springs FL Truss,FL,T1,
+ADL-139,Builders FirstSource,Lake City,FL,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Groveland FL Truss,FL,T1,
+ADL-140,Builders FirstSource,Plant City,FL,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Lake City FL Truss,FL,T2,
+ADL-141,Innovative Construction Group,Green Cove Springs,FL,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-142,True House,Jacksonville,FL,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,True House — Jacksonville Plant,FL,T1,
+ADL-143,True House,Crecent City,FL,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,True House — Crescent City Plant,FL,T1,
+ADL-144,Builders FirstSource,Norcross,GA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Acworth GA Truss,GA,T1,
+ADL-145,North Georgia Truss Systems,Cartersville,GA,Wood Structural Components (trusses etc),dev,MISSING,,,,,,in a raw source but not published
+ADL-146,Universal Forest Products,Folkston,GA,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-147,"Southern Components, Inc.",Shrevport,LA,Wood Structural Components (trusses etc),dev,MISSING,,,,,,in a raw source but not published
+ADL-148,Builders FirstSource,New Bedford,MA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — New Bedford MA Truss Panel,MA,T3,
+ADL-149,Cornerstone Building,Uxbridge,MA,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-150,NVR Building Products,Thurmont,MD,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-151,Shelter Systems,Westminster,MD,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-152,Stark Truss,Baltimore,MD,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-153,Mainely Trusses,Fairfield,ME,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-154,84 Lumber,Kings Mountain,NC,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,84 Lumber — Kings Mountain Truss Plant,NC,T1,
+ADL-155,Atlantic Building Systems,Fairmont,NC,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-156,Builders FirstSource,Albermarle,NC,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Albemarle NC Truss,NC,T1,
+ADL-157,Carolina Structural Systems,Star,NC,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-158,Longleaf,West End,NC,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,LONGLEAF TRUSS,NC,T1,
+ADL-159,The Building Center,Gastonia,NC,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-160,Universal Forest Products,Stanfield,NC,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-161,LaValley Building,Newport,NH,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-162,Builders FirstSource,Ballston Spa,NY,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-163,NextGen Building Components,Farmington,NY,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-164,PDJ Components,Chester,NY,Wood Structural Components (trusses etc),dev,HAVE,yes,name+city,"PDJ COMPONENTS, INC.",NY,T1,
+ADL-165,SR Sloan,Whitesboro,NY,Wood Structural Components (trusses etc),sealed,HAVE,yes,name+city,"S.R. SLOAN, INC.",NY,T1,
+ADL-166,Universal Forest Products,Hudson,NY,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-167,Builders FirstSource,Beaverton,OR,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Beaverton OR Truss,OR,T1,
+ADL-168,Oregon Truss Company,Dayton,OR,Wood Structural Components (trusses etc),sealed,HAVE,yes,name+city,OREGON TRUSS CO INC,OR,T1,
+ADL-169,Parr Truss,Cornelius,OR,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,PARR Truss Cornelius,OR,T1,
+ADL-170,Parr Truss,Redmond,OR,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,PARR Truss Harrisburg,OR,T3,
+ADL-171,The Truss Company,Eugene,OR,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-172,The Truss Company,Redmond,OR,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-173,84 Lumber,Coal Center,PA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,84 Lumber — Coal Center Truss Plant,PA,T1,
+ADL-174,Builders FirstSource,Paradise,PA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Paradise PA Truss,PA,T1,
+ADL-175,Iron City Steel Component,Pittsburgh,PA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,,not in any source we hold
+ADL-176,Montgomery Truss & Panel,Grove City,PA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,,not in any source we hold
+ADL-177,Precision Wall & Truss,Landisville,PA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,,not in any source we hold
+ADL-178,Toll Integrated Systems,Morrisville,PA,Wood Structural Components (trusses etc),dev,MISSING,,,,,,in a raw source but not published
+ADL-179,York P-B Truss,York,PA,Wood Structural Components (trusses etc),sealed,MISSING,,,,,,not in any source we hold
+ADL-180,Trussco Manufacturing,North Kingstown,RI,Wood Structural Components (trusses etc),sealed,MISSING,,,,,,not in any source we hold
+ADL-181,Atlantic Building Systems,Moncks Corner,SC,Wood Structural Components (trusses etc),dev,MISSING,,,,,,not in any source we hold
+ADL-182,Builders FirstSource,Yemassee,SC,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Loris SC,SC,T1,
+ADL-183,Panel Truss,Townville,SC,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-184,Stark Truss,Summerville,SC,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-185,Universal Forest Products,Conway,SC,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-186,84 Lumber,Houston,TX,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-187,Builders FirstSource,Conroe,TX,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Carrollton TX Truss - By Appointment Only,TX,T1,
+ADL-188,Builders FirstSource,Carrollton,TX,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Conroe TX Truss,TX,T1,
+ADL-189,"Longhorn Truss, LLC",Mabank,TX,Wood Structural Components (trusses etc),sealed,MISSING,,,,,,not in any source we hold
+ADL-190,"Trussworks, LLC",Mabank,TX,Wood Structural Components (trusses etc),dev,HAVE,yes,name+state,"TRUSSWORKS, LLC",TX,T1,
+ADL-191,Apex Truss,Warsaw,VA,Wood Structural Components (trusses etc),dev,MISSING,,,,,,"company in database, THIS PLANT not"
+ADL-192,Builders FirstSource,Elkwood,VA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Fredericksburg VA Truss,VA,T3,
+ADL-193,Builders FirstSource,Fredericksburg,VA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — Winchester VA Truss,VA,T1,
+ADL-194,Builders FirstSource,West Point,VA,Wood Structural Components (trusses etc),dev,HAVE,yes,name-prefix,Builders FirstSource — West Point VA Truss,VA,T1,
+ADL-195,Louws Truss,Burlington,WA,Wood Structural Components (trusses etc),sealed,HAVE,yes,name+state,LOUWS TRUSS INC,WA,T1,
+ADL-196,The Truss Company,Sumner,WA,Wood Structural Components (trusses etc),dev,HAVE,no — needs address lookup,name+city,THE TRUSS COMPANY,WA,T0,
+ADL-197,The Truss Company,Burlington,WA,Wood Structural Components (trusses etc),dev,HAVE,yes,name+state,TRUSS COMPANY,WA,T1,
+ADL-198,The Truss Company,Centralia,WA,Wood Structural Components (trusses etc),dev,HAVE,yes,name+state,TRUSS COMPANY,WA,T1,
+ADL-199,Aura Dwellings & Hospitality,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-200,ATCO Structures and Logistics (USA) Inc,,,,dev,HAVE,no — needs address lookup,name-prefix,ATCO Structures and Logistics,,T0,
+ADL-201,House Factory,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-202,BYLD Inc.,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-203,Novarum Homes,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-204,Steel Tech USA,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-205,Modutize,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-206,ATCO Structures,,,,dev,HAVE,yes,name-prefix,ATCO Structures & Logistics (USA) Inc.,TX,T2,
+ADL-207,US Offsite,,,,dev,HAVE,yes,name-prefix,"US-Offsite Holdings, LLC",CA,T1,
+ADL-208,DORCE Prefabricated & Construction,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-209,Falcon Structures,,,,dev,HAVE,no — needs address lookup,name,Falcon Structures,,T0,
+ADL-210,OCCA OFFSITE,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-211,Module,,,,sealed,MISSING,,,,,,not in any source we hold
+ADL-212,Ramtech Building Systems,,,,sealed,HAVE,yes,name,"Ramtech Building Systems, Inc.",TX,T1,
+ADL-213,"Neopod Systems, LLC.",,,,sealed,HAVE,no — needs address lookup,name,Neopod Systems LLC,,T0,
+ADL-214,"The Twiin Group, LLC",,,,dev,MISSING,,,,,,not in any source we hold
+ADL-215,"Fornidos Home Systems, Inc.",,,,dev,MISSING,,,,,,not in any source we hold
+ADL-216,ICON,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-217,Synergy Modular,,,,sealed,MISSING,,,,,,not in any source we hold
+ADL-218,Wind River Built,,,,dev,HAVE,yes,name,Wind River Built,TN,T1,
+ADL-219,Off-Site,,,,dev,MISSING,,,,,,in a raw source but not published
+ADL-220,Azure Printed Homes,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-221,Assembly OSM,,,,sealed,MISSING,,,,,,not in any source we hold
+ADL-222,Stella Domo,,,,dev,HAVE,yes,name,"Stella Domo, LLC",TX,T2,
+ADL-223,NEXGEN Building Products,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-224,Nibbi Prefab,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-225,GHOST FACTORY,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-226,G-pod,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-227,Irontown Modular,,,,dev,HAVE,yes,name,Irontown Modular,UT,T2,
+ADL-228,Blue Horse Building,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-229,Tiny Home Tours,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-230,Impresa Modular,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-231,Green Canopy NODE,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-232,Reframe Systems Inc,,,,dev,HAVE,yes,name,Reframe Systems Inc,MA,T1,
+ADL-233,Stream Modular,,,,sealed,MISSING,,,,,,not in any source we hold
+ADL-234,True Volumetric Corp,,,,dev,HAVE,yes,name,True Volumetric Corp,ON,T1,
+ADL-235,SBCA,,,,sealed,MISSING,,,,,,not in any source we hold
+ADL-236,"ASSEMBLAGEworks, Inc.",,,,sealed,MISSING,,,,,,not in any source we hold
+ADL-237,Promise Robotics,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-238,Housing Growth Partners,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-239,"Rmax, a Sika Company",,,,dev,MISSING,,,,,,not in any source we hold
+ADL-240,Slab to Ridge,,,,dev,MISSING,,,,,,not in any source we hold
+ADL-241,4Ward Solutions Group,,,,dev,MISSING,,,,,,not in any source we hold
