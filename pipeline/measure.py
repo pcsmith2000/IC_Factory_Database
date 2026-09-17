@@ -28,6 +28,42 @@ def _prefix_match(a: str, b: str) -> bool:
     return long.startswith(short) and long[len(short)] == " "
 
 
+def _light_name(name: str) -> str:
+    """Punctuation stripped, corporate words KEPT — the form the prefix rung compares.
+
+    norm_name removes "the", "company", "inc", "corp", which is right for the exact rungs and
+    pathological for the prefix one: "The Truss Company" becomes "truss", a single generic token,
+    and the prefix rung refuses a one-word key on purpose because "truss" would prefix half the
+    industry. All five of that company's control rows were unmatchable while all eight of its
+    plants sat in the warehouse with street addresses, carried as "The Truss Company - Eugene".
+
+    Keeping the corporate words makes both sides comparable — "the truss company" is a whole-word
+    prefix of "the truss company eugene".
+
+    It is an ADDITIONAL form, not a replacement. Swapping the prefix rung over to it wholesale was
+    measured against run 35255141179 and cost two matches net, 49 prefix hits down to 47: the
+    stripped form wins on names where a corporate word is the only difference. So the rung tries
+    the stripped form first and this one second, and a row matches if either does.
+
+    Deliberately local to Layer 7. reconcile.norm_name feeds the facility signature, and changing
+    it would re-key every addressless cluster and re-issue their IDs; G3 exists to catch that.
+    Matching is measurement, and measurement must not move identity.
+    """
+    return " ".join(re.sub(r"[^a-z0-9 ]", " ", (name or "").lower()).split())
+
+
+def _company_known(c: dict, by_name: dict, fac_names: list) -> bool:
+    """Is this control row's COMPANY anywhere in the warehouse, judged the way the rungs match?
+
+    One helper rather than two copies: the count and the per-row explanation disagreed once
+    already, reporting nine plant-level gaps where the metric counted fourteen.
+    """
+    cn, cl = norm_name(c.get("name", "")), _light_name(c.get("name", ""))
+    if by_name.get(_key(c.get("name", ""))):
+        return True
+    return any(_prefix_match(cn, fn) or _prefix_match(cl, fl) for _fid, fn, fl, _st in fac_names)
+
+
 def _key(name: str) -> str:
     """Normalised name with the spaces taken out, for the EXACT rungs only.
 
@@ -109,7 +145,7 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
         by_name_state[(nm, st)].append(f["facility_id"])
         by_name[nm].append(f["facility_id"])
         # Spaced, deliberately: the prefix rung tests a whole-WORD prefix, which needs the words.
-        fac_names.append((f["facility_id"], norm_name(f["name"]), st))
+        fac_names.append((f["facility_id"], norm_name(f["name"]), _light_name(f["name"]), st))
 
     def key_city(c):
         return (_key(c.get("name", "")), _norm_city(c.get("city")), (c.get("state") or "").upper())
@@ -157,9 +193,10 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
     for i, c in enumerate(in_scope):
         if i in matched:
             continue
-        cn, cst = norm_name(c.get("name", "")), (c.get("state") or "").upper()
-        for fid, fn, fst in fac_names:
-            if fid in taken or not _prefix_match(cn, fn):
+        cn, cl = norm_name(c.get("name", "")), _light_name(c.get("name", ""))
+        cst = (c.get("state") or "").upper()
+        for fid, fn, fl, fst in fac_names:
+            if fid in taken or not (_prefix_match(cn, fn) or _prefix_match(cl, fl)):
                 continue
             if cst and fst and cst != fst:
                 continue
@@ -177,9 +214,7 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
         # FirstSource — Acworth GA Truss". They are plant-level gaps, and saying so is the
         # difference between "we have never heard of this company" and "we have this
         # company but not this site".
-        cn = norm_name(c.get("name", ""))
-        known = bool(by_name.get(_key(c.get("name", "")))) or any(
-            _prefix_match(cn, fn) for _fid, fn, _st in fac_names)
+        known = _company_known(c, by_name, fac_names)
         (crowded if known else misses).append(c.get("name", ""))
     if _detail:
         outcome = []
@@ -187,9 +222,7 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
             if i in matched:
                 outcome.append((matched[i], taken_by.get(i), ""))
             else:
-                cn = norm_name(c.get("name", ""))
-                known = bool(by_name.get(_key(c.get("name", "")))) or any(
-                    _prefix_match(cn, fn) for _fid, fn, _st in fac_names)
+                known = _company_known(c, by_name, fac_names)
                 outcome.append((None, None,
                                 "company in database, THIS PLANT not" if known
                                 else "not in any source we hold"))

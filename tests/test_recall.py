@@ -164,3 +164,32 @@ def test_the_status_table_and_the_metric_cannot_disagree():
     assert [x["status"] for x in t] == ["HAVE", "HAVE", "MISSING"]
     assert t[1]["has_address"].startswith("no")      # a lead is on the list, without a street
     assert t[2]["why_missing"] == "not in any source we hold"
+
+
+def test_a_name_stripped_to_one_generic_word_still_matches():
+    """norm_name removes "the" and "company", so "The Truss Company" becomes "truss".
+
+    The exact rungs then cannot reach "trusssumner", and the prefix rung refuses a one-word key on
+    purpose because "truss" would prefix half the industry. All five of that company's control rows
+    were unmatchable while all eight of its plants sat in the warehouse with street addresses.
+    """
+    facs = [{"facility_id": f"IC-{i}", "name": f"The Truss Company - {city}", "state": st,
+             "tier": "T2"}
+            for i, (city, st) in enumerate([("Eugene", "OR"), ("Redmond", "OR"), ("Sumner", "WA")])]
+    control = [{"control_id": "1", "name": "The Truss Company", "state": "OR"},
+               {"control_id": "2", "name": "The Truss Company", "state": "OR"},
+               {"control_id": "3", "name": "The Truss Company", "state": "WA"}]
+    r = measure.recall(control, facs, {})
+    assert r["found"] == 3 and r["by_method"] == {"name-prefix": 3}
+
+
+def test_the_light_form_is_an_extra_rung_not_a_replacement():
+    """Swapping the prefix rung over to the corporate-words-kept form wholesale cost two matches
+    net against run 35255141179 — the stripped form wins where a corporate word is the only
+    difference. Both are tried; neither is dropped."""
+    stripped_only = [{"facility_id": "IC-1", "name": "ATCO Structures and Logistics", "tier": "T1"}]
+    assert measure.recall([{"control_id": "1", "name": "ATCO Structures and Logistics (USA) Inc"}],
+                          stripped_only, {})["found"] == 1
+    light_only = [{"facility_id": "IC-2", "name": "The Truss Company - Pasco", "tier": "T1"}]
+    assert measure.recall([{"control_id": "1", "name": "The Truss Company"}],
+                          light_only, {})["found"] == 1
