@@ -60,14 +60,14 @@ jobs:
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
-          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.GEOCODIO_API || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
           SECRETS_JSON: ${{ toJSON(secrets) }}
         run: |
           set -u
           need=""
           case "${{ inputs.stage }}" in
             locate)  [ -n "${AI_GATEWAY_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || need="AI_GATEWAY_API_KEY | IC_DB_AI_GATEWAY_API_KEY | VERCEL_AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY | IC_DB_ANTHROPIC_API_KEY)" ;;
-            geocode) [ -n "${GEOCODIO_API_KEY:-}" ] || need="GEOCODIO_API_KEY | IC_DB_GEOCODIO_API_KEY | GEOCODIO_KEY" ;;
+            geocode) [ -n "${GEOCODIO_API_KEY:-}" ] || need="GEOCODIO_API_KEY | GEOCODIO_API | IC_DB_GEOCODIO_API_KEY | GEOCODIO_KEY" ;;
           esac
           if [ -n "$need" ]; then
             # The secrets context lists what this repository actually has. Actions masks every
@@ -104,7 +104,7 @@ jobs:
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
-          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.GEOCODIO_API || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
         run: python -m pipeline.enrich.run "${{ inputs.stage }}" --out enrich ${{ inputs.args }}
 
       - name: Publish what this stage wrote
