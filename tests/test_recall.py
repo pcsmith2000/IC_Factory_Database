@@ -257,3 +257,43 @@ def test_crosswalk_candidates_are_offered_for_review_not_counted_as_found():
     # and once asserted, the crosswalk rung counts it — an assertion is evidence, a shared spelling
     # is not.
     assert measure.recall(control, facs, {"1": "IC-1"})["found"] == 1
+
+
+def test_a_facility_is_matched_by_every_name_its_sources_gave_it():
+    """A cluster publishes one name; the others were being discarded, 774 of them.
+
+    IC-93899 is Premier SIPS at 18504 Canyon Rd E, Puyallup WA, merged from or_bcd and sipa on
+    street_key. It publishes as "PREMIER BUILDING SYSTEMS" because or_bcd sorted first, and the
+    control writes "PREMIER SIPS" — so a plant held in TWO sources was counted as one held in none.
+    This is recovering data already fetched, not loosening a match: an alias goes through the same
+    exact and whole-word-prefix rungs as the primary name.
+    """
+    facs = [{"facility_id": "IC-93899", "name": "PREMIER BUILDING SYSTEMS",
+             "aliases": "Premier SIPS", "city": "Puyallup", "state": "WA", "tier": "T2"}]
+    control = [{"control_id": "1", "name": "PREMIER SIPS", "city": "Puyallup", "state": "WA"}]
+    assert measure.recall(control, facs, {})["found"] == 1
+
+    # and the one-to-one guard is on facility_id, so extra names cannot buy extra matches:
+    # two control rows, one facility, four names between them -> still one match, not two.
+    both = control + [{"control_id": "2", "name": "PREMIER BUILDING SYSTEMS",
+                       "city": "Puyallup", "state": "WA"}]
+    r = measure.recall(both, facs, {}, _detail=True)
+    assert r["found"] == 1
+    assert len({fid for _m, fid, _w in r["_detail"]["outcome"] if fid}) == 1
+
+
+def test_reconcile_keeps_the_other_names_as_aliases():
+    """Layer 5 is where the names are lost, so it is where they are kept."""
+    from pipeline import reconcile
+    from pathlib import Path
+    import tempfile
+    rows = [{"source_id": "or_bcd", "name_verbatim": "PREMIER BUILDING SYSTEMS", "state": "WA",
+             "city_norm": "puyallup", "street_key": "18504 canyon rd e", "row_hash": "a"},
+            {"source_id": "sipa", "name_verbatim": "Premier SIPS", "state": "WA",
+             "city_norm": "puyallup", "street_key": "18504 canyon rd e", "row_hash": "b"}]
+    with tempfile.TemporaryDirectory() as d:
+        out = reconcile.run(rows, Path(d) / "ids.json")   # must not exist: the registry creates it
+    f = out["facilities"][0]
+    assert f["n_sources"] == 2
+    assert f["name"] == "PREMIER BUILDING SYSTEMS"
+    assert f["aliases"] == "Premier SIPS"          # kept, not discarded

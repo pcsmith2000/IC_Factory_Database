@@ -205,8 +205,25 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
     by_name_state: dict[tuple, list] = defaultdict(list)
     by_name: dict[str, list] = defaultdict(list)
     fac_names: list[tuple] = []
+    def names_of(f: dict) -> list[str]:
+        """The facility's published name AND every other name its sources gave the same plant.
+
+        A cluster publishes one name and Layer 5 now keeps the rest. Matching only the published
+        one meant a plant held in two sources could read as missing because the control used the
+        other source's name for it — Premier SIPS, published as PREMIER BUILDING SYSTEMS. Every
+        alias goes through the same exact and prefix rungs as the primary, and the one-to-one
+        guard is on facility_id, so a facility with four names still satisfies one control row.
+        """
+        return [n for n in [f.get("name") or ""] + (f.get("aliases") or "").split(" | ") if n.strip()]
+
     for f in facilities:
-        nm, st = _key(f["name"]), (f.get("state") or "").upper()
+        st = (f.get("state") or "").upper()
+        for alias in names_of(f)[1:]:
+            by_name_city[(_key(alias), _norm_city(f.get("city") or f.get("city_norm")), st)].append(f["facility_id"])
+            by_name_state[(_key(alias), st)].append(f["facility_id"])
+            by_name[_key(alias)].append(f["facility_id"])
+            fac_names.append((f["facility_id"], norm_name(alias), _light_name(alias), st))
+        nm = _key(f["name"])
         # Layer 4 emits city_norm; dim_facility and hand-built fixtures carry city. Take whichever
         # is there — reading only "city" silently disabled this rung for every real run.
         by_name_city[(nm, _norm_city(f.get("city") or f.get("city_norm")), st)].append(f["facility_id"])

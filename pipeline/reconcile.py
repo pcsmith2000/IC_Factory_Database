@@ -126,10 +126,22 @@ def run(rows: list[dict], registry_path: Path) -> dict:
             r["match_confidence"] = {"entity+street": 0.95, "street_key": 0.90, "name+city": 0.70,
                                      "name+city→addressed": 0.70, "no-fixed-plant": 0.60}[m]
         first = members[0]
+        # Every OTHER name the sources gave this plant, kept rather than discarded. A cluster takes
+        # one name — whichever row sorted first — and the rest were being thrown away: 774 of them
+        # across 4,204 facilities. That loss is not cosmetic. IC-93899 is Premier SIPS at 18504
+        # Canyon Rd E, Puyallup WA, merged from or_bcd and sipa on street_key; it publishes as
+        # "PREMIER BUILDING SYSTEMS" because or_bcd sorted first, and the control list writes
+        # "PREMIER SIPS", so Layer 7 counted a plant we hold in two sources as one we do not hold
+        # at all. Keeping the aliases is recovering data we already fetched, not loosening a match:
+        # each alias is still compared by the same exact and whole-word-prefix rungs.
+        primary = first.get("name_verbatim") or ""
+        aliases = sorted({(r.get("name_verbatim") or "").strip() for r in members}
+                         - {primary.strip(), ""})
         facilities.append({
             "facility_id": fid, "signature": sig, "n_rows": len(members),
             "n_sources": len({r["source_id"] for r in members}),
-            "name": first.get("name_verbatim"), "state": first.get("state"), "city_norm": first.get("city_norm"),
+            "name": primary, "aliases": " | ".join(aliases),
+            "state": first.get("state"), "city_norm": first.get("city_norm"),
             "street_key": first.get("street_key"), "tier": tier(members), "match_method": methods[sig],
             "no_fixed_plant": bool(first.get("no_fixed_plant")),
         })
