@@ -20,7 +20,25 @@ _CITY_MAP = {"st": "saint", "st.": "saint", "ste": "sainte", "mt": "mount", "ft"
 _STREET_SUFFIX = {"street": "st", "st.": "st", "avenue": "ave", "ave.": "ave", "road": "rd", "rd.": "rd",
                   "drive": "dr", "dr.": "dr", "boulevard": "blvd", "highway": "hwy", "lane": "ln",
                   "parkway": "pkwy", "court": "ct", "place": "pl", "north": "n", "south": "s",
-                  "east": "e", "west": "w"}
+                  "east": "e", "west": "w",
+                  # Added 2026-09-17 from confirmed duplicate facilities in the deployed build.
+                  "terrace": "ter", "terr": "ter", "circle": "cir", "trail": "trl", "square": "sq",
+                  "turnpike": "tpke", "expressway": "expy", "freeway": "fwy", "route": "rte",
+                  "northeast": "ne", "northwest": "nw", "southeast": "se", "southwest": "sw"}
+# "1505 W Third Ave" and "1505 W 3rd Ave" are one plant (Ess Metron, Denver) and were two
+# facilities. Streets are numbered in words as often as in figures.
+_ORDINAL_WORD = {"first": "1st", "second": "2nd", "third": "3rd", "fourth": "4th", "fifth": "5th",
+                 "sixth": "6th", "seventh": "7th", "eighth": "8th", "ninth": "9th", "tenth": "10th",
+                 "eleventh": "11th", "twelfth": "12th", "thirteenth": "13th", "fourteenth": "14th",
+                 "fifteenth": "15th", "sixteenth": "16th", "seventeenth": "17th",
+                 "eighteenth": "18th", "nineteenth": "19th", "twentieth": "20th"}
+# Street TYPES only. Directionals are deliberately excluded: "5980 W Sam Houston Pkwy N" ends in a
+# type followed by a direction, and treating "n" as a type collapsed it to "5980 w sam houston n",
+# merging it with a different address. A direction qualifies a street; it is not one.
+_DIRECTIONALS = {"n", "s", "e", "w", "ne", "nw", "se", "sw"}
+_STREET_TYPES = (set(_STREET_SUFFIX.values()) | {"st", "ave", "rd", "dr", "blvd", "hwy", "ln",
+                                                 "pkwy", "ct", "pl", "ter", "cir", "trl", "sq",
+                                                 "way"}) - _DIRECTIONALS
 
 
 @dataclass
@@ -40,7 +58,17 @@ def norm_city(city: str) -> str:
 def street_key(address: str) -> str:
     """Street number + normalised street name. Survives any city spelling."""
     s = re.sub(r"[^a-z0-9 ]", " ", (address or "").lower())
-    parts = [_STREET_SUFFIX.get(p, p) for p in s.split()]
+    parts = [_STREET_SUFFIX.get(p, _ORDINAL_WORD.get(p, p)) for p in s.split()]
+    # A run of two street-type tokens is a transcription artifact: one register wrote Atkinson
+    # Industries at "1801 E 27th St Terrace" and another at "1801 E 27th Terrace", and they became
+    # two facilities at one address. Keep the LAST of the run — it is the street's actual type.
+    collapsed = []
+    for p in parts:
+        if collapsed and p in _STREET_TYPES and collapsed[-1] in _STREET_TYPES:
+            collapsed[-1] = p
+        else:
+            collapsed.append(p)
+    parts = collapsed
     # drop a unit designator and everything after it ("suite 4", "unit b", "bldg 2")
     for i, p in enumerate(parts):
         if p in {"suite", "ste", "unit", "bldg", "building", "apt"}:

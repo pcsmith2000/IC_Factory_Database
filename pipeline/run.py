@@ -379,6 +379,11 @@ def main(argv=None) -> int:
     except warehouse.WarehouseNotImplemented as e:
         return halt("layer 8", str(e))
     _write_record(record, rec_dir)
+    try:
+        from . import runlog
+        runlog.build()          # one row per run: cost, time, sources, recall
+    except Exception as e:      # the log is a convenience; never fail a release over it
+        print(f"  runlog not rebuilt: {type(e).__name__}: {e}")
     r8 = record["release"]
     print(f"RELEASE {r8['tag']} · {r8['published_count']} facilities "
           f"({r8['raw_count']} clusters − {r8['t0_leads']} T0 leads with no address "

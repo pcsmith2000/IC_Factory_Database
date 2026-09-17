@@ -421,6 +421,11 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
                 batches_done=0, candidates=len(rows), seeds=len(seeds))
     tally: dict[str, int] = {}
     stats: dict[str, int] = {}
+    # Token accounting. _classify_batch has always been able to report usage and nothing ever
+    # asked it to, so no run in this project's history records what it cost. A cached batch bills
+    # nothing, which is why `called` is reported beside the totals: tokens divided by batches is
+    # meaningless when most of a re-run is cache hits.
+    usage: dict[str, int] = {}
     t0, called, cached_n = time.time(), 0, 0
     for n, batch in enumerate(todo, 1):
         k = batch_key(batch, model, prompt)
@@ -434,7 +439,7 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
                 time.sleep(pace)
             before = dict(stats)
             try:
-                res = classify_batch(batch, prompt, model, temp, stats=stats)
+                res = classify_batch(batch, prompt, model, temp, usage_out=usage, stats=stats)
             except Exception as e:
                 # A provider that will not serve us is not a pipeline defect, and a 40-line
                 # traceback buries the one sentence that matters. Run 35155322818 spent four
@@ -473,4 +478,7 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
     _, resolved, provider = ai_client_and_model(model)
     return {"labels": labels, "model": resolved, "provider": provider, "temperature": temp,
             "seeds_also_candidates": len(overlap),
-            "prompt_hash": prompt_hash(prompt_path), "n_candidates": len(rows), "n_seeds": len(seeds)}
+            "prompt_hash": prompt_hash(prompt_path), "n_candidates": len(rows), "n_seeds": len(seeds),
+            "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0),
+            "batches_called": called, "batches_cached": cached_n,
+            "classify_seconds": round(time.time() - t0, 1)}
