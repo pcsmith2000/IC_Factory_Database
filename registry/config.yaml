@@ -102,6 +102,14 @@ gates:
   # instead of living only in the comment above; it does not halt anything.
   g1_dedupe_target_rate: 0.02
   g1_thresholds: {street_key: 0.95, name_city: 0.90, fuzzy: 0.80}
+  # What the signal is, measured on run 35177447708 (141 of 334 merged clusters, 42%): mostly
+  # CORPORATE HISTORY at one plant, not error. "amtex | amtex acquisition | sunbelt modular",
+  # "fleetwood homes | cavco industries", "koosharem | probuild", "homes by oakwood | z modular a
+  # div of zekelman", "relco roof and floor | parr truss harrisburg". One site, successive owners,
+  # rosters collected years apart. Merging those is RIGHT — one plant, one id — and splitting them
+  # would fracture a facility's history. The alias sets are also the raw material Layer 4 needs.
+  # Genuine co-location ("spitzer industries | volta", "atkinson ind | nvent") is the minority.
+  #
   # G2 looks for one address carrying two unrelated business names. It reports and does not halt:
   # the same signal covers genuine false merges ("spitzer industries" with "volta") and legitimate
   # aliasing ("smi homes" is "structural modular innovations"; "schult homes" and "cmh

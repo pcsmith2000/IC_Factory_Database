@@ -57,8 +57,15 @@ that build is compared to the first release with `pipeline/compare.py`, not merg
   halt, because the same signal covers legitimate aliasing: "smi homes" IS "structural modular
   innovations", "schult homes" and "cmh manufacturing west" are two brands of one Clayton plant,
   "bildt" is a typo for "boldt". Split a cluster only with evidence; fix the key logic or add a
-  crosswalk override. The rate sits around 23% and cannot come down until Layer 4 resolves
-  entities.
+  crosswalk override. The rate is 23% on the deterministic sources and 42% on a classified run,
+  and cannot come down until Layer 4 resolves entities.
+  **Read these before splitting anything.** Measured on run 35177447708, most are corporate
+  history rather than error: "amtex | amtex acquisition | sunbelt modular", "fleetwood homes |
+  cavco industries", "koosharem | probuild", "relco roof and floor | parr truss harrisburg" — one
+  site under successive owners, with rosters collected years apart. Those merges are correct and
+  splitting them would fracture a plant's history. Genuine co-location ("spitzer industries |
+  volta", "atkinson ind | nvent") is the minority. The alias sets are also the closest thing this
+  repo has to entity-resolution training data; do not discard the CSV.
   If instead G2 says *clusters hold more than one street key*, stop: a facility id comes from a
   signature containing that key, so it means clustering itself is broken, not that the data is
   messy. That one halts the run at any rate.
