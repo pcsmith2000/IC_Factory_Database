@@ -33,6 +33,7 @@ from __future__ import annotations
 import html as _html
 import re
 import time
+import urllib.error
 from pathlib import Path
 from ._common import LayoutChanged, contract_row, http_get, require
 
@@ -82,10 +83,32 @@ def _cards(page: str) -> list[dict]:
     return out
 
 
+# The site answers a valid state with "Resource not found" (HTTP 404, an 859-byte error page)
+# at random: FL, VA and NC each did it once and served 360-690 KB on the next request. http_get
+# rightly refuses to retry a 4xx, so this source retries the 404 itself and, when a state stays
+# down, leaves the page out and lets parse() say PARTIAL rather than lose every state to one.
+TRANSIENT_RETRIES = 4
+
+
+def _get_state(st: str, archive_dir: Path) -> Path | None:
+    for attempt in range(TRANSIENT_RETRIES + 1):
+        try:
+            return http_get(LIST.format(state=st), archive_dir, f"{st}.html", timeout=300)
+        except urllib.error.HTTPError as e:
+            if e.code != 404 or attempt == TRANSIENT_RETRIES:
+                if e.code == 404:
+                    return None
+                raise
+            time.sleep(2 * (attempt + 1))
+    return None
+
+
 def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
     paths = []
     for st in STATES:
-        paths.append(http_get(LIST.format(state=st), archive_dir, f"{st}.html", timeout=300))
+        p = _get_state(st, archive_dir)
+        if p is not None:
+            paths.append(p)
         time.sleep(PACE_SECONDS)
     if not any(_cards(p.read_text(encoding="utf-8", errors="replace")) for p in paths):
         raise LayoutChanged("no manufacturer cards on any state page — the listing markup "

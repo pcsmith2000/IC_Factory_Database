@@ -39,3 +39,24 @@ def test_the_keep_filter_takes_trusses_and_leaves_cabinets():
     assert KEEP.search("Trussway Manufacturing, Inc.") and KEEP.search("Georgia Mountain Components, Inc.")
     assert not KEEP.search("Cook Cabinet Shop Inc.") and not KEEP.search("Custom Pallet Co.")
     assert not KEEP.search("Panolam Industries, Inc.")
+
+
+def test_a_transient_404_is_retried_and_a_persistent_one_leaves_the_state_out(monkeypatch, tmp_path):
+    import urllib.error
+    from pipeline.sources import forest_products_locator as fpl
+    calls = {"n": 0}
+
+    def flaky(url, archive_dir, filename, **kw):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+        p = archive_dir / filename; p.write_text(PAGE); return p
+
+    monkeypatch.setattr(fpl, "http_get", flaky)
+    monkeypatch.setattr(fpl.time, "sleep", lambda s: None)
+    assert fpl._get_state("FL", tmp_path) is not None and calls["n"] == 3
+
+    def down(url, archive_dir, filename, **kw):
+        raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
+    monkeypatch.setattr(fpl, "http_get", down)
+    assert fpl._get_state("VA", tmp_path) is None
