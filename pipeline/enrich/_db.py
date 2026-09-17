@@ -20,6 +20,7 @@ from datetime import date
 SELECT_GOLDEN = """
     SELECT COALESCE(d.facility_id, g.facility_key) AS facility_id, g.facility_key,
            g.name, g.address, g.city, g.state, g.zip, g.lat_lon, g.status, g.expiry_date,
+           g.naics,
            d.tier, g.release_tag,
            EXISTS (SELECT 1 FROM fact_assertions a
                     WHERE a.facility_key = g.facility_key

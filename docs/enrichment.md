@@ -151,10 +151,36 @@ still have no building over 10,000 sqft within 30m of their rooftop coordinate, 
 -vs-largest bug does not explain. Either those operations really are small, or the coordinate is on
 the wrong parcel entirely, and stage 11 cannot tell which.
 
-**That makes stage 12's 10,000 sqft threshold suspect.** It was calibrated against 30 hand-verified
-rows and it now fires on 24% of everything measured. A threshold that flags a quarter of the
-database is describing the database, not an anomaly in it, and it should be re-derived from these
-790 before existence flags are trusted.
+### "Implausibly small" is a statement about an industry
+
+The 10,000 sqft threshold was calibrated against 30 hand-verified rows and fired on a quarter of
+everything measured. A threshold that flags a quarter of the database is describing the database
+rather than an anomaly in it — and measured over the 667 footprints in golden, it was worse than
+blunt. It was backwards:
+
+    naics                        n   median      flat 10,000   20% of own median
+    321214 truss               153   14,145        58   38%      11    7%
+    321992 prefab wood          99   18,894        36   36%      15   15%
+    332311 prefab metal        162   49,534        25   15%      25   15%
+    321991 manufactured homes  121   87,303        18   15%      22   18%
+
+A 10,000 sqft truss shop is an ordinary truss shop; that is near the median for the trade. A 10,000
+sqft manufactured-home plant would be remarkable. The flat bar flagged 38% of the first group and
+15% of the second, when the second is where small is actually strange.
+
+So the bar is a fraction of what the facility's own industry builds — 20% of the measured median for
+its NAICS, falling back to 20% of the all-trades median where a facility has no NAICS or its trade
+is too thin to measure. It fires on 13% of footprints instead of 25%, and moves those onto the
+facilities where size is evidence. The stage still needs two independent observations before it
+flags anything, so this is one input to a review, never a retirement.
+
+Re-derive when the measured set grows:
+
+    SELECT naics, COUNT(*), percentile_cont(0.5) WITHIN GROUP (ORDER BY building_sqft::numeric)
+    FROM golden_facility WHERE building_sqft IS NOT NULL GROUP BY 1 ORDER BY 2 DESC;
+
+and update `NAICS_MEDIAN_SQFT` in `pipeline/enrich/existence.py`, which records the n each median
+rests on.
 
 ### Re-measuring does not reliably supersede the old measurement
 

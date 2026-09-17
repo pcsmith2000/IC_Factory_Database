@@ -911,3 +911,45 @@ def test_an_assertion_predating_the_column_loses_to_one_that_has_it():
         {**_measurement("F1", 222, "", "old")},
     ], _rules())
     assert rows[0]["building_sqft"] == "111"
+
+
+# ---------------------------------------------- "implausibly small" is relative to the industry
+def test_the_small_footprint_bar_moves_with_what_the_trade_builds():
+    """The flat 10,000 sqft threshold was backwards. Measured over 667 footprints, a truss shop's
+    median is 14,145 sqft and a manufactured-home plant's is 87,303, so a flat bar flagged 38% of
+    truss shops and 15% of home plants — when the second group is the one where small is strange."""
+    from pipeline.enrich.existence import small_sqft
+    truss, homes = small_sqft("321214"), small_sqft("321991")
+    assert truss < 10_000 < homes, "the bar must fall for small trades and rise for large ones"
+    # a 12,000 sqft building: ordinary for a truss shop, remarkable for a home plant
+    assert not 12_000 < truss and 12_000 < homes
+
+
+def test_an_unknown_industry_falls_back_to_the_measured_average():
+    from pipeline.enrich.existence import small_sqft, DEFAULT_MEDIAN_SQFT, SMALL_FRACTION
+    expected = round(SMALL_FRACTION * DEFAULT_MEDIAN_SQFT)
+    assert small_sqft(None) == expected
+    assert small_sqft("") == expected
+    assert small_sqft("999999") == expected, "a trade with no measurement is not a zero threshold"
+
+
+def test_a_normal_truss_shop_is_no_longer_evidence_against_itself(tmp_path):
+    """The concrete regression: a 9,000 sqft truss shop with an expired licence used to collect two
+    observations and become a flag. One of those observations was just 'it is a truss shop'."""
+    from pipeline.enrich import existence
+    from datetime import date
+    import json
+    (tmp_path / "footprint.rows.json").write_text(json.dumps(
+        [{"facility_id": "IC-1", "building_sqft": 9_000, "n_nearby": 1},
+         {"facility_id": "IC-2", "building_sqft": 9_000, "n_nearby": 1}]))
+    rows = [
+        {"facility_id": "IC-1", "naics": "321214", "expiry_date": "2015-01-01", "status": "expired"},
+        {"facility_id": "IC-2", "naics": "321991", "expiry_date": "2015-01-01", "status": "expired"},
+    ]
+    rep = existence.run(rows, tmp_path, today=date(2026, 9, 17))
+    flagged = {a["facility_id"] for a in rep["assertions"]}
+    # both have an expired licence and a dead status; only the home plant's size adds to that
+    assert "IC-2" in flagged, "9,000 sqft IS strange for a manufactured-home plant"
+    why = next(a for a in rep["assertions"] if a["facility_id"] == "IC-2")["evidence"]
+    assert "9,000 sqft is below 17,461" in why, why
+    assert "321214" not in json.dumps(rep["reasons"]), "a normal truss shop must not cite its size"

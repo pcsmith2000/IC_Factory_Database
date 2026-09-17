@@ -9,8 +9,6 @@ could happen, expressed so that a run stops rather than publishes.
 from __future__ import annotations
 from dataclasses import dataclass
 
-SMALL = 10_000
-
 
 @dataclass
 class GateResult:
