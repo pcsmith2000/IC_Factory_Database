@@ -160,6 +160,15 @@ def main(argv=None) -> int:
                     keep.append(r); continue
                 got = labels.get(r["row_hash"], {})
                 lab = got.get("label")
+                # The model's own account of the row. It is the single most useful thing a
+                # reviewer can be handed — "Manufacturing vague likely not IC." is what identified
+                # prompt v1.2's over-correction — and it lived only in build/classify_cache, which
+                # exists in a CI artifact that expires. Carried here so review_queue.csv says why.
+                r["ic_label"] = lab or ""
+                r["ic_confidence"] = got.get("confidence", "")
+                r["ic_type"] = got.get("type", "")
+                r["ic_reason"] = (got.get("reason") or "").replace("\n", " ")[:120]
+                r["ic_candidate_reason"] = r.get("_candidate_reason", "")
                 if lab == "IC":
                     # Carry the product category through to Layer 5. golden.assertions_from_rows
                     # turns it into a `classifier`-sourced assertion; without this the classifier's

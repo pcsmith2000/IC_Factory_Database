@@ -29,6 +29,11 @@ that build is compared to the first release with `pipeline/compare.py`, not merg
 1. `run.yml` fires. Watch it. Green → a release PR appears.
 2. Download the workflow artifact. Review `dedupe_audit_<date>.csv`: fill the `decision`
    column (merge / keep / co-located). Review `review_queue.csv`: decide each UNCERTAIN row.
+   That file now carries the classifier's own account of the row — `ic_label`, `ic_confidence`,
+   `ic_type`, `ic_reason` and `ic_candidate_reason` (why the row became a candidate at all) —
+   so a reviewer can see what the model was unsure about instead of re-deciding from the raw
+   record. The reasons are worth reading in bulk: "Manufacturing vague likely not IC." on a
+   HUD-code plant is how prompt v1.2's over-correction was found.
 3. Commit the decisions to `control/` (they become seeds and crosswalk entries) and merge the PR.
    The count in the run record's `release.published_count` is the quotable number, with its tag.
    It counts located facilities only — `reconcile.TIER_RULES` has always said "T0 never counted",
