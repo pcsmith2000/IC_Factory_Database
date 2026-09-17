@@ -138,7 +138,8 @@ it. No further prompt edits.
 | 1 | 26 | 40.25% (40.6% on 239) | +1.7 | 581 |
 | 2 | 27 | 41.0% | +0.4 | 624 |
 | 3 | 28 | HALTED at G5 — 6 of 30 IC seeds missed (run 27: 2), no release, no recall | — | — |
-| 3 (re-run) | 29 | pending — everything run 28 carried, plus: name-anchored labels, v1.9 321214 rule, steel×3323 and 327390 candidates, forest_products_locator, mo_psc, classify_all, optional columns | | |
+| 3 (re-run) | 29 | HALTED at Layer 1 — forest_products_locator had no blob snapshot (archive.mode blob-only) | — | — |
+| 3 (re-run) | 30 | pending — everything run 28 carried, plus: name-anchored labels, v1.9 321214 rule, steel×3323 and 327390 candidates, forest_products_locator, mo_psc, classify_all, optional columns | | |
 
 Rule: stop at 90% fuzzy match, or when four additional passes together yield under 3% — unless
 corroboration is still improving significantly, in which case continue until it stops. Two passes
