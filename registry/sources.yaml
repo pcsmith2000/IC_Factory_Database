@@ -276,6 +276,7 @@ sources:
   - plant_address
   status_basis: on_current_list
   traps:
+  - 'Probed 2026-09-17: sbcindustry.com does not answer at all (curl exit 000, no HTTP status), not merely login-gated. Still the single biggest prize - 23 of the 122 never-ingested control rows are Wood Structural Components.'
   - The truss segment is invisible to every regulator source; this is its only roster.
   - MEMBER DIRECTORY IS LOGIN-GATED (probed 2026-09-17). /member-directory and every /member-directory/<slug> return 'Restricted
     Page'; search engines have them indexed but an anonymous fetch does not.
@@ -429,6 +430,7 @@ sources:
   - company_address
   status_basis: on_current_list
   traps:
+  - 'Probed 2026-09-17: mbma.com/membership/member-directory and /members both 404. The real page is /building-systems-directory, HTTP 200 but 35KB of shell with no member content in the HTML - JS-rendered, so it needs _browser.py, not http_get. /associate-directory is the other half. Worth doing: 10 control rows are Steel Structural Components.'
   - Company-level, not plant-level.
   status: queued
 - id: nfba
@@ -440,6 +442,7 @@ sources:
   - company_address
   status_basis: on_current_list
   traps:
+  - 'Probed 2026-09-17: /members and /find-a-builder both return HTTP 410 Gone. NFBA runs its directory on an AWS-hosted member area (/aws/NFBA/pt/sp/...) that answers 410 to an unauthenticated fetch. Post-frame overlaps the 11 LGS/steel panel control rows only partly; try MBMA first.'
   - Unverified.
   status: queued
 - id: state_sos
