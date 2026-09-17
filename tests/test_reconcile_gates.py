@@ -275,3 +275,46 @@ def test_g1_says_when_it_is_only_passing_on_a_relaxed_ceiling(tmp_path):
                         tmp_path / "p.csv", target_rate=0.02)
     if r.details["rate"] > 0.02:
         assert r.passed and r.details["would_fail_target"] and "ABOVE the 2% target" in r.summary
+
+
+# ---------------------------------------------------------------- G3, the gate that never fired
+def test_g3_passes_a_rerun_that_issues_no_ids():
+    """The only outcome G3 has ever reported is 'untested'. This is what a real pass looks like."""
+    r = gates.g3_id_stability(ids_issued=0, allow_new=0, is_rerun=True)
+    assert r.passed and r.tested
+    assert "0 new ids" in r.summary
+
+
+def test_g3_fails_a_rerun_that_renumbers():
+    """The failure this gate exists for: identical inputs, yet the registry issued fresh ids —
+    a signature changed, so facilities silently renumbered and every downstream id broke."""
+    r = gates.g3_id_stability(ids_issued=1, allow_new=0, is_rerun=True)
+    assert not r.passed and r.tested
+    assert "1 new ids" in r.summary
+
+
+def test_g3_honours_a_nonzero_allowance():
+    assert gates.g3_id_stability(ids_issued=2, allow_new=2, is_rerun=True).passed
+    assert not gates.g3_id_stability(ids_issued=3, allow_new=2, is_rerun=True).passed
+
+
+def test_g3_on_a_first_run_is_untested_and_says_so():
+    """A first run cannot observe stability. It must not report a pass that means nothing."""
+    r = gates.g3_id_stability(ids_issued=500, allow_new=0, is_rerun=False)
+    assert r.tested is False
+    assert "untested" in r.summary and "--rerun" in r.summary
+
+
+def test_id_registry_never_renumbers_an_existing_signature(tmp_path: Path):
+    """G3's premise: a signature seen before keeps its id, even as new ones are issued around it."""
+    p = tmp_path / "ids.json"
+    reg = reconcile.IdRegistry(p)
+    first = reg.get("FL|S|123main")
+    reg.get("AL|S|9oak")
+    reg.save()
+
+    reopened = reconcile.IdRegistry(p)          # a later run, same registry on disk
+    assert reopened.get("FL|S|123main") == first
+    assert reopened.issued_this_run == 0        # nothing new — this is what a re-run must show
+    assert reopened.get("TX|S|5elm") != first   # a genuinely new signature still gets a new id
+    assert reopened.issued_this_run == 1
