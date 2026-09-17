@@ -113,8 +113,45 @@ def locate_one(row: dict, client, model: str) -> dict:
     return {"answer": _extract_json(text) or {}, "visited": _searched_urls(msg.content)}
 
 
+def _page_states_the_address(url: str, address: str, timeout: int = 20) -> bool | None:
+    """Fetch the cited page and look for the address on it. None when the page cannot be read.
+
+    Checking that search visited a URL proves the page exists, not that it says what the model
+    claims — the model can open a real page and attribute an address to it that is not there, and
+    no amount of prompting reliably prevents that. The address itself is checked rather than the
+    quoted sentence, because a paraphrased quote is a formatting difference while a missing address
+    is the actual error. A page that cannot be fetched is not evidence of dishonesty, so it returns
+    None and the caller decides.
+    """
+    import re as _re, urllib.error, urllib.request
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            body = r.read(2_000_000).decode("utf-8", "replace")
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+    text = _re.sub(r"<[^>]+>", " ", body)
+    norm = lambda s: _re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+    page, want = norm(text), norm(address)
+    if want and want in page:
+        return True
+    # street number plus the distinctive word of the street name, for "1200 Industrial Blvd" vs
+    # "1200 Industrial Boulevard" — a suffix spelling difference is not a fabricated address
+    m = _re.match(r"^(\d+)\s+(.*)$", want)
+    if m:
+        num, rest = m.group(1), m.group(2).split()
+        distinctive = max(rest, key=len) if rest else ""
+        if distinctive and _re.search(rf"\b{num}\b[^.]{{0,40}}\b{_re.escape(distinctive)}\b", page):
+            return True
+    return False
+
+
+USER_AGENT = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+
+
 def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
-        min_confidence: float = 0.7) -> dict:
+        min_confidence: float = 0.7, verify_page: bool = True) -> dict:
     """rows: facilities with no address. Returns assertions plus a report."""
     from ._db import assertion
     from ..contract import street_key
@@ -144,6 +181,13 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
             why = f"cited a page search did not visit: {url}"
         elif not isinstance(conf, (int, float)) or conf < min_confidence:
             why = f"confidence {conf} below {min_confidence}"
+        elif verify_page:
+            # the check E1 cannot make from the response alone: does that page really say this?
+            states = _page_states_the_address(url, addr)
+            if states is False:
+                why = f"the cited page does not contain {addr!r}"
+            elif states is None:
+                why = f"could not read the cited page to confirm it: {url}"
         if why:
             rejected.append({"facility_id": row["facility_id"], "why": why})
             continue

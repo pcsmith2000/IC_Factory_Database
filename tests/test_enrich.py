@@ -86,7 +86,9 @@ GOOD = {"found": True, "address": "1200 Industrial Blvd", "city": "Elkhart", "st
 
 
 def test_a_cited_address_is_stored_with_its_evidence():
-    rep = locate.run(ROW, client=_FakeClient(GOOD, ["https://acme.example/contact"]))
+    # page verification is exercised separately below; this pins what gets stored
+    rep = locate.run(ROW, client=_FakeClient(GOOD, ["https://acme.example/contact"]),
+                     verify_page=False)
     assert rep["located"] == 1
     a = rep["assertions"][0]
     assert a["field"] == "address" and a["value"] == "1200 Industrial Blvd"
@@ -96,7 +98,7 @@ def test_a_cited_address_is_stored_with_its_evidence():
 
 def test_the_search_tool_is_actually_offered():
     c = _FakeClient(GOOD, ["https://acme.example/contact"])
-    locate.run(ROW, client=c)
+    locate.run(ROW, client=c, verify_page=False)
     assert c.kw["tools"] == [locate.WEB_SEARCH_TOOL]
 
 
@@ -111,7 +113,7 @@ def test_the_search_tool_is_actually_offered():
 def test_an_uncited_or_unsupported_answer_is_never_stored(reply, visited, why):
     """E1. A recalled address is indistinguishable from a read one once it is in golden_facility,
     so everything that cannot show its source is dropped here."""
-    rep = locate.run(ROW, client=_FakeClient(reply, visited))
+    rep = locate.run(ROW, client=_FakeClient(reply, visited), verify_page=False)
     assert rep["located"] == 0 and rep["assertions"] == []
     assert why in rep["rejected"][0]["why"]
 
@@ -119,7 +121,7 @@ def test_an_uncited_or_unsupported_answer_is_never_stored(reply, visited, why):
 def test_one_failing_facility_does_not_fail_the_stage():
     class Boom(_FakeClient):
         def create(self, **kw): raise RuntimeError("gateway 429")
-    rep = locate.run(ROW, client=Boom(GOOD))
+    rep = locate.run(ROW, client=Boom(GOOD), verify_page=False)
     assert rep["located"] == 0 and "gateway 429" in rep["rejected"][0]["why"]
 
 
@@ -195,3 +197,42 @@ def test_append_records_the_citation_so_provenance_can_be_walked():
     assert ev[3] == "our plant at 1 Main St"              # the sentence on it
     assert ev[5] == "IC-1"
     assert any("fact_assertions" in sql for sql, _ in seen)
+
+
+# --- the check E1 cannot make: does the cited page really say this? --------------------------
+
+def test_page_verification_accepts_an_address_that_is_on_the_page(monkeypatch):
+    monkeypatch.setattr(locate, "_page_states_the_address", lambda u, a, timeout=20: True)
+    rep = locate.run(ROW, client=_FakeClient(GOOD, ["https://acme.example/contact"]))
+    assert rep["located"] == 1
+
+
+def test_page_verification_rejects_an_address_the_page_does_not_contain(monkeypatch):
+    """Search visiting a URL proves the page exists, not that it says what the model claims. A real
+    page with a misattributed address passes every other check."""
+    monkeypatch.setattr(locate, "_page_states_the_address", lambda u, a, timeout=20: False)
+    rep = locate.run(ROW, client=_FakeClient(GOOD, ["https://acme.example/contact"]))
+    assert rep["located"] == 0
+    assert "does not contain" in rep["rejected"][0]["why"]
+
+
+def test_an_unreadable_page_is_not_treated_as_a_lie(monkeypatch):
+    """A page that will not load is not evidence of dishonesty, but it is not evidence of the
+    address either, so the assertion is still withheld — with a reason that says which it is."""
+    monkeypatch.setattr(locate, "_page_states_the_address", lambda u, a, timeout=20: None)
+    rep = locate.run(ROW, client=_FakeClient(GOOD, ["https://acme.example/contact"]))
+    assert rep["located"] == 0 and "could not read" in rep["rejected"][0]["why"]
+
+
+def test_a_street_suffix_spelling_difference_is_not_a_fabrication(monkeypatch):
+    """"1200 Industrial Blvd" against a page saying "1200 Industrial Boulevard" is a formatting
+    difference, not a wrong address."""
+    page = "<p>Our plant is at 1200 Industrial Boulevard, Waco TX.</p>"
+    class R:
+        def read(self, n=None): return page.encode()
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+    import urllib.request
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: R())
+    assert locate._page_states_the_address("https://x.example", "1200 Industrial Blvd") is True
+    assert locate._page_states_the_address("https://x.example", "99 Nowhere Rd") is False
