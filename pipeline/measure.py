@@ -373,6 +373,78 @@ def status_table(control_rows: list[dict], facilities: list[dict], crosswalk: di
     return out
 
 
+def crosswalk_candidates(control_rows: list[dict], facilities: list[dict],
+                         crosswalk: dict[str, str]) -> list[dict]:
+    """Unmatched control rows sharing a first name-token with a facility in the SAME city and state.
+
+    A REVIEW QUEUE, deliberately not a rung. The control writes "Company - Site" and the source
+    writes the site its own way, so no prefix of one is a prefix of the other: "Cavco - Penn West"
+    in Emlenton PA is "CAVCO-EMLENTON", "Mercer Mass Timber - WA" in Spokane is "Mercer", "VBC" in
+    Berwick PA is "VBC BERWICK, LLC". Seventeen such pairs exist against run 22, and about twelve
+    of them are the same plant.
+
+    It was built as a sixth rung first, and measuring it is why it is not one. Scoring the seventeen
+    by hand: 12 right, 5 wrong — Sterling Structural/Sterling Solutions, Clark Pacific/ClarkDietrich,
+    York P-B Truss/York International, Arizona Building Supply/Fleetwood Homes of Arizona, American
+    Builders Supply/A American Container. Roughly a 29% false-positive rate, which recall cannot
+    carry.
+
+    The obvious repair — demand a RARE first token — does not work, and the numbers say so plainly.
+    Document frequency across the 4,204 facility names, right answers marked:
+
+        mmy 1 RIGHT · trussco 1 RIGHT · vbc 2 RIGHT · vantem 2 RIGHT · mercer 2 RIGHT · nvr 2 RIGHT
+        sterling 2 WRONG · clark 3 WRONG · york 3 WRONG · arizona 5 WRONG
+        premier 8 RIGHT · ritz 9 RIGHT · superior 19 RIGHT · cavco 32 RIGHT · american 56 WRONG
+
+    Rarity does not separate them: "sterling" is as rare as "mercer" and wrong, "cavco" is sixteen
+    times commoner and right. Any threshold that sorted this list would be one I had chosen by
+    reading the answers, which is how a metric starts scoring itself.
+
+    What separates them is whether the shared token is the company's name or the town's, and no
+    string test settles that. A human does, once, and the answer becomes an assertion in the
+    crosswalk — where the crosswalk rung already counts it as found, because an assertion is
+    evidence and a coincidence of spelling is not.
+    """
+    r = recall(control_rows, facilities, crosswalk, _detail=True)
+    detail = r.pop("_detail", {})
+    rows = detail.get("rows", [])
+    matched_ids = {fid for _m, fid, _w in detail.get("outcome", []) if fid}
+    df: dict[str, int] = defaultdict(int)
+    for f in facilities:
+        for tok in set(norm_name(f["name"]).split()):
+            df[tok] += 1
+    out = []
+    for c, (_method, fid, _why) in zip(rows, detail.get("outcome", [])):
+        if fid:
+            continue
+        head = norm_name(c.get("name", "")).split()
+        ccity, cst = _norm_city(c.get("city")), (c.get("state") or "").upper()
+        if not head or len(head[0]) < 3 or not ccity or not cst:
+            continue
+        ctok = set(head)
+        for f in facilities:
+            if f["facility_id"] in matched_ids:
+                continue
+            ftok = set(norm_name(f["name"]).split())
+            if head[0] not in ftok:
+                continue
+            if _norm_city(f.get("city") or f.get("city_norm")) != ccity:
+                continue
+            if (f.get("state") or "").upper() != cst:
+                continue
+            out.append({
+                "control_id": c.get("control_id", ""), "control_name": c.get("name", ""),
+                "city": c.get("city", ""), "state": cst,
+                "facility_id": f["facility_id"], "facility_name": f.get("name", ""),
+                "facility_tier": f.get("tier", ""), "head_token": head[0],
+                "head_token_facilities": df[head[0]],
+                "shared_tokens": " ".join(sorted(ctok & ftok)),
+                "verdict": "",
+            })
+            break
+    return out
+
+
 def source_gap(status: list[dict]) -> dict:
     """How much of the shortfall any pipeline work could reach, and how much needs a new source.
 

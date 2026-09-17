@@ -319,6 +319,16 @@ def main(argv=None) -> int:
             print(f"  control status: {have}/{len(status)} on the list "
                   f"({sum(1 for r in status if r['has_address'].startswith('no'))} without a street) "
                   f"-> build/control-status.csv")
+            # Pairs a human can turn into crosswalk assertions. NOT counted as found: measured
+            # against run 22 this rule is ~29% wrong, and no token-rarity threshold separates the
+            # right pairs from the wrong ones without being chosen by reading the answers.
+            cand = measure.crosswalk_candidates(control_rows, facilities, crosswalk.get("control", {}))
+            if cand:
+                with open(out / "crosswalk-candidates.csv", "w", newline="") as fh:
+                    w = csv.DictWriter(fh, fieldnames=list(cand[0]))
+                    w.writeheader(); w.writerows(cand)
+                print(f"  {len(cand)} crosswalk candidates for review (same city+state, shared "
+                      f"first name token) -> build/crosswalk-candidates.csv")
             if ingested is not None:
                 gap = measure.source_gap(status)
                 m["recall"]["source_gap"] = gap

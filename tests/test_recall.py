@@ -226,3 +226,34 @@ def test_the_light_form_is_an_extra_rung_not_a_replacement():
     light_only = [{"facility_id": "IC-2", "name": "The Truss Company - Pasco", "tier": "T1"}]
     assert measure.recall([{"control_id": "1", "name": "The Truss Company"}],
                           light_only, {})["found"] == 1
+
+
+def test_crosswalk_candidates_are_offered_for_review_not_counted_as_found():
+    """The pair "Cavco - Penn West" / "CAVCO-EMLENTON" in one town is a lead, not a match.
+
+    Built as a sixth rung first. Scored by hand against run 22 it was 12 right of 17, and the
+    obvious repair — demand a rare first token — does not work: "sterling" (df 2) is wrong while
+    "cavco" (df 32) is right. Any threshold separating them would have been read off the answers.
+    So it generates candidates and recall does not move until a human asserts one.
+    """
+    facs = [{"facility_id": "IC-1", "name": "CAVCO-EMLENTON", "city": "Emlenton",
+             "state": "PA", "tier": "T2"},
+            {"facility_id": "IC-2", "name": "Lynchburg Ready Mix", "city": "Lynchburg",
+             "state": "VA", "tier": "T2"}]
+    control = [{"control_id": "1", "name": "Cavco - Penn West", "city": "Emlenton", "state": "PA"},
+               {"control_id": "2", "name": "Bankersteel - Lynchburg", "city": "Lynchburg",
+                "state": "VA"}]
+
+    r = measure.recall(control, facs, {})
+    assert r["found"] == 0                       # neither is a match, and neither is counted
+
+    cand = measure.crosswalk_candidates(control, facs, {})
+    assert len(cand) == 1                        # only the shared-token pair is even offered
+    assert cand[0]["control_name"] == "Cavco - Penn West"
+    assert cand[0]["facility_id"] == "IC-1"
+    assert cand[0]["head_token"] == "cavco"
+    assert cand[0]["verdict"] == ""              # a human fills this in; nothing is presumed
+
+    # and once asserted, the crosswalk rung counts it — an assertion is evidence, a shared spelling
+    # is not.
+    assert measure.recall(control, facs, {"1": "IC-1"})["found"] == 1
