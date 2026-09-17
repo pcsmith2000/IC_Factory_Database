@@ -11,6 +11,15 @@ COLUMNS = [
     "country", "source_identifier", "naics_verbatim", "status_verbatim", "status_basis",
     "expiry_date", "lat", "lon", "notes",
 ]
+# Fields a source MAY carry beyond the contract, added 2026-09-17. Optional on read so every
+# archived normalised CSV and the seeds file stay valid; blank by default on write. They are not in
+# VERBATIM, so row_hash — and with it the classifier cache — is unchanged by their presence, and
+# they play no part in the facility signature, so no id moves. Enrichment and GA DCA already carry
+# all three in notes as prose; this is where they become queryable.
+#   website           the plant's or company's site, as the source printed it
+#   sq_ft             plant floor area in square feet, digits only, as the source stated it
+#   operating_status  open | closed | revoked | unknown — a claim the source made, not an inference
+OPTIONAL = ["website", "sq_ft", "operating_status"]
 ADDED = ["city_norm", "street_key", "state", "no_fixed_plant", "contract_version", "row_hash"]
 REQUIRED = COLUMNS[:5]
 STATUS_BASES = {"dated_expiry", "on_current_list", "explicit_status_field", "certified_as_of_date", "none"}
@@ -163,7 +172,7 @@ def normalise(rows: list[dict]) -> list[dict]:
 
 
 def write_rows(path: Path, rows: list[dict], columns: list[str] | None = None) -> None:
-    cols = columns or (COLUMNS + ADDED)
+    cols = columns or (COLUMNS + OPTIONAL + ADDED)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")

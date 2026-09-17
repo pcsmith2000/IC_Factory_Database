@@ -175,7 +175,8 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
         if r["hq_city"] and (r["hq_city"].lower() != r["city"].lower()): notes += f"; directory tags HQ as {r['hq_city']}, {r['hq_state']}"
         out.append(contract_row(source, len(out) + 1, name=r["name"], address=r["street"], city=r["city"],
                                 state=r["state"], zip_code=r["zip"], source_url=URL, source_document=pdfs[0].name,
-                                source_identifier=r["phone"] or r["email"] or r["name"], notes=notes[:200]))
+                                source_identifier=r["phone"] or r["email"] or r["name"], notes=notes[:200],
+                                website=r["web"]))
     require(bool(out), pdfs[0], f"{len(recs)} records read and none had a street in a US state")
     out[0]["notes"] = (out[0]["notes"] + f" | {len(out)} manufacturers of {len(recs)} records; "
                        f"{storage_only} approved for storage/hazardous/utility occupancies only (kept for the classifier); "

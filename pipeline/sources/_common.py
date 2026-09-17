@@ -340,8 +340,12 @@ def split_city_state_zip(s: str) -> tuple[str, str, str]:
 def contract_row(source: dict, position: int, *, name: str, address: str = "", city: str = "", state: str = "",
                  zip_code: str = "", source_url: str, source_document: str, source_identifier: str = "",
                  naics: str = "", status: str = "", status_basis: str | None = None, expiry_date: str = "",
-                 lat: str = "", lon: str = "", notes: str = "", country: str = "US") -> dict:
-    r = {c: "" for c in COLUMNS}
+                 lat: str = "", lon: str = "", notes: str = "", country: str = "US",
+                 website: str = "", sq_ft: str = "", operating_status: str = "") -> dict:
+    from ..contract import OPTIONAL
+    r = {c: "" for c in COLUMNS + OPTIONAL}
+    r.update(website=(website or "").strip(), sq_ft="".join(ch for ch in (sq_ft or "") if ch.isdigit()),
+             operating_status=(operating_status or "").strip().lower())
     r.update(source_id=source["id"], source_url=source_url, source_document=source_document,
              retrieved_date=date.today().isoformat(), row_position=str(position),
              name_verbatim=name.strip(), address_verbatim=address.strip(), city_verbatim=city.strip(),

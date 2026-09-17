@@ -21,7 +21,7 @@ from __future__ import annotations
 import importlib, json
 from datetime import date
 from pathlib import Path
-from .contract import COLUMNS, write_rows
+from .contract import COLUMNS, OPTIONAL, write_rows
 from inspect import signature as _sig_of
 from . import archive as _archive
 from . import ai_enabled
@@ -122,10 +122,10 @@ def pull_source(source: dict, cfg: dict, out_dir: Path, archive_dir: Path) -> Pa
         r.setdefault("retrieved_date", date.today().isoformat())
         r.setdefault("country", "US")
         r.setdefault("status_basis", source.get("status_basis", "none"))
-        for c in COLUMNS:
+        for c in COLUMNS + OPTIONAL:
             r.setdefault(c, "")
     out = out_dir / f"{sid}.csv"
-    write_rows(out, rows, COLUMNS)
+    write_rows(out, rows, COLUMNS + OPTIONAL)     # optional fields ride along; blank when a source has none
     pull = {"source_id": sid, "rows": len(rows), "retrieved": date.today().isoformat(),
             "method": source.get("method"), "ai_extraction": bool(source.get("ai_extraction")),
             "acquire_mode": mode, "source_of_bytes": note or "live fetch"}
