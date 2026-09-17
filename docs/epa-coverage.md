@@ -218,3 +218,40 @@ Banker Steel is the concrete argument for it.
 | **Candidates** | **13,117** of 99,883 (13%) |
 
 Against 2,922 (2.9%) before either option.
+
+## What the widening cost, and how it was found — 2026-09-17
+
+The warning above turned out to be the important sentence in this document:
+
+> Option 2 or 3 also changes what G5 is measuring: the seeds were drawn from the current candidate
+> pool, and widening the pool widens the population the gate is meant to represent.
+
+That is exactly what happened. `3219` and `3212` hold the truss and panel plants this project
+wants, and they also hold every wood window, door, millwork shop, plywood mill, veneer plant and
+OSB line in the country. The classifier admitted them — correctly, under the prompt as written,
+because v1.1 defined IC as "building systems or components … for assembly into buildings" and a
+window is literally a component assembled into a building.
+
+G5 could not see it. The 60 seeds contain nothing resembling a plywood mill, so the gate reported
+precision 96-100% while the release carried:
+
+| | v1.1 | after the building-products boundary (v1.2+) |
+|---|---|---|
+| admitted names matching known non-IC brands and product words | 9.5% | 0.2-0.3% |
+| admitted rows sitting in building-product NAICS families | 26.1% | 4.0-4.5% |
+
+One in four admitted rows was a building-products plant, across two independent estimators, on a
+run every gate passed.
+
+Three things came out of it, and they are the general lesson rather than a note about NAICS:
+
+1. **The prompt, not the candidate rule, was the defect.** Widening the pool was right — it is how
+   Pacific Wall Systems and the other named cases were recovered. What was missing was a statement
+   of where a building *product* ends and a building *system* begins. `prompts/CLASSIFIER-PROMPT.md`
+   v1.2 added it; v1.3 and v1.4 corrected it for over-applying to plants with dull records.
+2. **A gate scored on seeds cannot police a pool the seeds do not represent.** Every prompt change
+   is now diffed row by row with `python -m pipeline.promptdiff`, which splits drops into the
+   product families a change is aimed at and the core families where a drop is a loss.
+3. **`pipeline/audit.py` reports both estimators on every run.** A keyword floor can only ever be a
+   lower bound and moves when the list stops matching; the NAICS bracket needs no list. They are
+   worth having together precisely because they can disagree.
