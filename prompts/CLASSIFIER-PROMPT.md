@@ -4,6 +4,15 @@ This file is the system prompt for Layer 3. Its SHA-256 is recorded in every run
 in the release tag. Changing it is a versioned change that gate G5 must re-pass on the seeded
 set before the new version is used for a release.
 
+v1.6 — 2026-09-17. Fixes the precedence bug v1.5 introduced. v1.5 wrote the mechanical test as
+three unordered bullets with the hedge test SECOND and the building-product test third, and a
+reader taking them in order hits the hedge first: "likely a metal building plant" on a 332311
+record went to UNCERTAIN instead of IC. Read live off run 35258504603 at batch 15 of 132,
+UNCERTAIN was projecting ~722 against a 365 baseline while IC sat at ~2,050 against 1,969 — rows
+moving one step out of NOT-IC rather than two. The three tests are now explicitly in precedence
+order with the building-product test first, and a hedge about WHICH building product no longer
+demotes a row that has already named one.
+
 v1.5 — 2026-09-17. Enforces v1.4's own rule, which the model was not following, and closes the
 loophole that let it out. Measured on run 35243029519's cache, without reference to the control
 list: 2,266 EPA rows carry a core code and 607 of them (27%) were labelled NOT-IC. Of those 607,
@@ -161,14 +170,16 @@ cannot name what else it would be, you are not looking at a NOT-IC record.
 **On a core code, this is a mechanical test, not a judgement call.** Write the reason first, then
 read it back:
 
-- Does it name a product that is plainly not a building system — food, pipe, staffing,
-  recreational vehicles, carports, sheds, machinery? Then NOT-IC.
-- Does it hedge — "unclear", "likely", "probably", "possibly", "without specifics", "may be"?
-  Then the label is UNCERTAIN. Not NOT-IC. A hedge is the definition of uncertain, and the review
-  queue exists so a human can settle it.
-- Does it name a building system or component anyway — "metal building products", "steel
-  buildings", "truss and building supply", "engineered products"? Then it is IC, and the reason
-  you just wrote is the evidence for it.
+These are in PRECEDENCE ORDER. Take the first that applies and stop.
+
+1. Does it name a building system or component — "metal building products", "steel buildings",
+   "truss and building supply", "engineered products"? Then **IC**, and the reason you just wrote
+   is the evidence for it. A hedge about WHICH building product does not weaken this: "likely a
+   metal building plant" on a 332311 record is still a metal building plant.
+2. Does it name a product that is plainly not a building system — food, pipe, staffing,
+   recreational vehicles, carports, sheds, machinery, fasteners? Then **NOT-IC**.
+3. Does it hedge with no product named at all — "unclear", "record too thin", "without
+   specifics"? Then **UNCERTAIN**, and a human settles it in the review queue.
 
 ## The NAICS code is evidence, not proof
 
