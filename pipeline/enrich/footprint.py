@@ -100,8 +100,10 @@ def measure(points: list[dict], release: str = DEFAULT_RELEASE,
     for f, ps in by_file.items():
         where = " OR ".join(f"(bbox.xmin BETWEEN {p['lon']-box_deg} AND {p['lon']+box_deg} AND "
                             f"bbox.ymin BETWEEN {p['lat']-box_deg} AND {p['lat']+box_deg})" for p in ps)
-        con.execute(f"CREATE OR REPLACE TEMP VIEW src AS "
-                    f"SELECT * FROM read_parquet('{f}') WHERE {where}")
+        # A TEMP TABLE, not a view: a view is lazy, so every point below would re-read the whole
+        # parquet file from S3 and the cost would be O(points x file reads) instead of O(files).
+        con.execute(f"CREATE OR REPLACE TEMP TABLE src AS "
+                    f"SELECT geometry, bbox, id, height FROM read_parquet('{f}') WHERE {where}")
         for p in ps:
             cands = con.execute(
                 "SELECT ST_AsText(geometry), ST_Distance(geometry, ST_Point(?, ?)), id, height "

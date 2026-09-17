@@ -1,0 +1,69 @@
+# One enrichment stage, as its own job. Called once per stage by enrich.yml so that each stage is
+# separately visible, separately timed, and separately re-runnable from the Actions UI — a runner
+# failure in stage 11 does not cost stages 9 and 10, and re-running stage 11 after an Overture
+# release does not re-spend model tokens in stage 9.
+#
+# Stages hand work to each other as artifacts rather than as a shared workspace: every stage
+# downloads what the earlier ones wrote, writes its own, and uploads that. `load` therefore sees
+# every stage's assertions without any stage needing to know about the others.
+name: enrich-stage
+
+on:
+  workflow_call:
+    inputs:
+      stage:      { required: true,  type: string }
+      branch_id:  { required: true,  type: string }
+      run_key:    { required: true,  type: string }
+      args:       { required: false, type: string, default: "" }
+      enabled:    { required: false, type: boolean, default: true }
+
+jobs:
+  stage:
+    if: inputs.enabled
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres]" duckdb
+
+      - name: Collect what earlier stages wrote
+        uses: actions/download-artifact@v4
+        continue-on-error: true          # the first stage has nothing to collect
+        with:
+          pattern: enrich-${{ inputs.run_key }}-*
+          merge-multiple: true
+          path: enrich
+
+      - name: Point at this run's Neon branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          BRANCH_ID: ${{ inputs.branch_id }}
+        run: |
+          python - <<'EOF' >> "$GITHUB_ENV"
+          import os, sys
+          sys.path.insert(0, ".github/scripts")
+          from neon_branch import call, project_id
+          uri = call(f"/projects/{project_id()}/connection_uri"
+                     f"?branch_id={os.environ['BRANCH_ID']}"
+                     "&database_name=neondb&role_name=neondb_owner")["uri"]
+          print(f"DATABASE_URL={uri}")
+          EOF
+
+      - name: Run stage ${{ inputs.stage }}
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.IC_DB_GEOCODIO_API_KEY }}
+        run: python -m pipeline.enrich.run "${{ inputs.stage }}" --out enrich ${{ inputs.args }}
+
+      - name: Publish what this stage wrote
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enrich-${{ inputs.run_key }}-${{ inputs.stage }}
+          path: enrich/${{ inputs.stage }}*
+          if-no-files-found: warn
+          retention-days: 14
