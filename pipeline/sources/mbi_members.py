@@ -40,7 +40,18 @@ BASE = "https://members.modular.org"
 # union on the detail slug.
 DIRECTORIES = ("member-directory", "manufacturerdirect")
 LETTER_URL = BASE + "/{directory}/FindStartsWith?term={letter}"
-LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+# Digits included because a sweep that assumes A-Z is the bug this repo found twice in one day —
+# sipa published one page of five, mbma one screen of an infinite scroll. GrowthZone does answer
+# ?term=0 .. ?term=9 and MBI does have members there: 33 Holdings, 360Connect, 3M ISD, 4Ward
+# Solutions Group, 720 Modular.
+#
+# Every one of them is a non-manufacturer tier — Associate Materials, Associate Services,
+# Contractor/Builder, Owner/Developer — so today this adds 20 GETs and exactly zero rows. It is in
+# anyway: the cost is 20 requests, and the alternative is a roster that silently omits the first
+# digit-named modular manufacturer to join. ?term=# returns the whole 724-member directory in one
+# response and is NOT used, because the tier filter below is what keeps this source to plants and
+# a single unfiltered fetch makes it easier to lose that.
+LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 # One card per member. Non-greedy to the next card so a missing field cannot borrow the next
 # member's address — the failure mode that would silently attach a real street to the wrong plant.
@@ -70,7 +81,7 @@ def _text(pattern: str, blob: str) -> str:
 
 
 def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
-    """52 GETs: 26 letters across each of the two directories, archived under distinct names."""
+    """72 GETs: 36 starting characters across each of the two directories, archived distinctly."""
     return [http_get(LETTER_URL.format(directory=d, letter=ch), archive_dir, f"{d}-{ch}.html")
             for d in DIRECTORIES for ch in LETTERS]
 
