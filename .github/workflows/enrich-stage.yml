@@ -61,6 +61,7 @@ jobs:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
           GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
+          SECRETS_JSON: ${{ toJSON(secrets) }}
         run: |
           set -u
           need=""
@@ -69,16 +70,28 @@ jobs:
             geocode) [ -n "${GEOCODIO_API_KEY:-}" ] || need="GEOCODIO_API_KEY | IC_DB_GEOCODIO_API_KEY | GEOCODIO_KEY" ;;
           esac
           if [ -n "$need" ]; then
+            # The secrets context lists what this repository actually has. Actions masks every
+            # value in logs, and only the names are read here — enough to tell "the secret is
+            # missing" from "the secret is spelled differently", which is the whole ambiguity.
+            AVAILABLE=$(printf '%s' "$SECRETS_JSON" | jq -r 'keys | join(" ")' 2>/dev/null || echo "(could not read the secrets context)")
             {
               echo "### Stage ${{ inputs.stage }}: missing credential"
               echo ""
-              echo "Looked for a repository secret under each of these names and found none set:"
+              echo "Looked for a secret under each of these names and found none set:"
               echo ""
               echo '```'
               echo "$need"
               echo '```'
               echo ""
-              echo "Add the secret under one of those names, or re-run with this stage disabled."
+              echo "Secret names this repository does have:"
+              echo ""
+              echo '```'
+              echo "$AVAILABLE"
+              echo '```'
+              echo ""
+              echo "If the credential is there under another name, add that spelling to"
+              echo ".github/workflows/enrich-stage.yml. If this list is empty, the secret is"
+              echo "scoped to a GitHub Environment and the job needs an environment: key."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "::error::stage ${{ inputs.stage }} needs one of: $need"
             exit 1
