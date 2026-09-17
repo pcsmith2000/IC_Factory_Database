@@ -79,3 +79,27 @@ def test_bare_source_rank_still_resolves_operator_and_lookup():
     assert golden._rank({"source_id": "operator", "source_class": "operator", "basis": "none"}, order) == 0
     assert golden._rank({"source_id": "lookup", "source_class": "lookup", "basis": "none"}, order) == 1
     assert golden._rank({"source_id": "epa_frs", "source_class": "A", "basis": "none"}, order) == 2
+
+
+# ------------------------------------------------- the audit, per product category
+def test_audit_locates_false_positives_by_product_type():
+    """The floor as one number says "something is wrong"; per category it says where.
+    On run 35174109197 panel carried 23.6% and hud_code 0.2% — same prompt, same model."""
+    from pipeline import audit
+    names = ["MASONITE MOBILE", "FLORIDA PLYWOODS, INC.", "NORTH BAY PLYWOOD",
+             "CLAYTON HOMES, INC.", "CUSTOM ROOF TRUSSES"]
+    types = ["panel", "panel", "panel", "hud_code", "truss_component"]
+    r = audit.scan(names, types)
+    assert r["by_product_type"]["panel"]["flagged"] == 3
+    assert r["by_product_type"]["panel"]["rate"] == 1.0
+    assert r["by_product_type"]["hud_code"]["rate"] == 0.0
+    assert r["by_product_type"]["truss_component"]["rate"] == 0.0
+    assert "concentrated in: panel" in audit.line(r)
+
+
+def test_audit_without_product_types_still_works():
+    """Callers that only have names keep the old behaviour."""
+    from pipeline import audit
+    r = audit.scan(["MASONITE MOBILE", "ACME MODULAR"])
+    assert r["flagged"] == 1 and r["by_product_type"] == {}
+    assert "concentrated in" not in audit.line(r)

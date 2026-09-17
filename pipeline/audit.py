@@ -43,17 +43,29 @@ IC_SIGNALS = re.compile(
 _COMPILED = [(cat, re.compile(pat, re.I)) for cat, pat in NOT_IC_PATTERNS]
 
 
-def scan(names: list[str]) -> dict:
+def scan(names: list[str], product_types: list[str] | None = None) -> dict:
     """Audit a list of admitted establishment names.
 
     Returns the floor count, the breakdown by category, the ambiguous names held back, and a
     sample of each so a reviewer can check the patterns rather than trust them.
+
+    Pass product_types alongside to get the floor per IC product category, which is where this
+    stops being a scalar and starts being a diagnosis. On run 35174109197 the 9.0% floor was not
+    spread evenly at all: panel 23.6% and other 19.1% carried almost all of it, while hud_code
+    (0.2%), metal_building (0.0%), precast (0.0%), volumetric (1.2%) and truss_component (1.5%)
+    were clean. That is the wood-products sense of "panel" — a sheet of material — colliding with
+    the IC sense, a wall panel, and it says which part of the prompt to fix.
     """
     by_cat: dict[str, list[str]] = {}
     ambiguous: list[str] = []
-    for nm in names:
+    pt_total: dict[str, int] = {}
+    pt_flagged: dict[str, int] = {}
+    types = product_types or [None] * len(names)
+    for nm, pt in zip(names, types):
         if not nm:
             continue
+        if pt:
+            pt_total[pt] = pt_total.get(pt, 0) + 1
         hit = next((cat for cat, rx in _COMPILED if rx.search(nm)), None)
         if not hit:
             continue
@@ -61,9 +73,15 @@ def scan(names: list[str]) -> dict:
             ambiguous.append(nm)
         else:
             by_cat.setdefault(hit, []).append(nm)
+            if pt:
+                pt_flagged[pt] = pt_flagged.get(pt, 0) + 1
     flagged = sum(len(v) for v in by_cat.values())
     total = len([n for n in names if n])
+    by_product = {pt: {"admitted": n, "flagged": pt_flagged.get(pt, 0),
+                       "rate": round(pt_flagged.get(pt, 0) / n, 4) if n else 0.0}
+                  for pt, n in sorted(pt_total.items(), key=lambda x: -x[1])}
     return {
+        "by_product_type": by_product,
         "admitted": total,
         "flagged": flagged,
         "floor_fp_rate": round(flagged / total, 4) if total else 0.0,
@@ -79,6 +97,10 @@ def line(res: dict) -> str:
     if not res.get("admitted"):
         return "  precision audit: nothing admitted by the classifier — nothing to audit"
     cats = ", ".join(f"{k} {v}" for k, v in res["by_category"].items()) or "none"
-    return (f"  precision audit: {res['flagged']} of {res['admitted']} admitted names are known "
-            f"non-IC manufacturing = {res['floor_fp_rate']:.1%} FLOOR on false positives "
-            f"({cats}); {res['ambiguous_held_back']} ambiguous held back")
+    out = (f"  precision audit: {res['flagged']} of {res['admitted']} admitted names are known "
+           f"non-IC manufacturing = {res['floor_fp_rate']:.1%} FLOOR on false positives "
+           f"({cats}); {res['ambiguous_held_back']} ambiguous held back")
+    worst = [f"{pt} {d['rate']:.0%}" for pt, d in res.get("by_product_type", {}).items() if d["rate"] >= 0.05]
+    if worst:
+        out += f"\n    concentrated in: {', '.join(worst)}"
+    return out
