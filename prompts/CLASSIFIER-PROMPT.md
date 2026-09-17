@@ -176,6 +176,16 @@ A core code does not prove IC — the core codes contain sheds, signs and projec
 code does not disprove it — the record may be coded to a parent or neighbouring industry. Weigh
 the code with the name and address; where they disagree, the name usually carries more signal.
 
+**"Components, not complete buildings" is not a reason.** It is a scope error, and it appears in
+21 core-code drops as nearly a stock phrase: "Metal products shop produces components not complete
+buildings" (332311, Trachte Inc. — a metal building manufacturer), "Wood products likely
+engineered structural components" (321214, Weyerhaeuser). This database is building systems AND
+components. Two of the four core codes ARE component codes — 321213 engineered wood members and
+321214 trusses — and a truss is a component by definition. A plant that makes wall panels, floor
+cassettes, trusses, joists, structural members or bathroom pods is in scope precisely because
+those are components. What is out of scope is a different PRODUCT — fasteners, connectors, HVAC
+parts, extrusions, machine parts — not a smaller unit of assembly.
+
 **A trading word is not a different product.** "Supply", "Products", "Dealer", "Distributors",
 "Contractors" and "Industries" describe how a company sells or how it was incorporated, not what
 comes off its line. On a core code they override nothing: "Huskey Truss & Building Supply" on

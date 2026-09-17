@@ -16,7 +16,13 @@ labelled NOT-IC under v1.4. Classifying those 607 by what their own stated reaso
 | names an IC product anyway: "metal building products", "truss and building supply" | 113 | that reason is the evidence FOR it |
 | names a genuinely different business: staffing, food, pipe, RVs, carports | 83 | correctly dropped; v1.5 changes nothing |
 
-Union of the first three: **226 rows, 37% of the 607.**
+| says it makes components rather than whole buildings | 21 | a scope error — two core codes ARE component codes |
+
+Union of the first three: **226 rows, 37% of the 607.** The component bucket overlaps them and is
+small, but it is the one that bears hardest on the control list, which is 38% structural
+components; of the 21, Trachte (a metal building manufacturer, twice) and Weyerhaeuser (engineered
+structural members) are plainly wrong, while Chicago Tube & Iron, Hydro Extrusion, Air Vent and
+J.I.G. Machine Works are plainly right and turn on the product, not the word "component".
 
 ## The prediction
 
