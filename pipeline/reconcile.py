@@ -99,6 +99,39 @@ def _attach_addressless(clusters: dict[str, list[dict]], methods: dict[str, str]
         clusters[target].extend(clusters.pop(sig))
         methods.pop(sig, None)
         folded += 1
+
+    # Second pass: the lead that carries no city OR state either. The pass above needs all three
+    # to agree and so cannot see these at all — they key on ('', '', name) and `all(key)` drops
+    # them. They are a real duplicate, not a separate plant: run 22 published "Falcon Structures"
+    # as a T0 lead beside IC-93515 FALCON STRUCTURES in Manor TX, and "Neopod Systems LLC" beside
+    # IC-94144 in New Braunfels, and the control list counted both as plants we hold only as a
+    # name. 6 of its 17 lead-only matches are this shape.
+    #
+    # The name alone is doing all the work here, so it must be distinctive and unique NATIONALLY:
+    # exactly one addressed cluster anywhere carries that normalised name, and the name is two
+    # tokens or eight characters — the same distinctiveness bar `_prefix_match` applies, and for
+    # the same reason, because norm_name reduces "The Truss Company" to "truss".
+    national: dict[str, list[str]] = defaultdict(list)
+    for sig, members in clusters.items():
+        if methods.get(sig) in ("street_key", "entity+street"):
+            n = norm_name(members[0].get("name_verbatim", ""))
+            if n:
+                national[n].append(sig)
+    for sig in [s for s, m in methods.items() if m == "name+city"]:
+        f = clusters[sig][0]
+        if f.get("state") or f.get("city_norm"):
+            continue                      # the pass above already had its chance at these
+        n = norm_name(f.get("name_verbatim", ""))
+        if not n or (" " not in n and len(n) < 8):
+            continue                      # one generic token would fold half the industry
+        targets = national.get(n, [])
+        if len(targets) != 1:
+            continue                      # two plants of that name: we cannot tell which
+        for r in clusters[sig]:
+            r["attached_from"] = "name-only"
+        clusters[targets[0]].extend(clusters.pop(sig))
+        methods.pop(sig, None)
+        folded += 1
     return folded
 
 

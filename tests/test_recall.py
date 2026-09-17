@@ -297,3 +297,44 @@ def test_reconcile_keeps_the_other_names_as_aliases():
     assert f["n_sources"] == 2
     assert f["name"] == "PREMIER BUILDING SYSTEMS"
     assert f["aliases"] == "Premier SIPS"          # kept, not discarded
+
+
+def test_a_lead_with_no_location_at_all_folds_into_its_one_addressed_plant():
+    """The first pass needs state, city and name to agree, so it cannot see these leads at all.
+
+    fl_bcis lists manufacturers approved to sell into Florida and carries no address, so each of
+    its rows became a T0 lead beside the addressed plant of the same name: "Falcon Structures"
+    beside FALCON STRUCTURES in Manor TX, "Neopod Systems LLC" beside NEOPOD SYSTEMS LLC in New
+    Braunfels. 108 facilities across run 22.
+
+    The name alone carries the merge, so it must be unique NATIONALLY and distinctive — the same
+    two-token-or-eight-character bar _prefix_match uses, because norm_name reduces "The Truss
+    Company" to "truss".
+    """
+    from pipeline import reconcile
+    from pathlib import Path
+    import tempfile
+    rows = [{"source_id": "epa_frs", "name_verbatim": "FALCON STRUCTURES", "state": "TX",
+             "city_norm": "manor", "street_key": "3120 fm 973", "row_hash": "a"},
+            {"source_id": "fl_bcis", "name_verbatim": "Falcon Structures", "state": "",
+             "city_norm": "", "street_key": "", "row_hash": "b"}]
+    with tempfile.TemporaryDirectory() as d:
+        out = reconcile.run(rows, Path(d) / "ids.json")
+    assert len(out["facilities"]) == 1              # one plant, not a plant and a ghost of it
+    assert out["facilities"][0]["tier"] != "T0"     # and it keeps the street
+
+
+def test_the_merge_refuses_a_name_that_two_addressed_plants_share():
+    """Two candidates means we cannot tell which plant the roster meant."""
+    from pipeline import reconcile
+    from pathlib import Path
+    import tempfile
+    rows = [{"source_id": "epa_frs", "name_verbatim": "UNITED STRUCTURES OF AMERICA", "state": "TN",
+             "city_norm": "portland", "street_key": "214 foutain head rd", "row_hash": "a"},
+            {"source_id": "epa_frs", "name_verbatim": "UNITED STRUCTURES OF AMERICA", "state": "TX",
+             "city_norm": "houston", "street_key": "1912 buschong", "row_hash": "b"},
+            {"source_id": "fl_bcis", "name_verbatim": "United Structures of America", "state": "",
+             "city_norm": "", "street_key": "", "row_hash": "c"}]
+    with tempfile.TemporaryDirectory() as d:
+        out = reconcile.run(rows, Path(d) / "ids.json")
+    assert len(out["facilities"]) == 3              # the lead stays separate rather than guess
