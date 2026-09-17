@@ -262,7 +262,18 @@ sources:
   status_basis: on_current_list
   traps:
   - The truss segment is invisible to every regulator source; this is its only roster.
-  status: queued
+  - MEMBER DIRECTORY IS LOGIN-GATED (probed 2026-09-17). /member-directory and every /member-directory/<slug> return 'Restricted
+    Page'; search engines have them indexed but an anonymous fetch does not.
+  - sitemap.xml is public and lists 3,536 URLs, of which exactly ONE is a member-directory page — the roster is genuinely
+    not published.
+  - 'The TMAT directory (/tmat-directory, 73 component manufacturers) IS public, but the detail pages carry only an <h1> name:
+    no address, no city, no state. Names alone would add T0 leads and lift recall without locating a plant.'
+  - Chapter pages (/chapter/<slug>, 28 of them incl. Colorado Truss Manufacturers, TMAT, Wisconsin Truss Manufacturers) are
+    public but list no members — chapter info and site nav only.
+  - 91 of the 241 ADL control rows are trusses and structural components. An SBCA membership is the single highest-value unlock
+    available to this project.
+  status: blocked
+  url: https://www.sbcacomponents.com/member-directory
 - id: pci_certified
   name: PCI certified plants (republished in Ascent magazine)
   class: D
