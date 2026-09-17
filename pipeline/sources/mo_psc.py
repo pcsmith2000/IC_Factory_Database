@@ -33,7 +33,7 @@ HEADER = ("Registration", "Business", "Address", "City", "State", "Zip", "Phone"
 # The header groups as printed: two of them are two words, and a boundary belongs between the LAST
 # word of the left group and the FIRST word of the right — midpoints between first words put the
 # Registration/Name boundary inside the name, and "ADVENTURE HOMES LLC" read as "HOMES LLC".
-GROUPS = (("Registration", "#"), ("Business", "Name"), ("Address",), ("City",), ("State",), ("Zip",), ("Phone",))
+REGNO = re.compile(r"^\d{2}-\d{6}$|^\d{6}$|^\d{2}[A-Z]{2,4}-\d{4}$")     # 10-000021 · 843701 · 21MFM-0001
 SEGMENT = {"MOD": "modular", "HUD": "HUD-code manufactured homes"}
 
 
@@ -47,13 +47,12 @@ def _columns(lines: list[list[dict]]) -> list[float]:
     for line in lines:
         words = [w["text"] for w in line]
         if all(h in words for h in HEADER):
-            def x1_of(word):  return next(w["x1"] for w in line if w["text"] == word)
-            def x0_of(word):  return next(w["x0"] for w in line if w["text"] == word)
-            bounds = []
-            for left, right in zip(GROUPS, GROUPS[1:]):
-                last = left[-1] if left[-1] in words else left[0]      # "#" may print as part of "Registration#"
-                bounds.append((x1_of(last) + x0_of(right[0])) / 2)
-            return bounds
+            xs = [next(w["x0"] for w in line if w["text"] == h) for h in HEADER]
+            # Midpoints between header first-words place Address, City, State, Zip and Phone
+            # correctly. They do NOT place the Registration/Name boundary — "Registration #" and
+            # "Business Name" are two words each and the name data begins left of "Business" —
+            # so that split is made on the registration number's own format, not on x.
+            return [(a + b) / 2 for a, b in zip(xs, xs[1:])]
     raise LayoutChanged("no 'Registration # Business Name Address City State Zip Phone' header — the PSC table changed")
 
 
@@ -88,7 +87,10 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
             cols = {i: [] for i in range(len(HEADER))}
             for w in line:
                 cols[_col(w["x0"], bounds)].append(w["text"])
-            reg, name, addr, city, st, zipc, phone = (" ".join(cols[i]) for i in range(7))
+            left = cols[0] + cols[1]                    # Registration + Name, re-split by format
+            reg = left[0] if left and REGNO.match(left[0]) else ""
+            name = " ".join(left[1:] if reg else left)
+            addr, city, st, zipc, phone = (" ".join(cols[i]) for i in range(2, 7))
             if not name or not re.fullmatch(r"[A-Z]{2}", st.strip()) or not re.match(r"\d{5}", zipc.strip()):
                 bad += 1               # header, footer, page number, or a wrapped fragment
                 continue
