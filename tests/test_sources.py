@@ -203,3 +203,76 @@ def test_mi_lara_blocks_put_the_street_in_address_and_the_company_in_name(monkey
     for r in rows:
         assert not r["name_verbatim"][0].isdigit(), r["name_verbatim"]
         assert "PO Box" not in r["address_verbatim"]
+
+
+def test_or_bcd_reads_addr1_and_drops_third_party_inspectors(tmp_path: Path):
+    """Oregon's licence file names its address lines addr1..addr4. A lookup for a column containing
+    "address" or "street" matched none of them, so all 164 rows arrived address-less and were read
+    as a source that publishes no address at all. It publishes one for 145 of them."""
+    from pipeline.sources import or_bcd
+    f = tmp_path / "vhbr-cuaq.csv"
+    f.write_text(
+        "licnbr,profession,lictype,full_name,dba,addr1,addr2,addr3,addr4,city,state,zipcode,county,lic_status,expiration_date\n"
+        'PFC667,Prefab,PFC-Prefab Components,BOOTZ MANUFACTURING INC,,25 S 41ST ST,,,PHOENIX AZ  85034,PHOENIX,AZ,85034,MARICOPA,Active,12/31/2026\n'
+        'PFS1,Prefab,PFS-Prefab Structures,MAPLE MODULAR INC,,PO BOX 723,1308 N MAPLE ST,,,ANYTOWN,IL,60000,X,Active,12/31/2026\n'
+        'PFS2,Prefab,PFS-Prefab Structures,PINES BUILDING CO,PINES NW,ATTN BRIAN HALL,606 N PINES RD STE 202,,,SPOKANE,WA,99206,X,Active,12/31/2026\n'
+        'PFS3,Prefab,PFS-Prefab Structures,BOXKILL LLC,,PO BOX 2217,,,,ALBANY,OR,97321,X,Active,12/31/2026\n'
+        'PFS4,Prefab,PFS-Prefab Structures,CANADA PREFAB LTD,,117 INDUSTRIAL ROAD 2,INVERMERE  BC V0A 1K5,,,,,,,Active,12/31/2026\n'
+        'TPI9,Prefab,TPI-Third Party Insp & Plan Review,XPRODTEST,,123 REVIEW WAY,,,SALEM OR 97301,SALEM,OR,97301,X,Active,12/31/2026\n')
+    rows = or_bcd.parse([f], SRC("or_bcd"))
+
+    assert [r["name_verbatim"] for r in rows] == [
+        "BOOTZ MANUFACTURING INC", "MAPLE MODULAR INC", "PINES BUILDING CO", "BOXKILL LLC", "CANADA PREFAB LTD"]
+
+    assert rows[0]["address_verbatim"] == "25 S 41ST ST"          # plain addr1
+    assert rows[0]["source_identifier"] == "PFC667"               # licnbr was being dropped too
+    assert rows[0]["expiry_date"] == "2026-12-31" and rows[0]["status_basis"] == "dated_expiry"
+
+    assert rows[1]["address_verbatim"] == "1308 N MAPLE ST"       # addr1 is a PO box
+    assert "PO BOX 723" in rows[1]["notes"]
+    assert rows[2]["address_verbatim"] == "606 N PINES RD STE 202"  # addr1 is an ATTN line
+    assert "dba=PINES NW" in rows[2]["notes"]
+
+    # a PO box is never promoted into the field that gets geocoded
+    assert rows[3]["address_verbatim"] == ""
+    assert rows[4]["country"] == "" and rows[0]["country"] == "US"   # blank state marks a non-US registrant
+    for r in rows:
+        assert "PO BOX" not in r["address_verbatim"].upper()
+
+
+def test_fl_bcis_splits_on_record_anchors_across_concatenated_pages(tmp_path: Path):
+    """A saved BCIS listing concatenates all 48 result pages, each with its own grdReport table and
+    its own _ctl2.. numbering, and the grid nests tables inside its cells. Taking the largest table
+    returned 37 rows of run-together page text; splitting on the name anchors returns every record."""
+    from pipeline.sources import fl_bcis
+    row = lambda ctl, name, typ, num, site, to, status: f'''
+      <tr><td><a id="grdReport__ctl{ctl}_hlnkOrgName" href="x">{name}</a>
+        <br><b>Org Type </b>{typ}
+        <br><b>FBC Organization Number </b>{num}
+        <br><b>Website </b><a href="{site}" target="new">{site}</a></td>
+        <td><span id="grdReport__ctl{ctl}_lblValidFromDate">01/01/2004</span>
+            <span id="grdReport__ctl{ctl}_lblValidToDate">{to}</span></td>
+        <td><span id="grdReport__ctl{ctl}_lblOrgStatus">{status}</span></td></tr>'''
+    page = lambda rows: f'<table id="grdReport"><tbody>{rows}</tbody></table>'
+    f = tmp_path / "fl_bcis_org_list.html"
+    f.write_text("<html><body>"
+        + page(row(2, "A &amp; A Sheet Metal Products", "Modular Unit Manufacturer", "MFT3685",
+                   "http://www.securallproducts.com/", "05/14/2028", "Approved")
+             + row(3, "Certifier Co", "Product Certification Agency", "CER1", "http://c.example", "", "Approved"))
+        # second page reuses _ctl2, which is why record anchors rather than table indexes are used
+        + page(row(2, "Affinity Building Systems, LLC.", "Modular Unit Manufacturer", "MFT8164",
+                   "http://affinity.example", "03/19/2027", "Approved")
+             + row(3, "Advanced Mfg SC", "Manufacturer Additional Facilities", "MAF11637",
+                   "http://adv.example", "05/23/2020", "Expired"))
+        + "</body></html>")
+    rows = fl_bcis.parse([f], SRC("fl_bcis"))
+
+    assert [r["name_verbatim"] for r in rows] == [
+        "A & A Sheet Metal Products", "Affinity Building Systems, LLC.", "Advanced Mfg SC"]
+    assert rows[0]["source_identifier"] == "MFT3685"
+    assert rows[0]["expiry_date"] == "2028-05-14" and rows[0]["status_basis"] == "dated_expiry"
+    assert rows[0]["status_verbatim"] == "Approved"
+    assert "website=http://www.securallproducts.com/" in rows[0]["notes"]
+    assert rows[2]["source_identifier"] == "MAF11637"      # additional facilities are plants too
+    assert all(not r["address_verbatim"] for r in rows)    # the listing publishes no address
+    assert all("no plant address published" in r["notes"] for r in rows)
