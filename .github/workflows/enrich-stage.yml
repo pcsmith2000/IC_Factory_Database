@@ -52,6 +52,39 @@ jobs:
           print(f"DATABASE_URL={uri}")
           EOF
 
+      # A stage that needs a credential says so before it does any work, and names every spelling
+      # it looked under. Secret names differ across this repo (CENSUS_KEY, IC_DB_ANTHROPIC_API_KEY,
+      # NEON_API_KEY), and "GEOCODIO_API_KEY is not set" three minutes into a run does not say
+      # whether the secret is absent or merely spelled differently.
+      - name: Check the credentials this stage needs
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
+        run: |
+          set -u
+          need=""
+          case "${{ inputs.stage }}" in
+            locate)  [ -n "${AI_GATEWAY_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || need="AI_GATEWAY_API_KEY | IC_DB_AI_GATEWAY_API_KEY | VERCEL_AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY | IC_DB_ANTHROPIC_API_KEY)" ;;
+            geocode) [ -n "${GEOCODIO_API_KEY:-}" ] || need="GEOCODIO_API_KEY | IC_DB_GEOCODIO_API_KEY | GEOCODIO_KEY" ;;
+          esac
+          if [ -n "$need" ]; then
+            {
+              echo "### Stage ${{ inputs.stage }}: missing credential"
+              echo ""
+              echo "Looked for a repository secret under each of these names and found none set:"
+              echo ""
+              echo '```'
+              echo "$need"
+              echo '```'
+              echo ""
+              echo "Add the secret under one of those names, or re-run with this stage disabled."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::stage ${{ inputs.stage }} needs one of: $need"
+            exit 1
+          fi
+          echo "credentials present for stage ${{ inputs.stage }}"
+
       - name: Run stage ${{ inputs.stage }}
         # Each credential accepts the canonical name or this repo's IC_DB_ naming, as run.yml does:
         # an unset secret reads as an empty string, so `||` falls through to the next spelling.
