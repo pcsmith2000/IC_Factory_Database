@@ -153,42 +153,68 @@ ON CONFLICT (assertion_id, release_tag) DO NOTHING
 """
 
 
-def append(db, assertions: list[dict], release_tag: str) -> dict:
+def _rows_for(a: dict, release_tag: str, today: str) -> tuple[tuple, tuple]:
+    """The ref_source_row and fact_assertions tuples for one assertion.
+
+    source_url means a URL. A located address cites a page, so it has one; a footprint cites an
+    Overture release and building id and a geocode cites a parcel dataset, and neither is a URL.
+    Putting those in source_url would make the column mean "whatever the evidence was", and
+    anything reading it as a link would be wrong.
+    """
+    ev = (a.get("evidence") or "")
+    url, quote = (ev.partition(" :: ")[0], ev.partition(" :: ")[2]) if ev.startswith("http") else ("", ev)
+    when = a.get("retrieved_date") or today
+    conf = None if a.get("confidence") in ("", None) else float(a["confidence"])
+    aid = f"{a['source_id']}|{a['facility_id']}|{a['field']}|{a['row_hash']}"
+    return ((a["row_hash"], a["source_id"], url, quote, when, a["facility_id"],
+             a.get("basis", "none"), conf, release_tag),
+            (aid, release_tag, a["facility_id"], a["source_id"], a["field"], when,
+             a["value"], a.get("basis", "none"), 0, a["row_hash"], conf,
+             a.get("source_class", "enrichment")))
+
+
+def _multi(sql_head: str, tail: str, rows: list[tuple]) -> tuple[str, list]:
+    """One INSERT ... VALUES (..),(..) with numbered placeholders, plus its flat parameter list."""
+    width, params, groups, n = len(rows[0]), [], [], 0
+    for r in rows:
+        groups.append("(" + ",".join(f"${n + j + 1}" for j in range(width)) + ")")
+        params.extend(r)
+        n += width
+    return f"{sql_head} VALUES {','.join(groups)} {tail}", params
+
+
+def append(db, assertions: list[dict], release_tag: str, chunk: int = 250) -> dict:
     """Append enrichment assertions. ON CONFLICT DO NOTHING plus the evidence-derived row_hash is
     what makes a re-run a no-op rather than a duplicate.
 
+    Batched for the same reason the golden rebuild is: NeonHttp does one HTTPS round trip per
+    query(), and a row at a time meant two per assertion. A 2,000 assertion geocode run is 4,000
+    requests that way, which is minutes of latency and nothing else.
+
     Reports rows actually inserted, not rows offered. A second run over unchanged evidence offers
-    the same assertions and inserts none of them, and a summary that called that "30 appended"
+    the same assertions and inserts none of them, and a summary that called that "2,000 appended"
     would be reporting the opposite of the property the design depends on.
     """
     from datetime import date
-    inserted = skipped = 0
-    for a in assertions:
-        # source_url means a URL. A located address cites a page, so it has one; a footprint cites
-        # an Overture release and building id and a geocode cites a parcel dataset, and neither is
-        # a URL. Putting those in source_url would make the column mean "whatever the evidence was"
-        # and anything reading it as a link would be wrong.
-        ev = (a.get("evidence") or "")
-        if ev.startswith("http"):
-            url, _, quote = ev.partition(" :: ")
-        else:
-            url, quote = "", ev
-        db.query(APPEND_EVIDENCE, (a["row_hash"], a["source_id"], url, quote,
-                                   a.get("retrieved_date") or date.today().isoformat(),
-                                   a["facility_id"], a.get("basis", "none"),
-                                   None if a.get("confidence") in ("", None) else float(a["confidence"]),
-                                   release_tag))
-        aid = f"{a['source_id']}|{a['facility_id']}|{a['field']}|{a['row_hash']}"
-        db.query(APPEND_ASSERTION, (aid, release_tag, a["facility_id"], a["source_id"], a["field"],
-                                    a.get("retrieved_date") or date.today().isoformat(),
-                                    a["value"], a.get("basis", "none"), 0, a["row_hash"],
-                                    None if a.get("confidence") in ("", None) else float(a["confidence"]),
-                                    a.get("source_class", "enrichment")))
-        if getattr(db, "last_row_count", 1):
-            inserted += 1
-        else:
-            skipped += 1
-    return {"offered": len(assertions), "inserted": inserted, "already_present": skipped}
+    today = date.today().isoformat()
+    inserted = 0
+    for i in range(0, len(assertions), chunk):
+        batch = [_rows_for(a, release_tag, today) for a in assertions[i:i + chunk]]
+        sql, params = _multi(
+            "INSERT INTO ref_source_row (row_hash, source_key, source_url, source_document,"
+            " retrieved_date, facility_key, match_method, match_confidence, last_seen_release)",
+            "ON CONFLICT (row_hash) DO UPDATE SET last_seen_release = EXCLUDED.last_seen_release",
+            [b[0] for b in batch])
+        db.query(sql, params)
+        sql, params = _multi(
+            "INSERT INTO fact_assertions (assertion_id, release_tag, facility_key, source_key,"
+            " field_key, date_key, value, basis, site_visit, row_hash, confidence, source_class)",
+            "ON CONFLICT (assertion_id, release_tag) DO NOTHING",
+            [b[1] for b in batch])
+        db.query(sql, params)
+        inserted += getattr(db, "last_row_count", 0) or 0
+    return {"offered": len(assertions), "inserted": inserted,
+            "already_present": len(assertions) - inserted}
 
 
 # ---------------------------------------------------------------- stage 13: rebuilding golden

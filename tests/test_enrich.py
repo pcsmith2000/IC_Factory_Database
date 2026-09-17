@@ -720,3 +720,39 @@ def test_a_gateway_http_error_carries_its_status_so_a_spent_key_is_recognised():
     assert _exhausted(GatewayError(402, '{"error":"budget exceeded"}'))
     assert _exhausted(GatewayError(404, "no such model"))
     assert not _exhausted(GatewayError(500, "upstream blew up"))
+
+
+def test_append_batches_instead_of_two_round_trips_per_assertion():
+    """NeonHttp does one HTTPS request per query(), so a row at a time meant two per assertion — a
+    2,000-assertion geocode run is 4,000 requests, which is minutes of latency and nothing else."""
+    from pipeline.enrich import _db
+    calls = []
+
+    class FakeDB:
+        last_row_count = 250
+        def query(self, sql, params=()):
+            calls.append((sql, params)); return []
+
+    rows = [_db.assertion(f"IC-{i}", "lat_lon", "1.0,2.0", source_id="geocode:geocodio",
+                          basis="rooftop", evidence="geocodio:parcel") for i in range(600)]
+    rep = _db.append(FakeDB(), rows, "rel-1", chunk=250)
+    assert len(calls) == 6, f"3 chunks x 2 tables, got {len(calls)} queries"
+    assert rep["offered"] == 600
+    # Postgres caps a statement at 65535 parameters; 250 x 12 leaves plenty of room
+    assert max(len(p) for _, p in calls) < 65535
+
+
+def test_append_reports_rows_inserted_not_rows_offered():
+    """A second run over unchanged evidence offers the same assertions and inserts none of them.
+    Calling that '2,000 appended' would report the opposite of the property the design rests on."""
+    from pipeline.enrich import _db
+
+    class AlreadyThere:
+        last_row_count = 0
+        def query(self, sql, params=()):
+            return []
+
+    rows = [_db.assertion(f"IC-{i}", "lat_lon", "1.0,2.0", source_id="geocode:geocodio",
+                          basis="rooftop", evidence="geocodio:parcel") for i in range(10)]
+    rep = _db.append(AlreadyThere(), rows, "rel-1")
+    assert rep == {"offered": 10, "inserted": 0, "already_present": 10}
