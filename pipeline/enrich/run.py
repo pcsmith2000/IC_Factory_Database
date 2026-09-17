@@ -35,7 +35,11 @@ DEFAULT_GEOCODE_LIMIT = 2000        # the free tier is 2500/day and is shared wi
 # share of the 512 files at roughly a minute each, which overruns the job long before it runs out
 # of facilities. The ceiling is on files for that reason, and the remainder is left for the next
 # run — every coordinate is still measured eventually, and no run is open-ended.
-DEFAULT_FOOTPRINT_LIMIT = 40
+# Sized against the 35 minute stage timeout, not against appetite: a file takes roughly a minute,
+# so a ceiling of 40 could never be reached before the timeout killed the job — the timeout would
+# become the real bound and the deferral path, which is what lets the next run continue cleanly,
+# would never run. 20 leaves headroom for the slowest files and for stage startup.
+DEFAULT_FOOTPRINT_LIMIT = 20
 
 
 def _summary(title: str, rows: list[tuple[str, object]]) -> str:

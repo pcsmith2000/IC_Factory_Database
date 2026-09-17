@@ -305,3 +305,15 @@ def test_non_url_evidence_does_not_end_up_in_the_url_column():
     _db.append(FakeDB(), [addr], "rel-1")
     ev = next(p for sql, p in seen if "ref_source_row" in sql)
     assert ev[2] == "https://x.example/c" and ev[3] == "our plant at 1 Main St"
+
+
+def test_the_footprint_ceiling_fits_inside_the_stage_timeout():
+    """A ceiling the job cannot reach is not a ceiling: the timeout becomes the real bound and the
+    deferral path, which is what lets the next run continue, never runs. Roughly a minute per file
+    against a 35 minute stage timeout."""
+    import re, pathlib
+    from pipeline.enrich.run import DEFAULT_FOOTPRINT_LIMIT
+    yml = pathlib.Path(".github/workflows/enrich-stage.yml").read_text()
+    timeout = int(re.search(r"timeout-minutes:\s*(\d+)", yml).group(1))
+    assert DEFAULT_FOOTPRINT_LIMIT < timeout * 0.75, (
+        f"ceiling {DEFAULT_FOOTPRINT_LIMIT} files vs {timeout} minute timeout leaves no headroom")
