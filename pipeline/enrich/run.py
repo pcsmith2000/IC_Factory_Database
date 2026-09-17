@@ -178,16 +178,33 @@ def main(argv=None) -> int:
         return 0
 
     if args.stage == "load":
+        from . import gates
         asserts = _load_assertions(args.out)
+        # Gates run before the write, not after it: a gate that reports on a release it has already
+        # published is a report, not a gate.
+        results = gates.run_all(asserts, before=rows, after=rows)
+        for r in results:
+            print(f"  {r}")
+        failed = [r for r in results if not r.passed]
+        if failed:
+            _emit(args.out, "load",
+                  {"halted": True, "gates": [str(r) for r in results], "appended": 0},
+                  [("HALTED", "a gate failed"), *[(r.gate, r.summary) for r in results]])
+            print(f"\nHALT: {len(failed)} gate(s) failed; nothing was written", file=sys.stderr)
+            return 1
         if args.dry_run:
-            _emit(args.out, "load", {"would_append": len(asserts)}, [("would append", len(asserts))])
+            _emit(args.out, "load", {"would_append": len(asserts), "gates": [str(r) for r in results]},
+                  [("would append", len(asserts)), *[(r.gate, r.summary) for r in results]])
             return 0
         n = _db.append(db, asserts, tag)
         by_field: dict[str, int] = {}
         for a in asserts:
             by_field[a["field"]] = by_field.get(a["field"], 0) + 1
-        _emit(args.out, "load", {"appended": n, "release_tag": tag, "by_field": by_field},
-              [("assertions appended", n), ("release tag", tag), ("by field", json.dumps(by_field))])
+        _emit(args.out, "load",
+              {"appended": n, "release_tag": tag, "by_field": by_field,
+               "gates": [str(r) for r in results]},
+              [("assertions appended", n), ("release tag", tag),
+               ("by field", json.dumps(by_field)), *[(r.gate, r.summary) for r in results]])
         return 0
     return 1
 

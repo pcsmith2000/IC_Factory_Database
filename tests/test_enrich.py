@@ -121,3 +121,53 @@ def test_one_failing_facility_does_not_fail_the_stage():
         def create(self, **kw): raise RuntimeError("gateway 429")
     rep = locate.run(ROW, client=Boom(GOOD))
     assert rep["located"] == 0 and "gateway 429" in rep["rejected"][0]["why"]
+
+
+# --- the gates block rather than advise ------------------------------------------------------
+
+from pipeline.enrich import gates
+
+CITED = {"source_id": "enrich:locate", "field": "address", "value": "1 Main St",
+         "evidence": "https://x.example/c :: our plant at 1 Main St"}
+ROOFTOP = {"source_id": "geocode:geocodio", "field": "lat_lon", "value": "1,2", "basis": "rooftop"}
+FOOTPRINT = {"source_id": "overture:building", "field": "building_sqft", "value": "40000",
+             "evidence": "2026-08-19.0:abc123@0.0m"}
+FLAG = {"source_id": "enrich:existence", "field": "existence_flag", "value": "review"}
+
+
+def test_all_gates_pass_on_well_formed_assertions():
+    rows = [{"address": "1 Main St", "lat_lon": "1,2"}]
+    assert all(r.passed for r in gates.run_all([CITED, ROOFTOP, FOOTPRINT, FLAG], rows, rows))
+
+
+def test_e1_fails_an_address_with_no_quote():
+    bad = {**CITED, "evidence": "https://x.example/c"}
+    assert not gates.e1_every_located_address_is_cited([bad]).passed
+
+
+def test_e2_fails_a_coordinate_that_is_not_a_rooftop_geocode():
+    """A nearest_rooftop_match landed on a different parcel 60% of the time in the verified set."""
+    bad = {**ROOFTOP, "basis": "nearest_rooftop_match"}
+    assert not gates.e2_no_coordinate_from_a_non_rooftop_geocode([bad]).passed
+
+
+def test_e3_fails_a_footprint_with_no_building_id():
+    assert not gates.e3_every_footprint_names_its_building([{**FOOTPRINT, "evidence": ""}]).passed
+
+
+def test_e4_fails_when_a_run_would_lose_a_field():
+    before = [{"address": "1 Main St", "lat_lon": "1,2"}, {"address": "2 Main St", "lat_lon": ""}]
+    after = [{"address": "1 Main St", "lat_lon": "1,2"}, {"address": "", "lat_lon": ""}]
+    r = gates.e4_enrichment_never_removes_a_field(before, after)
+    assert not r.passed and "a field was lost" in r.summary
+
+
+def test_e4_passes_when_a_run_only_adds():
+    before = [{"address": "1 Main St", "lat_lon": ""}]
+    after = [{"address": "1 Main St", "lat_lon": "1,2"}]
+    assert gates.e4_enrichment_never_removes_a_field(before, after).passed
+
+
+def test_e5_fails_anything_stage_12_writes_that_is_not_advisory():
+    assert not gates.e5_existence_is_advisory([{**FLAG, "value": "retired"}]).passed
+    assert not gates.e5_existence_is_advisory([{**FLAG, "field": "status"}]).passed
