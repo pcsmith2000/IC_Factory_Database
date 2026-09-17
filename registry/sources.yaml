@@ -288,6 +288,7 @@ sources:
     public but list no members — chapter info and site nav only.
   - 91 of the 241 ADL control rows are trusses and structural components. An SBCA membership is the single highest-value unlock
     available to this project.
+  - 'Probed 2026-09-17 for a substitute truss-plant roster: MiTek (mii.com/locator, /find-a-fabricator) and Alpine ITW have no public fabricator locator — every path 404s to the site nav — and sfia.com and sbcindustry.com do not complete a TLS handshake through the proxy. The plate suppliers know every truss plant in the country and publish none of it; FPL (South) and EPA 321214 remain the truss coverage.'
   status: blocked
   url: https://www.sbcacomponents.com/member-directory
 - id: pci_certified
@@ -561,6 +562,20 @@ sources:
   - 'The PDF filename carries a date and the previous URL 404s within months: discover the links from Manufacturer_Information, never pin them. Verified 2026-09-17: the 2-10-25 link recorded that morning was already gone; 6-2-26 and 9-15-25 are current.'
   - 'Read by COLUMN from the header, with each boundary at the midpoint between the last word of one header group and the first of the next. Midpoints between first words put the Registration/Name boundary inside the name and truncated "ADVENTURE HOMES LLC" to "HOMES LLC"; header x0 alone shifted every column one to the left and the HUD list yielded nothing.'
   status: active
+- id: sji_members
+  name: Steel Joist Institute member companies and plant locations
+  class: B
+  method: download
+  acquire: blob-only
+  needs_classify: false
+  carries:
+  - plant_city
+  status_basis: on_current_list
+  url: https://steeljoist.org/wp-content/uploads/2026/05/SJI_Member_Companies.pdf
+  traps:
+  - 'Found 2026-09-17 while looking for rosters behind the 10 never-ingested Steel Structural Components control rows. One PDF page, two columns, company name then one plant per line as "City, State[, Country]" — no streets. About 20 US plants: Vulcraft (Fort Payne AL, St. Joe IN, Norfolk NE, Chemung NY, Florence SC, Grapeland TX, Brigham City UT), Canam Steel (Buckeye AZ, Jacksonville FL, Point of Rocks MD, Washington MO), New Millennium (Hope AR, Lake City FL, Butler IN, Fallon NV, Salem VA), Valley Joist + Deck (Fort Payne AL, Fernley NV), Gooder-Henrichsen (Chicago Heights IL), Jodec (Groveland FL); the rest Mexico, Canada and Puerto Rico. Every one is a joist and deck plant, so needs_classify is false. Yield: T0 leads at city level that EPA FRS rows (Nucor, Canam) should corroborate into T2 — a corroboration source, not a recall one; none of the control rows in this segment is a joist maker. Parse by column x-position, the same way as ga_dca.'
+  - 'The URL carries the upload month and will move; discover it from https://steeljoist.org/sji-members/ ("Download a list of member companies") rather than pin it.'
+  status: queued
 - id: forest_products_locator
   name: Secondary Forest Products Locator (forestproductslocator.org)
   class: C
