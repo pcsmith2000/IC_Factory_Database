@@ -271,8 +271,25 @@ def main(argv=None) -> int:
         return 0
     hb.beat("8_warehouse")
     g1 = results[0].details
+    # reconcile.TIER_RULES has always said "T0 never counted", and nothing implemented it: T0 is a
+    # cluster with no street address on any of its rows, and release v1.0.0+reg.22389a4 published
+    # 949 of them — 936 from fl_bcis alone, which registers a MANUFACTURER for Florida sale rather
+    # than siting a plant, so "Patriot Homes of Alabama" appears as a Florida facility with no
+    # address. They are real leads and stay in the warehouse, tiered and queryable; they are not
+    # facilities and no longer inflate the headline. published_count is now what the tier rule
+    # always said it was, with the dedupe correction applied to the located population.
+    t0 = sum(1 for f in facilities if f.get("tier") == "T0")
+    # Not all T0 are equally blind: some carry city+state and are locatable to a town, just not to
+    # a street ("84 Lumber Door Shop - Bessemer"). The tier rule counts none of them, which is the
+    # documented contract, but the split is recorded so the choice can be revisited with a number
+    # rather than a guess — 511 of the 1,457 T0 in v1.0.0+reg.22389a4 had a city.
+    t0_with_city = sum(1 for f in facilities if f.get("tier") == "T0" and f.get("city_norm"))
+    located = len(facilities) - t0
+    dup_removed = len(facilities) - g1.get("corrected_count", len(facilities))
     record["release"] = {
-        "published_count": g1.get("corrected_count", len(facilities)), "raw_count": len(facilities),
+        "published_count": max(located - dup_removed, 0), "raw_count": len(facilities),
+        "located_count": located, "t0_leads": t0, "t0_leads_with_city": t0_with_city,
+        "dedupe_removed": dup_removed,
         "tag": f"v{__version__}+reg.{record['registry_version']}+ids.{sha256_file(ROOT / 'id_registry.json')[:8]}+ctl.{(record['control_sha'] or 'none')[:8]}+surv.{sha256_file(ROOT / 'registry' / 'survivorship.yaml')[:8]}"
                + (f"+prompt.{cls_meta['prompt_hash']}+model.{cls_meta['model']}" if cls_meta else ""),
         "finished": datetime.now(timezone.utc).isoformat(),
@@ -291,7 +308,10 @@ def main(argv=None) -> int:
     except warehouse.WarehouseNotImplemented as e:
         return halt("layer 8", str(e))
     _write_record(record, rec_dir)
-    print(f"RELEASE {record['release']['tag']} · {record['release']['published_count']} facilities")
+    r8 = record["release"]
+    print(f"RELEASE {r8['tag']} · {r8['published_count']} facilities "
+          f"({r8['raw_count']} clusters − {r8['t0_leads']} T0 leads with no address "
+          f"− {r8['dedupe_removed']} duplicates)")
     hb.done(phase="released", release_tag=record["release"]["tag"],
             published_count=record["release"]["published_count"],
             gates=[{"id": g.get("id"), "passed": g.get("passed")} for g in record.get("gates", [])])
