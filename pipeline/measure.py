@@ -157,10 +157,20 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
             continue
         (crowded if by_name.get(norm_name(c.get("name", ""))) else misses).append(c.get("name", ""))
     hits = len(matched)
-    return {"in_scope": len(in_scope), "found": hits, "recall": hits / len(in_scope),
-            "tested": True, "by_method": dict(by_method), "untriaged_assumed_in_scope": untriaged,
-            "company_present_plant_missing": len(crowded),
-            "missed": sorted(misses)[:50], "n_missed": len(misses) + len(crowded)}
+    out = {"in_scope": len(in_scope), "found": hits, "recall": hits / len(in_scope),
+           "tested": True, "by_method": dict(by_method), "untriaged_assumed_in_scope": untriaged,
+           "company_present_plant_missing": len(crowded),
+           "missed": sorted(misses)[:50], "n_missed": len(misses) + len(crowded)}
+    # Recall on the sealed quarter, reported beside the headline. Everything that changes the
+    # pipeline is diagnosed off `split: dev` rows; a prompt tuned until the rows it was shown come
+    # back is not measuring anything. `sealed` is the number to quote, `recall` the number to work
+    # against, and the gap between them is how much of the work was fitting.
+    for name, want in (("dev", "dev"), ("sealed", "sealed")):
+        idx = [i for i, c in enumerate(in_scope) if (c.get("split") or "dev").strip() == want]
+        if idx:
+            found = sum(1 for i in idx if i in matched)
+            out[name] = {"in_scope": len(idx), "found": found, "recall": found / len(idx)}
+    return out
 
 
 def coverage_and_bias(facilities: list[dict], frame: dict[str, int], band: tuple[float, float], min_share: float) -> dict:

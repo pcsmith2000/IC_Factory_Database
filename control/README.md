@@ -32,6 +32,18 @@ A copy lives in the blob at `ic-control/adl-control-2026-09-17.csv` — delibera
 `ic-sources/`, which is the only prefix Layer 1 reads. The control set is held out; putting it
 where an acquirer could pick it up would make G4 a formality.
 
+`split` — **`sealed` on 38 rows, `dev` on 203.** The target is 80% recall, and the fastest way
+to hit a recall target is to look at what you missed and go get exactly that. Everything the
+pipeline changes is therefore diagnosed off `dev` rows only; `sealed` rows are never inspected,
+named, or used to choose a source or a prompt. Layer 7 reports recall on each. `sealed` is the
+number to quote, `recall` the number to work against, and the gap between them measures how much
+of the work was fitting rather than finding.
+
+The split is deterministic — `sha256("ic-factory-control-split-v1" + normalised name) % 4 == 0` —
+and keyed on the COMPANY, not the row, so Builders FirstSource's 21 plants do not straddle the
+seal. 84 rows were forced to `dev` because they had already been inspected by hand while
+diagnosing the classifier, and a row you have read is not a test any more.
+
 `control.sha256` — SHA-256 of `control-triaged.csv`. Gate G4 fails if it does not match.
 Re-triage is a logged edit: change the file, update the checksum in the same commit, say why.
 

@@ -36,8 +36,8 @@ def check(cfg: dict, fix: bool = False) -> list[str]:
     # ---- control-triaged.csv
     p = ROOT / cfg["control"]["path"]
     hdr, rows = _read(p)
-    need = ["control_id", "name", "city", "state", "triage", "reason"]
-    if hdr[:6] != need:
+    need = ["control_id", "name", "city", "state", "triage", "reason", "split"]
+    if hdr[:7] != need:
         problems.append(f"{p.name}: columns must be {need}, got {hdr}")
     ids = [r["control_id"] for r in rows]
     if len(ids) != len(set(ids)):
@@ -53,6 +53,9 @@ def check(cfg: dict, fix: bool = False) -> list[str]:
             problems.append(f"{p.name} line {i}: blank name")
         if r.get("state") and not STATE.match(r["state"].strip().upper()):
             problems.append(f"{p.name} line {i}: state {r['state']!r} is not a 2-letter code")
+    for i, r in enumerate(rows, 2):
+        if (r.get("split") or "").strip() not in {"dev", "sealed"}:
+            problems.append(f"{p.name} line {i}: split {r.get('split')!r} must be dev or sealed")
     in_scope = sum(1 for r in rows if not (r.get("triage") or "").strip()
                    or r["triage"].strip().startswith("in_scope"))
     untriaged = sum(1 for r in rows if not (r.get("triage") or "").strip())
