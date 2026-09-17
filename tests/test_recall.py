@@ -124,3 +124,21 @@ def test_the_located_split_is_reported_for_dev_and_sealed_too():
     r = measure.recall(control, facs, {})
     assert r["sealed"]["recall_located"] == 1.0
     assert r["dev"]["recall_located"] == 0.0
+
+
+def test_internal_spacing_is_not_evidence_of_a_different_company():
+    """The control writes "Bankersteel" and "SR Sloan"; the sources write "Banker Steel" and
+    "S R Sloan". Squashing is safe at the exact rungs because the whole name must still match."""
+    facs = [{"facility_id": "IC-1", "name": "Banker Steel", "state": "FL", "tier": "T1"},
+            {"facility_id": "IC-2", "name": "S R Sloan", "state": "VA", "tier": "T1"}]
+    control = [{"control_id": "1", "name": "Bankersteel", "state": "FL"},
+               {"control_id": "2", "name": "SR Sloan", "state": "VA"}]
+    r = measure.recall(control, facs, {})
+    assert r["found"] == 2 and r["by_method"] == {"name+state": 2}
+
+
+def test_the_prefix_rung_still_needs_whole_words():
+    """Squashing must not leak into the prefix rung, or "Blue" prefixes "Bluebird Panels"."""
+    facs = [{"facility_id": "IC-1", "name": "Bluebird Panel Systems", "state": "OH", "tier": "T1"}]
+    control = [{"control_id": "1", "name": "Blue Bird", "state": "OH"}]
+    assert measure.recall(control, facs, {})["found"] == 0

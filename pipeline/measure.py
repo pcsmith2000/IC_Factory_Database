@@ -28,6 +28,18 @@ def _prefix_match(a: str, b: str) -> bool:
     return long.startswith(short) and long[len(short)] == " "
 
 
+def _key(name: str) -> str:
+    """Normalised name with the spaces taken out, for the EXACT rungs only.
+
+    Companies and the people listing them disagree about internal spacing, and the disagreement is
+    not evidence of anything: the control list writes "Bankersteel" and "SR Sloan" where the
+    sources write "Banker Steel" and "S R Sloan". Squashing is safe at this rung because the whole
+    name still has to match — it is a spelling normalisation, not a loosening. The prefix rung
+    keeps its spaces, because a whole-word prefix is exactly what it is testing.
+    """
+    return norm_name(name).replace(" ", "")
+
+
 def _norm_city(city: str | None) -> str:
     return " ".join(re.sub(r"[^a-z0-9 ]", " ", (city or "").lower()).split())
 
@@ -89,23 +101,24 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
     by_name: dict[str, list] = defaultdict(list)
     fac_names: list[tuple] = []
     for f in facilities:
-        nm, st = norm_name(f["name"]), (f.get("state") or "").upper()
+        nm, st = _key(f["name"]), (f.get("state") or "").upper()
         # Layer 4 emits city_norm; dim_facility and hand-built fixtures carry city. Take whichever
         # is there — reading only "city" silently disabled this rung for every real run.
         by_name_city[(nm, _norm_city(f.get("city") or f.get("city_norm")), st)].append(f["facility_id"])
         by_name_state[(nm, st)].append(f["facility_id"])
         by_name[nm].append(f["facility_id"])
-        fac_names.append((f["facility_id"], nm, st))
+        # Spaced, deliberately: the prefix rung tests a whole-WORD prefix, which needs the words.
+        fac_names.append((f["facility_id"], norm_name(f["name"]), st))
 
     def key_city(c):
-        return (norm_name(c.get("name", "")), _norm_city(c.get("city")), (c.get("state") or "").upper())
+        return (_key(c.get("name", "")), _norm_city(c.get("city")), (c.get("state") or "").upper())
 
     def key_state(c):
-        return (norm_name(c.get("name", "")), (c.get("state") or "").upper())
+        return (_key(c.get("name", "")), (c.get("state") or "").upper())
 
     RUNGS = [("name+city", by_name_city, key_city, lambda c: bool((c.get("city") or "").strip())),
              ("name+state", by_name_state, key_state, lambda c: bool((c.get("state") or "").strip())),
-             ("name", by_name, lambda c: norm_name(c.get("name", "")), lambda c: bool(norm_name(c.get("name", ""))))]
+             ("name", by_name, lambda c: _key(c.get("name", "")), lambda c: bool(_key(c.get("name", ""))))]
 
     taken: set[str] = set()
     matched: dict[int, str] = {}
@@ -156,7 +169,7 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
     for i, c in enumerate(in_scope):
         if i in matched:
             continue
-        (crowded if by_name.get(norm_name(c.get("name", ""))) else misses).append(c.get("name", ""))
+        (crowded if by_name.get(_key(c.get("name", ""))) else misses).append(c.get("name", ""))
     hits = len(matched)
     # A T0 row is a LEAD: a name the pipeline knows about with no location established. Counting
     # one as a found plant lets a source of bare names lift recall while the database gains nothing
