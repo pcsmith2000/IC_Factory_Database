@@ -138,6 +138,39 @@ earlier figure came from 19 coordinates of which 18 resolved. n=19 was simply to
 distribution is heavily right-skewed, so a small sample's median says little. The scale figure is
 the one to trust, and it is the reason the building selection changed from nearest to largest.
 
+Re-measuring the same 790 facilities with the largest-in-range rule, changing nothing else:
+
+    resolved to a different building       98 of 790   12%
+      their median sqft                 4,726  ->  13,558
+    under 10,000 sqft                     226  ->     187
+    median over all 790                28,689  ->  33,610
+
+So the diagnosis was right and partial. 12% of rows were measuring the wrong building and those
+were mostly sheds; fixing them moved the overall median by about 5,000 sqft. But 187 facilities
+still have no building over 10,000 sqft within 30m of their rooftop coordinate, which the nearest
+-vs-largest bug does not explain. Either those operations really are small, or the coordinate is on
+the wrong parcel entirely, and stage 11 cannot tell which.
+
+**That makes stage 12's 10,000 sqft threshold suspect.** It was calibrated against 30 hand-verified
+rows and it now fires on 24% of everything measured. A threshold that flags a quarter of the
+database is describing the database, not an anomaly in it, and it should be re-derived from these
+790 before existence flags are trusted.
+
+### Re-measuring does not reliably supersede the old measurement
+
+After the re-run, golden holds 211 footprints under 10,000 sqft where the new measurement produced
+187. The 24 difference are rows where the *superseded* value won.
+
+The cause is the survivorship tie-break. Both measurements are assertions with the same source, the
+same basis and the same `retrieved_date`, because enrichment stamps a date and both ran on the same
+day. `tie: most_recent` cannot order them, so which one wins is arbitrary.
+
+This matters for any field that is a **measurement** rather than an observation: re-running an
+improved method should replace the earlier answer, and right now it merely adds a second one. The
+fix is a design decision, not a patch — either enrichment assertions carry an ordering finer than a
+date, or a measurement assertion is keyed on (source, facility, field, release) and updated in
+place, which trades away strict append-only for the field where append-only is not what is wanted.
+
 ## Stage 9 was reach-limited, and search is what lifted it
 
 Without a search tool the model cannot browse. It can only extract an address from a page that is
