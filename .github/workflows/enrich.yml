@@ -1,0 +1,153 @@
+# Enrichment — stages 9 to 12, after the layers 1-8 release has loaded (docs/enrichment.md).
+#
+# Deterministic by construction: the Overture release, the model and the sample seed are pinned,
+# and every assertion's row_hash is taken over the evidence that produced it, so a second run over
+# unchanged inputs writes nothing new (ON CONFLICT DO NOTHING). Re-running is always safe.
+#
+# The AI is bounded and only in one stage: `locate` attempts at most `ai_limit` facilities per run
+# (default 200), searches at most 4 times per facility, and caps tokens per call. Everything after
+# it is deterministic. Setting ai_limit to 0 skips the AI entirely and the rest of the run is
+# unchanged — that is the switch to reach for if a run must be reproducible to the token.
+#
+# Nothing here touches the release database. Each run works on its own Neon branch and deletes it
+# at the end, so a layers 1-8 release publishing mid-run cannot collide and a failed run leaves
+# the release exactly as it found it.
+name: enrich
+
+on:
+  workflow_dispatch:
+    inputs:
+      stages:
+        description: "which stages to run, comma separated"
+        default: "plan,locate,geocode,footprint,existence,load"
+      ai_limit:
+        description: "max facilities the AI stage may attempt (0 disables the AI entirely)"
+        default: "200"
+      sample:
+        description: "work on a seeded stratified subset of this size (blank = all)"
+        default: ""
+      dry_run:
+        description: "plan every stage, make no external call and write nothing"
+        type: boolean
+        default: false
+      keep_branch:
+        description: "keep the Neon branch after the run, to inspect what it wrote"
+        type: boolean
+        default: false
+  workflow_run:
+    workflows: ["pipeline-run"]
+    types: [completed]
+
+concurrency:
+  group: enrich
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PY: "3.12"
+  OUT: enrich
+
+jobs:
+  # ---------------------------------------------------------------- its own database
+  branch:
+    # a scheduled pipeline-run that failed has nothing worth enriching
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      branch_id: ${{ steps.make.outputs.branch_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - id: make
+        name: Create this run's Neon branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: python .github/scripts/neon_branch.py create "enrich-${{ github.run_id }}"
+
+  # ---------------------------------------------------------------- one job per stage
+  stages:
+    needs: branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres]" duckdb
+
+      - name: Point at this run's branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          python - <<'EOF' >> "$GITHUB_ENV"
+          import os, sys
+          sys.path.insert(0, ".github/scripts")
+          from neon_branch import call, project_id
+          pid = project_id()
+          uri = call(f"/projects/{pid}/connection_uri?branch_id=${{ needs.branch.outputs.branch_id }}"
+                     "&database_name=neondb&role_name=neondb_owner")["uri"]
+          print(f"DATABASE_URL={uri}")
+          EOF
+
+      # Each stage is its own step so a failure names the stage, and so the log and the job
+      # summary read as one process after the next rather than one opaque command.
+      - name: 9 plan
+        if: contains(inputs.stages, 'plan') || github.event_name == 'workflow_run'
+        run: python -m pipeline.enrich.run plan --out "$OUT" ${{ inputs.sample && format('--sample {0}', inputs.sample) || '' }} --limit "${{ inputs.ai_limit || 200 }}"
+
+      - name: 9 locate — bounded AI, cited answers only
+        if: (contains(inputs.stages, 'locate') || github.event_name == 'workflow_run') && (inputs.ai_limit != '0')
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
+        run: python -m pipeline.enrich.run locate --out "$OUT" --limit "${{ inputs.ai_limit || 200 }}" ${{ inputs.sample && format('--sample {0}', inputs.sample) || '' }} ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: 10 geocode — rooftop only
+        if: contains(inputs.stages, 'geocode') || github.event_name == 'workflow_run'
+        env:
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY }}
+        run: python -m pipeline.enrich.run geocode --out "$OUT" ${{ inputs.sample && format('--sample {0}', inputs.sample) || '' }} ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: 11 footprint — Overture building under the coordinate
+        if: contains(inputs.stages, 'footprint') || github.event_name == 'workflow_run'
+        run: python -m pipeline.enrich.run footprint --out "$OUT" ${{ inputs.sample && format('--sample {0}', inputs.sample) || '' }} ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: 12 existence — advisory flags, never deletions
+        if: contains(inputs.stages, 'existence') || github.event_name == 'workflow_run'
+        run: python -m pipeline.enrich.run existence --out "$OUT" ${{ inputs.sample && format('--sample {0}', inputs.sample) || '' }}
+
+      - name: load — append every stage's assertions
+        if: (contains(inputs.stages, 'load') || github.event_name == 'workflow_run') && !inputs.dry_run
+        run: python -m pipeline.enrich.run load --out "$OUT" ${{ inputs.sample && format('--sample {0}', inputs.sample) || '' }}
+
+      - name: Upload stage metrics and assertions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enrich-${{ github.run_id }}
+          path: enrich/
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------- always clean up
+  cleanup:
+    needs: [branch, stages]
+    if: always() && needs.branch.outputs.branch_id != '' && !inputs.keep_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Delete this run's Neon branch
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: python .github/scripts/neon_branch.py delete "${{ needs.branch.outputs.branch_id }}"

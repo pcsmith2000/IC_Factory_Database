@@ -67,3 +67,76 @@ def assertion(facility_id: str, field: str, value: str, *, source_id: str,
             "basis": basis, "site_visit": False,
             "confidence": "" if confidence is None else confidence,
             "field": field, "value": value, "evidence": evidence}
+
+
+# ---------------------------------------------------------------- connecting
+class NeonHttp:
+    """Neon's SQL-over-HTTPS endpoint, exposing the slice of the warehouse interface the stages use.
+
+    The pooled Postgres port is not reachable from every runner or sandbox, but 443 always is, and
+    Neon serves the same database over it. Having one connect() that falls back to HTTP means the
+    stages are exercised by the same code path in CI and on a laptop.
+    """
+    engine = "neon_http"
+
+    def __init__(self, uri: str):
+        self.uri = uri
+        self.host = uri.split("@", 1)[1].split("/", 1)[0]
+
+    def query(self, sql: str, params=()) -> list[dict]:
+        import json, urllib.request
+        body = json.dumps({"query": sql, "params": list(params)}).encode()
+        req = urllib.request.Request(f"https://{self.host}/sql", data=body, method="POST",
+                                     headers={"Neon-Connection-String": self.uri,
+                                              "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            out = json.loads(r.read())
+        if "rows" not in out:
+            raise RuntimeError(f"neon http: {str(out)[:300]}")
+        return out["rows"]
+
+    def executemany(self, sql: str, rows: list[tuple]) -> int:
+        for r in rows:
+            self.query(sql, r)
+        return len(rows)
+
+
+def connect(url: str | None = None):
+    """Postgres when the driver and port are available, else the same database over HTTPS."""
+    import os
+    url = url or os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
+    if not url:
+        raise RuntimeError("no DATABASE_URL / DATABASE_URL_UNPOOLED for the enrichment branch")
+    try:
+        import psycopg
+        with psycopg.connect(url, connect_timeout=8):
+            pass
+        from ..warehouse import open_warehouse
+        return open_warehouse()
+    except Exception:
+        return NeonHttp(url)
+
+
+APPEND_ASSERTION = """
+INSERT INTO fact_assertions
+  (assertion_id, release_tag, facility_key, source_key, field_key, date_key,
+   value, basis, site_visit, row_hash, confidence, source_class)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+ON CONFLICT (assertion_id, release_tag) DO NOTHING
+"""
+
+
+def append(db, assertions: list[dict], release_tag: str) -> int:
+    """Append enrichment assertions. ON CONFLICT DO NOTHING plus the evidence-derived row_hash is
+    what makes a re-run a no-op rather than a duplicate."""
+    from datetime import date
+    n = 0
+    for a in assertions:
+        aid = f"{a['source_id']}|{a['facility_id']}|{a['field']}|{a['row_hash']}"
+        db.query(APPEND_ASSERTION, (aid, release_tag, a["facility_id"], a["source_id"], a["field"],
+                                    a.get("retrieved_date") or date.today().isoformat(),
+                                    a["value"], a.get("basis", "none"), 0, a["row_hash"],
+                                    None if a.get("confidence") in ("", None) else float(a["confidence"]),
+                                    a.get("source_class", "enrichment")))
+        n += 1
+    return n
