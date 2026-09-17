@@ -46,8 +46,17 @@ that build is compared to the first release with `pipeline/compare.py`, not merg
   has five in Houston). They are listed so a reviewer can catch the one case a key split — the
   same plant written "100 Main St" and "100 N Main Street". Merge one only with evidence; the
   default answer is *keep*.
-- **G2 flagged clusters** — a false merge. Inspect the cluster's rows; usually two firms sharing
-  a street key with a unit designator lost. Fix the key logic or add a crosswalk override.
+- **G2 flagged clusters** — one facility id holding two unrelated business names, listed in
+  `build/false_merge_audit_<date>.csv` with their shared street key. Usually an industrial park,
+  a shared building, or a street key that dropped a unit designator. It reports and does not
+  halt, because the same signal covers legitimate aliasing: "smi homes" IS "structural modular
+  innovations", "schult homes" and "cmh manufacturing west" are two brands of one Clayton plant,
+  "bildt" is a typo for "boldt". Split a cluster only with evidence; fix the key logic or add a
+  crosswalk override. The rate sits around 23% and cannot come down until Layer 4 resolves
+  entities.
+  If instead G2 says *clusters hold more than one street key*, stop: a facility id comes from a
+  signature containing that key, so it means clustering itself is broken, not that the data is
+  messy. That one halts the run at any rate.
 - **G3 issued ids on a re-run** — signatures changed. Something in normalisation is
   non-deterministic. Do not publish; find it.
 - **G4 checksum mismatch** — the control file changed without a logged triage edit. Restore
@@ -72,6 +81,24 @@ do not flip it to `queued` to get green.
 ## Changing the prompt
 Edit `prompts/CLASSIFIER-PROMPT.md`. Run `python -m pipeline.run --layers 2-8` with class-B
 rows present; G5 must pass on the seeds. The new hash lands in the release tag.
+
+**G5 passing is not enough.** It scores 60 hand-picked seeds and cannot see a change that moves
+rows the seeds do not contain. Prompt v1.2 raised precision 96% -> 100% with recall unchanged at
+87%, and in the same stroke stopped admitting about 90 genuine plants — CMH Manufacturing and
+Clayton Wakarusa (both HUD-code), Deltec Homes, Pacific Wall Systems — while removing 539
+millwork, window and door rows nobody had asked it to judge. Both effects were invisible to the
+gate.
+
+So diff the rows against the previous run before believing a prompt change:
+
+    python -m pipeline.promptdiff OLD/build/classify_cache NEW/build/classify_cache \
+        --rows NEW/build/normalised
+
+Drops from millwork, window, door and commodity-panel NAICS are usually the intended effect.
+Drops from 321991, 321992, 321213, 321214, 332311 or 327390 are candidate losses: the tool names
+each one with the model's own reason, so read them. `build/` from any CI run is in its artifact.
+Also compare the `precision_audit` block in the two run records — the floor on known non-IC
+admissions, which fell 9.5% -> 0.2% across that same change.
 
 ## Traps that cost days
 - A stale `.~lock.*` file hangs every LibreOffice recalc. Near-zero CPU on a timeout is a lock.
