@@ -240,8 +240,11 @@ SELECT_ASSERTIONS = """
            COALESCE(confidence, 0)     AS confidence,
            COALESCE(asserted_at, '')   AS asserted_at,
            field_key AS field, value
-    FROM fact_assertions
-    WHERE release_tag = $1
+    FROM fact_assertions a
+    WHERE a.release_tag = $1
+       OR (a.source_class = 'enrichment'
+           AND EXISTS (SELECT 1 FROM fact_assertions c
+                        WHERE c.release_tag = $1 AND c.facility_key = a.facility_key))
     ORDER BY facility_key, field_key, assertion_id
     LIMIT $2 OFFSET $3
 """
@@ -256,11 +259,19 @@ ON CONFLICT (source_key) DO UPDATE SET name = EXCLUDED.name, class = EXCLUDED.cl
 
 
 def fetch_assertions(db, release_tag: str, page: int = 5000) -> list[dict]:
-    """Every assertion of one release, shaped like golden.assertions_from_rows output.
+    """One release's assertions, plus enrichment for the facilities that release still contains.
 
-    Scoped to the release tag on purpose. fact_assertions is append-only across releases, so
-    rebuilding golden from all of it would resurrect facilities a later release dropped — golden
-    would stop being a statement about the current release.
+    Scoping to the release tag alone was nearly right and quietly destructive. It is correct that
+    rebuilding from every tag would resurrect facilities a later release dropped, so golden would
+    stop being a statement about the current release. But enrichment writes under the tag that was
+    current when it ran, so the moment layers 1-8 published a new release, every enrichment
+    assertion fell outside the scope and re-running promote could not bring it back. On the release
+    database that stranded 3,223 assertions across 2,006 facilities that were still present —
+    including 1,408 Geocodio rooftop lookups that had been paid for.
+
+    The EXISTS clause is what separates the two cases: an enrichment assertion is carried forward
+    only for a facility the current release still asserts something about, so a dropped facility
+    stays dropped and paid work is not thrown away with it.
     """
     out, offset = [], 0
     while True:

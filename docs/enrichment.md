@@ -326,12 +326,21 @@ Scoped to one release tag on purpose. `fact_assertions` is append-only across re
 rebuilding from all of it would resurrect facilities a later release dropped — golden would stop
 being a statement about the current release.
 
-**It does not survive.** Layers 1–8 rebuild golden from the assertions they hold in memory and
-`DELETE FROM golden_facility` first, so the next release drops everything stage 13 added. That is
-accepted while enrichment is a separate action: the alternative is making `build_golden` a function
-of the warehouse rather than of the run, which is a layers 1–8 change and belongs there, not here.
-Until the two pipelines are one, an enrichment pass is re-run after a release rather than preserved
-across one.
+**Golden does not survive a release; the assertions do.** Layers 1–8 rebuild golden from the
+assertions they hold in memory and `DELETE FROM golden_facility` first, so the next release drops
+everything stage 13 added, and stage 13 has to run again. That is the accepted cost of keeping the
+two as separate actions.
+
+What is *not* acceptable, and was true until measured on the release database, is losing the work
+itself. Enrichment writes under whatever release tag was current when it ran, and promote was
+scoped to a single tag — so a new release put every enrichment assertion out of scope and
+re-running promote could not bring it back. That stranded 3,223 assertions across 2,006 facilities
+that the new release still contained, including 1,408 Geocodio rooftop lookups already paid for.
+
+Promote now reads the current release's assertions **plus** enrichment assertions for facilities the
+current release still asserts something about. The scope existed to stop a rebuild resurrecting
+facilities a later release dropped, and that still holds: a dropped facility stays dropped, and
+paid work is not thrown out with it. Re-running stage 13 after a release is now genuinely enough.
 
 ## Writing to the release database
 

@@ -184,3 +184,48 @@ def test_the_loader_stamps_asserted_at_so_a_reload_can_be_ordered(wh, tmp_path: 
     _load(wh, tmp_path, "v-stamp")
     rows = wh.query("SELECT asserted_at FROM fact_assertions WHERE release_tag = ?", ("v-stamp",))
     assert rows and all(r["asserted_at"] for r in rows), "the loader left asserted_at empty"
+
+
+def test_promote_carries_enrichment_across_a_release_but_not_dropped_facilities(wh, tmp_path: Path):
+    """Enrichment writes under whatever tag is current when it runs. Scoping promote to one tag
+    alone meant that the moment layers 1-8 published, every enrichment assertion fell out of scope
+    and re-running promote could not recover it — on the release database that stranded 3,223
+    assertions, including 1,408 Geocodio lookups that had been paid for.
+
+    Carrying them forward must not resurrect facilities the new release dropped, which is the
+    reason the scope existed in the first place. Both halves are checked here.
+    """
+    from pipeline.enrich import _db
+    _load(wh, tmp_path, "v-old")
+    kept, dropped = [r["facility_id"] for r in wh.query(
+        "SELECT DISTINCT facility_key AS facility_id FROM fact_assertions WHERE release_tag = ?",
+        ("v-old",))][:2]
+
+    # enrichment runs against v-old and asserts on both facilities
+    for fid in (kept, dropped):
+        wh.query("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                 (f"enrich|{fid}", "v-old", fid, "geocode:geocodio", "lat_lon", "2026-09-17",
+                  "33.0,-84.0", "rooftop", 0, f"h{fid}", 1.0, "enrichment",
+                  "2026-09-17T06:00:00+00:00"))
+    # a new release lands and only `kept` survives it
+    wh.query("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+             ("new|1", "v-new", kept, "pa_dced", "name", "2026-09-20", "Acme", "none", 0,
+              "hn", 1.0, "A", "2026-09-20T00:00:00+00:00"))
+
+    got = {(r["facility_id"], r["field"]) for r in _db.fetch_assertions(_Sql(wh), "v-new")}
+    assert (kept, "lat_lon") in got, "paid enrichment on a surviving facility must carry forward"
+    assert not any(f == dropped for f, _ in got), "a dropped facility must stay dropped"
+
+
+class _Sql:
+    """Runs fetch_assertions' Postgres-numbered SQL against the sqlite test warehouse.
+
+    Postgres reuses $1 wherever it appears; sqlite's ? needs one binding per occurrence. The
+    production path sends $N straight to Postgres, so this expansion exists only here.
+    """
+    def __init__(self, wh):
+        self.wh = wh
+    def query(self, sql, params=()):
+        import re
+        order = [int(m.group(1)) for m in re.finditer(r"\$(\d+)", sql)]
+        return self.wh.query(re.sub(r"\$\d+", "?", sql), tuple(params[i - 1] for i in order))
