@@ -209,16 +209,22 @@ def main(argv=None) -> int:
     hb.beat("6_gates")
     g = cfg["gates"]
     results = [
-        gates.g1_dedupe(facilities, g["g1_dedupe_max_rate"], g["g1_thresholds"], out / f"dedupe_audit_{started:%Y-%m-%d}.csv"),
+        gates.g1_dedupe(facilities, g["g1_dedupe_max_rate"], g["g1_thresholds"],
+                        out / f"dedupe_audit_{started:%Y-%m-%d}.csv", g.get("g1_dedupe_target_rate")),
         gates.g2_false_merge(rec["rows"]),
         gates.g3_id_stability(rec["ids_issued"], g["g3_allow_new_ids_on_rerun"], args.rerun),
         gates.g4_control_isolation(ROOT / cfg["control"]["path"], ROOT / cfg["control"]["checksum_path"], rec["rows"]),
-        gates.g5_classifier_eval(labels, seeds, g["g5_min_precision"], g["g5_min_recall"]) if (cls_meta and cls_meta["n_candidates"])
+        gates.g5_classifier_eval(labels, seeds, g["g5_min_precision"], g["g5_min_recall"],
+                                 g.get("g5_base_rate"), g.get("g5_min_precision_at_base_rate"))
+        if (cls_meta and cls_meta["n_candidates"])
         else gates.GateResult("G5 classifier eval", True, "no rows were classified in this run — nothing to audit"),
     ]
-    record["gates"] = [{"gate": r.gate, "passed": r.passed, "summary": r.summary, "details": r.details} for r in results]
+    record["gates"] = [{"gate": r.gate, "passed": r.passed, "tested": r.tested,
+                        "summary": r.summary, "details": r.details} for r in results]
     for r in results:
-        print(f"  {'PASS' if r.passed else 'FAIL'}  {r.gate}: {r.summary}")
+        # SKIP, not PASS, when a gate asserted nothing — a vacuous pass reads as evidence.
+        mark = "FAIL" if not r.passed else ("PASS" if r.tested else "SKIP")
+        print(f"  {mark}  {r.gate}: {r.summary}")
     failed = [r for r in results if not r.passed]
     if failed:
         return halt("layer 6", "; ".join(f"{r.gate} — {r.summary}" for r in failed))

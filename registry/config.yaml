@@ -86,10 +86,21 @@ gates:
   # resolver. 0.02 is the real target and this 0.10 buys nothing but a runnable pipeline; every
   # pair is still written to build/dedupe_audit_<date>.csv for review either way.
   g1_dedupe_max_rate: 0.10
+  # What the gate is really calibrated to. Reported against every run so the debt stays visible
+  # instead of living only in the comment above; it does not halt anything.
+  g1_dedupe_target_rate: 0.02
   g1_thresholds: {street_key: 0.95, name_city: 0.90, fuzzy: 0.80}
   g3_allow_new_ids_on_rerun: 0
   g5_min_precision: 0.95
   g5_min_recall: 0.90
+  # The seeds are 30 IC to 30 NOT-IC; the candidate pool is roughly 20% IC. Precision measured at
+  # 50% prevalence flatters a classifier because false positives come from the negative class,
+  # which is four times larger in production — a 93% seed precision implies about 77% on the real
+  # pool. G5 now reports both. The adjusted figure only GATES when the min below is set, because
+  # picking that number is a decision about how many false plants the database will carry, and it
+  # should be made deliberately against observed values rather than guessed here.
+  g5_base_rate: 0.20
+  g5_min_precision_at_base_rate: null
 
 measure:
   bias_band: [0.7, 1.4]

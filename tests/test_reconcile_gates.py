@@ -229,3 +229,49 @@ def test_unusable_batch_error_shows_an_object(monkeypatch):
     monkeypatch.setattr(classify, "ai_client_and_model", lambda m: (FakeClient(), m, "test"))
     with pytest.raises(classify.BatchContractError, match="first object"):
         classify._call_once([{"row_hash": "h0", "name_verbatim": "X"}], "p", "m", 0, None, False)
+
+
+def test_g5_reports_precision_at_the_production_base_rate():
+    # 30/30 seeds flatter precision: false positives come from the negative class, which is four
+    # times larger at a 20% base rate. Measured tonight, a 93% seed precision implies ~77% real.
+    seeds = ([{"row_hash": f"p{i}", "seed_label": "IC"} for i in range(30)]
+             + [{"row_hash": f"n{i}", "seed_label": "NOT-IC"} for i in range(30)])
+    labels = {s["row_hash"]: {"label": s["seed_label"]} for s in seeds}
+    for i in range(2):                                    # two false positives -> 93% precision
+        labels[f"n{i}"] = {"label": "IC"}
+    r = gates.g5_classifier_eval(labels, seeds, 0.95, 0.90, base_rate=0.20)
+    assert round(r.details["precision"], 2) == 0.94
+    assert r.details["precision_at_base_rate"] < r.details["precision"]
+    assert round(r.details["precision_at_base_rate"], 2) == 0.79
+    assert "base rate" in r.summary
+    # It only gates when a threshold is set.
+    assert not gates.g5_classifier_eval(labels, seeds, 0.90, 0.90, 0.20, 0.95).passed
+    assert gates.g5_classifier_eval(labels, seeds, 0.90, 0.90, 0.20, None).passed
+
+def test_g2_and_g3_say_untested_rather_than_passing():
+    # Across 27 run records these passed 14 times each having asserted nothing.
+    single = [{"facility_id": "IC-1", "street_key": "1 a st"},
+              {"facility_id": "IC-2", "street_key": "2 b st"}]
+    r = gates.g2_false_merge(single)
+    assert r.passed and not r.tested and "untested" in r.summary
+
+    merged_clean = [{"facility_id": "IC-1", "street_key": "1 a st"},
+                    {"facility_id": "IC-1", "street_key": "1 a st"}]
+    r = gates.g2_false_merge(merged_clean)
+    assert r.passed and r.tested          # a real merge with one street key IS a real pass
+
+    bad = [{"facility_id": "IC-1", "street_key": "1 a st"},
+           {"facility_id": "IC-1", "street_key": "2 b st"}]
+    assert not gates.g2_false_merge(bad).passed
+
+    r = gates.g3_id_stability(160, 0, is_rerun=False)
+    assert r.passed and not r.tested and "untested" in r.summary
+    assert gates.g3_id_stability(0, 0, is_rerun=True).tested
+
+def test_g1_says_when_it_is_only_passing_on_a_relaxed_ceiling(tmp_path):
+    rows = normalise(ROWS)
+    rec = reconcile.run(rows, tmp_path / "ids.json")
+    r = gates.g1_dedupe(rec["facilities"], 0.10, {"street_key": .95, "name_city": .90, "fuzzy": .80},
+                        tmp_path / "p.csv", target_rate=0.02)
+    if r.details["rate"] > 0.02:
+        assert r.passed and r.details["would_fail_target"] and "ABOVE the 2% target" in r.summary
