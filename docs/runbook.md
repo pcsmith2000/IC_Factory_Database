@@ -92,7 +92,13 @@ release. Every run prints `NOT A CLEAN RELEASE` to stderr when any is set and re
 | `IC_CLASSIFIER_MODEL` | the pinned classifier | compares models without churning `registry/config.yaml`; the release tag records which model actually ran |
 | `IC_ARCHIVE` | the blob archive | `off` disables acquisition archiving and the heartbeat |
 
-CI sets none of them except `IC_CLASSIFIER_MODEL` and `IC_AI` from the dispatch inputs.
+The first four redirect **state** — what a release is made of or written to — and a run using
+one is not a release: it prints `NOT A CLEAN RELEASE` to stderr and lands in
+`state_overrides` in the run record. The last two choose between legitimate options, and CI
+passes `IC_CLASSIFIER_MODEL` and `IC_AI` on every dispatch, so they are recorded in
+`env_overrides` without a warning. Warning on a normal CI input is how a warning stops being
+read — the first classified run after the check was added printed NOT A CLEAN RELEASE for a
+perfectly ordinary model dispatch.
 
 ## Adding a source
 Add an entry to `registry/sources.yaml` with class, method, `url`, `needs_classify`, traps and

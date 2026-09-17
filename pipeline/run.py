@@ -51,12 +51,18 @@ def main(argv=None) -> int:
     # a counterfeit release: a scratch id registry makes G3 assert stability over ids nobody
     # issued, and a fixture CSV directory makes every downstream count meaningless. Say so on
     # every run and put it in the record, where the release tag can be read next to it.
-    overrides = {k: os.environ[k] for k in ("IC_CSV_DIR", "IC_ID_REGISTRY", "IC_WAREHOUSE_PATH",
-                                            "IC_WAREHOUSE_ENGINE", "IC_CLASSIFIER_MODEL", "IC_ARCHIVE")
-                 if os.environ.get(k)}
-    if overrides:
-        print("  NOT A CLEAN RELEASE — environment overrides active: "
-              + ", ".join(f"{k}={v}" for k, v in sorted(overrides.items())), file=sys.stderr)
+    # Two kinds, and conflating them cries wolf. STATE overrides redirect what a release is made
+    # of or written to, and a run using one is not a release at all. CONFIG overrides choose
+    # between legitimate options and CI passes IC_CLASSIFIER_MODEL on every dispatch — warning on
+    # that made the very first classified run print NOT A CLEAN RELEASE for no reason, which is
+    # how a warning stops being read.
+    STATE = ("IC_CSV_DIR", "IC_ID_REGISTRY", "IC_WAREHOUSE_PATH", "IC_WAREHOUSE_ENGINE")
+    CONFIG = ("IC_CLASSIFIER_MODEL", "IC_ARCHIVE", "IC_AI")
+    state_overrides = {k: os.environ[k] for k in STATE if os.environ.get(k)}
+    overrides = {**state_overrides, **{k: os.environ[k] for k in CONFIG if os.environ.get(k)}}
+    if state_overrides:
+        print("  NOT A CLEAN RELEASE — state overrides active: "
+              + ", ".join(f"{k}={v}" for k, v in sorted(state_overrides.items())), file=sys.stderr)
     layers = _layers(args.layers)
     started = datetime.now(timezone.utc)
     out = ROOT / args.out; out.mkdir(exist_ok=True)
@@ -75,7 +81,7 @@ def main(argv=None) -> int:
     norm_dir = out / "normalised"
     record = {
         "pipeline_version": __version__, "started": started.isoformat(),
-        "env_overrides": overrides,
+        "env_overrides": overrides, "state_overrides": state_overrides,
         "registry_version": registry_version(ROOT), "registry_file_sha": sha256_file(ROOT / args.registry),
         "control_sha": (ROOT / cfg["control"]["checksum_path"]).read_text().split()[0] if (ROOT / cfg["control"]["checksum_path"]).exists() else None,
         "layers": {}, "gates": [], "halted_at": None,
