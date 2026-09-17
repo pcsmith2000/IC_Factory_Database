@@ -92,3 +92,26 @@ Enrichment gets its own gates, in the spirit of G1-G5: they block rather than ad
 
 E4 is the important one. Enrichment only ever adds; if a run would take a field away from a
 facility that had it, something upstream broke and the run halts.
+
+## Deconfliction — enrichment runs beside an active layers 1–8
+
+Layers 1–8 and enrichment are worked on concurrently, so enrichment must never assume it is the
+only writer, and must never be the reason a 1–8 run is disturbed.
+
+**Production: a Neon branch, not the release database.** The workflow creates a Neon branch from
+the release database, runs stages 9–12 against the branch, and opens a PR with the enrichment
+release. A 1–8 run publishing while enrichment is mid-flight therefore cannot collide with it, and
+a failed enrichment leaves the release database untouched. The branch is deleted when the PR closes.
+
+**Development: a frozen sample, not live Neon.** Stages are built against a snapshot pinned to one
+release tag, so a new 1–8 run landing mid-iteration does not move the ground. `--sample N` takes a
+deterministic, state-stratified subset; every stage honours it, so a full design/run/inspect cycle
+costs a few dozen API calls rather than a few thousand.
+
+**Ownership.** Enrichment owns `pipeline/enrich/`, `.github/workflows/enrich.yml`,
+`tests/test_enrich.py` and this file. It does not modify layers 1–8, their sources, or their gates;
+anything it needs from them is a finding handed over, not an edit made in passing.
+
+**Shared budgets.** The Geocodio key is one free tier of 2,500 lookups a day across everyone using
+it. Stage 10 records its own daily spend in the run record, and `--sample` exists so that iterating
+on the design does not consume the allowance a real run needs.
