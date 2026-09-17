@@ -13,8 +13,7 @@ not assumed, so the first live run is the check.
 from __future__ import annotations
 import re, urllib.parse
 from pathlib import Path
-from html import unescape
-from ._common import http_get, html_tables, contract_row, require, iso_date, LayoutChanged
+from ._common import http_get, html_tables, contract_row, require, LayoutChanged
 
 MENU = "https://floridabuilding.org/mb/mb_default.aspx"
 
@@ -54,57 +53,23 @@ def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
     return [results]
 
 
-# Each organisation in the results grid is anchored by a uniquely-id'd name link:
-#
-#   <a id="grdReport__ctl2_hlnkOrgName" href="...">A &amp; A Sheet Metal Products</a>
-#     <b>Org Type </b>Modular Unit Manufacturer
-#     <b>FBC Organization Number </b>MFT3685
-#     <b>Website </b><a href="http://www.securallproducts.com/">www.securallproducts.com/</a>
-#   <span id="grdReport__ctl2_lblValidFromDate">07/27/2004</span> ... lblValidToDate, lblOrgStatus
-#
-# Taking the largest <table> instead yielded 37 rows of run-together page text, because the grid
-# nests tables inside its cells and a saved listing concatenates all 48 pages, each with its own
-# grdReport table and its own _ctl2.._ctl21 numbering. Splitting on the name anchors ignores both
-# the nesting and the pagination and recovers every record.
-ANCHOR = re.compile(r'<a[^>]+id="[^"]*hlnkOrgName"[^>]*>(.*?)</a>', re.I | re.S)
-FIELD = lambda label: re.compile(r"<b>\s*" + label + r"\s*</b>\s*([^<]*)", re.I)
-ORG_TYPE, ORG_NUM = FIELD("Org Type"), FIELD("FBC Organization Number")
-WEBSITE = re.compile(r"<b>\s*Website\s*</b>\s*<a[^>]+href=\"([^\"]+)\"", re.I)
-SPAN = lambda name: re.compile(r'id="[^"]*' + name + r'"[^>]*>(.*?)</span>', re.I | re.S)
-VALID_TO, STATUS = SPAN("lblValidToDate"), SPAN("lblOrgStatus")
-# "Modular Unit Manufacturer" is a plant; "Manufacturer Additional Facilities" is a further plant of
-# one. Every other organisation type on this search is a certifier, inspector or plan reviewer.
-PLANT_TYPES = re.compile(r"manufactur", re.I)
-TAGS = re.compile(r"<[^>]+>")
-
-
-def _text(s: str) -> str:
-    return re.sub(r"\s+", " ", unescape(TAGS.sub(" ", s or ""))).strip()
-
-
 def parse(paths: list[Path], source: dict) -> list[dict]:
     path = paths[-1]
     html = path.read_text(encoding="utf-8", errors="replace")
-    spans = [m for m in ANCHOR.finditer(html)]
-    require(bool(spans), path, "no organisation name anchors (hlnkOrgName) in the results page")
+    tables = [t for t in html_tables(html) if len(t) > 5]
+    require(bool(tables), path, "no results table with more than 5 rows — the POST did not return the manufacturer list")
+    table = max(tables, key=len)
+    hdr = [c.lower() for c in table[0]]
+    name_i = next((i for i, h in enumerate(hdr) if re.search(r"name|organi[sz]ation|manufacturer", h)), 0)
+    get = lambda cells, pat: next((cells[i] for i, h in enumerate(hdr) if re.search(pat, h) and i < len(cells)), "")
     out = []
-    for i, m in enumerate(spans, 1):
-        block = html[m.end():spans[i].start() if i < len(spans) else len(html)]
-        one = lambda rx: (rx.search(block).group(1).strip() if rx.search(block) else "")
-        org_type = _text(one(ORG_TYPE))
-        if not PLANT_TYPES.search(org_type):
+    for i, cells in enumerate(table[1:], 1):
+        if not cells or not cells[name_i].strip():
             continue
-        expiry = iso_date(_text(one(VALID_TO)))
-        out.append(contract_row(
-            source, i, name=_text(m.group(1)), source_url=MENU, source_document=path.name,
-            source_identifier=_text(one(ORG_NUM)), status=_text(one(STATUS)),
-            expiry_date=expiry, status_basis="dated_expiry" if expiry else "explicit_status_field",
-            # The listing publishes no plant address, but it does publish the manufacturer's own
-            # website, which is the only address-discovery channel any source here gives us.
-            notes="; ".join(x for x in (f"org_type={org_type}" if org_type else "",
-                                        f"website={one(WEBSITE)}" if one(WEBSITE) else "",
-                                        "names-only source: no plant address published") if x)))
-    require(bool(out), path, "organisation anchors found but none had a manufacturer org type")
+        out.append(contract_row(source, i, name=cells[name_i], address=get(cells, "address|street"), city=get(cells, "city"),
+                                state=get(cells, "state"), zip_code=get(cells, "zip"), source_url=MENU, source_document=path.name,
+                                source_identifier=get(cells, "number|id|cert"), status=get(cells, "status|type"),
+                                notes="" if get(cells, "address|street") else "names-only source: no plant address published"))
     return out
 
 
