@@ -5,7 +5,7 @@ in the release tag. Changing it is a versioned change that gate G5 must re-pass 
 set before the new version is used for a release.
 
 v1.7 — 2026-09-17. Scopes the hedge rule, which v1.5 and v1.6 both let loose on the whole
-population. v1.6 was dispatched on the diagnosis that v1.5's bullets were read in order; that was
+population, and counts a truncated NAICS code as the core code it is a parent of. v1.6 was dispatched on the diagnosis that v1.5's bullets were read in order; that was
 wrong, and run 35259543326 says so. Read at batch 28 of 132 against run 22's own per-batch spread
 (UNCERTAIN projection sd 88 rows, resampled 4,000 times from its 132 cached batches), v1.6 projects
 UNCERTAIN ~905 against a 366 baseline — 6.1 sd above it, and no better than v1.5's ~829. Reordering
@@ -183,8 +183,13 @@ NOT-IC is a positive finding: the establishment makes something else, and you ca
 cannot name what else it would be, you are not looking at a NOT-IC record.
 
 **On a core code, this is a mechanical test, not a judgement call.** It runs ONLY when the record
-carries a core code — 321213, 321214, 321991, 321992, 332311. Off those codes it does not apply at
-all; see "Off a core code" immediately below it. Write the reason first, then read it back:
+carries a core code — 321213, 321214, 321991, 321992, 332311. A code TRUNCATED to the family that
+contains one of those counts as carrying it: 32121, 3212, 33231 and 3323 are the parents of the
+core codes, and a record coded to the family is coded toward this dataset, not away from it.
+"SOUTHERN COMPONENTS INC." sits on 32121 and was resolved to NOT-IC as "Unclear wood products" —
+which is exactly the hedge rule 3 exists to catch, missed on a technicality of digit count. Off
+those codes the test does not apply at all; see "Off a core code" immediately below it. Write the
+reason first, then read it back:
 
 These are in PRECEDENCE ORDER. Take the first that applies and stop.
 

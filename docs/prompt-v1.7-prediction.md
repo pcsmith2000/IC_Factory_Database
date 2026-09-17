@@ -47,7 +47,21 @@ zero recall; it only grows the review queue, by 2.5x. The thing that would have 
 
 Rule 3 is now explicitly confined to records carrying a core code, with an else-branch that says
 what to do off them: a hedge with nothing pointing at IC is NOT-IC, and the positive finding v1.4
-requires comes from the record's own NAICS code. Nothing else moves.
+requires comes from the record's own NAICS code.
+
+One more clause, added because scoping rule 3 creates a way to LOSE a plant that v1.6 could still
+reach. "SOUTHERN COMPONENTS INC." in Louisiana — a control row — is coded `32121`, five digits, the
+parent of the truss codes. v1.4 called it NOT-IC as "Unclear wood products", which is precisely the
+hedge rule 3 is for; but under a rule that tests membership of {321213, 321214, 321991, 321992,
+332311} the record is off-core, and the new else-branch would confirm the error rather than route
+it to review. So a code truncated to a core family — 32121, 3212, 33231, 3323 — counts as carrying
+the core code. It is coded TOWARD this dataset, not away from it.
+
+Sized before writing it, so the clause is not doing more than it looks: of the 13,117 classified
+rows, 12,353 carry a full six-digit code, 397 five and 367 four, and exactly **60** carry a parent
+of a core family. Most are correctly NOT-IC (lumber yards, a coin laundry, a painting contractor),
+so this clause moves a handful of rows, not a population. It is in because it is free and because
+the alternative is a rule that fails on a digit count.
 
 ## The prediction
 
