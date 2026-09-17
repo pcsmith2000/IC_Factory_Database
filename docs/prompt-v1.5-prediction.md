@@ -24,14 +24,24 @@ components; of the 21, Trachte (a metal building manufacturer, twice) and Weyerh
 structural members) are plainly wrong, while Chicago Tube & Iron, Hydro Extrusion, Air Vent and
 J.I.G. Machine Works are plainly right and turn on the product, not the word "component".
 
+## The baseline, pinned before the comparison
+
+Run 35255141179 (v1.4, prompt 23e69d2b0d70, 15 sources, same 13,057 candidates) labelled:
+
+    IC 1,969   UNCERTAIN 365   NOT-IC the rest
+
+The three v1.4 runs before it read IC 2,017 / 1,964 / 2,012, so 1,969 is squarely in that band
+and the classifier is reproducible at temperature 0 to within about 3%. Any v1.5 movement larger
+than that is the prompt, not noise.
+
 ## The prediction
 
 On the same 13,057 candidates, same model, temperature 0:
 
-- **IC labels rise from ~1,964–2,017 by roughly 135–226.** Not all 226: the buckets overlap, and
+- **IC labels rise from 1,969 to roughly 2,100–2,195** (+135 to +226). Not all 226: the buckets overlap, and
   some are right for reasons the regex cannot see (Eklof Docks, Johnson Controls Fire Protection
   and CertainTeed Ceilings are all correctly NOT-IC despite naming a building product).
-- **UNCERTAIN rises from ~340–440 by roughly 38–77**, into the review queue where a human settles
+- **UNCERTAIN rises from 365 to roughly 403–442** (+38 to +77), into the review queue where a human settles
   it. UNCERTAIN going up is a success, not a cost.
 - **G5 seed recall holds at or above the 85% floor.** This is a widening, so seed recall should
   rise or hold; if it falls, the widening is admitting the wrong rows and the gate should halt the
