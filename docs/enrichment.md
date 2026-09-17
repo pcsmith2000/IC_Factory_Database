@@ -80,6 +80,42 @@ is gone, and under whose rooftop coordinate there is no building, is a candidate
 but the call is a human's. The stage writes the evidence and the flag; `control/operator_assertions.csv`
 is where a decision gets recorded.
 
+## The funnel, measured against the live release
+
+Read from the release database on 2026-09-17 (`v1.0.0+reg.22389a4`), not estimated:
+
+    total facilities                        4065
+    stage 9  need an address                1231
+    stage 10 have address, need coordinate   956
+    stage 11 have a coordinate to measure   1878
+    neither address nor coordinate          1231
+
+Stage 11 is the one with work to do today: 1,878 facilities already carry a coordinate, almost all
+of them from EPA, and none of them has a footprint. Stage 10's 956 fit inside Geocodio's free tier
+over two days. Stage 9's 1,231 are the hard part, and the number that matters there is not 1,231
+but how many can be reached at all — see below.
+
+## Stage 9 reaches far less than its target, and the reason is structural
+
+The model cannot browse. It can only extract an address from a page that is fetched and handed to
+it, which is how `corporate_locations` already works and the only form of this that produces a
+citation. So stage 9's real reach is the number of address-less facilities for which some source
+publishes a URL to fetch.
+
+    US facilities needing an address                     194 (of the registry sources; EPA aside)
+    ... for which fl_bcis publishes a website             18   9%
+    ... with no page to extract from                     176  91%
+
+and only 336 of the 853 websites `fl_bcis` publishes are well-formed URLs at all.
+
+Asking the model for an address with no page in front of it is not a smaller version of this. It
+is recall from training, which is exactly what gate E1 exists to reject, and for a plant address it
+would be confidently wrong often enough to poison a field no downstream stage can second-guess.
+
+So stage 9 ships covering the ~9% it can cite, and the remaining 91% stays an open question whose
+answer is a search capability, not a better prompt. Whether the Vercel AI Gateway exposes a web
+search tool decides it, and that is untested.
+
 ## Gates
 
 Enrichment gets its own gates, in the spirit of G1-G5: they block rather than advise.
