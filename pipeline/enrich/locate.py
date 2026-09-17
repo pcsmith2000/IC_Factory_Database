@@ -212,6 +212,22 @@ def locate_one_gateway(row: dict, model: str, key: str, search: str = DEFAULT_SE
     return parse_gateway_response(out)
 
 
+def _search_count(calls) -> int:
+    """How many searches the gateway ran, whatever shape it reports them in.
+
+    The first live call returned a dict keyed by tool name where the unit test had assumed a list,
+    and `calls or 0` handed that dict straight into an integer sum. The shape is the gateway's to
+    choose and it is only ever a metric here, so every plausible shape is accepted and anything
+    unrecognised counts as zero rather than failing a run over a number nothing depends on.
+    """
+    if isinstance(calls, dict):
+        vals = list(calls.values())
+        return sum(v for v in vals if isinstance(v, (int, float))) or len(vals)
+    if isinstance(calls, list):
+        return len(calls)
+    return calls if isinstance(calls, (int, float)) else 0
+
+
 def parse_gateway_response(out: dict) -> dict:
     """Pull the answer, the search count and the token usage out of a Chat Completions reply."""
     choice = (out.get("choices") or [{}])[0]
@@ -220,8 +236,7 @@ def parse_gateway_response(out: dict) -> dict:
     usage = out.get("usage") or {}
     # the gateway reports what it ran here; there is no raw search result to read
     meta = ((msg.get("provider_metadata") or {}).get("gateway") or {})
-    calls = meta.get("gatewayToolCalls")
-    searches = len(calls) if isinstance(calls, list) else (calls or 0)
+    searches = _search_count(meta.get("gatewayToolCalls"))
     return {"answer": _extract_json(text) or {}, "visited": set(),
             "usage": {"input_tokens": usage.get("prompt_tokens", 0) or 0,
                       "output_tokens": usage.get("completion_tokens", 0) or 0,
@@ -395,7 +410,10 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
             rejected.append({"facility_id": row["facility_id"], "why": f"{type(e).__name__}: {e}"})
             continue
         for k, v in (got.get("usage") or {}).items():
-            usage[k] = usage.get(k, 0) + v
+            # usage is a metric, never a reason to lose a run: a provider that reports a shape this
+            # does not expect must not take the addresses down with it
+            if isinstance(v, (int, float)):
+                usage[k] = usage.get(k, 0) + v
         a, visited = got["answer"], got["visited"]
         addr = (a.get("address") or "").strip()
         url = (a.get("source_url") or "").strip()

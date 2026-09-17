@@ -827,3 +827,33 @@ def test_footprint_takes_the_largest_building_in_range_not_the_nearest(monkeypat
     assert chosen[2] == "plant", "the plant must win on area"
     assert nearest[2] == "gatehouse", "and the nearest is kept for audit"
     assert chosen[0] > 10 * nearest[0], "the difference is the whole point"
+
+
+def test_the_search_count_survives_whatever_shape_the_gateway_reports():
+    """The first live call returned gatewayToolCalls as a dict keyed by tool name where the unit
+    test had assumed a list, and `calls or 0` fed that dict into an integer sum — killing a run
+    over a number nothing depends on. Usage is a metric, never a reason to lose addresses."""
+    from pipeline.enrich.locate import _search_count
+    assert _search_count({"vercel:tako_search": 2}) == 2       # the shape that actually arrived
+    assert _search_count([{"a": 1}, {"b": 2}]) == 2            # the shape the test had assumed
+    assert _search_count(3) == 3
+    assert _search_count(None) == 0
+    assert _search_count("nonsense") == 0
+    assert _search_count({"x": "weird"}) == 1                  # counted, not crashed
+
+
+def test_a_strange_usage_value_cannot_take_the_run_down(monkeypatch):
+    from pipeline.enrich import locate
+
+    def fake(row, model, key, search):
+        return {"answer": {"found": True, "address": "1 Plant Rd", "confidence": 0.9,
+                           "source_url": "https://x.example/p", "quote": "1 Plant Rd"},
+                "visited": set(),
+                "usage": {"input_tokens": 10, "output_tokens": 2, "web_searches": {"odd": "shape"}}}
+
+    monkeypatch.setattr(locate, "locate_one_gateway", fake)
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "k")
+    rep = locate.run([{"facility_id": "F1", "name": "Acme", "city": "X", "state": "TX"}],
+                     verify_page=False)
+    assert rep["located"] == 1, "the address must survive a metric it could not add up"
+    assert rep["usage"]["input_tokens"] == 10
