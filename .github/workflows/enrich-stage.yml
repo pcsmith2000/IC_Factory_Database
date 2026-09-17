@@ -22,7 +22,12 @@ jobs:
   stage:
     if: inputs.enabled
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # Every stage is bounded by its own ceiling — model calls, lookups, files read — so a stage
+    # that runs this long is stuck rather than busy. It matters more than an ordinary timeout
+    # because the enrich concurrency group serialises runs: a job hanging until a 120 minute
+    # timeout does not just waste its own run, it blocks every enrichment run behind it. That
+    # happened once, to a footprint stage reading S3 without a file ceiling.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
