@@ -82,3 +82,29 @@ IC labels barely moving means the model was never reading the rule that changed,
 how the instruction is placed rather than what it says. A large IC rise with G5 recall falling, or
 the audit floor climbing, means v1.5 widened past the boundary rather than enforcing it — in which
 case the 90 self-contradicting rows need naming individually rather than by rule.
+
+
+## Early reading, batch 9 of 132 — logged before the run finished
+
+    IC        15.2%  ->  projected ~2,009   (baseline 1,969, predicted 2,100-2,195)
+    UNCERTAIN  6.6%  ->  projected ~865     (baseline   365, predicted   403-442)
+
+How much of this is signal was checked against run 22's own per-batch spread rather than assumed.
+Batches are homogeneous by source — EPA FRS is the only source that needs classifying — but the
+per-batch IC rate still swings from 6.1% to 30.0% (sd 4.8%), and UNCERTAIN from 0% to 18.2%
+(sd 4.0%). Resampling nine batches from run 22 four hundred times, a nine-batch projection of the
+full run is off by 188 rows on IC and 155 on UNCERTAIN at one standard deviation.
+
+So:
+
+- **IC at ~2,009 is uncallable.** It carries ±376 at two sigma, which spans both the baseline and
+  the predicted range. Nothing can be concluded from it yet.
+- **UNCERTAIN at ~865 is real.** It is 3.2 sd above the 365 baseline, and 2.4x it. That exceeds
+  what nine batches of noise can produce.
+
+If that holds, the prediction is **half wrong in an interesting way**: the hedge rule is firing
+hard and routing rows out of NOT-IC, but into UNCERTAIN rather than into IC. That is defensible —
+a hedge genuinely is uncertain, and the review queue is where a human settles it — but it is not
+what was predicted, and it would mean v1.5 barely moves recall while roughly doubling the review
+queue. The rule that says "if you cannot name the other product, it is not NOT-IC" may be pushing
+rows one step rather than two.
