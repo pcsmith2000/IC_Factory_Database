@@ -4,6 +4,21 @@ This file is the system prompt for Layer 3. Its SHA-256 is recorded in every run
 in the release tag. Changing it is a versioned change that gate G5 must re-pass on the seeded
 set before the new version is used for a release.
 
+v1.7 — 2026-09-17. Scopes the hedge rule, which v1.5 and v1.6 both let loose on the whole
+population. v1.6 was dispatched on the diagnosis that v1.5's bullets were read in order; that was
+wrong, and run 35259543326 says so. Read at batch 28 of 132 against run 22's own per-batch spread
+(UNCERTAIN projection sd 88 rows, resampled 4,000 times from its 132 cached batches), v1.6 projects
+UNCERTAIN ~905 against a 366 baseline — 6.1 sd above it, and no better than v1.5's ~829. Reordering
+the tests changed nothing because ordering was never the problem.
+
+The real error was in sizing. v1.5's hedge rule was measured on 77 hedged reasons inside the 607
+core-code rows labelled NOT-IC — but the rule as written carries no such restriction, and across
+ALL 10,717 NOT-IC rows in run 22, 927 carry a hedge word (8.6%). The rule had twelve times the
+population it was sized for, and about 540 of those rows duly moved. They moved out of NOT-IC into
+UNCERTAIN, which buys no recall — an UNCERTAIN row does not publish — and costs a review queue 2.5x
+its size. So rule 3 is now explicitly confined to core codes, with an else-branch that says what to
+do off them.
+
 v1.6 — 2026-09-17. Fixes the precedence bug v1.5 introduced. v1.5 wrote the mechanical test as
 three unordered bullets with the hedge test SECOND and the building-product test third, and a
 reader taking them in order hits the hedge first: "likely a metal building plant" on a 332311
@@ -167,8 +182,9 @@ evidence genuinely could go either way the label is UNCERTAIN, and a human decid
 NOT-IC is a positive finding: the establishment makes something else, and you can say what. If you
 cannot name what else it would be, you are not looking at a NOT-IC record.
 
-**On a core code, this is a mechanical test, not a judgement call.** Write the reason first, then
-read it back:
+**On a core code, this is a mechanical test, not a judgement call.** It runs ONLY when the record
+carries a core code — 321213, 321214, 321991, 321992, 332311. Off those codes it does not apply at
+all; see "Off a core code" immediately below it. Write the reason first, then read it back:
 
 These are in PRECEDENCE ORDER. Take the first that applies and stop.
 
@@ -180,6 +196,16 @@ These are in PRECEDENCE ORDER. Take the first that applies and stop.
    recreational vehicles, carports, sheds, machinery, fasteners? Then **NOT-IC**.
 3. Does it hedge with no product named at all — "unclear", "record too thin", "without
    specifics"? Then **UNCERTAIN**, and a human settles it in the review queue.
+
+**Off a core code, a hedge is not UNCERTAIN.** Rule 3 exists because a core code is itself evidence
+for IC: a record that carries one and says nothing else is genuinely balanced, and a human should
+settle it. A record with NO core code and nothing in it pointing at an IC product is not balanced —
+nothing has argued for IC at all — and "I could not tell what this is" is the ordinary condition of
+a record about some other industry, not a finding of doubt. Label it **NOT-IC**, and take the
+positive finding from the record's own code: a 332999 shop fabricates metal products, a 423330
+wholesaler distributes them, a 236220 firm builds on site. Reserve UNCERTAIN for a record where
+something — the code, the name, a product word — actually points at IC while something else points
+away. A hedge on its own is not that.
 
 ## The NAICS code is evidence, not proof
 

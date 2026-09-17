@@ -135,3 +135,12 @@ which does not change what to do next.
 
 If v1.6 also balloons UNCERTAIN, this diagnosis is wrong and v1.5 deserves a full run to find out
 why. That is the one thing that would send me back for it.
+
+---
+
+**That falsifier fired.** v1.6 projected UNCERTAIN ~905 at batch 28 of 132 — 6.1 sd above baseline,
+no better than v1.5's ~829. The precedence diagnosis was wrong. But v1.5 does NOT need the full run
+this paragraph promised it: the cause was found in run 22's cache instead, for nothing. The hedge
+rule was sized on 77 hedged reasons inside the 607 core-code NOT-IC rows, while the rule as written
+reached all 927 hedged NOT-IC rows in the population — 81 on a core code, 846 off it. See
+`docs/prompt-v1.7-prediction.md`.
