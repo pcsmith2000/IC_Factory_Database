@@ -171,3 +171,27 @@ def test_e4_passes_when_a_run_only_adds():
 def test_e5_fails_anything_stage_12_writes_that_is_not_advisory():
     assert not gates.e5_existence_is_advisory([{**FLAG, "value": "retired"}]).passed
     assert not gates.e5_existence_is_advisory([{**FLAG, "field": "status"}]).passed
+
+
+def test_append_records_the_citation_so_provenance_can_be_walked():
+    """fact_assertions has no evidence column. Without a ref_source_row entry, gate E1 checks a
+    citation and the database then forgets it, and nothing can answer why an address was believed."""
+    from pipeline.enrich import _db
+    seen = []
+
+    class FakeDB:
+        last_row_count = 1
+        def query(self, sql, params=()):
+            seen.append((sql, params)); return []
+
+    a = _db.assertion("IC-1", "address", "1 Main St", source_id="enrich:locate",
+                      basis="web_cited", confidence=0.9,
+                      evidence="https://x.example/c :: our plant at 1 Main St")
+    _db.append(FakeDB(), [a], "rel-1")
+
+    ev = next(p for sql, p in seen if "ref_source_row" in sql)
+    assert ev[0] == a["row_hash"] and ev[1] == "enrich:locate"
+    assert ev[2] == "https://x.example/c"                 # the page
+    assert ev[3] == "our plant at 1 Main St"              # the sentence on it
+    assert ev[5] == "IC-1"
+    assert any("fact_assertions" in sql for sql, _ in seen)

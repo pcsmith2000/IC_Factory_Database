@@ -127,6 +127,20 @@ def connect(url: str | None = None):
         return NeonHttp(url)
 
 
+# fact_assertions has no evidence column — by design: a published source's assertion points at
+# ref_source_row via row_hash, and v_provenance walks that chain to answer "who says so". An
+# enrichment assertion has no contract row, so without a ref_source_row entry its citation would be
+# checked by gate E1 and then discarded, and the database could never answer why an address was
+# believed. Writing one puts an inferred value on exactly the same provenance footing as a state
+# licence: source_url is the page the model read, source_document the sentence it read there.
+APPEND_EVIDENCE = """
+INSERT INTO ref_source_row
+  (row_hash, source_key, source_url, source_document, retrieved_date,
+   facility_key, match_method, match_confidence, last_seen_release)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+ON CONFLICT (row_hash) DO UPDATE SET last_seen_release = EXCLUDED.last_seen_release
+"""
+
 APPEND_ASSERTION = """
 INSERT INTO fact_assertions
   (assertion_id, release_tag, facility_key, source_key, field_key, date_key,
@@ -147,6 +161,12 @@ def append(db, assertions: list[dict], release_tag: str) -> dict:
     from datetime import date
     inserted = skipped = 0
     for a in assertions:
+        url, _, quote = (a.get("evidence") or "").partition(" :: ")
+        db.query(APPEND_EVIDENCE, (a["row_hash"], a["source_id"], url, quote,
+                                   a.get("retrieved_date") or date.today().isoformat(),
+                                   a["facility_id"], a.get("basis", "none"),
+                                   None if a.get("confidence") in ("", None) else float(a["confidence"]),
+                                   release_tag))
         aid = f"{a['source_id']}|{a['facility_id']}|{a['field']}|{a['row_hash']}"
         db.query(APPEND_ASSERTION, (aid, release_tag, a["facility_id"], a["source_id"], a["field"],
                                     a.get("retrieved_date") or date.today().isoformat(),
