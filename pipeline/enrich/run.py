@@ -30,6 +30,12 @@ from . import _db
 STAGES = ("plan", "locate", "geocode", "footprint", "existence", "load")
 DEFAULT_AI_LIMIT = 200
 DEFAULT_GEOCODE_LIMIT = 2000        # the free tier is 2500/day and is shared with anyone else using it
+# Footprint cost is per distinct Overture file, not per facility: ten plants in one county read one
+# file, ten spread across ten states read ten. A nationally spread run therefore touches a large
+# share of the 512 files at roughly a minute each, which overruns the job long before it runs out
+# of facilities. The ceiling is on files for that reason, and the remainder is left for the next
+# run — every coordinate is still measured eventually, and no run is open-ended.
+DEFAULT_FOOTPRINT_LIMIT = 40
 
 
 def _summary(title: str, rows: list[tuple[str, object]]) -> str:
@@ -65,6 +71,8 @@ def main(argv=None) -> int:
                     help="hard ceiling on facilities for the AI stage (default 200)")
     ap.add_argument("--geocode-limit", type=int, default=DEFAULT_GEOCODE_LIMIT,
                     help="hard ceiling on Geocodio lookups per run (default 2000, free tier 2500/day)")
+    ap.add_argument("--footprint-limit", type=int, default=DEFAULT_FOOTPRINT_LIMIT,
+                    help="hard ceiling on distinct Overture files a run may read (default 40)")
     ap.add_argument("--release-tag", default=os.environ.get("ENRICH_RELEASE_TAG", ""))
     ap.add_argument("--dry-run", action="store_true", help="plan the stage; make no external call")
     args = ap.parse_args(argv)
@@ -156,7 +164,8 @@ def main(argv=None) -> int:
             _emit(args.out, "footprint", {"planned": len(pts), "called": 0},
                   [("would measure", len(pts)), ("calls made", 0)])
             return 0
-        res = footprint.measure(pts, cache=args.out / "overture_index.json")
+        res = footprint.measure(pts, cache=args.out / "overture_index.json",
+                                max_files=args.footprint_limit)
         got = [r for r in res if r.get("building_sqft")]
         asserts = [assertion(r["facility_id"], "building_sqft", str(r["building_sqft"]),
                              source_id="overture:building", basis="footprint",
@@ -172,7 +181,11 @@ def main(argv=None) -> int:
                "under_10k": sum(1 for x in sq if x < 10000),
                "release": footprint.DEFAULT_RELEASE},
               [("coordinates", len(pts)), ("measured", len(got)),
-               ("no building within 30m", len(pts) - len(got)),
+               ("file ceiling this run", args.footprint_limit),
+               ("deferred to the next run (file ceiling)",
+                sum(1 for r in res if r.get("reason") == "deferred: file ceiling reached")),
+               ("no building within 30m",
+                sum(1 for r in res if (r.get("reason") or "").startswith("no Overture building"))),
                ("median sqft", f"{sq[len(sq)//2]:,}" if sq else "-"),
                ("under 10k sqft (flagged)", sum(1 for x in sq if x < 10000)),
                ("overture release", footprint.DEFAULT_RELEASE)])

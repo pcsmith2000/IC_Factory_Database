@@ -236,3 +236,20 @@ def test_a_street_suffix_spelling_difference_is_not_a_fabrication(monkeypatch):
     monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: R())
     assert locate._page_states_the_address("https://x.example", "1200 Industrial Blvd") is True
     assert locate._page_states_the_address("https://x.example", "99 Nowhere Rd") is False
+
+
+def test_footprint_defers_rather_than_drops_when_the_file_ceiling_is_hit(monkeypatch):
+    """Cost is one S3 read per distinct region, about a minute each, so a nationally spread run
+    overruns the job long before it runs out of facilities. Points beyond the ceiling must come
+    back with a reason so the next run takes them, not vanish."""
+    from pipeline.enrich import footprint
+    idx = [{"file": f"s3://f{i}", "xmin": i, "xmax": i + 1, "ymin": 0, "ymax": 1} for i in range(5)]
+    monkeypatch.setattr(footprint, "build_index", lambda release=None, cache=None: idx)
+    monkeypatch.setattr(footprint, "_connect", lambda: (_ for _ in ()).throw(
+        AssertionError("must not open a connection when every point is deferred")))
+    pts = [{"facility_id": f"IC-{i}", "lat": 0.5, "lon": i + 0.5} for i in range(5)]
+    res = footprint.measure(pts, cache=None, max_files=0)
+    assert len(res) == 5
+    assert all(r["building_sqft"] is None for r in res)
+    assert all(r["reason"] == "deferred: file ceiling reached" for r in res)
+    assert {r["facility_id"] for r in res} == {p["facility_id"] for p in pts}

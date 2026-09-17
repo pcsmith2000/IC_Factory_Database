@@ -85,8 +85,14 @@ def wkt_area_m2(wkt: str) -> float:
 
 
 def measure(points: list[dict], release: str = DEFAULT_RELEASE,
-            cache: Path | None = None, box_deg: float = 0.0035) -> list[dict]:
-    """points: [{facility_id, lat, lon}] -> one result each, grouped by file so each is read once."""
+            cache: Path | None = None, box_deg: float = 0.0035,
+            max_files: int | None = None) -> list[dict]:
+    """points: [{facility_id, lat, lon}] -> one result each, grouped by file so each is read once.
+
+    `max_files` bounds the run by the thing that actually costs: one S3 parquet read per distinct
+    region, around a minute each. Points in files beyond the ceiling are returned with a reason
+    rather than dropped, so the next run picks them up and nothing is silently skipped.
+    """
     idx = build_index(release, cache)
     by_file: dict[str, list[dict]] = {}
     out: list[dict] = []
@@ -97,7 +103,15 @@ def measure(points: list[dict], release: str = DEFAULT_RELEASE,
         else:
             by_file.setdefault(f, []).append(p)
     con = _connect()
-    for f, ps in by_file.items():
+    files = list(by_file)
+    if max_files is not None and len(files) > max_files:
+        for f in files[max_files:]:
+            for p in by_file[f]:
+                out.append({**p, "building_sqft": None,
+                            "reason": "deferred: file ceiling reached"})
+        files = files[:max_files]
+    for f in files:
+        ps = by_file[f]
         where = " OR ".join(f"(bbox.xmin BETWEEN {p['lon']-box_deg} AND {p['lon']+box_deg} AND "
                             f"bbox.ymin BETWEEN {p['lat']-box_deg} AND {p['lat']+box_deg})" for p in ps)
         # A TEMP TABLE, not a view: a view is lazy, so every point below would re-read the whole
