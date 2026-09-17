@@ -430,9 +430,11 @@ sources:
   - company_address
   status_basis: on_current_list
   traps:
+  - 'Built 2026-09-17. The rendered directory is an infinite scroll (views-infinite-scroll-content-wrapper): the first render holds one page, so the fetcher scrolls until the member count stops growing and raises rather than publish a truncated roster. 40 US members, all with a street, 21 states; 4 non-US skipped (the state filter lists Alberta and Ontario beside the states). Archived as rendered HTML because CI has no Chromium - acquire is blob-only.'
   - 'Probed 2026-09-17: mbma.com/membership/member-directory and /members both 404. The real page is /building-systems-directory, HTTP 200 but 35KB of shell with no member content in the HTML - JS-rendered, so it needs _browser.py, not http_get. /associate-directory is the other half. Worth doing: 10 control rows are Steel Structural Components.'
   - Company-level, not plant-level.
-  status: queued
+  acquire: blob-only
+  status: active
 - id: nfba
   name: NFBA post-frame manufacturers
   class: D
