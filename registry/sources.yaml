@@ -362,6 +362,7 @@ sources:
   - plant_address
   status_basis: accredited
   traps:
+  - 'Probed 2026-09-17, three approaches, stopping. /directory-of-accredited-companies/ 404s; the real page is /search-accredited-organizations-2/ whose form (action / method GET) offers service=13569 ''Metal Building Systems (AC472)''; a plain GET with that parameter returns 162KB of chrome and zero rows, and rendering it with Chromium and selecting the option returns 200KB with no table and no address. Results are fetched client-side from an endpoint not yet identified - try the wp-json routes or watch the XHR. NOT worth a fourth attempt on current evidence: IAS is the superset of MBMA membership, and MBMA''s 40 AC472 plants reached ~0 control rows, so the segment is already covered where it matters.'
   - Accredits the plant, not the corporation (~215 numbers). Better instrument for NAICS 332311 than MBMA.
   status: queued
 - id: aisc_certified
@@ -373,6 +374,7 @@ sources:
   - plant_address
   status_basis: certified
   traps:
+  - 'Probed 2026-09-17: /certification/ and /certification/certified-company-search/ both return HTTP 403 to an ordinary fetch, so AISC blocks automation at the edge rather than gating on login. Would need a different route entirely.'
   - 403s every plain fetch. Browser job.
   status: queued
 - id: sipa
