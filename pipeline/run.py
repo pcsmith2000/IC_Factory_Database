@@ -49,8 +49,12 @@ def main(argv=None) -> int:
     layers = _layers(args.layers)
     started = datetime.now(timezone.utc)
     out = ROOT / args.out; out.mkdir(exist_ok=True)
-    # A probe's record belongs with its probe output, not in the release history.
-    rec_dir = out if args.limit else None
+    # A record belongs with its output unless the run is a release. A --limit probe never is, and
+    # neither is a run told to write somewhere other than the default build/ — that is a local
+    # verification run, and its record has no business in the tracked release history. CI passes
+    # neither flag, so releases still land in run_records/. (Six tracked records were deleted by a
+    # cleanup glob aimed at exactly these strays; the fix is to stop creating them.)
+    rec_dir = out if (args.limit or args.out != ap.get_default("out")) else None
     csv_dir, norm_dir = ROOT / "ic-csv", out / "normalised"
     record = {
         "pipeline_version": __version__, "started": started.isoformat(),
