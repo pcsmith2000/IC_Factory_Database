@@ -77,3 +77,22 @@ state level only. The denominator. Refresh annually and record the vintage in co
 
 **v1.0 shipped these as headers only.** Seeds and frame totals were added from the 2026-09-09
 build; `control-triaged.csv` was filled on 2026-09-17 with the ADL list.
+
+## `untriaged-worklist.csv` — the rows that need a human, not another source
+
+35 of the 203 dev rows carry no category, no city and no state: a bare company name. 31 of those
+35 appear nowhere in the 89,437 distinct establishment names the pipeline holds across every
+source, EPA FRS included. That is evidence, not proof — a small plant can hold no environmental
+permit — but it is a strong signal, and reading the names makes the pattern plainer: Tiny Home
+Tours, Housing Growth Partners, 4Ward Solutions Group, Slab to Ridge, Promise Robotics.
+
+Promise Robotics was checked rather than assumed. It sells "Homebuilding Factory-as-a-Service":
+it deploys robots into other companies' factories, and its own facility is in Calgary, Alberta. It
+is a technology vendor with no US plant, so no US plant database can ever find it, and while its
+`triage` is blank Layer 7 counts it in the denominator and scores it a miss forever.
+
+The worklist is the 35 rows with the computed signal against each. `proposed_triage` and
+`evidence` are empty on purpose. **Claude did not triage these**, because every row moved to
+`out_of_scope` raises Claude's own recall number, and a model that grades itself by shrinking the
+denominator is the exact failure the sealed split exists to catch. Filling this in is a human
+decision; the checksum and G4 make it a logged one.
