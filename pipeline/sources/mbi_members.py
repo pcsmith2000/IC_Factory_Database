@@ -30,7 +30,7 @@ from __future__ import annotations
 import html as _html
 import re
 from pathlib import Path
-from ._common import LayoutChanged, contract_row, http_get, require
+from ._common import US_STATES, LayoutChanged, contract_row, http_get, require
 
 BASE = "https://members.modular.org"
 # MBI runs TWO overlapping directories and neither contains the other. The general membership
@@ -89,6 +89,7 @@ def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
 def parse(paths: list[Path], source: dict) -> list[dict]:
     out: list[dict] = []
     seen: set[tuple] = set()
+    non_us_seen: set[tuple] = set()
     skipped: dict[str, int] = {}
     position = 0
     total_cards = 0
@@ -110,6 +111,18 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
             slug_m = SLUG.search(card)
             slug = slug_m.group(1) if slug_m else ""
             city = _text(PROP.format(p="addressLocality"), card)
+            # MBI is international and the card carries no addressCountry. US members carry a
+            # two-letter state in addressRegion; everyone else carries a region name — "Dubayy",
+            # "Hunan", "Varsinais-Suomi" — or a Canadian province. 60 of 188 manufacturer members
+            # are abroad, and until Layer 2 stopped truncating regions to two letters they entered
+            # the warehouse as VA, MI, DU and SH. This is a US database; they are skipped and
+            # counted, the same way sipa and mbma skip their non-US members.
+            region = _text(PROP.format(p="addressRegion"), card).strip().upper()
+            if region not in US_STATES:
+                # Counted by (name, city) like the kept rows, so a member listed in both
+                # directories is one skipped member, not two.
+                non_us_seen.add((DEDUPE_TRIM.sub("", name.lower()), DEDUPE_TRIM.sub("", city.lower())))
+                continue
             key = (DEDUPE_TRIM.sub("", name.lower()), DEDUPE_TRIM.sub("", city.lower()))
             if key in seen:
                 continue          # the same member listed in both directories
@@ -133,9 +146,9 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
             f"tier; types seen: {sorted(skipped)[:8]}")
     # Deliberately loud: a reader asking "what did this source leave out?" gets the answer without
     # opening the archive.
-    out[0]["notes"] += (f" | {len(out)} manufacturer members kept, "
-                        f"{sum(skipped.values())} non-manufacturer members skipped across "
-                        f"{len(skipped)} membership types")
+    out[0]["notes"] += (f" | {len(out)} US manufacturer members kept, {len(non_us_seen)} non-US "
+                        f"manufacturer members skipped, {sum(skipped.values())} non-manufacturer members "
+                        f"skipped across {len(skipped)} membership types")
     return out
 
 

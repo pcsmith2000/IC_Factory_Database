@@ -14,6 +14,7 @@ A company entry with no url is reported (not silently skipped) and yields no row
 """
 from __future__ import annotations
 import json, re, time, urllib.parse
+import re
 from pathlib import Path
 from ._common import http_get, html_text, contract_row, require
 from ._extract import extract_locations
@@ -102,12 +103,23 @@ def _from_csv(path: Path, source: dict) -> list[dict]:
     missing = [c for c in ("name", "city", "state") if rows and c not in rows[0]]
     require(not missing, path, f"pre-extracted CSV is missing columns {missing}; "
                                f"expected {PRE_EXTRACTED_COLUMNS}")
-    out = []
+    out, millwork = [], 0
     # Position is per file, so revising one company's CSV cannot shift the row numbers recorded
     # against every other company.
     for i, r in enumerate(rows, 1):
         name = (r.get("name") or "").strip()
         if not name:
+            continue
+        # The transcription's own `kind` says what the site makes, and a company's location page
+        # lists everything it runs: 84 Lumber's 54 sites are 21 truss plants, 32 door shops and a
+        # millwork location; Parr's 14 are 9 truss and 5 doors-millwork. A door shop is millwork,
+        # which prompt v1.2 drew outside the boundary — and this source carries needs_classify:
+        # false, so nothing downstream would have drawn it. 38 non-IC sites were publishing as
+        # plants. Dropped on the transcription's own field: millwork or doors, with no truss,
+        # panel, component or manufacturing in the same description.
+        kind = (r.get("kind") or "").strip()
+        if _is_millwork_only(kind):
+            millwork += 1
             continue
         name = _qualify((r.get("company") or "").strip(), name)
         out.append(contract_row(source, i, name=name, address=(r.get("address") or "").strip(),
@@ -118,7 +130,18 @@ def _from_csv(path: Path, source: dict) -> list[dict]:
                                 notes=("transcribed from the company page, not model-extracted"
                                        + (f"; {r['evidence'].strip()}" if (r.get("evidence") or "").strip() else ""))[:200]))
     require(bool(out), path, "pre-extracted CSV produced no rows")
+    if millwork:
+        out[0]["notes"] = (out[0]["notes"] + f" | {millwork} door/millwork-only sites dropped from {path.name}")[:200]
     return out
+
+
+_MILLWORK = re.compile(r"door|millwork", re.I)
+_MAKES_IC = re.compile(r"truss|panel|component|manufactur|facility|plant", re.I)
+
+
+def _is_millwork_only(kind: str) -> bool:
+    """A site whose kind names doors or millwork and nothing this database is about."""
+    return bool(kind) and bool(_MILLWORK.search(kind)) and not _MAKES_IC.search(kind)
 
 
 

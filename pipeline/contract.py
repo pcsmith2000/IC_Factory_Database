@@ -115,6 +115,38 @@ def validate_rows(source_id: str, rows: list[dict]) -> list[str]:
     return problems
 
 
+_US = {"AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA",
+       "ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR",
+       "PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"}
+_US_NAMES = {"alabama":"AL","alaska":"AK","arizona":"AZ","arkansas":"AR","california":"CA","colorado":"CO",
+    "connecticut":"CT","delaware":"DE","district of columbia":"DC","florida":"FL","georgia":"GA","hawaii":"HI",
+    "idaho":"ID","illinois":"IL","indiana":"IN","iowa":"IA","kansas":"KS","kentucky":"KY","louisiana":"LA",
+    "maine":"ME","maryland":"MD","massachusetts":"MA","michigan":"MI","minnesota":"MN","mississippi":"MS",
+    "missouri":"MO","montana":"MT","nebraska":"NE","nevada":"NV","new hampshire":"NH","new jersey":"NJ",
+    "new mexico":"NM","new york":"NY","north carolina":"NC","north dakota":"ND","ohio":"OH","oklahoma":"OK",
+    "oregon":"OR","pennsylvania":"PA","rhode island":"RI","south carolina":"SC","south dakota":"SD",
+    "tennessee":"TN","texas":"TX","utah":"UT","vermont":"VT","virginia":"VA","washington":"WA",
+    "west virginia":"WV","wisconsin":"WI","wyoming":"WY"}
+
+
+def us_state(verbatim: str | None) -> str:
+    """A US state code, or nothing. Never a code invented by truncation.
+
+    This used to be `.upper()[:2]`, which turned every non-US region a source carried into a
+    plausible US state: MBI's Turku, Finland ("Varsinais-Suomi") became VA, Belo Horizonte ("Minas
+    Gerais") became MI, Dubai ("Dubayy") became DU, Shanghai became SH. Sixty of MBI's 188 members
+    are abroad and every one of them landed in the warehouse with a state it never had — two of
+    them with states that exist, where they could match a control row and pollute per-state
+    coverage. A state this database did not read is a state it must not report.
+    """
+    s = " ".join((verbatim or "").split())
+    if not s:
+        return ""
+    if s.upper() in _US:
+        return s.upper()
+    return _US_NAMES.get(s.lower(), "")
+
+
 def normalise(rows: list[dict]) -> list[dict]:
     """Add the Layer 2 columns. Verbatim columns are untouched."""
     out = []
@@ -122,7 +154,7 @@ def normalise(rows: list[dict]) -> list[dict]:
         r = dict(row)
         r["city_norm"] = norm_city(row.get("city_verbatim", ""))
         r["street_key"] = street_key(row.get("address_verbatim", ""))
-        r["state"] = (row.get("state_verbatim") or "").strip().upper()[:2]
+        r["state"] = us_state(row.get("state_verbatim"))
         r["no_fixed_plant"] = "NO-FIXED-PLANT" in (row.get("notes") or "").upper()
         r["contract_version"] = CONTRACT_VERSION
         r["row_hash"] = row_hash(row)
