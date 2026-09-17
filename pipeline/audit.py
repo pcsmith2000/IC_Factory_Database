@@ -16,6 +16,13 @@ about — the true rate is higher, since Oldcastle, Panelfold and the rest match
 A name carrying a strong IC signal as well as a flagged word ("Pacific Truss & Plywood") is
 counted separately and excluded from the floor: those are the cases a keyword can't call.
 
+The instrument was checked rather than assumed. A random 30 of the 185 names it flagged on run
+35174109197 were read one by one: JELD-WEN x7, Masonite x5, Louisiana-Pacific x3, Weyerhaeuser,
+Georgia-Pacific MDF, Boise Cascade plywood, two OSB plants, Murphy Plywood, Standard Plywoods,
+Langboard OSB, Kolbe & Kolbe, Sunset Moulding, Ken-Rich Millwork and four more millwork shops.
+Nothing in the sample was defensible as IC, so the count is a floor and not an overstatement —
+which is the only way the number is worth quoting.
+
     python -m pipeline.audit build/classify_cache --rows build/facilities.csv
 """
 from __future__ import annotations
