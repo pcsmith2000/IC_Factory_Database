@@ -413,3 +413,13 @@ def test_attaching_issues_no_new_ids_so_g3_is_unaffected(tmp_path: Path):
                             _row("Deer Run Cabins", "campbellsville", src="iibc")], p)
     assert second["ids_issued"] == 0
     assert second["facilities"][0]["facility_id"] == fid
+
+
+def test_an_attached_row_does_not_claim_street_level_provenance(tmp_path: Path):
+    """The fold gives the row a new facility id, not a street address it never had."""
+    addressed = _row("DEER RUN CABINS", "campbellsville", street="100 main st")
+    homeless = _row("Deer Run Cabins", "campbellsville", src="iibc")
+    reconcile.run([addressed, homeless], tmp_path / "ids.json")
+    assert addressed["match_method"] == "street_key" and addressed["match_confidence"] == 0.90
+    assert homeless["match_method"] == "name+city→addressed"
+    assert homeless["match_confidence"] == 0.70      # not the cluster's 0.90

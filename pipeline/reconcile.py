@@ -117,8 +117,14 @@ def run(rows: list[dict], registry_path: Path) -> dict:
     for sig, members in clusters.items():
         fid = reg.get(sig)
         for r in members:
-            r["facility_id"] = fid; r["match_method"] = methods[sig]
-            r["match_confidence"] = {"entity+street": 0.95, "street_key": 0.90, "name+city": 0.70, "no-fixed-plant": 0.60}[methods[sig]]
+            # A row folded in by _attach_addressless was matched on name and city, NOT on the
+            # street key that gives its new cluster an id. Recording the cluster's method here
+            # would claim 0.90 street-level provenance for a row that never carried a street, and
+            # v_provenance would repeat that claim to anyone tracing the value back.
+            m = "name+city→addressed" if r.get("attached_from") else methods[sig]
+            r["facility_id"] = fid; r["match_method"] = m
+            r["match_confidence"] = {"entity+street": 0.95, "street_key": 0.90, "name+city": 0.70,
+                                     "name+city→addressed": 0.70, "no-fixed-plant": 0.60}[m]
         first = members[0]
         facilities.append({
             "facility_id": fid, "signature": sig, "n_rows": len(members),
