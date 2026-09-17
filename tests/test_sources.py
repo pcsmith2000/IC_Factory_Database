@@ -386,3 +386,20 @@ def test_superior_walls_counts_a_plant_once_across_two_slugs():
                                                "status_basis": "on_current_list"})
     assert len(rows) == 1
     assert "1 licensee plants from 2 pages; 1 pages were a second slug" in rows[0]["notes"]
+
+
+def test_a_bare_town_label_is_not_written_into_the_company_name():
+    """The Truss Company lists its plants as "Sumner, WA" and "Eugene, OR".
+
+    Qualifying those produced "The Truss Company — Sumner, WA", and norm_name strips "The" and
+    "Company": the control row normalised to "truss" while the facility normalised to
+    "trusssumnerwa". All eight plants were extracted correctly, with street addresses, and none of
+    them matched anything. The town already lives in the city and state columns.
+    """
+    from pipeline.sources.corporate_locations import _qualify
+    assert _qualify("The Truss Company", "Sumner, WA") == "The Truss Company"
+    assert _qualify("The Truss Company", "Medford, OR") == "The Truss Company"
+    assert _qualify("Banker Steel", "Lynchburg, VA") == "Banker Steel"
+    # a label that names a SITE is still qualified — that is what 84 Lumber needs
+    assert _qualify("84 Lumber", "Kings Mountain Truss Plant") == "84 Lumber — Kings Mountain Truss Plant"
+    assert _qualify("UFP Site Built", "Shawnlee Construction") == "UFP Site Built — Shawnlee Construction"

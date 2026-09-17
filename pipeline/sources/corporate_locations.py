@@ -24,24 +24,32 @@ PROMPT = ROOT / "prompts" / "EXTRACTION-PROMPT.md"
 MAX_FOLLOW = 150
 
 
+# "Sumner, WA" · "Medford, OR" — a label that is only a place, not a plant name.
+PLACE_LABEL = re.compile(r"^[A-Za-z .'\-]{2,28},\s*[A-Za-z]{2}\.?$")
+
+
 def _qualify(company: str, label: str) -> str:
-    """Prefix the operating company onto a location label that does not already carry it.
+    """The establishment's name: the company, plus the site label only when that label names a SITE.
 
-    84 Lumber's page names its plants "Mt. Airy Truss Plant", "Kings Mountain Truss Plant" — the
-    SITE, never the operator. The row that reached the warehouse was therefore called "Kings
-    Mountain Truss Plant" and nothing could tie it to 84 Lumber: not a reader, not the control
-    list, not a cross-source join. Every multi-site company on this source has the same shape, and
-    between them they are about forty plants.
+    84 Lumber's page names plants "Mt. Airy Truss Plant" and "Kings Mountain Truss Plant" — the
+    site, never the operator — so the row reached the warehouse with nothing tying it to 84 Lumber.
+    The company goes in front of a label like that, because the label is the only thing separating
+    one 84 Lumber plant from another and this database is plant-level.
 
-    The company goes in front rather than replacing the label, because the label is the only thing
-    that tells one 84 Lumber plant from another and this database is plant-level. "84 Lumber —
-    Kings Mountain Truss Plant" is matchable as 84 Lumber and still unique per site.
-
-    A label that already names the company ("Stark Truss - Summerville") is left alone.
+    But many pages label a plant with nothing but its town. The Truss Company lists "Sumner, WA",
+    "Eugene, OR", "Centralia, WA", and qualifying those produced facilities called "The Truss
+    Company — Sumner, WA". That is worse than useless: norm_name strips "The" and "Company", so the
+    control row "The Truss Company" normalises to "truss" while the facility normalises to
+    "trusssumnerwa", and all eight plants — every one of them correctly extracted, with its street
+    address — failed to match anything. The town is already in the city and state columns, which is
+    where the rest of the pipeline looks for it, and Layer 4's signature keeps the plants apart on
+    exactly that. So a pure place label is DROPPED and the company name stands alone.
     """
     c, l = company.strip(), label.strip()
     if not c:
         return l
+    if PLACE_LABEL.match(l):
+        return c
     cn, ln = norm_name(c), norm_name(l)
     if not cn or not ln or cn in ln:
         return l
