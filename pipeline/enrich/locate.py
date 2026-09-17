@@ -113,8 +113,14 @@ def locate_one(row: dict, client, model: str) -> dict:
     return {"answer": _extract_json(text) or {}, "visited": _searched_urls(msg.content)}
 
 
-def _page_states_the_address(url: str, address: str, timeout: int = 20) -> bool | None:
-    """Fetch the cited page and look for the address on it. None when the page cannot be read.
+def _page_states_the_address(url: str, address: str, timeout: int = 20) -> tuple[bool | None, str]:
+    """Fetch the cited page, look for the address, and return the text around it.
+
+    The snippet is returned rather than the model's own quote because auditing the first real run
+    showed two of five quotes were page furniture — "Door Shop Store Details Store Locator Change
+    My Store" offered as the sentence containing 36 McCoy St. The address checked out; the evidence
+    a human would read did not. Taking the surrounding text from the page makes the stored quote
+    something the page actually says, instead of the model's claim about what it says.
 
     Checking that search visited a URL proves the page exists, not that it says what the model
     claims — the model can open a real page and attribute an address to it that is not there, and
@@ -129,21 +135,34 @@ def _page_states_the_address(url: str, address: str, timeout: int = 20) -> bool 
         with urllib.request.urlopen(req, timeout=timeout) as r:
             body = r.read(2_000_000).decode("utf-8", "replace")
     except (urllib.error.URLError, OSError, ValueError):
-        return None
-    text = _re.sub(r"<[^>]+>", " ", body)
+        return None, ""
+    text = _re.sub(r"\s+", " ", _re.sub(r"<[^>]+>", " ", body))
     norm = lambda s: _re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
     page, want = norm(text), norm(address)
+
+    def around(hay: str, needle: str) -> str:
+        i = hay.find(needle)
+        if i < 0:
+            return ""
+        return hay[max(0, i - 90):i + len(needle) + 90].strip()
+
     if want and want in page:
-        return True
+        # locate it in the readable text, not the normalised form, so the snippet is legible
+        m = _re.search(_re.escape(address), text, _re.I)
+        return True, (around(text, m.group(0)) if m else around(page, want))
     # street number plus the distinctive word of the street name, for "1200 Industrial Blvd" vs
     # "1200 Industrial Boulevard" — a suffix spelling difference is not a fabricated address
     m = _re.match(r"^(\d+)\s+(.*)$", want)
     if m:
         num, rest = m.group(1), m.group(2).split()
         distinctive = max(rest, key=len) if rest else ""
-        if distinctive and _re.search(rf"\b{num}\b[^.]{{0,40}}\b{_re.escape(distinctive)}\b", page):
-            return True
-    return False
+        if distinctive:
+            # search the readable text, not the normalised form: the snippet is stored as evidence
+            # and read by a person, so "1200 Industrial Boulevard" beats "1200 industrial boulevard"
+            hit = _re.search(rf"\b{num}\b[^.]{{0,40}}\b{_re.escape(distinctive)}\w*\b", text, _re.I)
+            if hit:
+                return True, around(text, hit.group(0))
+    return False, ""
 
 
 USER_AGENT = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -183,11 +202,13 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
             why = f"confidence {conf} below {min_confidence}"
         elif verify_page:
             # the check E1 cannot make from the response alone: does that page really say this?
-            states = _page_states_the_address(url, addr)
+            states, snippet = _page_states_the_address(url, addr)
             if states is False:
                 why = f"the cited page does not contain {addr!r}"
             elif states is None:
                 why = f"could not read the cited page to confirm it: {url}"
+            elif snippet:
+                quote = snippet         # what the page says, not what the model said it says
         if why:
             rejected.append({"facility_id": row["facility_id"], "why": why})
             continue

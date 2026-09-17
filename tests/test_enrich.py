@@ -202,7 +202,8 @@ def test_append_records_the_citation_so_provenance_can_be_walked():
 # --- the check E1 cannot make: does the cited page really say this? --------------------------
 
 def test_page_verification_accepts_an_address_that_is_on_the_page(monkeypatch):
-    monkeypatch.setattr(locate, "_page_states_the_address", lambda u, a, timeout=20: True)
+    monkeypatch.setattr(locate, "_page_states_the_address",
+                        lambda u, a, timeout=20: (True, "our plant at 1 Main St"))
     rep = locate.run(ROW, client=_FakeClient(GOOD, ["https://acme.example/contact"]))
     assert rep["located"] == 1
 
@@ -210,7 +211,7 @@ def test_page_verification_accepts_an_address_that_is_on_the_page(monkeypatch):
 def test_page_verification_rejects_an_address_the_page_does_not_contain(monkeypatch):
     """Search visiting a URL proves the page exists, not that it says what the model claims. A real
     page with a misattributed address passes every other check."""
-    monkeypatch.setattr(locate, "_page_states_the_address", lambda u, a, timeout=20: False)
+    monkeypatch.setattr(locate, "_page_states_the_address", lambda u, a, timeout=20: (False, ""))
     rep = locate.run(ROW, client=_FakeClient(GOOD, ["https://acme.example/contact"]))
     assert rep["located"] == 0
     assert "does not contain" in rep["rejected"][0]["why"]
@@ -219,7 +220,7 @@ def test_page_verification_rejects_an_address_the_page_does_not_contain(monkeypa
 def test_an_unreadable_page_is_not_treated_as_a_lie(monkeypatch):
     """A page that will not load is not evidence of dishonesty, but it is not evidence of the
     address either, so the assertion is still withheld — with a reason that says which it is."""
-    monkeypatch.setattr(locate, "_page_states_the_address", lambda u, a, timeout=20: None)
+    monkeypatch.setattr(locate, "_page_states_the_address", lambda u, a, timeout=20: (None, ""))
     rep = locate.run(ROW, client=_FakeClient(GOOD, ["https://acme.example/contact"]))
     assert rep["located"] == 0 and "could not read" in rep["rejected"][0]["why"]
 
@@ -234,8 +235,9 @@ def test_a_street_suffix_spelling_difference_is_not_a_fabrication(monkeypatch):
         def __exit__(self, *a): pass
     import urllib.request
     monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: R())
-    assert locate._page_states_the_address("https://x.example", "1200 Industrial Blvd") is True
-    assert locate._page_states_the_address("https://x.example", "99 Nowhere Rd") is False
+    ok, snippet = locate._page_states_the_address("https://x.example", "1200 Industrial Blvd")
+    assert ok is True and "Industrial Boulevard" in snippet
+    assert locate._page_states_the_address("https://x.example", "99 Nowhere Rd")[0] is False
 
 
 def test_footprint_defers_rather_than_drops_when_the_file_ceiling_is_hit(monkeypatch):
@@ -317,3 +319,18 @@ def test_the_footprint_ceiling_fits_inside_the_stage_timeout():
     timeout = int(re.search(r"timeout-minutes:\s*(\d+)", yml).group(1))
     assert DEFAULT_FOOTPRINT_LIMIT < timeout * 0.75, (
         f"ceiling {DEFAULT_FOOTPRINT_LIMIT} files vs {timeout} minute timeout leaves no headroom")
+
+
+def test_the_stored_quote_comes_from_the_page_not_the_model(monkeypatch):
+    """Auditing the first real run found two of five quotes were page furniture — "Door Shop Store
+    Details Store Locator Change My Store" offered as the sentence containing 36 McCoy St. The
+    address was on the page; the evidence a human would read was not."""
+    monkeypatch.setattr(locate, "_page_states_the_address",
+                        lambda u, a, timeout=20: (True, "Visit us at 1200 Industrial Blvd, Waco TX"))
+    junk = {**GOOD, "address": "1200 Industrial Blvd",
+            "quote": "Store Locator Change My Store"}
+    rep = locate.run(ROW, client=_FakeClient(junk, ["https://acme.example/contact"]))
+    assert rep["located"] == 1
+    ev = rep["assertions"][0]["evidence"]
+    assert "Visit us at 1200 Industrial Blvd" in ev
+    assert "Change My Store" not in ev
