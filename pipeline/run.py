@@ -30,6 +30,12 @@ def main(argv=None) -> int:
     ap.add_argument("--layers", default="1-8")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--rerun", action="store_true", help="inputs identical to last run; G3 must issue 0 ids")
+    ap.add_argument("--limit", type=int, default=0,
+                    help="classify only the first N candidates. A short run on the REAL path — same "
+                         "100-row batches, same rows, same validation — so what it measures "
+                         "(IC share, secs/batch, re-asks) actually predicts a full run. The 60-seed "
+                         "bake-off does not: it under-read ling's latency by 3.5x and reported zero "
+                         "re-asks for models needing them on a quarter of real batches.")
     ap.add_argument("--out", default="build")
     args = ap.parse_args(argv)
 
@@ -130,6 +136,13 @@ def main(argv=None) -> int:
         # Candidate generation is deterministic (keyword x NAICS matrix) and runs either way — it is
         # the measurable half of Layer 3, and with the classifier off it is what the review queue holds.
         cand = classify.candidates([r for r in rows if r["source_id"] in needs], core)
+        if args.limit:
+            # Deterministic slice: candidates are already ordered by source and row position, so
+            # the same --limit always probes the same rows and two models are compared on
+            # identical input. Seeds are added by classify.run regardless, so G5 still scores.
+            print(f"  --limit {args.limit}: probing {min(args.limit, len(cand))} of {len(cand)} "
+                  f"candidates (not a release)")
+            cand = cand[:args.limit]
         if ai_enabled():
             cls_meta = classify.run(cand, cfg["classifier"], seeds, out / "classify_cache",
                                     ROOT / cfg["classifier"]["prompt_path"], hb=hb)
