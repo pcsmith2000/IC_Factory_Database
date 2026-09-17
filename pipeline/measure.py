@@ -53,7 +53,8 @@ def load_frame(path: Path) -> dict[str, int]:
     return out
 
 
-def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str, str]) -> dict:
+def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str, str],
+           _detail: bool = False) -> dict:
     """Did the pipeline find the establishments a human already verified exist?
 
     The control list is PLANT-level, not company-level: "Builders FirstSource" is 21 rows in 13
@@ -180,6 +181,18 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
         known = bool(by_name.get(_key(c.get("name", "")))) or any(
             _prefix_match(cn, fn) for _fid, fn, _st in fac_names)
         (crowded if known else misses).append(c.get("name", ""))
+    if _detail:
+        outcome = []
+        for i, c in enumerate(in_scope):
+            if i in matched:
+                outcome.append((matched[i], taken_by.get(i), ""))
+            else:
+                cn = norm_name(c.get("name", ""))
+                known = bool(by_name.get(_key(c.get("name", "")))) or any(
+                    _prefix_match(cn, fn) for _fid, fn, _st in fac_names)
+                outcome.append((None, None,
+                                "company in database, THIS PLANT not" if known
+                                else "not in any source we hold"))
     hits = len(matched)
     # A T0 row is a LEAD: a name the pipeline knows about with no location established. Counting
     # one as a found plant lets a source of bare names lift recall while the database gains nothing
@@ -204,6 +217,8 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
             loc = sum(1 for i in idx if i in matched and tier.get(taken_by.get(i), "") != "T0")
             out[name] = {"in_scope": len(idx), "found": found, "recall": found / len(idx),
                          "found_located": loc, "recall_located": loc / len(idx)}
+    if _detail:
+        out["_detail"] = {"rows": in_scope, "outcome": outcome}
     return out
 
 
@@ -226,3 +241,35 @@ def coverage_and_bias(facilities: list[dict], frame: dict[str, int], band: tuple
     n = sum(1 for st in states if frame[st] / n_frame >= min_share)
     return {"counted_facilities": n_ours, "frame_total": n_frame, "states": states,
             "out_of_band": out_of_band, "mean_abs_bias": round(mab / n, 3) if n else None}
+
+
+def status_table(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str, str]) -> list[dict]:
+    """One row per control entry: did we find it, how, and if not, why not.
+
+    Runs the SAME matcher as recall(), which is the point of it existing. Every earlier version of
+    this table was rebuilt by hand outside the metric, and a hand-built copy of a matcher drifts
+    from it — the first one reported nine plant-level gaps where the metric counted fourteen,
+    because it tested "is this company known" on the exact key while the metric tested it the way
+    the rungs match.
+
+    `status` answers the control's question — is this establishment on our list — so a T0 lead is
+    HAVE, with `has_address` saying which of those still needs a street.
+    """
+    r = recall(control_rows, facilities, crosswalk, _detail=True)
+    detail = r.pop("_detail", {})
+    by_id = {f["facility_id"]: f for f in facilities}
+    out = []
+    for c, (method, fid, why) in zip(detail["rows"], detail["outcome"]):
+        f = by_id.get(fid) if fid else None
+        on_list = f is not None
+        out.append({
+            "control_id": c.get("control_id", ""), "name": c.get("name", ""),
+            "city": c.get("city", ""), "state": c.get("state", ""),
+            "reason": c.get("reason", ""), "split": c.get("split", ""),
+            "status": "HAVE" if on_list else "MISSING",
+            "has_address": "" if not on_list else ("yes" if f.get("tier") != "T0" else "no — needs address lookup"),
+            "matched_by": method or "", "matched_facility": (f or {}).get("name", ""),
+            "matched_state": (f or {}).get("state", ""), "matched_tier": (f or {}).get("tier", ""),
+            "why_missing": why or "",
+        })
+    return out

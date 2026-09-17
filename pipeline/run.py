@@ -304,6 +304,20 @@ def main(argv=None) -> int:
         m["coverage_bias"] = measure.coverage_and_bias(facilities, measure.load_frame(frame_path), tuple(cfg["measure"]["bias_band"]), cfg["measure"]["bias_min_state_share"])
         gaps = load_yaml(ROOT / "registry" / "known-gaps.yaml") if (ROOT / "registry" / "known-gaps.yaml").exists() else {}
         m["coverage_bias"]["out_of_band_causes"] = {st: gaps.get("states", {}).get(st, "NO CAUSE ON RECORD") for st in m["coverage_bias"]["out_of_band"]}
+    # Per-row control status, written every run from the SAME matcher the metric uses. Hand-built
+    # copies of this table drifted from the number they were meant to explain.
+    try:
+        status = measure.status_table(control_rows, facilities, crosswalk.get("control", {}))
+        if status:
+            with open(out / "control-status.csv", "w", newline="") as fh:
+                w = csv.DictWriter(fh, fieldnames=list(status[0]))
+                w.writeheader(); w.writerows(status)
+            have = sum(1 for r in status if r["status"] == "HAVE")
+            print(f"  control status: {have}/{len(status)} on the list "
+                  f"({sum(1 for r in status if r['has_address'].startswith('no'))} without a street) "
+                  f"-> build/control-status.csv")
+    except Exception as e:
+        print(f"  control-status.csv not written: {type(e).__name__}: {e}")
     record["layers"]["7_measure"] = m
     rc = m["recall"]
     if rc.get("tested"):

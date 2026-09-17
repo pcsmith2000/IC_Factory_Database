@@ -142,3 +142,25 @@ def test_the_prefix_rung_still_needs_whole_words():
     facs = [{"facility_id": "IC-1", "name": "Bluebird Panel Systems", "state": "OH", "tier": "T1"}]
     control = [{"control_id": "1", "name": "Blue Bird", "state": "OH"}]
     assert measure.recall(control, facs, {})["found"] == 0
+
+
+def test_the_status_table_and_the_metric_cannot_disagree():
+    """The table is built from the same matcher, because a hand-built copy drifts from it.
+
+    The first version of this table reported nine plant-level gaps where the metric counted
+    fourteen: it tested "is this company known" on the exact key while the metric tested it the way
+    the rungs actually match.
+    """
+    facs = [{"facility_id": "IC-1", "name": "Real Plant Co", "state": "OH", "tier": "T2"},
+            {"facility_id": "IC-2", "name": "Lead Co", "state": "OH", "tier": "T0"}]
+    control = [{"control_id": "1", "name": "Real Plant Co", "state": "OH"},
+               {"control_id": "2", "name": "Lead Co", "state": "OH"},
+               {"control_id": "3", "name": "Nowhere Industries", "state": "OH"}]
+    r = measure.recall(control, facs, {})
+    t = measure.status_table(control, facs, {})
+    assert sum(1 for x in t if x["status"] == "HAVE") == r["found"]
+    assert sum(1 for x in t if x["has_address"].startswith("no")) == r["found_lead_only"]
+    assert sum(1 for x in t if x["status"] == "MISSING") == r["n_missed"]
+    assert [x["status"] for x in t] == ["HAVE", "HAVE", "MISSING"]
+    assert t[1]["has_address"].startswith("no")      # a lead is on the list, without a street
+    assert t[2]["why_missing"] == "not in any source we hold"
