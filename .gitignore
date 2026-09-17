@@ -1,4 +1,8 @@
 build/
+# `--out` targets for probe runs (python -m pipeline.run --limit N --out build-probe-<model>).
+# Same derived artifacts as build/ — normalised CSVs and classify_cache — just under another
+# name, 29 MB a probe. Never a release, never committed.
+build-probe-*/
 .cache/
 ic-csv/*.csv
 ic-csv/*.pull.json
