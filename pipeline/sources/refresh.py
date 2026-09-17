@@ -28,9 +28,42 @@ def refresh_one(source: dict, cfg: dict, arch, cache: Path) -> dict:
     sid = source["id"]
     mod = importlib.import_module(f"pipeline.sources.{sid}")
     day_dir = cache / sid / date.today().isoformat()
+    carried = _carry_forward_transcripts(arch, sid, day_dir)
     files = mod.fetch(source, cfg, day_dir)
     reduced = _reduce_oversize(mod, files, source, cfg, arch)
-    return {"source_id": sid, "files": len(files), "reduced": reduced, **arch.archive_dir(sid, day_dir)}
+    return {"source_id": sid, "files": len(files), "reduced": reduced, "carried_forward": carried,
+            **arch.archive_dir(sid, day_dir)}
+
+
+def _carry_forward_transcripts(arch, sid: str, day_dir: Path) -> list[str]:
+    """Copy hand-transcribed CSVs from the previous snapshot into the new one.
+
+    A refresh writes a NEW dated folder and Layer 1 reads the newest, so anything the fetch does
+    not reproduce is silently gone from the run's point of view. corporate_locations keeps six
+    transcribed CSVs — 67 KB of somebody reading location pages by hand, which parse() prefers
+    outright over a model call — and a refresh on 2026-09-17 archived HTML only. Run 35243029519
+    fell back to model extraction and lost 53 plants against the previous build: 84 Lumber 54 to
+    21, Stark Truss 15 to 0, Parr 14 to 9. The CSVs were still in the 2026-09-16 folder the whole
+    time; nothing was deleted, and nothing warned.
+
+    A fetch cannot recreate human transcription, so a refresh must never drop it.
+    """
+    try:
+        dates = sorted(arch.dates_for(sid))
+    except Exception:
+        return []
+    prev = next((d for d in reversed(dates) if d != day_dir.name), None)
+    if prev is None:
+        return []
+    carried = []
+    for b in arch.list_prefix(f"{arch.prefix}/{sid}/{prev}/"):
+        name = b["pathname"].rsplit("/", 1)[-1]
+        if not name.lower().endswith(".csv"):
+            continue
+        day_dir.mkdir(parents=True, exist_ok=True)
+        arch.download(b["url"], day_dir / name)
+        carried.append(name)
+    return carried
 
 
 def _reduce_oversize(mod, files: list[Path], source: dict, cfg: dict, arch) -> str:
@@ -81,7 +114,9 @@ def main(argv=None) -> int:
     for s in chosen:
         try:
             r = refresh_one(s, cfg, arch, ROOT / cfg["storage"]["local_cache"])
-            print(f"  {s['id']:<22} {r['uploaded']} file(s), {r['bytes']} bytes → {r['manifest'].rsplit('/', 2)[0]}/")
+            carried = r.get("carried_forward") or []
+            print(f"  {s['id']:<22} {r['uploaded']} file(s), {r['bytes']} bytes → {r['manifest'].rsplit('/', 2)[0]}/"
+                  + (f"  [carried forward {len(carried)} transcribed CSV(s): {', '.join(carried)}]" if carried else ""))
         except Exception as e:
             bad += 1
             print(f"  {s['id']:<22} NOT REFRESHED  {type(e).__name__}: {str(e)[:100]}", file=sys.stderr)

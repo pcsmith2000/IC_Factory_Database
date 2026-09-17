@@ -128,14 +128,24 @@ def parse(paths: list[Path], source: dict, cfg: dict | None = None) -> list[dict
     # Transcribed CSVs win outright: if the reading is already done, do not pay for it again.
     # One file per company, so a company whose page changed is re-transcribed and re-uploaded on
     # its own — the others keep their rows, their positions and the file they came from.
+    # Transcribed CSVs win PER COMPANY, not for the whole source. The docstring has always said
+    # "one file per company ... the others keep their rows", but the code returned as soon as any
+    # CSV existed, so six carried-forward CSVs silently suppressed every HTML page — Banker Steel
+    # and True House among them, which have no CSV and exist only as pages.
     pre = sorted((p for p in paths if p.suffix.lower() == ".csv"), key=lambda p: p.name)
-    if pre:
-        out: list[dict] = []
-        for f in pre:
-            out += _from_csv(f, source)
-        return out
-    out, audit, pos = [], [], 0
+    out: list[dict] = []
+    audit: list[dict] = []
+    pos = 0
+    transcribed: set[str] = set()
+    for f in pre:
+        transcribed.add(f.stem.lower())
+        out += _from_csv(f, source)
     for path in paths:
+        if path.suffix.lower() == ".csv":
+            continue
+        if path.parent.name.lower() in transcribed:
+            continue          # this company is already read by hand; do not pay for a model call
+
         slug = path.parent.name
         company = next((pg["company"] for pg in (source.get("pages") or [])
                         if re.sub(r"[^a-z0-9]+", "-", pg.get("company", "").lower()).strip("-") == slug),
@@ -152,8 +162,12 @@ def parse(paths: list[Path], source: dict, cfg: dict | None = None) -> list[dict
             out.append(contract_row(source, pos, name=_qualify(company, loc["name"]), address=loc["address"], city=loc["city"], state=loc["state"],
                                     zip_code=loc["zip"], source_url=url, source_document=path.name,
                                     status=loc.get("kind", ""), notes=(f"evidence: {loc['evidence']}" if loc.get("evidence") else "kind=unclear: page does not say this is a plant")[:200]))
-    if paths:
-        (paths[0].parent.parent / "extraction_audit.json").write_text(json.dumps(audit, indent=1))
+    if audit:
+        # The day folder, not paths[0]'s parent: a transcribed CSV sits at the folder root while a
+        # page sits one level down, so keying off paths[0] wrote the audit to the wrong directory
+        # as soon as a CSV sorted first.
+        day = next((x.parent.parent for x in paths if x.suffix.lower() != ".csv"), paths[0].parent)
+        (day / "extraction_audit.json").write_text(json.dumps(audit, indent=1))
     # de-duplicate a location that appears on both an index page and its own sub-page
     seen, dedup = set(), []
     for r in out:

@@ -403,3 +403,39 @@ def test_a_bare_town_label_is_not_written_into_the_company_name():
     # a label that names a SITE is still qualified — that is what 84 Lumber needs
     assert _qualify("84 Lumber", "Kings Mountain Truss Plant") == "84 Lumber — Kings Mountain Truss Plant"
     assert _qualify("UFP Site Built", "Shawnlee Construction") == "UFP Site Built — Shawnlee Construction"
+
+
+def test_a_transcribed_csv_wins_for_its_own_company_only(tmp_path):
+    """Six carried-forward CSVs silently suppressed every HTML page in the folder.
+
+    parse() returned as soon as any CSV existed, so Banker Steel and True House — which have no
+    transcription and exist only as pages — produced nothing. The docstring has always said "one
+    file per company ... the others keep their rows".
+    """
+    import csv as _csv
+    from pipeline.sources import corporate_locations as CL
+    (tmp_path / "stark-truss.csv").write_text("")
+    with open(tmp_path / "stark-truss.csv", "w", newline="") as fh:
+        w = _csv.DictWriter(fh, fieldnames=CL.PRE_EXTRACTED_COLUMNS); w.writeheader()
+        w.writerow({"company": "Stark Truss", "name": "Stark Truss - Summerville", "address": "1 A St",
+                    "city": "Summerville", "state": "SC", "zip": "29483", "kind": "plant",
+                    "evidence": "", "source_url": "https://www.starktruss.com/locations/"})
+    (tmp_path / "banker-steel").mkdir()
+    (tmp_path / "banker-steel" / "index.html").write_text("<p>" + "x " * 300 + "</p>")
+    paths = sorted(p for p in tmp_path.rglob("*") if p.is_file())
+    src = {"id": "corporate_locations", "status_basis": "on_current_list",
+           "pages": [{"company": "Stark Truss", "url": "u"}, {"company": "Banker Steel", "url": "u"}]}
+
+    seen = {}
+    def fake_extract(text, company, page_url, cfg, prompt_path, archive_to):
+        seen["company"] = company
+        return {"locations": [], "dropped": [], "model": "test", "prompt_hash": "0"}
+    CL.extract_locations, real = fake_extract, CL.extract_locations
+    try:
+        rows = CL.parse(paths, src, {})
+    finally:
+        CL.extract_locations = real
+    # the transcribed company came from its CSV, and was NOT sent to the model
+    assert [r["name_verbatim"] for r in rows] == ["Stark Truss - Summerville"]
+    # the company WITHOUT a transcription still reached extraction
+    assert seen.get("company") == "Banker Steel"
