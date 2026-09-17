@@ -331,6 +331,23 @@ sources:
   - Manufacturing is one of five member categories; read only /members/manufacturing.
   - The street address exists only on the member profile, and only in the paragraph headed by that member's own name — the
     same sidebar renders projects and sponsors.
+- id: woodworks_mass_timber
+  name: WoodWorks mass timber manufacturer & fabricator locations
+  class: C
+  method: fetch
+  url: https://www.woodworks.org/wp-content/uploads/mass_timber_manufacturer_locations.pdf
+  needs_classify: false
+  carries:
+  - plant_city
+  status_basis: on_current_list
+  status: active
+  traps:
+  - 'The PDF is a MAP, not a table: straight text extraction interleaves both panels word by word. Read only x0 < 160, the
+    left alphabetical list.'
+  - Town and state only — this roster prints no street addresses.
+  - About a third of the roster is Canadian; count and skip rather than coercing to a US state.
+  - '''Vancouver & Washougal, WA'' is ambiguous (the company is Vancouver, BC). Both rows are emitted verbatim rather than
+    guessed.'
 - id: mbma
   name: MBMA members
   class: D

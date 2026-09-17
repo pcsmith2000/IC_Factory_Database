@@ -263,3 +263,35 @@ def test_sipa_keeps_a_member_whose_profile_has_no_readable_address(tmp_path):
     rows = sipa.parse(sorted(tmp_path.glob("*.html")), src)
     assert len(rows) == 1 and rows[0]["address_verbatim"] == ""
     assert rows[0]["city_verbatim"] == "West Chesterfield"
+
+
+def test_mass_timber_shares_one_state_across_several_towns():
+    """"Drain, Portland & Swisshome, OR" is three Oregon plants, not one town called all that."""
+    from pipeline.sources.woodworks_mass_timber import _places
+    assert _places(["Drain, Portland & Swisshome, OR;", "Piedmont, SC"]) == [
+        ("Drain", "OR"), ("Portland", "OR"), ("Swisshome", "OR"), ("Piedmont", "SC")]
+
+
+def test_mass_timber_skips_canada_without_coercing_it():
+    from pipeline.sources.woodworks_mass_timber import _places
+    assert _places(["Conway, AR; Okanagan Falls, BC;", "Spokane, WA"]) == [("Conway", "AR"), ("Spokane", "WA")]
+    assert _places(["Boissevian, MB; Edmonton, AB;", "Sturgeon County, AB"]) == []
+
+
+def test_a_stray_pdf_artifact_line_cannot_swallow_the_line_above_it():
+    """Joining the location lines appended the PDF's own filename to the last entry and the
+    segment stopped matching — Western Forest Products' Washougal plant vanished silently."""
+    from pipeline.sources.woodworks_mass_timber import _places
+    assert _places(["Vancouver & Washougal, WA",
+                    "FFRRAA--994499__MMAANNUUFFAACCTTUURREERR__LLOOCCAATTIIOONNSS__MMAAPP__JJaann22002266..iinndddd"]) \
+        == [("Vancouver", "WA"), ("Washougal", "WA")]
+
+
+def test_mass_timber_entries_ignore_the_pages_own_prose():
+    """A line is a company name only when the next line is the parenthesised product list."""
+    from pipeline.sources.woodworks_mass_timber import _entries
+    e = _entries(["As a non-profit, WoodWorks", "They represent the mass timber",
+                  "Mercer", "(CLT, GLT, Glulam, fabricator)", "Conway, AR;", "Spokane, WA",
+                  "Quality Buildings", "(Fabricator)", "Lancaster, PA"])
+    assert [x["name"] for x in e] == ["Mercer", "Quality Buildings"]
+    assert e[0]["locations"] == ["Conway, AR;", "Spokane, WA"]
