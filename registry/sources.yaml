@@ -530,6 +530,7 @@ sources:
   method: download
   acquire: blob-only
   needs_classify: true
+  classify_all: true               # no NAICS on a registry row; every row goes to the classifier
   carries:
   - plant_address
   - explicit_status

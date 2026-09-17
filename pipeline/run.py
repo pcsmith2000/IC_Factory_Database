@@ -165,7 +165,8 @@ def main(argv=None) -> int:
         core = set(cfg["frame"]["naics"])
         # Candidate generation is deterministic (keyword x NAICS matrix) and runs either way — it is
         # the measurable half of Layer 3, and with the classifier off it is what the review queue holds.
-        cand = classify.candidates([r for r in rows if r["source_id"] in needs], core)
+        always = {s["id"] for s in sources if s.get("needs_classify") and s.get("classify_all")}
+        cand = classify.candidates([r for r in rows if r["source_id"] in needs], core, always)
         if args.limit:
             # Deterministic slice: candidates are already ordered by source and row position, so
             # the same --limit always probes the same rows and two models are compared on

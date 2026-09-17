@@ -63,12 +63,23 @@ PLACENAME_COLLISIONS = {"trussville", "old forge", "campanello"}
 WIDE_NAICS_FAMILIES = {"3219", "3212"}
 
 
-def candidates(rows: list[dict], core_naics: set[str]) -> list[dict]:
-    """Return rows in a core NAICS code, in a wide family, or matching keyword × NAICS family."""
+def candidates(rows: list[dict], core_naics: set[str], always: set[str] = frozenset()) -> list[dict]:
+    """Return rows in a core NAICS code, in a wide family, or matching keyword × NAICS family.
+
+    `always` names sources whose EVERY row is a candidate. The NAICS tests exist because EPA FRS is
+    89,000 establishments and only a sliver could be IC; a registry of approved building
+    manufacturers is the opposite case — every row is a plausible plant and none carries a NAICS.
+    Without this, GA DCA's 99 rows were never candidated, never labelled, and fell through the
+    "not IC or uncandidated" drop in run 28 as though the source had contributed nothing. The
+    classifier still decides each one, with the directory's occupancy in front of it; this only
+    puts the row in front of the classifier.
+    """
     out = []
     for r in rows:
         naics = (r.get("naics_verbatim") or "").strip()
         name = (r.get("name_verbatim") or "").lower()
+        if r.get("source_id") in always:
+            r["_candidate_reason"] = f"every row of {r['source_id']} is classified"; out.append(r); continue
         if naics in core_naics:
             r["_candidate_reason"] = f"core naics {naics}"; out.append(r); continue
         if naics[:4] in WIDE_NAICS_FAMILIES:
