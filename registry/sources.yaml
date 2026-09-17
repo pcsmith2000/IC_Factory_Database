@@ -511,3 +511,16 @@ sources:
   reason: Plant lists are prose in Item 1, overlap with MHI/corporate pulls is severe. Useful only for dating existing records,
     not discovery.
   status: excluded
+- id: lead_addresses
+  name: Street addresses found for existing T0 leads (enrichment pass)
+  class: D
+  method: upload
+  needs_classify: false
+  acquire: blob-only
+  carries:
+  - plant_address
+  status_basis: none
+  traps:
+  - 'NOT a way to put the control list into the database. Every row must be a plant a real source already surfaced as a lead; the lookup adds a street, never a facility. Rows added because the control names them make recall self-fulfilling, and G4 refuses control provenance.'
+  - 'Each row is an assertion: source_url names where the street came from and evidence says what kind of page. A street off a search result without a source_url is not a row.'
+  status: active
