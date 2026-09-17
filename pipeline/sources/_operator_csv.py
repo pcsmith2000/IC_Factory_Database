@@ -54,7 +54,11 @@ def read(paths: list[Path], source: dict, *, drop_if_evidence: str = "", note: s
                     source_document=path.name,
                     source_identifier=(r.get("registration_id") or "").strip(),
                     status=(r.get("status") or ""), expiry_date=iso_date(r.get("expires") or ""),
-                    notes=ev[:400]))
+                    notes=ev[:400],
+                    # Optional columns a transcriber may add; absent in the state-registry uploads,
+                    # present in the enrichment CSV where the lookup found them.
+                    website=(r.get("website") or ""), sq_ft=(r.get("sq_ft") or ""),
+                    operating_status=(r.get("operating_status") or "")))
     # An empty roster is a real answer for some of these — MA publishes no list — but it must be
     # said out loud rather than read as a broken parse.
     if out:

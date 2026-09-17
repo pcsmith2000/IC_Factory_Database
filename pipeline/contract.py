@@ -103,7 +103,11 @@ def read_contract(path: Path) -> list[dict]:
         missing = [c for c in COLUMNS if c not in r.fieldnames]
         if missing:
             raise ValidationError(path.stem, f"missing contract columns: {missing}")
-        return list(r)
+        rows = list(r)
+        for row in rows:
+            for c in OPTIONAL:           # tolerated when absent on disk; present on every row in memory
+                row.setdefault(c, "")
+        return rows
 
 
 def validate_rows(source_id: str, rows: list[dict]) -> list[str]:
