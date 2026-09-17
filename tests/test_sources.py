@@ -439,3 +439,26 @@ def test_a_transcribed_csv_wins_for_its_own_company_only(tmp_path):
     assert [r["name_verbatim"] for r in rows] == ["Stark Truss - Summerville"]
     # the company WITHOUT a transcription still reached extraction
     assert seen.get("company") == "Banker Steel"
+
+
+def test_the_browser_pins_the_proxy_ca_by_spki_rather_than_disabling_tls():
+    """Chromium reads the NSS store, not the CA env vars, and this image has no certutil.
+
+    The CA is pinned with --ignore-certificate-errors-spki-list, which whitelists specific public
+    keys; it is NOT --ignore-certificate-errors, which would switch verification off. The pins are
+    read out of the CA file at launch, so a rotated CA is picked up instead of a stale fingerprint.
+    """
+    import base64
+    from pipeline.sources import _browser
+    pins = _browser._spki_pins()
+    assert pins, "no SPKI pins read from the agent-proxy CA — a browser source cannot reach TLS"
+    for p in pins:
+        assert len(base64.b64decode(p)) == 32      # SHA-256 of the SubjectPublicKeyInfo
+
+
+def test_the_browser_never_asks_playwright_to_download_a_second_chromium():
+    """The image ships Chromium under PLAYWRIGHT_BROWSERS_PATH and the docs say not to fetch one."""
+    from pipeline.sources import _browser
+    src = (__import__("pathlib").Path(_browser.__file__)).read_text()
+    assert "playwright install" not in src.replace("do NOT run `playwright install`", "")
+    assert _browser._chromium_path(), "no Chromium found under /opt/pw-browsers"
