@@ -97,3 +97,30 @@ def test_out_of_scope_rows_are_excluded_but_blank_triage_is_not():
 def test_an_empty_control_file_is_untested_not_zero():
     r = measure.recall([], FACS, {})
     assert r["tested"] is False and r["recall"] is None
+
+
+def test_a_lead_is_not_a_found_plant():
+    """A T0 row is a name with no location established.
+
+    Counting one as found lets a roster of bare names lift recall while the database gains nothing
+    anybody could visit — and a names-only roster is the cheapest source there is, which makes this
+    the number most likely to be gamed by accident. On the warehouse as it stood when this was
+    written, 18 of 29 matches were leads: recall read 12% and located recall 4.6%.
+    """
+    facs = [{"facility_id": "IC-1", "name": "Located Panel Works", "state": "OH", "tier": "T2"},
+            {"facility_id": "IC-2", "name": "Lead Only Trusses", "state": "OH", "tier": "T0"}]
+    control = [{"control_id": "1", "name": "Located Panel Works", "state": "OH"},
+               {"control_id": "2", "name": "Lead Only Trusses", "state": "OH"}]
+    r = measure.recall(control, facs, {})
+    assert r["found"] == 2 and r["recall"] == 1.0
+    assert r["found_located"] == 1 and r["found_lead_only"] == 1
+    assert r["recall_located"] == 0.5
+
+
+def test_the_located_split_is_reported_for_dev_and_sealed_too():
+    facs = [{"facility_id": "IC-1", "name": "Real Plant Co", "state": "OH", "tier": "T1"}]
+    control = [{"control_id": "1", "name": "Real Plant Co", "state": "OH", "split": "sealed"},
+               {"control_id": "2", "name": "Absent Co", "state": "OH", "split": "dev"}]
+    r = measure.recall(control, facs, {})
+    assert r["sealed"]["recall_located"] == 1.0
+    assert r["dev"]["recall_located"] == 0.0

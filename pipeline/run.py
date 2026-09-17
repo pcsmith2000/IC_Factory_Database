@@ -307,7 +307,15 @@ def main(argv=None) -> int:
     record["layers"]["7_measure"] = m
     rc = m["recall"]
     if rc.get("tested"):
-        print(f"  recall vs control: {rc['found']}/{rc['in_scope']} = {rc['recall']:.0%}")
+        # Located first: it is the number that says how much of the control this database could
+        # actually take somebody to. The headline counts T0 leads, which are names with no place.
+        print(f"  recall vs control: {rc['found_located']}/{rc['in_scope']} located = "
+              f"{rc['recall_located']:.0%}  ({rc['found']} incl. {rc['found_lead_only']} leads "
+              f"= {rc['recall']:.0%})")
+        if rc.get("sealed"):
+            print(f"    sealed quarter:  {rc['sealed']['found_located']}/{rc['sealed']['in_scope']}"
+                  f" located = {rc['sealed']['recall_located']:.0%}   dev "
+                  f"{rc['dev']['recall_located']:.0%}")
     else:
         print("  recall vs control: UNTESTED — control/control-triaged.csv holds no in-scope rows")
     cb = m.get("coverage_bias")

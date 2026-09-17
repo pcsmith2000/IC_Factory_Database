@@ -109,11 +109,12 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
 
     taken: set[str] = set()
     matched: dict[int, str] = {}
+    taken_by: dict[int, str] = {}
     by_method: dict[str, int] = defaultdict(int)
     for i, c in enumerate(in_scope):                       # crosswalk first, it is an assertion
         cw = crosswalk.get(c.get("control_id", ""))
         if cw and cw in fac_ids and cw not in taken:
-            matched[i] = "crosswalk"; taken.add(cw); by_method["crosswalk"] += 1
+            matched[i] = "crosswalk"; taken.add(cw); taken_by[i] = cw; by_method["crosswalk"] += 1
     fac_state = {f["facility_id"]: (f.get("state") or "").upper() for f in facilities}
     for label, index, keyfn, usable in RUNGS:              # then each rung across the whole list
         for i, c in enumerate(in_scope):
@@ -127,7 +128,7 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
             free = [fid for fid in index.get(keyfn(c), ())
                     if fid not in taken and not (cst and fac_state.get(fid) and cst != fac_state[fid])]
             if free:
-                matched[i] = label; taken.add(free[0]); by_method[label] += 1
+                matched[i] = label; taken.add(free[0]); taken_by[i] = free[0]; by_method[label] += 1
 
     # Rung 5: the control list writes trading names ("Fading West"), the rosters write registered
     # ones ("FADING WEST BUILDING SYSTEMS, LLC"), and exact normalisation calls that a miss. So one
@@ -148,7 +149,7 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
                 continue
             if cst and fst and cst != fst:
                 continue
-            matched[i] = "name-prefix"; taken.add(fid); by_method["name-prefix"] += 1
+            matched[i] = "name-prefix"; taken.add(fid); taken_by[i] = fid; by_method["name-prefix"] += 1
             break
 
     misses, crowded = [], []
@@ -157,7 +158,15 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
             continue
         (crowded if by_name.get(norm_name(c.get("name", ""))) else misses).append(c.get("name", ""))
     hits = len(matched)
+    # A T0 row is a LEAD: a name the pipeline knows about with no location established. Counting
+    # one as a found plant lets a source of bare names lift recall while the database gains nothing
+    # anybody could visit — and a names-only roster is the cheapest source there is, so this is the
+    # number most likely to be gamed by accident. Reported apart, always.
+    tier = {f["facility_id"]: (f.get("tier") or "") for f in facilities}
+    leads = sum(1 for i in matched if tier.get(taken_by.get(i), "") == "T0")
     out = {"in_scope": len(in_scope), "found": hits, "recall": hits / len(in_scope),
+           "found_located": hits - leads, "found_lead_only": leads,
+           "recall_located": (hits - leads) / len(in_scope),
            "tested": True, "by_method": dict(by_method), "untriaged_assumed_in_scope": untriaged,
            "company_present_plant_missing": len(crowded),
            "missed": sorted(misses)[:50], "n_missed": len(misses) + len(crowded)}
@@ -169,7 +178,9 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
         idx = [i for i, c in enumerate(in_scope) if (c.get("split") or "dev").strip() == want]
         if idx:
             found = sum(1 for i in idx if i in matched)
-            out[name] = {"in_scope": len(idx), "found": found, "recall": found / len(idx)}
+            loc = sum(1 for i in idx if i in matched and tier.get(taken_by.get(i), "") != "T0")
+            out[name] = {"in_scope": len(idx), "found": found, "recall": found / len(idx),
+                         "found_located": loc, "recall_located": loc / len(idx)}
     return out
 
 
