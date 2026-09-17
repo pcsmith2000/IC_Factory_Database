@@ -102,6 +102,7 @@ def geocode(queries: list[str], key: str) -> list[dict]:
 def summarise(sample: list[dict], results: list[dict]) -> dict:
     """Accuracy mix overall, by state, and by Geocodio's underlying dataset."""
     types, datasets, by_state = collections.Counter(), collections.Counter(), collections.defaultdict(collections.Counter)
+    cross = collections.defaultdict(collections.Counter)   # accuracy_type x underlying dataset family
     scores, misses = [], []
     for row, res in zip(sample, results):
         st = (row.get("state") or "??").upper()
@@ -113,7 +114,9 @@ def summarise(sample: list[dict], results: list[dict]) -> dict:
         top = hits[0]
         at = top.get("accuracy_type", "unknown")
         types[at] += 1; by_state[st][at] += 1
-        datasets[top.get("source", "unknown")] += 1
+        src = top.get("source", "unknown")
+        datasets[src] += 1
+        cross[at]["TIGER/Line (free Census data)" if "TIGER" in src else "local parcel/address-point file"] += 1
         if isinstance(top.get("accuracy"), (int, float)):
             scores.append(float(top["accuracy"]))
     n = max(1, len(sample))
@@ -122,6 +125,7 @@ def summarise(sample: list[dict], results: list[dict]) -> dict:
             "mean_accuracy_score": round(sum(scores) / len(scores), 3) if scores else None,
             "by_state": {s: dict(c.most_common()) for s, c in sorted(by_state.items())},
             "underlying_dataset": dict(datasets.most_common(15)),
+            "accuracy_by_dataset_family": {k: dict(v) for k, v in sorted(cross.items())},
             "no_result_examples": misses[:20]}
 
 
