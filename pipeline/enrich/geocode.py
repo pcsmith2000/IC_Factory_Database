@@ -90,6 +90,9 @@ def run(rows: list[dict], key: str | None = None) -> dict:
             # the underlying dataset is part of the licence question, not just the accuracy one:
             # Geocodio may store and sell results only as its own data sources permit
             evidence=f"geocodio:{hits[0].get('source', '?')}"))
+    # count coordinates, not assertions: the quality flags are assertions too, and reporting them
+    # as "rooftop stored" would say a run placed facilities it explicitly declined to place
+    coords = [a for a in asserts if a["field"] == "lat_lon"]
     return {"requested": len(todo), "assertions": asserts, "accuracy_type": mix, "flags": flags,
-            "stored": len(asserts),
+            "stored": len(coords), "quality_flags_recorded": len(asserts) - len(coords),
             "rooftop_pct": round(100 * mix.get("rooftop", 0) / max(1, len(todo)), 1)}

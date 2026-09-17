@@ -138,7 +138,8 @@ def main(argv=None) -> int:
         (args.out / "geocode.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
         _emit(args.out, "geocode", {k: v for k, v in rep.items() if k != "assertions"},
               [("eligible", len(need_coord)), ("ceiling", args.geocode_limit),
-               ("looked up", rep["requested"]), ("rooftop stored", rep["stored"]),
+               ("looked up", rep["requested"]), ("rooftop coordinates stored", rep["stored"]),
+               ("recorded unplaceable (not retried next run)", rep["quality_flags_recorded"]),
                ("rooftop %", rep["rooftop_pct"]),
                ("not stored (non-rooftop)", rep["requested"] - rep["stored"]),
                ("accuracy mix", json.dumps(rep["accuracy_type"]))])
