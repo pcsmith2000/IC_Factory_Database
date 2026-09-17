@@ -57,7 +57,7 @@ ADL-055,CAPE COD PANEL,HYANNIS,MA,,Open Wood Panel,dev
 ADL-056,BARDEN BUILDING PRODUCTS / NORTH AMERICAN TRUSS,MIDDLEPORT,NY,,Open Wood Panel,sealed
 ADL-057,DC STRUCTURES,PORTLAND,OR,,Open Wood Panel,dev
 ADL-058,TIMBERQUEST,SOUTH LAKE TAHOE,CA,,Open Wood Panel,dev
-ADL-059,ACQBUILT INC,EDMONTON,AB,,Open Wood Panel,dev
+ADL-059,ACQBUILT INC,EDMONTON,AB,out_of_scope,"Open Wood Panel | OUT OF SCOPE: not a US facility. This database is US-scoped; every source filters to US states and Layer 2 validates them, so a plant in AB/BC can never be matched by any amount of pipeline work.",dev
 ADL-060,84 Lumber,Winchester,VA,,Open Wood Panel,dev
 ADL-061,Annadale Millwork,Winchester,VA,,Open Wood Panel,dev
 ADL-062,Van Metre Companies,Winchester,VA,,Open Wood Panel,sealed
@@ -68,7 +68,7 @@ ADL-066,Sterling Structural - IL,Phoenix,IL,,Mass Timber (CLT),dev
 ADL-067,Sterling Structural - TX,LUFKIN,TX,,Mass Timber (CLT),dev
 ADL-068,Mercer Mass Timber - WA,Spokane,WA,,Mass Timber (CLT),dev
 ADL-069,Mercer Mass Timber - AR,Conway,AR,,Mass Timber (CLT),dev
-ADL-070,Mercer Mass Timber - BC,OKANAGAN FALLS,BC,,Mass Timber (CLT),dev
+ADL-070,Mercer Mass Timber - BC,OKANAGAN FALLS,BC,out_of_scope,"Mass Timber (CLT) | OUT OF SCOPE: not a US facility. This database is US-scoped; every source filters to US states and Layer 2 validates them, so a plant in AB/BC can never be matched by any amount of pipeline work.",dev
 ADL-071,SmartLam - AL,Dothan,AL,,Mass Timber (CLT),dev
 ADL-072,SmartLam - OR,Columbia Falls,OR,,Mass Timber (CLT),dev
 ADL-073,DR Johnson,Riddle,OR,,Mass Timber (CLT),dev
