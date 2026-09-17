@@ -4,6 +4,20 @@ This file is the system prompt for Layer 3. Its SHA-256 is recorded in every run
 in the release tag. Changing it is a versioned change that gate G5 must re-pass on the seeded
 set before the new version is used for a release.
 
+v1.8 — 2026-09-17. Stops v1.7's else-branch from eating IC labels. v1.7 scoped the hedge rule
+correctly and then over-reached: read live off run 35262458992 at batch 56 of 132, against run 22's
+own per-batch spread, it projected IC ~1,814 and UNCERTAIN ~196 — both BELOW the 1,969/366 v1.4
+baseline, and IC roughly 4 sd below its own predicted 2,100-2,195. Rows moved toward NOT-IC in
+bulk. That is the falsifier v1.7's prediction named and bet against, and it is the expensive
+direction: UNCERTAIN falling costs review time, IC falling costs recall.
+
+The cause is placement, not wording. "Off a core code, a hedge is not UNCERTAIN" sits directly
+beneath the numbered test and reads as a fourth rule over every off-core record, so "label it
+NOT-IC" was applied to records whose reason named a building product. Rule 1 is scoped to core
+codes because its MECHANICAL form is; the judgement it encodes never was. So the paragraph now
+opens by saying the IC path is untouched, and closes by saying the rule moves rows out of UNCERTAIN
+and never out of IC.
+
 v1.7 — 2026-09-17. Scopes the hedge rule, which v1.5 and v1.6 both let loose on the whole
 population, and counts a truncated NAICS code as the core code it is a parent of. v1.6 was dispatched on the diagnosis that v1.5's bullets were read in order; that was
 wrong, and run 35259543326 says so. Read at batch 28 of 132 against run 22's own per-batch spread
@@ -202,7 +216,14 @@ These are in PRECEDENCE ORDER. Take the first that applies and stop.
 3. Does it hedge with no product named at all — "unclear", "record too thin", "without
    specifics"? Then **UNCERTAIN**, and a human settles it in the review queue.
 
-**Off a core code, a hedge is not UNCERTAIN.** Rule 3 exists because a core code is itself evidence
+**Off a core code, a HEDGE is not UNCERTAIN — and this paragraph is about hedges only.** Before
+reading further: if the reason names a building system or component, the label is **IC**, core code
+or not. Rule 1 is scoped to core codes only because its MECHANICAL form is; the judgement it
+encodes is not, and the whole "What is IC" section above governs every record whatever its code. A
+wall-panel plant coded to millwork is IC. Nothing below takes that away, and nothing below applies
+to a reason that names a product.
+
+Now, hedges. Rule 3 exists because a core code is itself evidence
 for IC: a record that carries one and says nothing else is genuinely balanced, and a human should
 settle it. A record with NO core code and nothing in it pointing at an IC product is not balanced —
 nothing has argued for IC at all — and "I could not tell what this is" is the ordinary condition of
@@ -211,6 +232,10 @@ positive finding from the record's own code: a 332999 shop fabricates metal prod
 wholesaler distributes them, a 236220 firm builds on site. Reserve UNCERTAIN for a record where
 something — the code, the name, a product word — actually points at IC while something else points
 away. A hedge on its own is not that.
+
+To be explicit about the mistake v1.7 made, because it cost more than the one it fixed: this rule
+moves rows from UNCERTAIN to NOT-IC. It moves NOTHING out of IC. If applying it would change an IC
+label, you have misread it.
 
 ## The NAICS code is evidence, not proof
 
