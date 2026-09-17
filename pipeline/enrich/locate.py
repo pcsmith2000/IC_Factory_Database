@@ -25,20 +25,44 @@ way, but recall is still an open question until measured against control/seeds.c
 """
 from __future__ import annotations
 import json, re
+from datetime import date
 
 # The gateway documents Anthropic's basic server tool for the Messages API. Newer model families
 # take web_search_20260209 with dynamic filtering; change this constant, not the call site.
 WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search", "max_uses": 4}
 
 GATEWAY_CHAT_URL = "https://ai-gateway.vercel.sh/v1/chat/completions"
-# Parallel and Perplexity are both $5/1000; Exa and Tako are $7. The config field differs by tool
-# ("objective" vs "query"), which is why the name is paired with its field rather than bare.
-SEARCH_TOOLS = {"parallel": ("vercel:parallel_search", "objective"),
-                "perplexity": ("vercel:perplexity_search", "query"),
-                "exa": ("vercel:exa_search", "query"),
-                "tako": ("vercel:tako_search", "query")}
-DEFAULT_SEARCH = "parallel"
 MAX_RESULTS = 5
+
+# Each tool takes a different config shape, so the builder lives with the name rather than the call
+# site guessing. Tako is the one with a trap: it searches a curated data graph as well as the web,
+# and inlining data rows is billed per row. Stage 9 wants a street address off a web page, so it
+# asks for `sources.web` only and never sets includeContents — which also keeps it on the flat
+# per-request price.
+def _tako(objective):
+    return {"query": objective, "effort": "fast", "sources": {"web": {"count": MAX_RESULTS}}}
+
+
+SEARCH_TOOLS = {
+    "parallel":   ("vercel:parallel_search",   lambda o: {"objective": o, "max_results": MAX_RESULTS}),
+    "perplexity": ("vercel:perplexity_search", lambda o: {"query": o, "max_results": MAX_RESULTS}),
+    "exa":        ("vercel:exa_search",        lambda o: {"query": o, "num_results": MAX_RESULTS}),
+    "tako":       ("vercel:tako_search",       _tako),
+}
+
+# Search is ~90% of what stage 9 costs, so the search provider is the price, not the model.
+# Tako is free on the gateway through 2026-09-30 and $7/1000 after; Parallel and Perplexity are
+# $5/1000 flat. Defaulting by date rather than by a constant someone has to remember means the run
+# is free while free and cheapest-paid afterwards, without a silent bill on October 1st. The choice
+# is recorded in every run summary, so a run is always auditable for which it used.
+TAKO_FREE_UNTIL = date(2026, 9, 30)
+
+
+def default_search(today: date | None = None) -> str:
+    return "tako" if (today or date.today()) <= TAKO_FREE_UNTIL else "parallel"
+
+
+DEFAULT_SEARCH = default_search()
 # An open-weight model, because the gateway is what makes that possible and stage 9 has no reason
 # to pay frontier prices: the task is bounded extraction — open a page, return a street address or
 # found=false — behind gates that discard anything uncited, unverified against the fetched page, or
@@ -168,13 +192,12 @@ def locate_one_gateway(row: dict, model: str, key: str, search: str = DEFAULT_SE
     confirming the address is on it — is independent of all this and unaffected.
     """
     import urllib.error, urllib.request
-    tool_type, field = SEARCH_TOOLS[search]
+    tool_type, build_config = SEARCH_TOOLS[search]
     body = json.dumps({
         "model": model,
         "messages": [{"role": "user", "content": PROMPT.format(
             name=row.get("name", ""), city=row.get("city", ""), state=row.get("state", ""))}],
-        "tools": [{"type": tool_type,
-                   "config": {field: search_objective(row), "max_results": MAX_RESULTS}}],
+        "tools": [{"type": tool_type, "config": build_config(search_objective(row))}],
         "tool_choice": "required",       # the prompt forbids answering from memory; enforce it
         "max_tokens": 1500,
     }).encode()

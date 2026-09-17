@@ -161,22 +161,30 @@ provider-native ones. Two paths exist and `--search` picks:
     gateway   Chat Completions + vercel:parallel_search   any model       search $5/1000
     native    Messages API + web_search_20250305          Anthropic only  search $10/1000
 
-**Search is the dominant cost, not the model.** Prices from the gateway's own model list, per
-million tokens, against a projection at 3 searches and 30k input tokens per facility and the
-measured 42% yield:
+**Search is the dominant cost, not the model.** A full pass over the 1,181 facilities that need an
+address, projected at 3 searches and 30k input tokens each:
 
-                                    search   tokens  /facility  /located  1,181 rows
-    sonnet-5    + anthropic search   0.0300   0.0640     0.0940     0.224        $111
-    haiku-4.5   + anthropic search   0.0300   0.0320     0.0620     0.148         $73
-    gpt-5-nano  + openai search      0.0300   0.0017     0.0317     0.075         $37
-    qwen3.7-flash + parallel         0.0150   0.0010     0.0160     0.038         $19
-    mercury-2.5   + parallel         0.0150   0.0013     0.0163     0.039         $19
+    ling-3.0-flash + tako (free to 2026-09-30)     $0.00066/facility        $0.77
+    qwen3.7-flash  + tako (free to 2026-09-30)     $0.00095                 $1.12
+    qwen3.7-flash  + parallel   $5/1000            $0.01595                $18.84
+    qwen3.7-flash  + tako       $7/1000            $0.02195                $25.93
+    sonnet-5       + anthropic $10/1000            $0.09400               $111.01
 
-Going from Sonnet to an open-weight model cuts the token bill about 50x and the total only 6x,
-because at those prices ~90% of what is left is the per-search charge. Half the remaining saving
-comes from leaving Anthropic's $10/1000 search for Parallel's $5/1000, which is a decision about
-the search provider and not about the model at all. The token column is a projection; the search
-column is exact, and stage 9 now records both so the next run replaces the projection.
+Sonnet to an open-weight model cuts the token bill ~50x and the total only 6x, because at those
+prices ~90% of what remains is the per-search charge. The search provider, not the model, is the
+price: $111 to $19 is mostly Anthropic's $10/1000 giving way to Parallel's $5/1000, and $19 to $1
+is the Tako promotion. The model choice is the last $0.35 of it.
+
+So `default_search()` picks by date — Tako while the promotion runs, Parallel from October 1st —
+rather than by a constant someone has to remember to change. Free while free, cheapest-paid after,
+no silent bill on the 1st, and the choice is recorded in every run summary.
+
+Tako has one trap worth naming: it searches a curated data graph as well as the web and bills per
+row for inlined data. Stage 9 asks for `sources.web` only and never sets `includeContents`, which
+is what keeps it on the flat per-request price.
+
+The token column is a projection; the search column is exact. Stage 9 records both, per run and per
+located address, so the next real pass replaces the projection with its own numbers.
 
 The default is `alibaba/qwen3.7-flash` with Parallel search. The task is bounded extraction behind
 gates that discard anything uncited, unverified against the fetched page, or under 0.7 confidence,

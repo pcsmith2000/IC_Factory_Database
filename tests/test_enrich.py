@@ -695,8 +695,9 @@ def test_the_gateway_path_needs_no_anthropic_client_and_no_anthropic_model(monke
     monkeypatch.setenv("AI_GATEWAY_API_KEY", "k")
     rep = locate.run([{"facility_id": "F1", "name": "Acme", "city": "X", "state": "TX"}],
                      model="alibaba/qwen3.7-flash", verify_page=False)
-    assert seen == {"model": "alibaba/qwen3.7-flash", "key": "k", "search": "parallel"}
-    assert rep["search"] == "parallel" and rep["attempted"] == 1
+    assert seen == {"model": "alibaba/qwen3.7-flash", "key": "k",
+                    "search": locate.DEFAULT_SEARCH}
+    assert rep["search"] == locate.DEFAULT_SEARCH and rep["attempted"] == 1
 
 
 def test_the_default_model_is_not_a_frontier_vendor():
@@ -756,3 +757,36 @@ def test_append_reports_rows_inserted_not_rows_offered():
                           basis="rooftop", evidence="geocodio:parcel") for i in range(10)]
     rep = _db.append(AlreadyThere(), rows, "rel-1")
     assert rep == {"offered": 10, "inserted": 0, "already_present": 10}
+
+
+# ---------------------------------------------------------------- search is the price, not the model
+def test_search_defaults_to_tako_while_free_and_to_the_cheapest_paid_after():
+    """Search is ~90% of what stage 9 costs. Tako is free on the gateway through 2026-09-30 and $7
+    per 1,000 after; Parallel is $5 flat. Defaulting by date means the run is free while free and
+    cheapest-paid afterwards, with no silent bill on October 1st."""
+    from datetime import date
+    from pipeline.enrich.locate import default_search
+    assert default_search(date(2026, 9, 17)) == "tako"
+    assert default_search(date(2026, 9, 30)) == "tako", "the last free day is still free"
+    assert default_search(date(2026, 10, 1)) == "parallel", "and the first paid day is not Tako"
+
+
+def test_tako_asks_for_web_results_only_because_data_rows_are_billed():
+    """Tako searches a curated data graph as well as the web and bills per row for inlined data.
+    Stage 9 wants a street address off a page, so asking for the graph at all is spend with no
+    possible benefit — and includeContents is what turns a flat per-request price into a variable
+    one."""
+    from pipeline.enrich.locate import SEARCH_TOOLS
+    cfg = SEARCH_TOOLS["tako"][1]("street address of the Acme plant in Elkhart, IN")
+    assert set(cfg["sources"]) == {"web"}, "the data graph must not be searched"
+    assert "includeContents" not in json.dumps(cfg), "inlined rows are billed per row"
+    assert cfg["query"].startswith("street address")
+
+
+def test_each_search_tool_gets_the_config_shape_its_provider_documents():
+    """The field names differ per provider — parallel takes `objective`, the rest take `query`, and
+    Exa counts results with `num_results`. One generic shape would silently mis-send three of four."""
+    from pipeline.enrich.locate import SEARCH_TOOLS
+    assert SEARCH_TOOLS["parallel"][1]("o") == {"objective": "o", "max_results": 5}
+    assert SEARCH_TOOLS["perplexity"][1]("o") == {"query": "o", "max_results": 5}
+    assert SEARCH_TOOLS["exa"][1]("o") == {"query": "o", "num_results": 5}
