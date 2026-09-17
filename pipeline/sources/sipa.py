@@ -7,9 +7,20 @@ manufacturer roster fixes both halves of that at once: it adds the plants the re
 list, and because SIPA's manufacturing membership IS a list of panel plants, the source carries
 `needs_classify: false` and the rows do not go past the classifier to be thrown away again.
 
-The membership is small and the page is honest about it: ten manufacturers, all US. That is the
-whole segment, not a sample of it — SIPA separates Manufacturing from Builder, Dealer/Distributor,
-Design Professional and Associate members, and only the manufacturing page is read here.
+SIPA separates Manufacturing from Builder, Dealer/Distributor, Design Professional and Associate
+members, and only the manufacturing page is read here.
+
+That page is PAGINATED and the first version of this source did not notice. It read
+/members/manufacturing, found ten cards, and the docstring above this line used to say "ten
+manufacturers, all US. That is the whole segment, not a sample of it" — which was false, asserted
+confidently, and never checked. The index carries its own pager, /members/manufacturing/page/0
+through /page/3, and page 0 alone links members the crawl never fetched: Insulspan, Panelwrights,
+The Murus Company, and PorterSIPs — which is a row on the ADL control list that was being counted
+as a plant no source holds.
+
+So every page of the pager is read and the cards are unioned by slug. The page count is taken from
+the index's own pager links rather than guessed, and a snapshot whose folder is missing a page the
+index advertises says so in its notes instead of quietly returning a tenth of the roster.
 
 Two documents per member, and both are needed:
 
@@ -51,7 +62,26 @@ ADDRESS = re.compile(
     r"(?P<city>[^<,]+),\s*(?P<state>[A-Za-z]{2})\s*(?P<zip>\d{5})?[^<]*<br\s*/?>"
     r"(?P<country>[^<]*)</p>", re.S)
 
+# The index's own pager: /members/manufacturing/page/0 .. /page/N.
+PAGE_LINK = re.compile(r'href="/members/manufacturing/page/(\d+)"')
+
 PACE_SECONDS = 0.4
+
+
+def _index_pages(paths: list[Path]) -> list[Path]:
+    """Every archived index page, page 0 first."""
+    return sorted((p for p in paths if p.name.startswith("manufacturing") and p.suffix == ".html"),
+                  key=lambda p: (p.name != "manufacturing.html", p.name))
+
+
+def _all_cards(index_paths: list[Path]) -> list[dict]:
+    """Cards from every index page, unioned by slug — the pager repeats page 0 as /page/0."""
+    out, seen = [], set()
+    for path in index_paths:
+        for c in _cards(path.read_text(encoding="utf-8", errors="replace")):
+            if c["slug"] not in seen:
+                seen.add(c["slug"]); out.append(c)
+    return out
 
 
 def _cards(index_html: str) -> list[dict]:
@@ -72,12 +102,16 @@ def _cards(index_html: str) -> list[dict]:
 
 def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
     index = http_get(INDEX, archive_dir, "manufacturing.html")
-    cards = _cards(index.read_text(encoding="utf-8", errors="replace"))
+    first = index.read_text(encoding="utf-8", errors="replace")
+    paths = [index]
+    for n in sorted({int(x) for x in PAGE_LINK.findall(first)}):
+        paths.append(http_get(f"{INDEX}/page/{n}", archive_dir, f"manufacturing-page-{n}.html"))
+        time.sleep(PACE_SECONDS)
+    cards = _all_cards(_index_pages(paths))
     if not cards:
         raise LayoutChanged(
             "no member cards on /members/manufacturing — SIPA either changed the card markup or "
             "moved the manufacturer list behind the member login")
-    paths = [index]
     for c in cards:
         paths.append(http_get(f"{BASE}/members/{c['slug']}", archive_dir, f"{c['slug']}.html"))
         time.sleep(PACE_SECONDS)
@@ -85,12 +119,18 @@ def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
 
 
 def parse(paths: list[Path], source: dict) -> list[dict]:
-    index = next((p for p in paths if p.name == "manufacturing.html"), None)
-    require(index is not None, paths[0] if paths else Path(INDEX),
+    indexes = _index_pages(paths)
+    require(bool(indexes), paths[0] if paths else Path(INDEX),
             "the archived folder has no manufacturing.html — refresh this source before parsing")
-    cards = _cards(index.read_text(encoding="utf-8", errors="replace"))
+    index = indexes[0]
+    cards = _all_cards(indexes)
     require(bool(cards), index, "manufacturing.html archived but no member cards parsed from it")
-    profiles = {p.stem: p for p in paths if p.name != "manufacturing.html"}
+    # A folder holding fewer pages than the index advertises is a partial crawl, and returning its
+    # tenth of the roster as the roster is exactly what this source did for its first three weeks.
+    advertised = {int(x) for x in PAGE_LINK.findall(index.read_text(encoding="utf-8", errors="replace"))}
+    missing = sorted(advertised - {int(p.name.split("-")[-1][:-5]) for p in indexes
+                                   if p.name.startswith("manufacturing-page-")})
+    profiles = {p.stem: p for p in paths if p not in set(indexes)}
 
     out, no_street, foreign = [], 0, 0
     for position, c in enumerate(cards, 1):
@@ -121,8 +161,12 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
             notes=f"SIPA member types: {c['types']}"))
 
     require(bool(out), index, "member cards parsed but every one was foreign or unreadable")
-    out[0]["notes"] += (f" | {len(out)} SIPA manufacturing members kept, {foreign} non-US skipped; "
-                        f"{no_street} of {len(out)} have no street on their profile")
+    out[0]["notes"] += (f" | {len(out)} SIPA manufacturing members kept from {len(indexes)} index "
+                        f"page(s), {foreign} non-US skipped; {no_street} of {len(out)} have no "
+                        f"street on their profile")
+    if missing:
+        out[0]["notes"] += (f" | PARTIAL: the index advertises pages {missing} that are not in this "
+                            f"snapshot — re-fetch sipa, this is a fraction of the roster")
     return out
 
 
