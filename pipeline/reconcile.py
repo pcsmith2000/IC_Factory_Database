@@ -62,6 +62,46 @@ def tier(cluster: list[dict]) -> str:
     return "T1"
 
 
+def _attach_addressless(clusters: dict[str, list[dict]], methods: dict[str, str]) -> int:
+    """Fold a name+city cluster into the addressed cluster it plainly belongs to.
+
+    Rosters disagree about addresses: one carries a street, another only city and state, and the
+    same plant then takes two ids because the signatures differ. That is the single largest source
+    of duplication — 76 of the 320 pairs G1 raised on 2026-09-17 were this exact shape.
+
+    The merge is deliberately timid. An addressless cluster joins an addressed one only when state,
+    normalised city and normalised name all agree AND exactly one addressed cluster matches. Two
+    candidates means we cannot tell which plant the roster meant, so it stays separate — a company
+    with several plants in one city is common enough that guessing would manufacture false merges,
+    which is the failure G2 exists to catch and is far worse than a duplicate.
+
+    Ids stay stable: the addressed cluster keeps its signature and therefore its id, and the
+    addressless signature is simply retired. Nothing is renumbered and no id is issued, so G3 is
+    unaffected.
+    """
+    addressed: dict[tuple, list[str]] = defaultdict(list)
+    for sig, members in clusters.items():
+        if methods[sig] in ("street_key", "entity+street"):
+            f = members[0]
+            key = (f.get("state", ""), f.get("city_norm", ""), norm_name(f.get("name_verbatim", "")))
+            if all(key):
+                addressed[key].append(sig)
+    folded = 0
+    for sig in [s for s, m in methods.items() if m == "name+city"]:
+        f = clusters[sig][0]
+        key = (f.get("state", ""), f.get("city_norm", ""), norm_name(f.get("name_verbatim", "")))
+        targets = addressed.get(key, [])
+        if len(targets) != 1:
+            continue                      # unknown plant, or none — leave it alone
+        target = targets[0]
+        for r in clusters[sig]:
+            r["attached_from"] = "name+city"
+        clusters[target].extend(clusters.pop(sig))
+        methods.pop(sig, None)
+        folded += 1
+    return folded
+
+
 def run(rows: list[dict], registry_path: Path) -> dict:
     reg = IdRegistry(registry_path)
     clusters: dict[str, list[dict]] = defaultdict(list)
@@ -72,6 +112,7 @@ def run(rows: list[dict], registry_path: Path) -> dict:
         else:
             sig, m = signature(r)
         clusters[sig].append(r); methods[sig] = m
+    _attach_addressless(clusters, methods)
     facilities = []
     for sig, members in clusters.items():
         fid = reg.get(sig)

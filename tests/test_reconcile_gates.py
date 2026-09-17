@@ -367,3 +367,49 @@ def test_g1_still_merges_an_addressless_row_into_an_addressed_one(tmp_path: Path
     r = gates.g1_dedupe(facs, 0.10, {"street_key": 0.95, "name_city": 0.90, "fuzzy": 0.80},
                         tmp_path / "a.csv", target_rate=0.02)
     assert r.details["collapses"] == 1
+
+
+# ------------------------------------------------- attaching addressless rows to a known plant
+def _row(name, city, state="KY", street="", src="epa_frs", rh=None):
+    return {"name_verbatim": name, "city_norm": city, "state": state, "street_key": street,
+            "source_id": src, "row_hash": rh or f"{name}{city}{street}{src}",
+            "address_verbatim": street, "retrieved_date": "2026-09-17"}
+
+
+def test_addressless_row_joins_the_one_plant_it_can_only_be(tmp_path: Path):
+    """One roster has the street, another only city+state. Same plant, and it must take one id."""
+    rows = [_row("DEER RUN CABINS", "campbellsville", street="100 main st"),
+            _row("Deer Run Cabins", "campbellsville", src="iibc")]
+    res = reconcile.run(rows, tmp_path / "ids.json")
+    assert res["n_facilities"] == 1
+    assert len({r["facility_id"] for r in rows}) == 1
+    fac = res["facilities"][0]
+    assert fac["n_sources"] == 2          # the point: corroboration, not just fewer rows
+    assert fac["tier"] == "T2"            # two sources with an address between them
+
+
+def test_addressless_row_stays_put_when_two_plants_could_claim_it(tmp_path: Path):
+    """TAS Energy has five Houston plants. An addressless 'TAS Energy, Houston' row cannot be
+    assigned to one of them, and guessing would be a false merge — the failure G2 exists for."""
+    rows = [_row("TAS ENERGY INC.", "houston", "TX", "9450 w wingfoot rd"),
+            _row("TAS ENERGY INC.", "houston", "TX", "2920 airport blvd"),
+            _row("Tas Energy Inc", "houston", "TX", src="iibc")]
+    res = reconcile.run(rows, tmp_path / "ids.json")
+    assert res["n_facilities"] == 3       # the addressless row keeps its own id
+
+
+def test_addressless_row_in_another_city_is_not_attached(tmp_path: Path):
+    rows = [_row("ACME MODULAR", "louisville", "KY", "100 main st"),
+            _row("ACME MODULAR", "lexington", "KY", src="iibc")]
+    assert reconcile.run(rows, tmp_path / "ids.json")["n_facilities"] == 2
+
+
+def test_attaching_issues_no_new_ids_so_g3_is_unaffected(tmp_path: Path):
+    """The addressed cluster keeps its signature and its id; the addressless one is retired."""
+    p = tmp_path / "ids.json"
+    first = reconcile.run([_row("DEER RUN CABINS", "campbellsville", street="100 main st")], p)
+    fid = first["facilities"][0]["facility_id"]
+    second = reconcile.run([_row("DEER RUN CABINS", "campbellsville", street="100 main st"),
+                            _row("Deer Run Cabins", "campbellsville", src="iibc")], p)
+    assert second["ids_issued"] == 0
+    assert second["facilities"][0]["facility_id"] == fid
