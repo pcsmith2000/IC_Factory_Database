@@ -1,0 +1,94 @@
+# Enrichment — stages 9–12, after the warehouse load
+
+Layers 1–8 turn published sources into a release and load it into Neon. Enrichment starts from
+that loaded release and adds three fields the sources do not publish — a plant address, a rooftop
+coordinate, and a building footprint — plus a fourth judgement: whether the plant still exists.
+
+It is a separate workflow because it has a different failure profile. Layers 1–8 are pure
+transformation of archived bytes and are reproducible offline; enrichment calls paid APIs, reads
+the open web, and spends model tokens. Mixing them would make a quarterly release hostage to a
+rate limit.
+
+## Why four stages and not one
+
+Each stage consumes what the previous one produced, and each can fail independently:
+
+    9  locate     name + city (+ website)     ->  address
+    10 geocode    address                     ->  lat/lon, accuracy_type
+    11 footprint  rooftop lat/lon             ->  building_sqft
+    12 existence  everything above            ->  existence_flag
+
+A facility can enter at any stage. One that already has a street address skips 9. One that already
+has a rooftop coordinate skips 9 and 10. Stage 11 only ever sees coordinates stage 10 was willing
+to publish. Re-running stage 11 alone after an Overture release must not re-run the model in 9.
+
+Each stage is a separate workflow job with `needs:` on the one before it, and a separate module
+under `pipeline/enrich/`. Every stage is idempotent: it selects the facilities missing its output
+field, and writing the same release twice changes nothing.
+
+## Everything written is an assertion
+
+No stage writes to `golden_facility`. Each appends to `fact_assertions` under its own source id:
+
+    enrich:locate      address       a plant address found and cited by the model
+    geocode:geocodio   lat_lon       a coordinate, with its accuracy_type
+    overture:building  building_sqft a footprint area, with the building id it came from
+    enrich:existence   status        a dead-plant flag, never a deletion
+
+`golden.build_golden` then runs again and survivorship decides, exactly as for a published source.
+This keeps `v_provenance` answering "why is this facility here, and who says so" for a geocoded
+coordinate as readily as for a state licence — and it means `operator` (a human correction in
+`control/operator_assertions.csv`) still outranks every one of these, as `survivorship.yaml` says.
+
+## What each stage may and may not do
+
+**9 — locate.** For facilities with a name, city and state but no street address. The model is
+given the company name, the city, and the manufacturer's own website where a source published one
+(`fl_bcis` publishes 853 of them). It must return a street address **and** the URL it came from
+with the address quoted verbatim from that page. An address without a citation is discarded, not
+stored. The model is never asked to recall an address from training.
+
+**10 — geocode.** Geocodio batch, address to coordinate. Measured on 200 of our own addresses,
+rooftop coverage is 81.6% and the accuracy types partition cleanly by source: every rooftop came
+from a local parcel or address-point file, every non-rooftop from TIGER/Line. Human verification of
+30 of them (`control/VERIFY-30.csv`) then showed the types fail differently:
+
+    rooftop                80% verified   failures are the right site, point off by 25-110m
+    nearest_rooftop_match  30% verified   failures are a different parcel: a vacant lot, a house, a road
+
+So only `rooftop` is stored as a coordinate. `nearest_rooftop_match`, `range_interpolation`,
+`street_center` and `place` are recorded as a geocode-quality flag and nothing else — a coordinate
+on the wrong parcel is worse than no coordinate, because it will be measured in stage 11 and
+rendered on the map as though it were known.
+
+**11 — footprint.** The building polygon under the coordinate, from Overture buildings on S3, and
+its area. Two cautions the verification set already raised:
+
+  - A rooftop coordinate can sit a metre or so *outside* the polygon, so the match is
+    nearest-building-within-tolerance, not strict containment.
+  - A plant is often a multi-building campus (Madison Industries) and for precast operations the
+    working area is an open yard with no roof at all (Concrete Modular Systems). Stage 11 therefore
+    reports the area of the building it matched and the count of buildings on the parcel, and never
+    claims to have measured "the plant".
+
+  DuckDB's `ST_Area_Spheroid` must not be used: it ignores the cosine-of-latitude convergence of
+  meridians and returns the same area for the same polygon at every latitude, correct only at the
+  equator and 2x too large by 60N. Area is computed from the ring coordinates directly.
+
+**12 — existence.** Flags, never deletions. A plant whose licence expired years ago, whose website
+is gone, and under whose rooftop coordinate there is no building, is a candidate for retirement —
+but the call is a human's. The stage writes the evidence and the flag; `control/operator_assertions.csv`
+is where a decision gets recorded.
+
+## Gates
+
+Enrichment gets its own gates, in the spirit of G1-G5: they block rather than advise.
+
+    E1  a located address must carry a citation URL and a verbatim quote
+    E2  no coordinate may be published from a non-rooftop geocode
+    E3  a footprint must name the Overture building id it was measured from
+    E4  no stage may reduce the count of facilities with an address or a coordinate
+    E5  existence flags are advisory: the stage may never delete or unpublish a facility
+
+E4 is the important one. Enrichment only ever adds; if a run would take a field away from a
+facility that had it, something upstream broke and the run halts.
