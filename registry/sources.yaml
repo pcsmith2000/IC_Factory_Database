@@ -97,9 +97,11 @@ sources:
   - approval_records
   status_basis: on_current_list
   traps:
+  - 'Uploaded by hand 2026-09-17: 49 certified manufacturers, city only and no street, so the source lands at T0.'
   - Approval-centric, not plant-centric; extraction not clean. FOIL request drafted.
   acquire_note: no list published and dos.ny.gov blocks automation; upload the FOIL response
-  status: queued
+  acquire: blob-only
+  status: active
 - id: in_dhs
   name: Indiana DHS industrialized building systems registry
   class: A
@@ -130,8 +132,10 @@ sources:
   - explicit_status
   status_basis: explicit_status_field
   traps:
+  - 'Uploaded by hand 2026-09-17: 308 modular manufacturers across 39 states, a NATIONAL roster like Indiana''s. The same folder holds 9 approved third-party inspection agencies in an identical schema; they are dropped on their evidence line, never by filename.'
   - Form-gated.
-  status: queued
+  acquire: blob-only
+  status: active
 - id: ca_hcd
   name: California HCD factory-built housing
   class: A
@@ -141,9 +145,11 @@ sources:
   - business_address_often_hq
   status_basis: on_current_list
   traps:
+  - 'Uploaded by hand 2026-09-17: 172 Active Manufacturer licences across 33 states. The address is the LICENCE address, not a plant.'
   - HCD issues no plant-level approval number; identifiers are per-model and per-unit. Plant identity is structurally unavailable.
   - Treat rows as company-level leads. Cap at T1 without a second source.
-  status: leads_only
+  acquire: blob-only
+  status: active
 - id: epa_frs
   name: EPA Facility Registry Service — national file
   class: B
