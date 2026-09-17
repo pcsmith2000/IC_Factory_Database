@@ -98,3 +98,37 @@ would read whatever we chose to look up. G4 exists to refuse rows with control p
 exactly this reason, and a source that laundered them through a web search would defeat the gate
 without tripping it. The worklist of 146 is useful for finding *sources* — the Mercer probe found
 APA that way — and for nothing that writes into the database.
+
+## Second and third batches — 19 addresses, and what else the lookups carried
+
+Running rate **20 of 22** first-query hits. The two misses (Dvele, Professional Building Systems)
+are both companies whose coverage is trade press announcing a plant rather than listing it.
+
+One lookup corrected me. WoodWorks lists "Sterling Solutions" as a mass-timber plant in Phoenix IL;
+I had read the crosswalk pair *Sterling Structural - IL ↔ Sterling Solutions* as a coincidence of
+the word "sterling". Sterling Solutions is Sterling Structural's parent — same 60-acre campus at
+501 E 151st St — and the Lufkin TX pair is the same company too. `crosswalk-candidates.csv` now
+says so, and the count I read as likely real is 13 of 16.
+
+**Data the lookups carried beyond the street, which the contract has no column for:**
+
+| plant | fact | where |
+|---|---|---|
+| Sterling, Phoenix IL + Lufkin TX | capacity 1,000 CLT panels/day across the two plants; 60-acre campus | Business Wire, sterlingsolutions.com |
+| Panel Built, Blairsville GA | three separate facilities in one town (302 Beasley, 303 Beasley, 193 Mauney Rd) | panelbuilt.com |
+| Mercer, Spokane Valley WA | $30M expansion | Spokane Journal of Business |
+| Sauter Timber, Estacada OR | plant opened Dec 2025 | Estacada News |
+| Dvele, Mesa AZ | 220,000 sq ft flagship plant | Homes.com News |
+| Kullman, Lebanon NJ | plant CLOSED; site listed for sale | Yelp, LoopNet |
+
+These are exactly the fields Peter wants next — website, square footage, lines/capacity, status —
+and today they live in `evidence` as prose, which is attributable but not queryable. Adding
+`website`, `sq_ft`, `capacity_note` and `operating_status` as contract columns is a schema change
+that touches every source and the warehouse; it is the right next structural step and it is not
+done here, because it belongs in its own change with its own tests rather than under an
+enrichment commit. Until then the facts are in the row, cited, in prose.
+
+One row is deliberately imperfect and says so: Mercer's Spokane plant is postally in **Spokane
+Valley**, and the WoodWorks lead says Spokane. The truth is written (Spokane Valley), so the address
+row will NOT fold into the lead by name+city and G1 will raise the pair. Writing "Spokane" to make
+the fold work would have falsified `city_verbatim`.

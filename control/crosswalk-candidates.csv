@@ -4,7 +4,7 @@ ADL-010,VBC,Berwick,PA,IC-03088,"VBC BERWICK, LLC",T1,vbc,2,vbc,likely yes — h
 ADL-012,Vantem Global,Clio,SC,IC-03695,Vantem Clio,T2,vantem,1,vantem,likely yes — head token is the company's own distinctive name,
 ADL-019,Ritz Craft MI,Jonesville,MI,IC-03042,"RITZ-CRAFT CORP. OF MI, INC.",T2,ritz,9,craft mi ritz,likely yes — head token is the company's own distinctive name,
 ADL-027,Cavco - Penn West,Emlenton,PA,IC-02906,CAVCO-EMLENTON,T2,cavco,32,cavco,likely yes — head token is the company's own distinctive name,
-ADL-066,Sterling Structural - IL,Phoenix,IL,IC-04088,Sterling Solutions,T0,sterling,2,sterling,"no — Sterling Site Access Solutions is mats/site access, a different firm",
+ADL-066,Sterling Structural - IL,Phoenix,IL,IC-04088,Sterling Solutions,T0,sterling,2,sterling,"likely yes — CORRECTED: Sterling Solutions is Sterling Structural's parent; same campus at 501 E 151st St, Phoenix IL (sterlingsolutions.com/sterling-locations). My first read called this a coincidence and was wrong.",
 ADL-068,Mercer Mass Timber - WA,Spokane,WA,IC-04082,Mercer,T0,mercer,2,mercer,likely yes — head token is the company's own distinctive name,
 ADL-069,Mercer Mass Timber - AR,Conway,AR,IC-04081,Mercer,T0,mercer,2,mercer,likely yes — head token is the company's own distinctive name,
 ADL-077,SUPERIOR WALLS - ADVANCED CONCRETE SYSTEMS,MIDDLEBURG,PA,IC-03898,Superior Walls by Advanced Concrete,T1,superior,19,advanced concrete superior walls,likely yes — head token is the company's own distinctive name,
