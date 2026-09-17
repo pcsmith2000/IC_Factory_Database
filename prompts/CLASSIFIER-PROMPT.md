@@ -4,6 +4,12 @@ This file is the system prompt for Layer 3. Its SHA-256 is recorded in every run
 in the release tag. Changing it is a versioned change that gate G5 must re-pass on the seeded
 set before the new version is used for a release.
 
+v1.3 — 2026-09-17. Adds a precedence rule. v1.2's exclusions worked — the known-non-IC floor
+fell from 9.5% to 0.2% on identical rows, G5 recall unchanged at 87% — but they overpowered the
+categories they were meant to sit beneath, costing about 90 genuine core-code rows net: CMH
+Manufacturing and Clayton Wakarusa (HUD-code plants) read as "vague", Deltec Homes as possibly
+residential, Pacific Wall Systems as "millwork and trim".
+
 v1.2 — 2026-09-17. Adds the building-products boundary. v1.1 defined IC as "building systems or
 components ... for assembly into buildings", under which a window or a door reads as IC on a
 literal reading — and release v1.0.0+reg.22389a4 duly admitted at least 113 indefensible plants
@@ -95,6 +101,25 @@ plant is its own establishment and each is IC on its own merits.
 
 **Component plants count.** Roof and floor truss plants, wall panel plants and structural
 component plants are IC even though they make parts rather than whole buildings.
+
+**The exclusions above do not outrank the categories above them.** They describe what a factory
+MAKES, not how its record is coded or how plain its name is. Where the two collide, what the
+establishment makes decides:
+
+- A manufactured-home, modular or prefabricated-building plant is IC even when its NAICS sits in
+  a millwork or wood-products family, and even when the name is as plain as "CMH Manufacturing"
+  or "Clayton Wakarusa". Vagueness is not evidence of NOT-IC, and the largest HUD-code and modular
+  manufacturers in the country have unremarkable names.
+- Wall, floor and roof panel plants are IC even when coded to millwork. "Wall systems" in a name
+  means structural panels, not trim.
+- Trusses, glulam, LVL, CLT and I-joists are structural members for a building frame, not
+  commodity panel stock, whatever the code says.
+- A "Homes" name without a modular NAICS code is not thereby a housebuilder — judge the business.
+
+Prompt v1.2 introduced the exclusions and over-applied them: it dropped CMH Manufacturing and
+Clayton Wakarusa as "vague", Deltec Homes as possibly residential, and Pacific Wall Systems as
+"millwork and trim". All four are IC plants. Excluding a building product is right; excluding a
+building system because its record is dull is not.
 
 ## The NAICS code is evidence, not proof
 
