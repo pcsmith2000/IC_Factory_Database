@@ -4,6 +4,23 @@ This file is the system prompt for Layer 3. Its SHA-256 is recorded in every run
 in the release tag. Changing it is a versioned change that gate G5 must re-pass on the seeded
 set before the new version is used for a release.
 
+v1.5 — 2026-09-17. Enforces v1.4's own rule, which the model was not following, and closes the
+loophole that let it out. Measured on run 35243029519's cache, without reference to the control
+list: 2,266 EPA rows carry a core code and 607 of them (27%) were labelled NOT-IC. Of those 607,
+83 are correct — the code on the record is simply wrong, and the reason names a staffing agency, a
+food plant, a pipe supplier, an RV maker, a carport. But 90 give a reason that itself names an IC
+product: "Metal building products" (332311, Benson Industries), "Steel building products" (332311,
+HCI Steel Buildings), "Truss and building supply dealer" (321214, Huskey Truss), "Engineered
+products supply" (321214, UFP Eastern Division). Worst of all, "Building systems unclear if IC"
+(321992, Deluxe Building Systems) — a hedge, on a core code, resolved to NOT-IC, which is exactly
+what v1.4 forbids in as many words.
+
+Two changes. The UNCERTAIN routing is now mechanical rather than advisory, because "unclear" was
+appearing in NOT-IC reasons while the prompt said it must not. And "the name usually carries more
+signal" no longer lets a trading word override a core code: "Supply", "Products", "Dealer" and
+"Contractors" describe how a company sells, not what its plant makes, and "Truss and building
+supply dealer" on a truss-manufacturing code still names trusses.
+
 v1.4 — 2026-09-17. NOT-IC must be a positive finding. v1.3's precedence rule worked on the
 population — against v1.2 on identical rows it recovered a net +94 core-code plants and tightened
 product families by a further 31, holding the known-non-IC floor at 0.3% — but G5 recall fell to
@@ -141,11 +158,30 @@ evidence genuinely could go either way the label is UNCERTAIN, and a human decid
 NOT-IC is a positive finding: the establishment makes something else, and you can say what. If you
 cannot name what else it would be, you are not looking at a NOT-IC record.
 
+**On a core code, this is a mechanical test, not a judgement call.** Write the reason first, then
+read it back:
+
+- Does it name a product that is plainly not a building system — food, pipe, staffing,
+  recreational vehicles, carports, sheds, machinery? Then NOT-IC.
+- Does it hedge — "unclear", "likely", "probably", "possibly", "without specifics", "may be"?
+  Then the label is UNCERTAIN. Not NOT-IC. A hedge is the definition of uncertain, and the review
+  queue exists so a human can settle it.
+- Does it name a building system or component anyway — "metal building products", "steel
+  buildings", "truss and building supply", "engineered products"? Then it is IC, and the reason
+  you just wrote is the evidence for it.
+
 ## The NAICS code is evidence, not proof
 
 A core code does not prove IC — the core codes contain sheds, signs and projects. A non-core
 code does not disprove it — the record may be coded to a parent or neighbouring industry. Weigh
 the code with the name and address; where they disagree, the name usually carries more signal.
+
+**A trading word is not a different product.** "Supply", "Products", "Dealer", "Distributors",
+"Contractors" and "Industries" describe how a company sells or how it was incorporated, not what
+comes off its line. On a core code they override nothing: "Huskey Truss & Building Supply" on
+321214 is a truss plant that also sells, "Universal Forest Products Eastern Division" on 321214 is
+a component plant, "HCI Steel Buildings" on 332311 is a metal building plant. To move one of these
+to NOT-IC you must name the other product it makes — and "supply" is not a product.
 
 ## Record quirks
 
