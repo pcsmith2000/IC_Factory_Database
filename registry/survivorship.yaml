@@ -21,3 +21,10 @@ fields:
   # class-based order could never match and the field stayed empty. A human correction still
   # outranks the model.
   product_type:    {order: [operator, classifier], tie: most_recent}
+  # Added 2026-09-17. A registry (class A) states a website as printed; the enrichment pass (class
+  # D) cites the company's own site. Square footage and open/closed status come almost only from
+  # the enrichment pass today, so class D leads; a registry's explicit status field outranks it
+  # for operating_status because a revoked registration is a stronger claim than a listing.
+  website:          {order: [operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
+  sq_ft:            {order: [operator, "class:D", "class:A", "class:B"], tie: most_recent}
+  operating_status: {order: [operator, "basis:explicit_status_field", "class:D", "class:A"], tie: most_recent}

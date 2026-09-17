@@ -25,7 +25,8 @@ from datetime import date
 from pathlib import Path
 
 GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_lon", "naics",
-                 "status", "expiry_date", "product_type"]
+                 "status", "expiry_date", "product_type",
+                 "website", "sq_ft", "operating_status"]      # added 2026-09-17; see _migrate_golden
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},
     "lookup": {"name": "Layer 4 entity resolution", "class": "lookup"},
@@ -166,6 +167,28 @@ class _Warehouse:
         with self.transaction() as c:
             for stmt in DDL:
                 c.execute(stmt)
+            self._migrate_golden(c)
+
+    def _existing_columns(self, c, table: str) -> set[str]:
+        raise NotImplementedError
+
+    def _migrate_golden(self, c) -> list[str]:
+        """Add any golden field the live golden_facility table predates.
+
+        CREATE TABLE IF NOT EXISTS is a no-op on a table that exists, so a field added to
+        GOLDEN_FIELDS after the first release would be in the INSERT column list and absent from
+        the table — every load after that would fail. website, sq_ft and operating_status are the
+        first fields added since the schema was laid down. Each missing column and its __source
+        twin are added in place; nothing is dropped or rewritten, and a table that already has
+        them is left exactly as it was. Both engines accept ALTER TABLE ... ADD COLUMN ... TEXT."""
+        have = self._existing_columns(c, "golden_facility")
+        added = []
+        for f in GOLDEN_FIELDS:
+            for col in (f, f"{f}__source"):
+                if col not in have:
+                    c.execute(f"ALTER TABLE golden_facility ADD COLUMN {col} TEXT")
+                    added.append(col)
+        return added
 
     @contextmanager
     def transaction(self):
@@ -289,6 +312,9 @@ class SqliteWarehouse(_Warehouse):
     def _rows(self, raw) -> list[dict]:
         return [dict(r) for r in raw.fetchall()]
 
+    def _existing_columns(self, c, table: str) -> set[str]:
+        return {r["name"] for r in self._rows(c.execute(f"PRAGMA table_info({table})"))}
+
 
 class PostgresWarehouse(_Warehouse):
     """Neon (or any Postgres). Prefers the direct/unpooled URL for the loader — DDL and one long
@@ -320,6 +346,10 @@ class PostgresWarehouse(_Warehouse):
 
     def _rows(self, raw) -> list[dict]:
         return [dict(r) for r in raw.fetchall()] if raw.description else []
+
+    def _existing_columns(self, c, table: str) -> set[str]:
+        return {r["column_name"] for r in self._rows(c.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_name = ?", (table,)))}
 
 
 def open_warehouse(cfg: dict, root: Path):

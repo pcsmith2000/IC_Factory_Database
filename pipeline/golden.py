@@ -14,6 +14,9 @@ FIELD_MAP = {  # golden field -> contract column
     "name": "name_verbatim", "address": "address_verbatim", "city": "city_verbatim",
     "state": "state_verbatim", "zip": "zip_verbatim", "naics": "naics_verbatim",
     "status": "status_verbatim", "expiry_date": "expiry_date",
+    # Optional contract columns (2026-09-17). Blank on most rows; asserted only when a source
+    # printed them — GA DCA's websites, the enrichment lookups' square footage and status.
+    "website": "website", "sq_ft": "sq_ft", "operating_status": "operating_status",
 }
 
 
