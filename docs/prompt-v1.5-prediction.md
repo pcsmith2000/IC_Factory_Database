@@ -108,3 +108,30 @@ a hedge genuinely is uncertain, and the review queue is where a human settles it
 what was predicted, and it would mean v1.5 barely moves recall while roughly doubling the review
 queue. The rule that says "if you cannot name the other product, it is not NOT-IC" may be pushing
 rows one step rather than two.
+
+
+## Verdict on v1.5 — PARTIAL, 32 of 132 batches, then cancelled
+
+                    projected (2 sd)    baseline    predicted
+    IC              ~2,042 +/-223         1,969     2,100-2,195
+    UNCERTAIN         ~829 +/-186           365       403-442
+
+**The prediction is falsified, and the cause is a mistake in the change rather than anything about
+the classifier.** UNCERTAIN ran 5.0 standard deviations above baseline and roughly 2.3x it, while
+IC stayed inside its own error bars. Rows moved one step out of NOT-IC instead of two.
+
+v1.5 wrote its mechanical test as three bullets, and a reader takes bullets in order: the hedge
+test was second and the building-product test third, so "likely a metal building plant" on a
+332311 record hit the hedge branch and landed on UNCERTAIN when v1.4 would have called it IC. The
+widening was real and a step was placed in front of it. v1.6 puts the three tests in explicit
+precedence order with the building-product test first.
+
+**Cancelled at 32 of 132 rather than run to completion.** What that costs, stated plainly: no G5
+verdict on v1.5, no audit-floor reading, and no final recall for it. What it buys: roughly 30
+minutes and 800,000 tokens not spent finishing a configuration v1.6 supersedes. The signal that
+decides the diagnosis was already at five sigma; the signal still inside its error bars — IC at
++73 over baseline, about 2.7 sd of run-to-run noise — would have resolved to "a small real gain",
+which does not change what to do next.
+
+If v1.6 also balloons UNCERTAIN, this diagnosis is wrong and v1.5 deserves a full run to find out
+why. That is the one thing that would send me back for it.
