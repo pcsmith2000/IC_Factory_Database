@@ -50,6 +50,21 @@ class IdRegistry:
 
 
 def tier(cluster: list[dict]) -> str:
+    """T0 means no PLACEABLE address, which is not the same as no address given.
+
+    Worth stating because the gap looks like a bug and is not. Of run 22's 1,382 T0 leads, 287 have
+    a member row whose `address_verbatim` is non-empty — 293 rows in all, mostly EPA FRS (181),
+    in_dhs (40) and mbi_members (36). Every one of them is unplaceable rather than unparsed:
+
+        MAIN ST · HWY 278 W · SARDIS RD. · 10TH AVENUE SOUTH · SHANHOUSE BOULEVARD
+        BEDFORD INDL. PARK · HIGHWAY 41 N & CAVALIER ROAD · AT OR NEAR RIVERFRONT DR.
+        P.O. BOX 310 · P O BOX 6868
+
+    street_key needs a house number and refuses a PO box, both correctly: a street name with no
+    number does not identify a building, and a mailbox is not a plant. Reaching these needs a
+    geocoder or the enrichment pass, not a parser fix — and street_key must not be loosened to
+    chase them, because it feeds the facility signature and every id would be re-issued.
+    """
     sources = {r["source_id"] for r in cluster}
     has_addr = any(r.get("street_key") for r in cluster)
     site_visit = any("osha" in (r.get("source_id") or "") or "OSHA" in (r.get("notes") or "") for r in cluster)
