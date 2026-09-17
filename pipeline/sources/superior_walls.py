@@ -127,12 +127,20 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
     pages = [p for p in paths if p.suffix.lower() == ".html"]
     require(bool(pages), paths[0] if paths else Path(PAGES_API),
             "no page HTML in the archived folder — refresh this source before parsing")
-    out, skipped = [], 0
+    out, skipped, seen, repeats = [], 0, set(), 0
     for path in sorted(pages):
         lic = _licensee(path.read_text(encoding="utf-8", errors="replace"))
         if not lic:
             skipped += 1
             continue
+        # One plant, two pages. Warrior Precast is both /superior-walls-warrior-precast/ and
+        # /superior-walls-east-tennessee/; Weaver and Northeast each have a second slug too. The
+        # street and ZIP are the plant, so that is the key — not the slug, which is the page.
+        key = (re.sub(r"[^a-z0-9]", "", lic["street"].lower()), lic["zip"])
+        if key in seen:
+            repeats += 1
+            continue
+        seen.add(key)
         out.append(contract_row(
             source, len(out) + 1, name=lic["name"], address=lic["street"],
             city=lic["city"], state=lic["state"], zip_code=lic["zip"],
@@ -143,8 +151,9 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
         raise LayoutChanged(
             f"none of {len(pages)} pages carried a 'Contact Information' block with a plant "
             "address — superiorwalls.com has changed its licensee page template")
-    out[0]["notes"] += (f" | {len(out)} licensee plants; {skipped} pages carried no licensee "
-                        "contact block (products, corporate, news)")
+    out[0]["notes"] += (f" | {len(out)} licensee plants from {len(pages)} pages; {repeats} pages "
+                        f"were a second slug for a plant already seen; {skipped} carried no "
+                        "licensee contact block (products, corporate, news)")
     return out
 
 

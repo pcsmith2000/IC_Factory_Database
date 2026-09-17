@@ -169,7 +169,17 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
     for i, c in enumerate(in_scope):
         if i in matched:
             continue
-        (crowded if by_name.get(_key(c.get("name", ""))) else misses).append(c.get("name", ""))
+        # "Company is present, this plant is not" must be judged the way the rungs match,
+        # not on the exact key alone. 20 unmatched "Builders FirstSource" rows read as
+        # plain misses while the warehouse held 90 BFS plants, because the exact key
+        # "buildersfirstsource" does not appear in an index built from "Builders
+        # FirstSource — Acworth GA Truss". They are plant-level gaps, and saying so is the
+        # difference between "we have never heard of this company" and "we have this
+        # company but not this site".
+        cn = norm_name(c.get("name", ""))
+        known = bool(by_name.get(_key(c.get("name", "")))) or any(
+            _prefix_match(cn, fn) for _fid, fn, _st in fac_names)
+        (crowded if known else misses).append(c.get("name", ""))
     hits = len(matched)
     # A T0 row is a LEAD: a name the pipeline knows about with no location established. Counting
     # one as a found plant lets a source of bare names lift recall while the database gains nothing

@@ -370,3 +370,19 @@ def test_superior_walls_needs_the_line_breaks_to_split_street_from_city():
     from pipeline.sources.superior_walls import _lines
     got = _lines("<p>Contact Information<br>55 Advanced Lane<br>Middleburg, PA 17842</p>")
     assert got == ["Contact Information", "55 Advanced Lane", "Middleburg, PA 17842"]
+
+
+def test_superior_walls_counts_a_plant_once_across_two_slugs():
+    """Warrior Precast is both /superior-walls-warrior-precast/ and /superior-walls-east-tennessee/.
+    The street and ZIP are the plant; the slug is only the page."""
+    import tempfile, pathlib
+    from pipeline.sources import superior_walls as SW
+    d = pathlib.Path(tempfile.mkdtemp())
+    block = ("<p>Contact Information<br>Superior Walls by Warrior Precast<br>931-555-0100<br>"
+             "10144 Sparta Hwy.<br>Rock Island, TN 38581</p>")
+    (d / "superior-walls-warrior-precast.html").write_text(block)
+    (d / "superior-walls-east-tennessee.html").write_text(block)
+    rows = SW.parse(sorted(d.glob("*.html")), {"id": "superior_walls", "url": SW.BASE,
+                                               "status_basis": "on_current_list"})
+    assert len(rows) == 1
+    assert "1 licensee plants from 2 pages; 1 pages were a second slug" in rows[0]["notes"]
