@@ -76,13 +76,23 @@ class VercelBlobArchive:
                     raise ArchiveError(f"blob {what}: {e.reason}") from e
             time.sleep(2 ** attempt)
 
-    def put(self, path: Path, pathname: str) -> dict:
+    def put(self, path: Path, pathname: str, *, cache_max_age: int | None = None) -> dict:
+        """Upload one file. cache_max_age sets the object's edge/browser TTL in seconds.
+
+        Archived sources are immutable and want the default (a year at the edge). An object that is
+        OVERWRITTEN in place — the run heartbeat — must pass a small value, because the CDN keys on
+        the pathname alone: a query-string buster on the read side does not work (measured against
+        run 35170703333, x-vercel-cache: HIT with a unique ?cb= every call), so a reader otherwise
+        sees a run frozen, or watches it go backwards as different edges answer.
+        """
         body = path.read_bytes()
+        headers = {"x-vercel-blob-access": self.access, "x-add-random-suffix": "0", "x-allow-overwrite": "1",
+                   "x-content-type": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+                   "x-content-length": str(len(body))}
+        if cache_max_age is not None:
+            headers["x-cache-control-max-age"] = str(int(cache_max_age))
         return self._call(f"{BLOB_API}/?{urllib.parse.urlencode({'pathname': pathname})}", method="PUT", data=body,
-                          what=f"put {pathname}", headers={
-                              "x-vercel-blob-access": self.access, "x-add-random-suffix": "0", "x-allow-overwrite": "1",
-                              "x-content-type": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
-                              "x-content-length": str(len(body))})
+                          what=f"put {pathname}", headers=headers)
 
     def head(self, url_or_pathname: str) -> dict:
         """Metadata for one blob (pathname, size, url). Raises ArchiveError (HTTP 404) when absent."""

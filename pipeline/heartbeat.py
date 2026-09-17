@@ -29,6 +29,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PREFIX = "ic-runs"
+CACHE_MAX_AGE = 60     # seconds the CDN may hold a progress.json. 60 is the floor Vercel Blob
+                       # enforces — asking for 5 comes back as 'public, max-age=60' — so this
+                       # is the freshest a watcher can be. Each PUT does seem to evict the
+                       # edge, so in practice reads track the run far more closely than 60s.
 
 
 def _now() -> str:
@@ -80,7 +84,9 @@ class Heartbeat:
         try:
             tmp = Path(os.environ.get("RUNNER_TEMP") or "/tmp") / f"hb-{self.run_id}.json"
             tmp.write_text(json.dumps(self.state, indent=1))
-            self.archive.put(tmp, self.key)
+            # This pathname is overwritten every few seconds; without a short TTL the CDN serves a
+            # stale copy to whoever is watching. See VercelBlobArchive.put.
+            self.archive.put(tmp, self.key, cache_max_age=CACHE_MAX_AGE)
             self._last = time.time()
         except Exception:
             # Deliberately silent. A store that is unreachable is a reason to lose visibility,
@@ -101,7 +107,13 @@ def read(cfg: dict, run_id: str | None = None) -> dict | None:
     if not blobs:
         return None
     b = max(blobs, key=lambda x: x.get("uploadedAt") or x["pathname"])
-    with urllib.request.urlopen(b["url"], timeout=60) as r:
+    # Freshness is bought at PUBLISH time (CACHE_MAX_AGE, see Heartbeat._write), not here. The CDN
+    # keys on the pathname alone and ignores a query string, so a read-side cache-buster does not
+    # work: measured against run 35170703333, six fetches with a unique ?cb= each returned
+    # x-vercel-cache HIT half the time and the batch count went 67, 67, 69, 67, 70, 72. These
+    # request headers are belt-and-braces for intermediaries that do honour them.
+    req = urllib.request.Request(b["url"], headers={"cache-control": "no-cache", "pragma": "no-cache"})
+    with urllib.request.urlopen(req, timeout=60) as r:
         return json.load(r)
 
 
