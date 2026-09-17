@@ -113,12 +113,12 @@ Stage 11 legitimately has nothing to do yet, which is a better answer than measu
 points and reporting their median as though it meant something. Stage 10's 2,834 exceed Geocodio's
 2,500/day free tier, so it carries a ceiling of its own.
 
-## Stage 9 reaches far less than its target, and the reason is structural
+## Stage 9 was reach-limited, and search is what lifted it
 
-The model cannot browse. It can only extract an address from a page that is fetched and handed to
-it, which is how `corporate_locations` already works and the only form of this that produces a
-citation. So stage 9's real reach is the number of address-less facilities for which some source
-publishes a URL to fetch.
+Without a search tool the model cannot browse. It can only extract an address from a page that is
+fetched and handed to it, which is how `corporate_locations` already works and the only form of
+this that produces a citation. On that footing stage 9's reach is just the address-less facilities
+for which some source publishes a URL to fetch.
 
     US facilities needing an address                     194 (of the registry sources; EPA aside)
     ... for which fl_bcis publishes a website             18   9%
@@ -130,9 +130,24 @@ Asking the model for an address with no page in front of it is not a smaller ver
 is recall from training, which is exactly what gate E1 exists to reject, and for a plant address it
 would be confidently wrong often enough to poison a field no downstream stage can second-guess.
 
-So stage 9 ships covering the ~9% it can cite, and the remaining 91% stays an open question whose
-answer is a search capability, not a better prompt. Whether the Vercel AI Gateway exposes a web
-search tool decides it, and that is untested.
+So stage 9 needed a search capability, not a better prompt, and the Vercel AI Gateway supplies one:
+the Anthropic `web_search_20250305` server tool runs gateway-side, so the model both finds and reads
+the page. That lifts the reach from the ~9% with a publisher-supplied URL to any facility the open
+web documents. Measured on the live release: 6 attempted, 5 cited and verified, 1 rejected.
+
+Verification is deliberately narrow, and it is worth being explicit about what it does not cover.
+
+    verified          the cited page, fetched independently, contains the address string
+    not verified      that the page is about the right company
+    not verified      that the address is the plant and not a head office or a sales office
+    not verified      that the page is current
+
+The last of those is visible in the shipped data: one citation is a 2014 groundbreaking notice for a
+plant "to be built". The address is real and the page says it; whether the plant still runs there
+twelve years on is a different question, and stage 12 is the stage that asks it. Recency is a known,
+accepted limitation of stage 9 rather than a bug in it — deferred by decision, not overlooked. The
+company-identity and plant-vs-office gaps need human eyes, the way `control/VERIFY-30.csv` did; the
+citations are stored in `ref_source_row`, so that is a query away whenever it is wanted.
 
 ## Gates
 
