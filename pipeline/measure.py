@@ -32,8 +32,18 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
             hits += 1; by_method["crosswalk"] += 1; continue
         if (norm_name(c["name"]), (c.get("state") or "").upper()) in by_name_state:
             hits += 1; by_method["name+state"] += 1
-    return {"in_scope": len(in_scope), "found": hits, "recall": hits / len(in_scope) if in_scope else 0.0,
-            "by_method": dict(by_method)}
+    if not in_scope:
+        # control/control-triaged.csv is empty, so there is nothing to have found. Reporting 0.0
+        # states that the pipeline missed every establishment it was asked about, which is both
+        # false and the most damning number in the release row — fact_release_metrics.recall has
+        # carried it on every release to date. None says "not measured", the same distinction
+        # GateResult.tested draws for G2 and G3.
+        return {"in_scope": 0, "found": 0, "recall": None, "tested": False,
+                "note": "no control rows triaged in_scope — recall cannot be measured, and 0.0 "
+                        "would read as a total miss rather than an absent test",
+                "by_method": {}}
+    return {"in_scope": len(in_scope), "found": hits, "recall": hits / len(in_scope),
+            "tested": True, "by_method": dict(by_method)}
 
 
 def coverage_and_bias(facilities: list[dict], frame: dict[str, int], band: tuple[float, float], min_share: float) -> dict:

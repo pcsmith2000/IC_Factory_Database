@@ -261,6 +261,19 @@ def main(argv=None) -> int:
         gaps = load_yaml(ROOT / "registry" / "known-gaps.yaml") if (ROOT / "registry" / "known-gaps.yaml").exists() else {}
         m["coverage_bias"]["out_of_band_causes"] = {st: gaps.get("states", {}).get(st, "NO CAUSE ON RECORD") for st in m["coverage_bias"]["out_of_band"]}
     record["layers"]["7_measure"] = m
+    rc = m["recall"]
+    if rc.get("tested"):
+        print(f"  recall vs control: {rc['found']}/{rc['in_scope']} = {rc['recall']:.0%}")
+    else:
+        print("  recall vs control: UNTESTED — control/control-triaged.csv holds no in-scope rows")
+    cb = m.get("coverage_bias")
+    if cb:
+        # The frame is the Census CBP establishment count for the core codes: the closest thing to
+        # a denominator this project has, and the only statement it can make about how complete it
+        # is. It was computed on every run and reported only per state.
+        print(f"  coverage vs Census frame: {cb['counted_facilities']} of {cb['frame_total']} "
+              f"establishments = {cb['counted_facilities'] / cb['frame_total']:.0%}; "
+              f"{len(cb['out_of_band'])} states outside the bias band")
 
     # ---- Layer 8
     if 8 not in layers:
