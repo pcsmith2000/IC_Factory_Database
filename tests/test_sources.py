@@ -153,3 +153,53 @@ def test_split_city_state_zip_never_corrects():
     assert _common.split_city_state_zip("Mifflinburg, IN") == ("Mifflinburg", "IN", "")
     assert _common.split_city_state_zip("Somewhere Odd") == ("Somewhere Odd", "", "")
     assert _common.iso_date("13/45/2027") == "" and _common.iso_date("2027-01-31") == "2027-01-31"
+
+
+def test_mi_lara_blocks_put_the_street_in_address_and_the_company_in_name(monkeypatch):
+    """The PDF interleaves each entry as street / CA+name+box+phone / city, so a parser that groups
+    on the city line and takes the first line as the name transposes the two. That shipped once and
+    sent every Michigan address to a geocoder as a PO Box string, so it is pinned here."""
+    from pipeline.sources import mi_lara
+    page = "\n".join([
+        "Approved Manufacturers",
+        "CA Number Manufacturer Address Telephone Number",
+        "425 W McMillan Street",
+        "122 Wisconsin Homes Inc PO Box 250 (715) 384-2161",
+        "Marshfield, WI 54449",
+        "1035 Iris Drive SE",                                  # no PO box
+        "205 Madison Industries (770) 483-4401",
+        "Conyers, GA 30094",
+        "362 Frey-Moss Structures Inc 1801 Rockdale Industrial Boulevard (770) 483-7543",
+        "Conyers, GA 30012",                                   # street shares the anchor line
+        "Shanghai Morimatsu Pharmaceutical Equipment No. 29 Jinwen Road",
+        "652 (862) 138-1120",                                  # name wraps across both neighbours
+        "Engineering Co Ltd Pudong, Shangahi, China 201323",
+    ])
+    monkeypatch.setattr(mi_lara, "pdf_pages_text", lambda p: [page])
+    rows = mi_lara.parse([Path("Approved_Manufacturers_Listings.pdf")],
+                         {"id": "mi_lara", "status_basis": "on_current_list"})
+
+    assert len(rows) == 4
+    first = rows[0]
+    assert first["name_verbatim"] == "Wisconsin Homes Inc"
+    assert first["address_verbatim"] == "425 W McMillan Street"
+    assert (first["city_verbatim"], first["state_verbatim"], first["zip_verbatim"]) == ("Marshfield", "WI", "54449")
+    assert first["source_identifier"] == "122"
+    assert "PO Box 250" in first["notes"] and "PO Box" not in first["address_verbatim"]
+
+    assert rows[1]["name_verbatim"] == "Madison Industries"          # no PO box to strip
+    assert rows[1]["address_verbatim"] == "1035 Iris Drive SE"
+
+    assert rows[2]["name_verbatim"] == "Frey-Moss Structures Inc"    # street shared the anchor line
+    assert rows[2]["address_verbatim"] == "1801 Rockdale Industrial Boulevard"
+
+    wrapped = rows[3]                                                # name wrapped over three lines
+    assert wrapped["name_verbatim"] == "Shanghai Morimatsu Pharmaceutical Equipment Engineering Co Ltd"
+    assert wrapped["address_verbatim"] == "No. 29 Jinwen Road"
+    assert wrapped["city_verbatim"] == "Pudong, Shangahi, China 201323"   # typo kept verbatim
+    assert wrapped["country"] == ""                                       # not a US facility
+
+    # the transposition this test exists to catch
+    for r in rows:
+        assert not r["name_verbatim"][0].isdigit(), r["name_verbatim"]
+        assert "PO Box" not in r["address_verbatim"]
