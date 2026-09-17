@@ -205,7 +205,8 @@ def main(argv=None) -> int:
             # a keyword list that edited the output would just be a second, worse classifier.
             admitted = [r for r in keep if r["source_id"] in needs]
             pa = audit.scan([r.get("name_verbatim") or "" for r in admitted],
-                            [r.get("product_type") or "" for r in admitted])
+                            [r.get("product_type") or "" for r in admitted],
+                            [r.get("naics_verbatim") or "" for r in admitted])
             record["layers"]["3_classify"]["precision_audit"] = pa
             print(audit.line(pa))
             rows = keep

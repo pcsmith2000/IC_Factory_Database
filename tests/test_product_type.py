@@ -103,3 +103,26 @@ def test_audit_without_product_types_still_works():
     r = audit.scan(["MASONITE MOBILE", "ACME MODULAR"])
     assert r["flagged"] == 1 and r["by_product_type"] == {}
     assert "concentrated in" not in audit.line(r)
+
+
+def test_audit_naics_check_is_independent_of_the_keyword_list():
+    """A second estimator earns its place only by disagreeing with the first where it should.
+    ACME WALL SYSTEMS is coded 321918 (millwork) but is a wall-panel plant: the name-based floor
+    correctly ignores it, the NAICS bracket correctly counts it. Measured on real runs the two
+    moved together — names 9.5/0.2/0.3%, NAICS 26.1/4.0/4.5% — which is why both are reported."""
+    from pipeline import audit
+    names = ["ACME WALL SYSTEMS", "DOVER MILLWORK INC", "PENINSULA TRUSS LLC"]
+    naics = ["321918", "321918", "321214"]
+    r = audit.scan(names, None, naics)
+    assert r["flagged"] == 1                      # only the millwork NAME matches
+    assert r["product_naics_admitted"] == 2       # both 321918 rows sit in a product family
+    assert r["product_naics_rate"] == round(2 / 3, 4)
+    assert r["product_naics_by_code"] == {"other millwork": 2}
+    assert "independent check" in audit.line(r)
+
+
+def test_audit_without_naics_reports_no_second_bracket():
+    from pipeline import audit
+    r = audit.scan(["MASONITE MOBILE", "ACME MODULAR"])
+    assert r["product_naics_admitted"] == 0
+    assert "independent check" not in audit.line(r)

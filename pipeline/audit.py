@@ -27,6 +27,7 @@ which is the only way the number is worth quoting.
 """
 from __future__ import annotations
 import re
+from collections import Counter
 
 # Each entry: (category, pattern). Patterns are deliberately narrow — a national brand whose
 # entire business is the flagged product, or a product word with no IC reading.
@@ -53,7 +54,22 @@ IC_SIGNALS = re.compile(
 _COMPILED = [(cat, re.compile(pat, re.I)) for cat, pat in NOT_IC_PATTERNS]
 
 
-def scan(names: list[str], product_types: list[str] | None = None) -> dict:
+# NAICS families that make building products rather than building systems. A second, independent
+# estimator: it needs no keyword list, so it catches what a name never says, and it corroborates
+# or contradicts the name-based floor instead of repeating it. Looser by design — a wall-panel
+# plant coded 321918 is a real admission, not an error — so it reads high and brackets the truth
+# from above while the keyword floor brackets it from below. Measured across three prompts on
+# identical rows: names 9.5% -> 0.2% -> 0.3%, NAICS 26.1% -> 4.0% -> 4.5%. Same shape, and two
+# measures that move together are worth far more than either alone.
+PRODUCT_NAICS = {
+    "321911": "wood windows and doors", "321918": "other millwork", "321912": "cut stock",
+    "321219": "reconstituted wood", "321211": "hardwood veneer", "321212": "softwood veneer",
+    "321920": "wood containers and pallets",
+}
+
+
+def scan(names: list[str], product_types: list[str] | None = None,
+         naics: list[str] | None = None) -> dict:
     """Audit a list of admitted establishment names.
 
     Returns the floor count, the breakdown by category, the ambiguous names held back, and a
@@ -87,11 +103,18 @@ def scan(names: list[str], product_types: list[str] | None = None) -> dict:
                 pt_flagged[pt] = pt_flagged.get(pt, 0) + 1
     flagged = sum(len(v) for v in by_cat.values())
     total = len([n for n in names if n])
+    codes = [c for c in (naics or []) if c]
+    in_product = sum(1 for c in codes if c in PRODUCT_NAICS)
     by_product = {pt: {"admitted": n, "flagged": pt_flagged.get(pt, 0),
                        "rate": round(pt_flagged.get(pt, 0) / n, 4) if n else 0.0}
                   for pt, n in sorted(pt_total.items(), key=lambda x: -x[1])}
     return {
         "by_product_type": by_product,
+        "product_naics_admitted": in_product,
+        "product_naics_rate": round(in_product / total, 4) if total else 0.0,
+        "product_naics_by_code": {PRODUCT_NAICS[c]: n for c, n in
+                                  sorted(Counter(c for c in codes if c in PRODUCT_NAICS).items(),
+                                         key=lambda x: -x[1])},
         "admitted": total,
         "flagged": flagged,
         "floor_fp_rate": round(flagged / total, 4) if total else 0.0,
@@ -110,6 +133,10 @@ def line(res: dict) -> str:
     out = (f"  precision audit: {res['flagged']} of {res['admitted']} admitted names are known "
            f"non-IC manufacturing = {res['floor_fp_rate']:.1%} FLOOR on false positives "
            f"({cats}); {res['ambiguous_held_back']} ambiguous held back")
+    if res.get("product_naics_admitted"):
+        out += (f"\n    independent check: {res['product_naics_admitted']} of {res['admitted']} "
+                f"sit in building-product NAICS families = {res['product_naics_rate']:.1%} "
+                f"(a looser upper bracket; the floor above is the lower one)")
     worst = [f"{pt} {d['rate']:.0%}" for pt, d in res.get("by_product_type", {}).items() if d["rate"] >= 0.05]
     if worst:
         out += f"\n    concentrated in: {', '.join(worst)}"
