@@ -12,7 +12,7 @@ certified_as_of_date; a row registered in no listed year keeps on_current_list a
 from __future__ import annotations
 import re
 from pathlib import Path
-from ._common import http_get, pick, contract_row, require
+from ._common import US_STATES, http_get, pick, contract_row, require
 
 PAGE = "https://interstateibc.org/manufacturers/"
 YEAR = re.compile(r"^(19|20)\d{2}$")
@@ -45,7 +45,7 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
     years = [(i, c) for i, c in enumerate(header) if YEAR.match(c)]
     require("name" in idx and state_i is not None, path, f"columns changed: {header}")
 
-    out = []
+    out, non_us = [], 0
     for i, tr in enumerate(table.find_all("tr")[1:], 1):
         cells = [c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])]
         get = lambda j: cells[j] if j is not None and j < len(cells) else ""
@@ -53,6 +53,14 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
         if not name:
             continue
         reg = [y for j, y in years if get(j).upper().startswith("R")]
+        # The commission registers plants that ship into member states, and some of those plants are
+        # in Manitoba, Ontario, Chihuahua and Shanghai: 9 of 286 rows. contract_row defaults country to
+        # US, so they entered as US plants with a two-letter province for a state, and until Layer 2
+        # stopped truncating regions two of them carried codes that exist. This is a US database; a
+        # state that is not a US state is skipped and counted, as mbi, sipa and mbma already do.
+        if get(state_i).strip().upper() not in US_STATES:
+            non_us += 1
+            continue
         out.append(contract_row(
             source, i, name=name, address=get(idx.get("address")), city=get(idx.get("city")), state=get(state_i),
             source_url=PAGE, source_document=path.name,

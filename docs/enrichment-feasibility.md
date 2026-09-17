@@ -150,3 +150,22 @@ Built runs three plants in Blairsville and ProMod already had a T2 cluster under
 so the lead sits beside more than one addressed candidate and `_attach_addressless` refuses to pick
 — which is the rule working. The enrichment row may duplicate one of those plants; that is G1's
 review CSV to raise, not a reason to loosen the merge.
+
+## Batch five — the state-registry tier, where single-shot lookup breaks down
+
+Six leads from in_dhs / pa_dced / iibc with a city and state, dealer-looking names excluded. **Two of
+six**, against 25 of 28 on the roster tier. The misses are not random and each says something:
+
+| lead | what the search found | why not written |
+|---|---|---|
+| Modular Steel Systems "Plant 2", Berwick PA | the company's Bloomsburg HQ at 11 Edwards Dr | Berwick plant not found; Deluxe Modular is at 499 W 3rd St Berwick, a different firm |
+| AFM Corporation, Excelsior MN | "24000 West Hwy 7, Suite 201" | a suite — AFM is the R-Control SIP *licensor*; the plants are the licensees (the control's R-CONTROL rows) |
+| CSR Modular Systems, Kansas City MO | 929 Holmes, principal office | company status **revoked** — not operating |
+| E3 Solutions, Bristol IN | nothing matching a modular maker | thin or renamed; C&B Custom Modular is the Bristol plant the results surface instead |
+
+So the registries' leads are HUD-code and small-shop registrants with thin web presence, and a
+non-trivial share are defunct — Kullman (closed), CSR (revoked). Per-row lookup on this tier costs
+three searches per street. The cheaper route is a registry that already carries streets:
+**GA DCA** and **Missouri PSC** both do (found in batch two), and they are queued as sources.
+
+Running rate across all tiers: **27 of 34** first-query hits.
