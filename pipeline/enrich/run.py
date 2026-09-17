@@ -124,11 +124,20 @@ def main(argv=None) -> int:
         rep = locate.run(todo)
         (args.out).mkdir(parents=True, exist_ok=True)
         (args.out / "locate.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
-        _emit(args.out, "locate",
-              {k: v for k, v in rep.items() if k != "assertions"},
-              [("eligible", len(need_addr)), ("ceiling", args.limit), ("attempted", rep["requested"]),
-               ("located with a citation", rep["located"]),
-               ("rejected", len(rep["rejected"])), ("model", rep["model"])])
+        table = [("eligible", len(need_addr)), ("ceiling", args.limit),
+                 ("selected", rep["requested"]),
+                 ("attempted (reached the model)", rep["attempted"]),
+                 ("located with a citation", rep["located"]),
+                 ("yield %", rep["yield_pct"]),
+                 ("rejected", len(rep["rejected"])),
+                 ("why rejected", json.dumps(rep["rejected_by_reason"])),
+                 ("model", rep["model"])]
+        if rep.get("budget_exhausted"):
+            table.insert(0, ("DEFERRED (AI Gateway budget spent)", rep["deferred"]))
+            print(f"::warning::AI Gateway key budget exhausted after {rep['attempted']} of "
+                  f"{rep['requested']} facilities; {rep['deferred']} deferred to the next run. "
+                  f"{rep['budget_message']}")
+        _emit(args.out, "locate", {k: v for k, v in rep.items() if k != "assertions"}, table)
         return 0
 
     if args.stage == "geocode":

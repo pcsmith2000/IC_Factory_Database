@@ -534,3 +534,73 @@ def test_a_non_quota_error_still_fails_loudly(monkeypatch):
     with _pytest.raises(geocode.GeocodioError):
         geocode.run([{"facility_id": "F1", "address": "1 Main St", "city": "X", "state": "TX"}],
                     key="k")
+
+
+# ---------------------------------------------------------------- stage 9: a spent gateway budget
+class _Status402(Exception):
+    status_code = 402
+    def __str__(self):
+        return ("Error code: 402 - {'error': {'message': 'API key budget exceeded. "
+                "Current spend: $10.01, limit: $10.00.', 'type': 'quota_for_entity_exceeded'}}")
+
+
+def test_a_spent_gateway_budget_stops_the_stage_instead_of_rejecting_every_facility(monkeypatch):
+    """The first pass against the release database reported 180 rejections on 200 facilities. 152
+    of them were this 402, recorded one per facility as though the model had considered and
+    declined each one. The run read as a 10% success rate; it was 42%. A spent key is a fact about
+    the key, so the stage stops at the first one and defers the rest."""
+    from pipeline.enrich import locate
+    seen = {"n": 0}
+
+    def fake_locate_one(row, client, model):
+        seen["n"] += 1
+        if seen["n"] <= 2:
+            return {"answer": {"found": True, "address": "1 Plant Rd", "confidence": 0.9,
+                               "source_url": "https://x.example/p", "quote": "1 Plant Rd"},
+                    "visited": {"https://x.example/p"}}
+        raise _Status402()
+
+    monkeypatch.setattr(locate, "locate_one", fake_locate_one)
+    rows = [{"facility_id": f"F{i}", "name": "Acme", "city": "X", "state": "TX"} for i in range(10)]
+    rep = locate.run(rows, client=object(), model="m", verify_page=False)
+
+    assert rep["budget_exhausted"] is True
+    assert rep["attempted"] == 2, "the facility that raised never reached the model either"
+    assert rep["deferred"] == 8
+    assert rep["located"] == 2 and rep["rejected"] == []
+    assert seen["n"] == 3, "the stage must stop at the first spent-key error, not grind on"
+    assert "budget exceeded" in rep["budget_message"]
+
+
+def test_an_ordinary_facility_failure_still_only_costs_that_facility(monkeypatch):
+    """Stopping is only right for the credential. A malformed response from one plant's search must
+    not abandon the other 199."""
+    from pipeline.enrich import locate
+
+    def fake_locate_one(row, client, model):
+        if row["facility_id"] == "F1":
+            raise ValueError("bad json")
+        return {"answer": {"found": True, "address": "1 Plant Rd", "confidence": 0.9,
+                           "source_url": "https://x.example/p", "quote": "1 Plant Rd"},
+                "visited": {"https://x.example/p"}}
+
+    monkeypatch.setattr(locate, "locate_one", fake_locate_one)
+    rows = [{"facility_id": f"F{i}", "name": "Acme", "city": "X", "state": "TX"} for i in range(3)]
+    rep = locate.run(rows, client=object(), model="m", verify_page=False)
+    assert rep["budget_exhausted"] is False
+    assert rep["attempted"] == 3 and rep["deferred"] == 0
+    assert rep["located"] == 2 and len(rep["rejected"]) == 1
+
+
+def test_rejections_are_bucketed_by_what_actually_went_wrong():
+    """A total says the funnel leaked; the buckets say where. 'Search could not find this plant'
+    and 'verification would not accept what it found' call for opposite fixes."""
+    from pipeline.enrich.locate import _reason
+    assert _reason("no citation") == "no citation"
+    assert _reason("confidence 0.6 below 0.7") == "confidence below threshold"
+    assert _reason("the cited page does not contain '1 Main St'") == "page did not contain the address"
+    assert _reason("could not read the cited page to confirm it: https://x") == "page could not be read"
+    assert _reason("cited a page search did not visit: https://x") == "cited a page search never opened"
+    assert _reason("not a street address: 'Dallas, TX'") == "not a street address"
+    assert _reason("No search results returned a verifiable street address") == \
+        "model found nothing it could cite"

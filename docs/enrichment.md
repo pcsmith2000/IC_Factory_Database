@@ -135,7 +135,22 @@ would be confidently wrong often enough to poison a field no downstream stage ca
 So stage 9 needed a search capability, not a better prompt, and the Vercel AI Gateway supplies one:
 the Anthropic `web_search_20250305` server tool runs gateway-side, so the model both finds and reads
 the page. That lifts the reach from the ~9% with a publisher-supplied URL to any facility the open
-web documents. Measured on the live release: 6 attempted, 5 cited and verified, 1 rejected.
+web documents.
+
+Measured on the release database, on the 48 facilities that reached the model before the gateway
+key's budget ran out:
+
+    20  42%  located with a citation
+    11  23%  the model found nothing it could cite          a reach limit
+     7  15%  the cited page could not be read               Facebook, YellowPages, mystore411
+     5  10%  the cited page did not contain the address     verification doing its job
+     4   8%  confidence below 0.7
+     1   2%  cited a page search never opened
+
+The 15% that could not be read are sites that refuse a datacenter IP whatever User-Agent it sends,
+so that bucket is a floor rather than a bug to fix. The 10% whose page did not contain the address
+is the number that justifies fetching the page independently at all: without that check those five
+would have been stored as cited facts.
 
 Verification is deliberately narrow, and it is worth being explicit about what it does not cover.
 

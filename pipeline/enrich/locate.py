@@ -174,6 +174,47 @@ USER_AGENT = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.3
               "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
 
 
+# One bad facility must not fail the stage; one spent credential must not be mistaken for 200 of
+# them. These statuses are facts about the key, not about the plant being searched for: the next
+# facility will fail identically, so the stage stops and defers the rest rather than grinding
+# through its whole ceiling recording verdicts no model ever reached.
+#
+# This is not hypothetical. The first pass against the release database attempted 200 facilities
+# and reported 180 rejections; 152 of those were a 402 "API key budget exceeded" after the gateway
+# key hit its $10 limit 48 facilities in. The run looked like a 10% success rate. It was 42%.
+FATAL_STATUSES = {401, 402, 403}
+
+
+def _exhausted(e: Exception) -> str:
+    """The message, if this error means the credential is spent or refused; "" if not."""
+    import re
+    code = getattr(e, "status_code", None) or getattr(getattr(e, "response", None), "status_code", None)
+    if code is None:
+        m = re.search(r"Error code: (\d{3})", str(e))
+        code = int(m.group(1)) if m else None
+    return str(e) if code in FATAL_STATUSES else ""
+
+
+def _reason(why: str) -> str:
+    """Bucket a rejection so a run says where the funnel leaks, not just that it leaked.
+
+    The difference that matters is between "search could not find this plant" and "verification
+    would not accept what it found" — the first is a reach problem and the second is a strictness
+    one, and they call for opposite fixes.
+    """
+    for needle, bucket in (
+            ("not a street address", "not a street address"),
+            ("no citation", "no citation"),
+            ("cited a page search did not visit", "cited a page search never opened"),
+            ("below", "confidence below threshold"),
+            ("the cited page does not contain", "page did not contain the address"),
+            ("could not read the cited page", "page could not be read"),
+    ):
+        if needle in why:
+            return bucket
+    return "model found nothing it could cite"
+
+
 def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
         min_confidence: float = 0.7, verify_page: bool = True) -> dict:
     """rows: facilities with no address. Returns assertions plus a report."""
@@ -182,10 +223,16 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
     if client is None:
         client, model, _provider = _client(model)
     asserts, rejected = [], []
+    attempted, stopped = 0, ""
     for row in rows:
+        attempted += 1
         try:
             got = locate_one(row, client, model)
-        except Exception as e:                       # one bad facility must not fail the stage
+        except Exception as e:
+            stopped = _exhausted(e)
+            if stopped:
+                attempted -= 1                       # this one never reached the model either
+                break
             rejected.append({"facility_id": row["facility_id"], "why": f"{type(e).__name__}: {e}"})
             continue
         a, visited = got["answer"], got["visited"]
@@ -220,5 +267,10 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
         asserts.append(assertion(row["facility_id"], "address", addr,
                                  source_id="enrich:locate", basis="web_cited",
                                  confidence=float(conf), evidence=f"{url} :: {quote[:300]}"))
-    return {"requested": len(rows), "assertions": asserts, "located": len(asserts),
-            "rejected": rejected, "model": model}
+    import collections
+    return {"requested": len(rows), "attempted": attempted, "assertions": asserts,
+            "located": len(asserts), "rejected": rejected, "model": model,
+            "deferred": len(rows) - attempted,
+            "budget_exhausted": bool(stopped), "budget_message": stopped[:300],
+            "rejected_by_reason": dict(collections.Counter(_reason(r["why"]) for r in rejected)),
+            "yield_pct": round(100 * len(asserts) / max(1, attempted), 1)}
