@@ -174,6 +174,36 @@ is too thin to measure. It fires on 13% of footprints instead of 25%, and moves 
 facilities where size is evidence. The stage still needs two independent observations before it
 flags anything, so this is one input to a review, never a retirement.
 
+#### What the human verdicts say about it, and what they cannot
+
+`control/VERIFY-30.csv` is the only ground truth on whether a coordinate is on the right parcel.
+Measuring those 30 (25 resolved; 5 had no Overture building within 30m):
+
+    verified   n=18   median 61,066 sqft   min  3,789
+    rejected   n= 5   median  3,859        max 57,132
+    uncertain  n= 2   median  3,946
+
+The signal is real — a correct geocode lands on a big building and a wrong one on a small building —
+and it says where a bar has power:
+
+    below  2,829 (the truss bar)    flags 0 of 5 wrong locations, 0 of 18 correct
+    below  6,647 (the fallback)     flags 3 of 5,                  1 of 18
+    below  9,907 (prefab metal)     flags 4 of 5,                  1 of 18
+    below 17,461 (manufactured)     flags 4 of 5,                  3 of 18
+
+Which reads like an argument for an absolute floor under the per-NAICS bar. It is not one. Only 5 of
+the 30 rows match to a NAICS at all, and **none of them are truss or prefab wood** — the two trades
+whose bars fall lowest. A 6,647 floor would push firing back to 20% and re-flag 41 of 153 truss
+shops on the strength of a sample containing no truss shops.
+
+So the bar stays where the population data puts it, and the consequence is worth stating plainly:
+**for truss and prefab wood the footprint signal is effectively off.** That is the honest position
+rather than a gap — footprint alone cannot separate a small truss shop from a mislocated one, and
+those facilities will be flagged, when they are, by licence expiry and dead-status instead.
+
+What would settle it is about ten truss and prefab-wood coordinates verified against imagery the way
+the original 30 were. That is a spreadsheet afternoon, and it is the cheapest evidence left to buy.
+
 Re-derive when the measured set grows:
 
     SELECT naics, COUNT(*), percentile_cont(0.5) WITHIN GROUP (ORDER BY building_sqft::numeric)
