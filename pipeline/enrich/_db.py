@@ -164,7 +164,15 @@ def append(db, assertions: list[dict], release_tag: str) -> dict:
     from datetime import date
     inserted = skipped = 0
     for a in assertions:
-        url, _, quote = (a.get("evidence") or "").partition(" :: ")
+        # source_url means a URL. A located address cites a page, so it has one; a footprint cites
+        # an Overture release and building id and a geocode cites a parcel dataset, and neither is
+        # a URL. Putting those in source_url would make the column mean "whatever the evidence was"
+        # and anything reading it as a link would be wrong.
+        ev = (a.get("evidence") or "")
+        if ev.startswith("http"):
+            url, _, quote = ev.partition(" :: ")
+        else:
+            url, quote = "", ev
         db.query(APPEND_EVIDENCE, (a["row_hash"], a["source_id"], url, quote,
                                    a.get("retrieved_date") or date.today().isoformat(),
                                    a["facility_id"], a.get("basis", "none"),

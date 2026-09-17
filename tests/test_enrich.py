@@ -279,3 +279,29 @@ def test_geocode_records_an_unplaceable_address_so_it_is_not_retried():
     assert a["field"] == "geocode_quality" and a["value"] == "street_center"
     assert a["basis"] == "not_rooftop"
     assert not any(x["field"] == "lat_lon" for x in rep["assertions"])
+
+
+def test_non_url_evidence_does_not_end_up_in_the_url_column():
+    """A footprint cites an Overture release and building id; a geocode cites a parcel dataset.
+    Neither is a URL, and source_url must mean a URL or nothing reading it as a link is safe."""
+    from pipeline.enrich import _db
+    seen = []
+
+    class FakeDB:
+        last_row_count = 1
+        def query(self, sql, params=()):
+            seen.append((sql, params)); return []
+
+    fp = _db.assertion("IC-1", "building_sqft", "81969", source_id="overture:building",
+                       basis="footprint", evidence="2026-08-19.0:abc123@22.1m")
+    _db.append(FakeDB(), [fp], "rel-1")
+    ev = next(p for sql, p in seen if "ref_source_row" in sql)
+    assert ev[2] == ""                                  # source_url stays empty
+    assert ev[3] == "2026-08-19.0:abc123@22.1m"         # the citation lands in source_document
+
+    seen.clear()
+    addr = _db.assertion("IC-2", "address", "1 Main St", source_id="enrich:locate",
+                         basis="web_cited", evidence="https://x.example/c :: our plant at 1 Main St")
+    _db.append(FakeDB(), [addr], "rel-1")
+    ev = next(p for sql, p in seen if "ref_source_row" in sql)
+    assert ev[2] == "https://x.example/c" and ev[3] == "our plant at 1 Main St"
