@@ -266,7 +266,7 @@ def test_geocode_records_an_unplaceable_address_so_it_is_not_retried():
     def fake_post(queries, key):
         return [{"query": q, "response": {"results": [
             {"location": {"lat": 1.0, "lng": 2.0}, "accuracy": 0.8,
-             "accuracy_type": "street_center", "source": "TIGER/Line"}]}} for q in queries]
+             "accuracy_type": "street_center", "source": "TIGER/Line"}]}} for q in queries], ""
 
     import pipeline.enrich.geocode as mod
     orig, mod._post = mod._post, fake_post
@@ -466,3 +466,71 @@ def test_e6_blocks_a_rebuild_that_would_shrink_golden():
                                                      {"__rows": 10, "address": 4}).passed
     assert not gates.e6_rebuilt_golden_loses_nothing({"__rows": 10, "address": 5},
                                                      {"__rows": 9, "address": 5}).passed
+
+
+# ---------------------------------------------------------------- stage 10: the free-tier ceiling
+def _quota_403(url_or_req, *a, **kw):
+    import urllib.error, io
+    raise urllib.error.HTTPError(
+        "https://api.geocod.io/v2/geocode", 403, "Forbidden", {},
+        io.BytesIO(b'{"error":"You have exceeded the free tier. Please add a payment method '
+                   b'or check that you are using the intended API key."}'))
+
+
+def test_a_spent_free_tier_defers_the_rest_instead_of_failing(monkeypatch):
+    """The day's lookups running out is a ceiling on the stage, not a fault in it. Raising here
+    would throw away the assertions already earned and turn a correctly behaved stage red."""
+    from pipeline.enrich import geocode
+    monkeypatch.setattr(geocode.urllib.request, "urlopen", _quota_403)
+    rows = [{"facility_id": f"F{i}", "address": f"{i} Main St", "city": "Dallas", "state": "TX"}
+            for i in range(5)]
+    rep = geocode.run(rows, key="k")
+    assert rep["quota_exhausted"] is True
+    assert rep["deferred"] == 5 and rep["requested"] == 0
+    assert rep["assertions"] == []
+    assert "free tier" in rep["quota_message"].lower()
+
+
+def test_lookups_earned_before_the_ceiling_are_kept(monkeypatch):
+    """Results come back in input order, so a 403 on a later batch still pairs the earlier ones."""
+    from pipeline.enrich import geocode
+    calls = {"n": 0}
+
+    class _Resp:
+        def __init__(self, payload): self.payload = payload
+        def read(self): import json; return json.dumps(self.payload).encode()
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def fake(req, *a, **kw):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return _Resp({"results": [{"response": {"results": [
+                {"accuracy_type": "rooftop", "accuracy": 1.0, "source": "City of Dallas",
+                 "location": {"lat": 32.0, "lng": -96.0}}]}}]})
+        return _quota_403(req)
+
+    monkeypatch.setattr(geocode, "BATCH", 1)
+    monkeypatch.setattr(geocode.urllib.request, "urlopen", fake)
+    rows = [{"facility_id": f"F{i}", "address": f"{i} Main St", "city": "Dallas", "state": "TX"}
+            for i in range(3)]
+    rep = geocode.run(rows, key="k")
+    assert rep["quota_exhausted"] is True
+    assert rep["requested"] == 1 and rep["deferred"] == 2
+    assert rep["stored"] == 1, "the coordinate earned before the ceiling must survive"
+
+
+def test_a_non_quota_error_still_fails_loudly(monkeypatch):
+    """Deferring is only right for the ceiling. A bad key or a 500 is a fault and must not be
+    reported as 'deferred', which would look like ordinary progress."""
+    import urllib.error, io, pytest as _pytest
+    from pipeline.enrich import geocode
+
+    def fake(req, *a, **kw):
+        raise urllib.error.HTTPError("u", 401, "Unauthorized", {},
+                                     io.BytesIO(b'{"error":"Invalid API key"}'))
+
+    monkeypatch.setattr(geocode.urllib.request, "urlopen", fake)
+    with _pytest.raises(geocode.GeocodioError):
+        geocode.run([{"facility_id": "F1", "address": "1 Main St", "city": "X", "state": "TX"}],
+                    key="k")

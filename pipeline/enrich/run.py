@@ -141,13 +141,22 @@ def main(argv=None) -> int:
         rep = geocode.run(todo)
         (args.out).mkdir(parents=True, exist_ok=True)
         (args.out / "geocode.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
-        _emit(args.out, "geocode", {k: v for k, v in rep.items() if k != "assertions"},
-              [("eligible", len(need_coord)), ("ceiling", args.geocode_limit),
-               ("looked up", rep["requested"]), ("rooftop coordinates stored", rep["stored"]),
-               ("recorded unplaceable (not retried next run)", rep["quality_flags_recorded"]),
-               ("rooftop %", rep["rooftop_pct"]),
-               ("not stored (non-rooftop)", rep["requested"] - rep["stored"]),
-               ("accuracy mix", json.dumps(rep["accuracy_type"]))])
+        table = [("eligible", len(need_coord)), ("ceiling", args.geocode_limit),
+                 ("looked up", rep["requested"]), ("rooftop coordinates stored", rep["stored"]),
+                 ("recorded unplaceable (not retried next run)", rep["quality_flags_recorded"]),
+                 ("rooftop %", rep["rooftop_pct"]),
+                 ("not stored (non-rooftop)", rep["requested"] - rep["stored"]),
+                 ("accuracy mix", json.dumps(rep["accuracy_type"]))]
+        if rep.get("quota_exhausted"):
+            # Loud, and green. The stage did what it could and the rest is deferred, not lost —
+            # but a run that says nothing would leave the ceiling invisible until someone wondered
+            # why the coordinate count stopped moving.
+            table.insert(0, ("DEFERRED (Geocodio free tier spent)", rep["deferred"]))
+            print(f"::warning::Geocodio free tier exhausted after {rep['requested']} of "
+                  f"{rep['selected']} lookups; {rep['deferred']} deferred to the next run. "
+                  f"Add a payment method at https://dash.geocod.io/billing to lift the "
+                  f"{geocode.FREE_TIER_PER_DAY}/day ceiling.")
+        _emit(args.out, "geocode", {k: v for k, v in rep.items() if k != "assertions"}, table)
         return 0
 
     if args.stage == "footprint":

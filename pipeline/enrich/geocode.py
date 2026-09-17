@@ -29,12 +29,28 @@ class GeocodioError(RuntimeError):
     pass
 
 
+class GeocodioQuotaExhausted(GeocodioError):
+    """The day's free-tier lookups are spent. Not a failure of this stage — a ceiling on it.
+
+    It reads like the footprint file ceiling: the addresses that did not get looked up are deferred,
+    not dropped. Nothing about them changed, the stage selects them again next run, and the
+    assertions it did earn before the ceiling are still written. Crashing here would throw away
+    those, and would make a red run out of a stage that behaved correctly.
+    """
+
+
 def one_line(r: dict) -> str:
     tail = " ".join(p for p in [r.get("city") or "", r.get("state") or "", r.get("zip") or ""] if p)
     return f"{(r.get('address') or '').strip()}, {tail}".strip().rstrip(",")
 
 
-def _post(queries: list[str], key: str) -> list[dict]:
+def _post(queries: list[str], key: str) -> tuple[list[dict], str]:
+    """Returns (results in input order, reason the run stopped early or "").
+
+    Stopping early keeps whatever earlier batches returned. A 403 on the third batch does not make
+    the first two worthless, and results come back in input order, so the caller pairs what it got
+    with the head of its own list and defers the tail.
+    """
     out: list[dict] = []
     for i in range(0, len(queries), BATCH):
         req = urllib.request.Request(f"{API}?api_key={key}",
@@ -44,9 +60,11 @@ def _post(queries: list[str], key: str) -> list[dict]:
             with urllib.request.urlopen(req, timeout=180) as resp:
                 out.extend(json.loads(resp.read()).get("results", []))
         except urllib.error.HTTPError as e:
-            raise GeocodioError(f"Geocodio returned {e.code}: "
-                                f"{e.read().decode('utf-8', 'replace')[:300]}") from None
-    return out
+            body = e.read().decode("utf-8", "replace")[:300]
+            if e.code in (402, 403) and "free tier" in body.lower():
+                return out, body
+            raise GeocodioError(f"Geocodio returned {e.code}: {body}") from None
+    return out, ""
 
 
 def run(rows: list[dict], key: str | None = None) -> dict:
@@ -62,9 +80,10 @@ def run(rows: list[dict], key: str | None = None) -> dict:
         print(f"  note: {len(todo)} lookups exceeds the {FREE_TIER_PER_DAY}/day free tier; "
               f"use --sample or expect to be billed", file=sys.stderr)
 
-    results = _post([one_line(r) for r in todo], key)
+    results, stopped = _post([one_line(r) for r in todo], key)
+    done, deferred = todo[:len(results)], todo[len(results):]
     asserts, flags, mix = [], [], {}
-    for row, res in zip(todo, results):
+    for row, res in zip(done, results):
         hits = (res.get("response") or {}).get("results") or []
         at = hits[0].get("accuracy_type", "unknown") if hits else "no_result"
         mix[at] = mix.get(at, 0) + 1
@@ -93,6 +112,8 @@ def run(rows: list[dict], key: str | None = None) -> dict:
     # count coordinates, not assertions: the quality flags are assertions too, and reporting them
     # as "rooftop stored" would say a run placed facilities it explicitly declined to place
     coords = [a for a in asserts if a["field"] == "lat_lon"]
-    return {"requested": len(todo), "assertions": asserts, "accuracy_type": mix, "flags": flags,
+    return {"requested": len(done), "assertions": asserts, "accuracy_type": mix, "flags": flags,
             "stored": len(coords), "quality_flags_recorded": len(asserts) - len(coords),
-            "rooftop_pct": round(100 * mix.get("rooftop", 0) / max(1, len(todo)), 1)}
+            "rooftop_pct": round(100 * mix.get("rooftop", 0) / max(1, len(done)), 1),
+            "selected": len(todo), "deferred": len(deferred),
+            "quota_exhausted": bool(stopped), "quota_message": stopped}
