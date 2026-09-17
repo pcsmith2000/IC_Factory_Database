@@ -47,6 +47,23 @@ diagnosing the classifier, and a row you have read is not a test any more.
 `control.sha256` — SHA-256 of `control-triaged.csv`. Gate G4 fails if it does not match.
 Re-triage is a logged edit: change the file, update the checksum in the same commit, say why.
 
+**Do not simulate recall against `build/` without checking how it was produced.** A run with
+`ai: off` never executes the classifier, so EPA FRS contributes none of its 99,883 rows and the
+local warehouse is missing about 1,700 facilities. Simulating a new source against that build
+understates the base and overstates the source. On 2026-09-17 four sources were measured this way
+across several iterations before the mistake was caught; re-derived against the real run
+(35235103386, 3,905 facilities) located recall went 16.2% → 29.0%, not the 4.6% → 18.3% the
+deterministic build reported. Pull the `build-<run_id>` artifact from the workflow run instead —
+the API redirects to blob storage, and the redirect must be followed WITHOUT the Authorization
+header or it 401s.
+
+The same broken baseline produced a false diagnosis worth recording, because it is the kind that
+sounds right: "the classifier drops 63% of verified IC plants". It does not. Comparing raw rows
+against a warehouse in which classification never ran makes every classified-out row look like a
+false negative. Survival by NAICS on the real run — 321214 truss 79%, 321991 mobile home 85%,
+321992 prefab wood 69%, 332311 prefab metal 63%, against 332312 structural steel 1% and 321918
+millwork 0% — is the classifier keeping the IC families and dropping the ones it is meant to.
+
 `crosswalk.csv` — `control_id,row_hash,facility_id,legal_entity_id`. Explicit links between
 control rows and database rows. Provenance beats inference: re-deriving links by string
 similarity understated recall by 21 points.
