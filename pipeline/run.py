@@ -224,7 +224,13 @@ def main(argv=None) -> int:
 
     # ---- Layer 5
     hb.beat("5_reconcile")
-    rec = reconcile.run(rows, ROOT / "id_registry.json")
+    # IC_ID_REGISTRY alongside IC_CSV_DIR and IC_WAREHOUSE_PATH. Ids are never renumbered, so a
+    # run against fixture data writing here burns real IC numbers on plants that do not exist —
+    # a test fixture took IC-94453 through IC-94456 for "700 ash blvd" and friends before this
+    # existed. A test points it at a scratch file; a real run leaves it unset.
+    id_registry_path = (Path(os.environ["IC_ID_REGISTRY"]) if os.environ.get("IC_ID_REGISTRY")
+                        else ROOT / "id_registry.json")
+    rec = reconcile.run(rows, id_registry_path)
     facilities = rec["facilities"]
     record["layers"]["5_reconcile"] = {k: v for k, v in rec.items() if k not in {"facilities", "rows"}}
     _write_csv(out / "facilities.csv", facilities)
@@ -326,7 +332,7 @@ def main(argv=None) -> int:
         "published_count": max(located - dup_removed, 0), "raw_count": len(facilities),
         "located_count": located, "t0_leads": t0, "t0_leads_with_city": t0_with_city,
         "dedupe_removed": dup_removed,
-        "tag": f"v{__version__}+reg.{record['registry_version']}+ids.{sha256_file(ROOT / 'id_registry.json')[:8]}+ctl.{(record['control_sha'] or 'none')[:8]}+surv.{sha256_file(ROOT / 'registry' / 'survivorship.yaml')[:8]}"
+        "tag": f"v{__version__}+reg.{record['registry_version']}+ids.{sha256_file(id_registry_path)[:8]}+ctl.{(record['control_sha'] or 'none')[:8]}+surv.{sha256_file(ROOT / 'registry' / 'survivorship.yaml')[:8]}"
                + (f"+prompt.{cls_meta['prompt_hash']}+model.{cls_meta['model']}" if cls_meta else ""),
         "finished": datetime.now(timezone.utc).isoformat(),
         "ai": "on" if ai_enabled() else "off — deterministic sources only, classifier and ai_extraction skipped",

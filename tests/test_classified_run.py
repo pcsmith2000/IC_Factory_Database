@@ -62,6 +62,9 @@ def classified(tmp_path, monkeypatch):
     # runs, not that it runs at scale, and a fixture keeps this a test rather than a five-minute
     # rebuild of the whole release.
     monkeypatch.setenv("IC_CSV_DIR", str(ROOT / "tests" / "fixtures" / "ic-csv"))
+    # Ids are never renumbered, so a fixture run against the real registry permanently assigns IC
+    # numbers to plants that do not exist. It took IC-94453 through IC-94456 once; never again.
+    monkeypatch.setenv("IC_ID_REGISTRY", str(tmp_path / "id_registry.json"))
     out = tmp_path / "build"
     rc = run_mod.main(["--layers", "2-8", "--out", str(out)])
     assert rc == 0, f"pipeline exited {rc}"
@@ -91,3 +94,12 @@ def test_review_queue_carries_the_classifier_reasoning(classified):
 def test_not_ic_rows_do_not_reach_the_release(classified):
     names = {(r.get("name") or "").upper() for r in csv.DictReader(open(classified / "golden.csv"))}
     assert not [n for n in names if "PLYWOOD" in n or "MILLWORK" in n]
+
+
+def test_the_real_id_registry_is_untouched_by_a_fixture_run(classified):
+    """Guards the mistake this fixture made once: fixture rows took IC-94453 through IC-94456 in
+    the tracked registry, and ids are never renumbered, so the burn would have been permanent."""
+    import json
+    real = json.loads((ROOT / "id_registry.json").read_text())
+    assert not any(sig.endswith(("700 ash blvd", "300 elm rd", "600 birch way", "200 oak ave"))
+                   for sig in real["ids"]), "a fixture address reached the real id registry"
