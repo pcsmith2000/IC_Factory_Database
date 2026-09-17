@@ -80,3 +80,30 @@ after six clean files per source, which meant it checked 10 of 410 files and ski
 index — the one file that would have flagged. The second pass targets list-looking filenames with
 no cutoff. A sweep that samples the wrong six files returns "clean" just as confidently as one that
 checked everything.
+
+---
+
+## Run 25's actual result — v1.7, measured
+
+    prompt 6127f4dbf7db · 18 sources · 13,057 candidates · all five gates pass
+    UNCERTAIN 162   (baseline 366, v1.6 699, PREDICTED 403-447)
+    recall 38.59%   located 30.71%   sealed 42.11%   published 2,726
+    1,276,169 in / 839,911 out
+
+**The UNCERTAIN prediction is falsified**: 162 against a predicted 403-447, and below even the v1.4
+baseline of 366. v1.7 did not narrow the balloon back to its intended size, it collapsed it past
+the starting point — which is the same over-reach the IC line showed live and which v1.8 fixes.
+
+Recall at 38.59% beats run 22's 37.3%, and the attribution matters more than the headline. Run 25
+carries three changes at once: v1.7, the dual-form matcher, and the three state registries.
+Measured separately beforehand, the matcher alone took run 22 from 37.3% to 38.2% and the
+registries reached 2 control rows. So the prompt's own contribution to recall is about one row, on
+a run where the classifier's IC count fell roughly 150 below baseline.
+
+That is the case for stopping, now with a number rather than a prediction: **three prompt versions
+have moved recall by about one row.** 122 of the missing control rows are in no source, so they are
+in no prompt's candidate pool, and the classifier cannot be the lever.
+
+One correction to the figures this run reports: its `source_gap` reads a 49.4% ceiling because run
+25 was dispatched from a commit predating the state-aware fix to `sources_holding`. The honest
+ceiling is 44.4%.
