@@ -332,3 +332,41 @@ def test_indiana_finds_the_city_line_past_a_po_box():
     r = _listings(page)[0]
     assert (r["street"], r["city"], r["state"]) == ("3549 Highway 16 North", "Denver", "NC")
     assert r["extra"] == "P O Box 428"
+
+
+def test_superior_walls_takes_the_licensee_address_not_the_corporate_one():
+    """Every page carries both. New Holland, PA 17557 is Superior Walls of America, not a plant —
+    the same trap that put bldr.com's Albuquerque plant in Irving, Texas."""
+    from pipeline.sources.superior_walls import _licensee
+    page = ("<p>Contact Information<br>Superior Walls by Advanced Concrete<br>570-837-3955<br>"
+            "55 Advanced Lane<br>Middleburg, PA 17842</p>"
+            "<p>CORPORATE OFFICES<br>Superior Walls<br>937 East Earl Road<br>"
+            "New Holland, PA 17557</p>")
+    lic = _licensee(page)
+    assert lic == {"name": "Superior Walls by Advanced Concrete", "street": "55 Advanced Lane",
+                   "city": "Middleburg", "state": "PA", "zip": "17842"}
+
+
+def test_superior_walls_rejects_a_page_that_is_only_the_corporate_office():
+    """A products or news page has no licensee on it, and must not yield the head office as one."""
+    from pipeline.sources.superior_walls import _licensee
+    assert _licensee("<p>CORPORATE OFFICES<br>Superior Walls<br>937 East Earl Road<br>"
+                     "New Holland, PA 17557</p>") is None
+    assert _licensee("<p>Contact Information<br>Superior Walls<br>717-351-9255<br>"
+                     "937 East Earl Road<br>New Holland, PA 17557</p>") is None
+
+
+def test_superior_walls_skips_a_non_us_licensee():
+    """The network includes Alberta and the Bahamas; this is a US plant database."""
+    from pipeline.sources.superior_walls import _licensee
+    assert _licensee("<p>Contact Information<br>Superior Walls of Alberta<br>780-555-1212<br>"
+                     "12 Industrial Way<br>Leduc, AB 99999</p>") is None
+
+
+def test_superior_walls_needs_the_line_breaks_to_split_street_from_city():
+    """Flattening the page loses the <br> between them and "55 Advanced Lane Middleburg" has no
+    delimiter left — the first attempt read the street as "55 Advanced" and the town as "Lane
+    Middleburg"."""
+    from pipeline.sources.superior_walls import _lines
+    got = _lines("<p>Contact Information<br>55 Advanced Lane<br>Middleburg, PA 17842</p>")
+    assert got == ["Contact Information", "55 Advanced Lane", "Middleburg, PA 17842"]

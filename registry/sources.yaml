@@ -342,6 +342,21 @@ sources:
   - Manufacturing is one of five member categories; read only /members/manufacturing.
   - The street address exists only on the member profile, and only in the paragraph headed by that member's own name — the
     same sidebar renders projects and sponsors.
+- id: superior_walls
+  name: Superior Walls licensed precast manufacturers
+  class: C
+  method: fetch
+  url: https://www.superiorwalls.com/wp-json/wp/v2/pages?per_page=100
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: on_current_list
+  status: active
+  traps:
+  - The locator page renders client-side and serves nothing. The licensee list is in the WordPress REST API.
+  - The API's `content` is raw shortcode whose image URLs parse as street numbers — read the RENDERED page.
+  - Every page carries the New Holland PA corporate address as well as the plant's. Anchor on 'Contact Information' and cut
+    at 'CORPORATE OFFICES'.
 - id: woodworks_mass_timber
   name: WoodWorks mass timber manufacturer & fabricator locations
   class: C
