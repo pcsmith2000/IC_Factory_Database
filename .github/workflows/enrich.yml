@@ -9,9 +9,17 @@
 # it is deterministic. Setting ai_limit to 0 skips the AI entirely and the rest of the run is
 # unchanged — that is the switch to reach for if a run must be reproducible to the token.
 #
-# Nothing here touches the release database. Each run works on its own Neon branch and deletes it
-# at the end, so a layers 1-8 release publishing mid-run cannot collide and a failed run leaves
-# the release exactly as it found it.
+# By default nothing here touches the release database: a run works on its own Neon branch and
+# deletes it at the end, so a layers 1-8 release publishing mid-run cannot collide and a failed run
+# leaves the release exactly as it found it. `target: main` is the deliberate exception — it is how
+# an enrichment pass is actually published — and it is never the default and never what a
+# workflow_run trigger chooses.
+#
+# What lands is not the assertions. Stage 13 (promote) applies registry/survivorship.yaml to the
+# release's assertions and rebuilds golden_facility, because golden is what every reader reads;
+# without it a run writes rows nothing can see. That rebuild does not survive the next layers 1-8
+# release, which rebuilds golden from its own assertions. Accepted while the two are separate
+# actions (docs/enrichment.md).
 name: enrich
 
 on:
@@ -19,7 +27,12 @@ on:
     inputs:
       stages:
         description: "which stages to run, comma separated"
-        default: "plan,locate,geocode,footprint,existence,load"
+        default: "plan,locate,geocode,footprint,existence,load,promote"
+      target:
+        description: "which database to write to"
+        type: choice
+        options: ["branch", "main"]
+        default: "branch"
       ai_limit:
         description: "max facilities the AI stage may attempt (0 disables the AI entirely)"
         default: "200"
@@ -73,12 +86,24 @@ jobs:
           [ "${{ inputs.dry_run }}" = "true" ] && A="$A --dry-run"
           echo "common=$A" >> "$GITHUB_OUTPUT"
 
+      # A run targeting main makes no branch, so branch_id stays empty — which is also what stops
+      # cleanup from deleting anything. The workflow_run trigger never reaches this: it has no
+      # inputs, so `inputs.target` is empty and the branch is made.
       - id: make
         name: Create this run's Neon branch
+        if: inputs.target != 'main'
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
         run: python .github/scripts/neon_branch.py create "enrich-${{ github.run_id }}"
+
+      - name: Say which database this run writes to
+        run: |
+          if [ "${{ inputs.target }}" = "main" ]; then
+            echo "### Target: **main** — this run writes to the release database" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Target: a throwaway Neon branch — the release database is untouched" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   # ---------------------------------------------------------------- one job per stage
   # Each stage is its own job via the reusable workflow, chained with needs:, so the run reads as
@@ -155,9 +180,23 @@ jobs:
       enabled: ${{ (contains(inputs.stages, 'load') || github.event_name == 'workflow_run') && !inputs.dry_run }}
       args: ${{ needs.branch.outputs.common_args }}
 
+  # Survivorship again, so the assertions the stages just appended are visible to every reader.
+  # It is skipped on a dry run for the same reason load is: it replaces a table.
+  promote:
+    needs: [branch, load]
+    if: always() && needs.branch.result == 'success'
+    uses: ./.github/workflows/enrich-stage.yml
+    secrets: inherit
+    with:
+      stage: promote
+      branch_id: ${{ needs.branch.outputs.branch_id }}
+      run_key: ${{ github.run_id }}
+      enabled: ${{ (contains(inputs.stages, 'promote') || github.event_name == 'workflow_run') && !inputs.dry_run }}
+      args: ${{ needs.branch.outputs.common_args }}
+
   # ---------------------------------------------------------------- always clean up
   cleanup:
-    needs: [branch, plan, locate, geocode, footprint, existence, load]
+    needs: [branch, plan, locate, geocode, footprint, existence, load, promote]
     if: always() && needs.branch.outputs.branch_id != '' && !inputs.keep_branch
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -1,4 +1,4 @@
-# Enrichment — stages 9–12, after the warehouse load
+# Enrichment — stages 9–13, after the warehouse load
 
 Layers 1–8 turn published sources into a release and load it into Neon. Enrichment starts from
 that loaded release and adds three fields the sources do not publish — a plant address, a rooftop
@@ -9,7 +9,7 @@ transformation of archived bytes and are reproducible offline; enrichment calls 
 the open web, and spends model tokens. Mixing them would make a quarterly release hostage to a
 rate limit.
 
-## Why four stages and not one
+## Why five stages and not one
 
 Each stage consumes what the previous one produced, and each can fail independently:
 
@@ -17,6 +17,7 @@ Each stage consumes what the previous one produced, and each can fail independen
     10 geocode    address                     ->  lat/lon, accuracy_type
     11 footprint  rooftop lat/lon             ->  building_sqft
     12 existence  everything above            ->  existence_flag
+    13 promote    every assertion of the release -> golden_facility
 
 A facility can enter at any stage. One that already has a street address skips 9. One that already
 has a rooftop coordinate skips 9 and 10. Stage 11 only ever sees coordinates stage 10 was willing
@@ -35,7 +36,8 @@ No stage writes to `golden_facility`. Each appends to `fact_assertions` under it
     overture:building  building_sqft a footprint area, with the building id it came from
     enrich:existence   status        a dead-plant flag, never a deletion
 
-`golden.build_golden` then runs again and survivorship decides, exactly as for a published source.
+Stage 13 then runs `golden.build_golden` again and survivorship decides, exactly as for a
+published source.
 This keeps `v_provenance` answering "why is this facility here, and who says so" for a geocoded
 coordinate as readily as for a state licence — and it means `operator` (a human correction in
 `control/operator_assertions.csv`) still outranks every one of these, as `survivorship.yaml` says.
@@ -149,6 +151,44 @@ accepted limitation of stage 9 rather than a bug in it — deferred by decision,
 company-identity and plant-vs-office gaps need human eyes, the way `control/VERIFY-30.csv` did; the
 citations are stored in `ref_source_row`, so that is a query away whenever it is wanted.
 
+## Stage 13 exists because assertions are not visible
+
+Nothing downstream reads `fact_assertions`. `golden_facility` is what the site, the exports and
+enrichment's own snapshot query all read, so a run that appends assertions and stops has written
+rows that nobody can see. Stages 9–12 did exactly that until stage 13 existed, and a pass against
+the release database would have added ~2,800 invisible rows.
+
+Stage 13 is not a second definition of golden. It calls the same `golden.build_golden` with the
+same `registry/survivorship.yaml` that layers 1–8 call, over the assertions of the same release
+tag. Three things had to be true for that to mean anything:
+
+    lat_lon        `basis:rooftop` ranks above `class:B`. Every class B coordinate is epa_frs and
+                   EPA's are self-reported; without this line the rooftop geocode loses to the
+                   very coordinate stage 10 exists to replace.
+    address        `class:enrichment` ranks last. Worth having where no registry publishes one,
+                   worth less than any registry that does.
+    golden columns building_sqft and existence_flag had nowhere to land: they were not golden
+                   fields, so stages 11 and 12 could not reach the table at all.
+
+Scoped to one release tag on purpose. `fact_assertions` is append-only across releases, so
+rebuilding from all of it would resurrect facilities a later release dropped — golden would stop
+being a statement about the current release.
+
+**It does not survive.** Layers 1–8 rebuild golden from the assertions they hold in memory and
+`DELETE FROM golden_facility` first, so the next release drops everything stage 13 added. That is
+accepted while enrichment is a separate action: the alternative is making `build_golden` a function
+of the warehouse rather than of the run, which is a layers 1–8 change and belongs there, not here.
+Until the two pipelines are one, an enrichment pass is re-run after a release rather than preserved
+across one.
+
+## Writing to the release database
+
+The default is still a throwaway Neon branch, and the `workflow_run` trigger can only ever choose
+that: it passes no inputs. `target: main` is a deliberate `workflow_dispatch` choice and the only
+way an enrichment pass is actually published. It creates no branch, which is also what stops
+cleanup having anything to delete — and `neon_branch.py delete` refuses a default branch outright,
+because the failure it prevents is unrecoverable and the check costs one API call.
+
 ## Gates
 
 Enrichment gets its own gates, in the spirit of G1-G5: they block rather than advise.
@@ -158,9 +198,15 @@ Enrichment gets its own gates, in the spirit of G1-G5: they block rather than ad
     E3  a footprint must name the Overture building id it was measured from
     E4  no stage may reduce the count of facilities with an address or a coordinate
     E5  existence flags are advisory: the stage may never delete or unpublish a facility
+    E6  the rebuilt golden must cover every field at least as well as the one it replaces
 
 E4 is the important one. Enrichment only ever adds; if a run would take a field away from a
 facility that had it, something upstream broke and the run halts.
+
+E6 is E4 asked of the table rather than of the stage outputs. Stage 13 is the one stage that can
+destroy a release rather than merely fail to improve it, so it compares per-field coverage counted
+in the database — not in the eight-column snapshot the stages use, which would read zero for every
+field it does not select and wave the rebuild through.
 
 ## Deconfliction — enrichment runs beside an active layers 1–8
 

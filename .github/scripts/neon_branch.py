@@ -7,6 +7,10 @@ so a failed run leaves the release database exactly as it found it.
 
     python .github/scripts/neon_branch.py create <name>   # prints DATABASE_URL=..., BRANCH_ID=...
     python .github/scripts/neon_branch.py delete <branch_id>
+
+A run may instead target the release database directly (enrich.yml's `target: main`), which is
+what publishing an enrichment pass means. That path creates no branch and so has nothing to
+delete — `delete` refuses a default branch outright rather than relying on never being handed one.
 """
 from __future__ import annotations
 import json, os, sys, urllib.error, urllib.request
@@ -69,6 +73,12 @@ def main() -> int:
         print(f"created branch {bid} from {default} (connection string written to the environment)")
         return 0
     if action == "delete":
+        # The cleanup job deletes whatever branch id it is given. A run targeting main creates no
+        # branch and passes an empty id, so this should never fire — which is exactly why it is
+        # worth asserting: the failure it prevents is unrecoverable and the check costs one call.
+        branch = call(f"/projects/{pid}/branches/{arg}").get("branch", {})
+        if branch.get("default"):
+            sys.exit(f"refusing to delete {arg}: it is the project's default branch")
         call(f"/projects/{pid}/branches/{arg}", "DELETE")
         print(f"deleted branch {arg}")
         return 0

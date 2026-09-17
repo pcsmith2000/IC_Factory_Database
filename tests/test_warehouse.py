@@ -133,3 +133,28 @@ def test_every_enrichment_source_has_a_dim_source_row():
     assert emitted <= set(warehouse.SYNTHETIC_SOURCES), emitted - set(warehouse.SYNTHETIC_SOURCES)
     assert all(warehouse.SYNTHETIC_SOURCES[s]["class"] == _db.assertion("f", "x", "v", source_id=s)["source_class"]
                for s in emitted), "dim_source class must match the class the assertions carry"
+
+
+def test_promote_rebuilds_exactly_the_golden_the_loader_wrote(wh, tmp_path: Path):
+    """Stage 13 replaces golden_facility from what the database holds, so a round trip through
+    fact_assertions must reproduce what the loader computed in memory. Anything the write-then-read
+    loses — the 0/1 integer for site_visit, a null date_key, source_class — would show up here as a
+    different winner, and on main it would show up as a silently rewritten release."""
+    from pipeline.enrich import promote
+    _, asserts, gold = _load(wh, tmp_path, "v-promote")
+
+    read_back = wh.query(
+        "SELECT facility_key AS facility_id, source_key AS source_id, source_class, "
+        "       date_key AS retrieved_date, row_hash, basis, site_visit, confidence, "
+        "       field_key AS field, value "
+        "FROM fact_assertions WHERE release_tag = ?", ("v-promote",))
+    assert read_back, "the loader wrote no assertions to read back"
+
+    rules = load_yaml(ROOT / "registry" / "survivorship.yaml")
+    rebuilt, _ = promote.build(read_back, rules)
+
+    def shape(rows):
+        return {r["facility_id"]: {k: v for k, v in r.items()
+                                   if k.endswith("__source") or k in warehouse.GOLDEN_FIELDS}
+                for r in rows}
+    assert shape(rebuilt) == shape(gold)

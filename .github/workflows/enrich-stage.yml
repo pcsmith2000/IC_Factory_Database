@@ -12,7 +12,7 @@ on:
   workflow_call:
     inputs:
       stage:      { required: true,  type: string }
-      branch_id:  { required: true,  type: string }
+      branch_id:  { required: false, type: string, default: "" }   # empty = the release database itself
       run_key:    { required: true,  type: string }
       args:       { required: false, type: string, default: "" }
       enabled:    { required: false, type: boolean, default: true }
@@ -42,7 +42,10 @@ jobs:
           merge-multiple: true
           path: enrich
 
-      - name: Point at this run's Neon branch
+      # An empty branch_id means the run targets the release database: Neon's connection_uri
+      # returns the default branch when no branch is named. Which database a stage wrote to is the
+      # first thing anyone reading a run wants to know, so it is printed — by name, never by URI.
+      - name: Point at this run's database
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
@@ -52,11 +55,13 @@ jobs:
           import os, sys
           sys.path.insert(0, ".github/scripts")
           from neon_branch import call, project_id
-          uri = call(f"/projects/{project_id()}/connection_uri"
-                     f"?branch_id={os.environ['BRANCH_ID']}"
-                     "&database_name=neondb&role_name=neondb_owner")["uri"]
+          bid = os.environ.get("BRANCH_ID", "").strip()
+          q = (f"branch_id={bid}&" if bid else "") + "database_name=neondb&role_name=neondb_owner"
+          uri = call(f"/projects/{project_id()}/connection_uri?{q}")["uri"]
           print(f"DATABASE_URL={uri}")
+          print(f"ENRICH_TARGET={bid or 'main (the release database)'}", file=sys.stderr)
           EOF
+          echo "### Stage ${{ inputs.stage }} — database: ${BRANCH_ID:-main (the release database)}" >> "$GITHUB_STEP_SUMMARY"
 
       # A stage that needs a credential says so before it does any work, and names every spelling
       # it looked under. Secret names differ across this repo (CENSUS_KEY, IC_DB_ANTHROPIC_API_KEY,
