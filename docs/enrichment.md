@@ -206,8 +206,26 @@ Tako has one trap worth naming: it searches a curated data graph as well as the 
 row for inlined data. Stage 9 asks for `sources.web` only and never sets `includeContents`, which
 is what keeps it on the flat per-request price.
 
-The token column is a projection; the search column is exact. Stage 9 records both, per run and per
-located address, so the next real pass replaces the projection with its own numbers.
+The token column was a projection. The first live run replaced it, and it held:
+
+    20 facilities, alibaba/qwen3.7-flash + Tako, 2026-09-17
+      576,097 input tokens   6,414 output   50 searches
+      $0.000906 per facility   against $0.00095 projected
+      $1.07 for a full 1,181-row pass   against $1.12 projected
+
+### A yield number that means the opposite of what it looks like
+
+That run located 3 of 20, a 15% yield against Sonnet's 42%, and the obvious conclusion — that the
+cheap model is worse — is wrong. All 17 of the rows it rejected were rows Sonnet had **already**
+rejected.
+
+The cause is structural, not a fluke. `need_addr` is computed from golden, so the 20 addresses
+Sonnet found had dropped out of the queue, leaving its 28 failures at the head of it. The cheap
+model was handed the hardest rows a frontier model could not do, and still found three of them.
+
+So a model comparison must not run against `main`, where each run mutates the queue the next one
+reads. It needs the same rows twice: `--sample` with its fixed seed, or a Neon branch per arm, which
+is what `target: branch` is for. The costs above are directly comparable; the yields are not.
 
 The default is `alibaba/qwen3.7-flash` with Parallel search. The task is bounded extraction behind
 gates that discard anything uncited, unverified against the fetched page, or under 0.7 confidence,
