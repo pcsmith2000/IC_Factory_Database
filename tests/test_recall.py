@@ -163,7 +163,40 @@ def test_the_status_table_and_the_metric_cannot_disagree():
     assert sum(1 for x in t if x["status"] == "MISSING") == r["n_missed"]
     assert [x["status"] for x in t] == ["HAVE", "HAVE", "MISSING"]
     assert t[1]["has_address"].startswith("no")      # a lead is on the list, without a street
-    assert t[2]["why_missing"] == "not in any source we hold"
+    # Without the ingested index the table must not claim more than recall() can see. It knows the
+    # plant is not published; it has checked nothing about what was fetched.
+    assert t[2]["why_missing"] == "not in the published warehouse"
+
+
+def test_a_missing_row_does_not_blame_the_classifier_for_a_plant_nobody_fetched(tmp_path):
+    """"not in any source we hold" was written for 151 rows and checked for none of them.
+
+    recall() only sees PUBLISHED facilities, so that sentence was a claim about ingestion made by
+    code that had never read an ingested row. Against run 22's 103,017 normalised rows it was wrong
+    for 29 of the 151: those plants were fetched and then lost, 9 of them labelled IC. The other
+    122 really are in no source, and that is the difference between an edit that can work and one
+    that cannot.
+    """
+    norm = tmp_path / "normalised"; norm.mkdir()
+    (norm / "epa_frs.csv").write_text(
+        "name_verbatim,row_hash\nLost Panel Systems Kokomo,h1\nSomething Else,h2\n")
+    facs = [{"facility_id": "IC-1", "name": "Real Plant Co", "state": "OH", "tier": "T2"}]
+    control = [{"control_id": "1", "name": "Real Plant Co", "state": "OH"},
+               {"control_id": "2", "name": "Lost Panel Systems", "state": "IN"},
+               {"control_id": "3", "name": "Nowhere Industries", "state": "OH"}]
+    idx = measure.ingested_index(norm)
+    t = measure.status_table(control, facs, {}, idx)
+
+    # fetched by a source, absent from the warehouse: a leak, and the source is named
+    assert t[1]["why_missing"].startswith("ingested but lost before publication")
+    assert t[1]["ingested_by"] == "epa_frs"
+    # no source holds it: no amount of prompt or matcher work reaches this row
+    assert t[2]["why_missing"] == "never ingested — no source holds this name"
+    assert t[2]["ingested_by"] == ""
+
+    gap = measure.source_gap(t)
+    assert (gap["found"], gap["ingested_but_lost"], gap["never_ingested"]) == (1, 1, 1)
+    assert gap["ceiling"] == round(2 / 3, 4)      # what ALL pipeline work could reach, at most
 
 
 def test_a_name_stripped_to_one_generic_word_still_matches():

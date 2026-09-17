@@ -80,6 +80,55 @@ def _norm_city(city: str | None) -> str:
     return " ".join(re.sub(r"[^a-z0-9 ]", " ", (city or "").lower()).split())
 
 
+def ingested_index(normalised_dir: Path) -> dict:
+    """Every establishment name ANY source ingested, before a classifier saw it.
+
+    recall() can only see published facilities, so the only answer it can give for an unmatched
+    control row is "not in the published warehouse". For 151 missing rows in run 22 that answer was
+    being WRITTEN OUT as "not in any source we hold", which is a different and much stronger claim,
+    and nothing had checked it. Measured against the 103,017 normalised rows it is also wrong for
+    29 of them: those plants were ingested and then lost — 9 were even labelled IC — while 122
+    genuinely appear in no source. The distinction decides where work goes, because no prompt edit
+    reaches a row nothing ever fetched.
+
+    Indexed by FIRST TOKEN, which is exact rather than a heuristic: `_prefix_match` only succeeds
+    when one normalised name is a whole-word prefix of the other, so the two necessarily share a
+    first token. That turns a 151 x 103,017 scan into a dict lookup. The stripped and light forms
+    are kept in separate indexes so a stripped name is never compared against a light one, which
+    is the same pairing `_company_known` uses.
+    """
+    exact: dict[str, set] = defaultdict(set)
+    first_norm: dict[str, list] = defaultdict(list)
+    first_light: dict[str, list] = defaultdict(list)
+    for path in sorted(Path(normalised_dir).glob("*.csv")):
+        src = path.stem
+        with open(path, newline="", encoding="utf-8", errors="replace") as fh:
+            for r in csv.DictReader(fh):
+                nm = r.get("name_verbatim") or ""
+                if not nm:
+                    continue
+                exact[_key(nm)].add(src)
+                for form, idx in ((norm_name(nm), first_norm), (_light_name(nm), first_light)):
+                    if form:
+                        idx[form.split()[0]].append((form, src))
+    return {"exact": exact, "first_norm": first_norm, "first_light": first_light}
+
+
+def sources_holding(name: str, index: dict) -> set:
+    """Which sources ingested a row under this name, judged the way the rungs match."""
+    if not index:
+        return set()
+    got = set(index["exact"].get(_key(name), ()))
+    cn, cl = norm_name(name), _light_name(name)
+    for form, idx in ((cn, index["first_norm"]), (cl, index["first_light"])):
+        if not form:
+            continue
+        for candidate, src in idx.get(form.split()[0], ()):
+            if _prefix_match(form, candidate):
+                got.add(src)
+    return got
+
+
 def load_frame(path: Path) -> dict[str, int]:
     """CSV: state,establishments — Census CBP state totals for the four core codes."""
     out = {}
@@ -225,7 +274,7 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
                 known = _company_known(c, by_name, fac_names)
                 outcome.append((None, None,
                                 "company in database, THIS PLANT not" if known
-                                else "not in any source we hold"))
+                                else "not in the published warehouse"))
     hits = len(matched)
     # A T0 row is a LEAD: a name the pipeline knows about with no location established. Counting
     # one as a found plant lets a source of bare names lift recall while the database gains nothing
@@ -276,7 +325,8 @@ def coverage_and_bias(facilities: list[dict], frame: dict[str, int], band: tuple
             "out_of_band": out_of_band, "mean_abs_bias": round(mab / n, 3) if n else None}
 
 
-def status_table(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str, str]) -> list[dict]:
+def status_table(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str, str],
+                 ingested: dict | None = None) -> list[dict]:
     """One row per control entry: did we find it, how, and if not, why not.
 
     Runs the SAME matcher as recall(), which is the point of it existing. Every earlier version of
@@ -287,6 +337,12 @@ def status_table(control_rows: list[dict], facilities: list[dict], crosswalk: di
 
     `status` answers the control's question — is this establishment on our list — so a T0 lead is
     HAVE, with `has_address` saying which of those still needs a street.
+
+    `ingested` is the index from `ingested_index()`. With it, a MISSING row says whether any source
+    fetched the name at all and names the sources that did, which separates "no source has this
+    plant" from "a source had it and the pipeline lost it". Without it the row falls back to what
+    recall() alone can see, and says only that the plant is not in the published warehouse — it
+    does NOT claim no source holds it, because nothing checked.
     """
     r = recall(control_rows, facilities, crosswalk, _detail=True)
     detail = r.pop("_detail", {})
@@ -303,6 +359,32 @@ def status_table(control_rows: list[dict], facilities: list[dict], crosswalk: di
             "has_address": "" if not on_list else ("yes" if f.get("tier") != "T0" else "no — needs address lookup"),
             "matched_by": method or "", "matched_facility": (f or {}).get("name", ""),
             "matched_state": (f or {}).get("state", ""), "matched_tier": (f or {}).get("tier", ""),
-            "why_missing": why or "",
+            "why_missing": why or "", "ingested_by": "",
         })
+        if on_list or ingested is None:
+            continue
+        # A plant no source ever fetched is beyond any amount of prompt or matcher work; one that
+        # WAS fetched and did not survive is a leak with a fixable cause. Only the second kind is
+        # worth an edit, and until this column existed both read identically.
+        srcs = sources_holding(c.get("name", ""), ingested)
+        out[-1]["ingested_by"] = " ".join(sorted(srcs))
+        out[-1]["why_missing"] = ("never ingested — no source holds this name" if not srcs
+                                  else f"ingested but lost before publication ({out[-1]['why_missing']})")
     return out
+
+
+def source_gap(status: list[dict]) -> dict:
+    """How much of the shortfall any pipeline work could reach, and how much needs a new source.
+
+    `ceiling` is the recall this database would reach if every row that was ingested and lost were
+    recovered and nothing else changed — the honest upper bound on classifier, matcher and
+    resolution work against today's sources. Run 22: 90 found, 29 recoverable, 122 never ingested,
+    so the ceiling is 49.4% and 80% is unreachable without fetching 74 more plants.
+    """
+    have = sum(1 for r in status if r["status"] == "HAVE")
+    missing = [r for r in status if r["status"] == "MISSING"]
+    never = sum(1 for r in missing if r["why_missing"].startswith("never ingested"))
+    lost = len(missing) - never
+    n = len(status)
+    return {"in_scope": n, "found": have, "ingested_but_lost": lost, "never_ingested": never,
+            "ceiling": round((have + lost) / n, 4) if n else None}

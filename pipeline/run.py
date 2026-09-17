@@ -307,7 +307,10 @@ def main(argv=None) -> int:
     # Per-row control status, written every run from the SAME matcher the metric uses. Hand-built
     # copies of this table drifted from the number they were meant to explain.
     try:
-        status = measure.status_table(control_rows, facilities, crosswalk.get("control", {}))
+        # Built from the NORMALISED rows, so a missing plant can say whether any source fetched
+        # it. Without this the table blamed the classifier for 122 rows no source ever held.
+        ingested = measure.ingested_index(out / "normalised") if (out / "normalised").is_dir() else None
+        status = measure.status_table(control_rows, facilities, crosswalk.get("control", {}), ingested)
         if status:
             with open(out / "control-status.csv", "w", newline="") as fh:
                 w = csv.DictWriter(fh, fieldnames=list(status[0]))
@@ -316,6 +319,12 @@ def main(argv=None) -> int:
             print(f"  control status: {have}/{len(status)} on the list "
                   f"({sum(1 for r in status if r['has_address'].startswith('no'))} without a street) "
                   f"-> build/control-status.csv")
+            if ingested is not None:
+                gap = measure.source_gap(status)
+                m["recall"]["source_gap"] = gap
+                print(f"  source gap: {gap['never_ingested']} of {len(status)} control rows are in "
+                      f"no source we hold; {gap['ingested_but_lost']} were ingested and lost. "
+                      f"Ceiling on today's sources: {gap['ceiling']:.1%}")
     except Exception as e:
         print(f"  control-status.csv not written: {type(e).__name__}: {e}")
     record["layers"]["7_measure"] = m
