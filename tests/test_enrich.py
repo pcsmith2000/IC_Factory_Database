@@ -48,3 +48,76 @@ def test_file_index_lookup_picks_the_covering_file():
 
 def test_square_feet_conversion():
     assert abs(wkt_area_m2(_box(34.6, -82.6, 0.001)) * M2_FT2 - 109_500) < 3_000
+
+
+# --- stage 9: a located address is only as good as its citation ------------------------------
+
+class _Block:
+    def __init__(self, text=None, content=None):
+        if text is not None: self.text = text
+        if content is not None: self.content = content
+
+
+class _Result:
+    def __init__(self, url): self.url = url
+
+
+class _FakeClient:
+    """Stands in for the gateway. `reply` is the JSON the model returns; `visited` is what the
+    web_search tool actually opened."""
+    def __init__(self, reply, visited=()):
+        self._reply, self._visited = reply, visited
+        self.messages = self
+
+    def create(self, **kw):
+        self.kw = kw
+        blocks = [_Block(content=[_Result(u) for u in self._visited]),
+                  _Block(text=json.dumps(self._reply))]
+        return type("M", (), {"content": blocks})()
+
+
+import json
+from pipeline.enrich import locate
+
+ROW = [{"facility_id": "IC-00001", "name": "Acme Modular", "city": "Elkhart", "state": "IN"}]
+GOOD = {"found": True, "address": "1200 Industrial Blvd", "city": "Elkhart", "state": "IN",
+        "source_url": "https://acme.example/contact", "quote": "Our plant at 1200 Industrial Blvd.",
+        "confidence": 0.9, "reason": "contact page"}
+
+
+def test_a_cited_address_is_stored_with_its_evidence():
+    rep = locate.run(ROW, client=_FakeClient(GOOD, ["https://acme.example/contact"]))
+    assert rep["located"] == 1
+    a = rep["assertions"][0]
+    assert a["field"] == "address" and a["value"] == "1200 Industrial Blvd"
+    assert a["source_id"] == "enrich:locate" and a["basis"] == "web_cited"
+    assert "https://acme.example/contact" in a["evidence"] and "Our plant at" in a["evidence"]
+
+
+def test_the_search_tool_is_actually_offered():
+    c = _FakeClient(GOOD, ["https://acme.example/contact"])
+    locate.run(ROW, client=c)
+    assert c.kw["tools"] == [locate.WEB_SEARCH_TOOL]
+
+
+@pytest.mark.parametrize("reply,visited,why", [
+    ({**GOOD, "source_url": "", "quote": ""}, ["https://acme.example/contact"], "no citation"),
+    ({**GOOD, "source_url": "https://elsewhere.example/x"}, ["https://acme.example/contact"],
+     "cited a page search did not visit"),
+    ({**GOOD, "confidence": 0.3}, ["https://acme.example/contact"], "confidence"),
+    ({**GOOD, "address": "PO Box 12"}, ["https://acme.example/contact"], "not a street address"),
+    ({"found": False, "reason": "no plant page found"}, [], "no plant page found"),
+])
+def test_an_uncited_or_unsupported_answer_is_never_stored(reply, visited, why):
+    """E1. A recalled address is indistinguishable from a read one once it is in golden_facility,
+    so everything that cannot show its source is dropped here."""
+    rep = locate.run(ROW, client=_FakeClient(reply, visited))
+    assert rep["located"] == 0 and rep["assertions"] == []
+    assert why in rep["rejected"][0]["why"]
+
+
+def test_one_failing_facility_does_not_fail_the_stage():
+    class Boom(_FakeClient):
+        def create(self, **kw): raise RuntimeError("gateway 429")
+    rep = locate.run(ROW, client=Boom(GOOD))
+    assert rep["located"] == 0 and "gateway 429" in rep["rejected"][0]["why"]
