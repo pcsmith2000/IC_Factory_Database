@@ -265,7 +265,7 @@ sources:
     # the member cards in the response body, so 26 plain GETs get the whole directory. Verified
     # 2026-09-17: 182 manufacturer members, every one with a street address.
     method: fetch
-    url: https://members.modular.org/member-directory/FindStartsWith?term={letter}
+    url: https://members.modular.org/{directory}/FindStartsWith?term={letter}  # member-directory + manufacturerdirect
     # Per-source override of archive.mode (blob-only). MBI answers 26 plain GETs without a WAF or
     # a login, so there is no reason to hand-stage files for it: web-first fetches, archives what
     # came back, and falls back to the newest archived copy if the site breaks — which is what

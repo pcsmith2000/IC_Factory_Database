@@ -33,7 +33,13 @@ from pathlib import Path
 from ._common import LayoutChanged, contract_row, http_get, require
 
 BASE = "https://members.modular.org"
-LETTER_URL = BASE + "/member-directory/FindStartsWith?term={letter}"
+# MBI runs TWO overlapping directories and neither contains the other. The general membership
+# directory, filtered to manufacturer tiers, gave 182; the dedicated manufacturer view gave 113, of
+# which 16 were absent from the first — MODLOGIQ, Marengo Structures, National Modular Mfg, Resia,
+# Arning Companies among them. Sweeping only one silently loses real plants, so sweep both and
+# union on the detail slug.
+DIRECTORIES = ("member-directory", "manufacturerdirect")
+LETTER_URL = BASE + "/{directory}/FindStartsWith?term={letter}"
 LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # One card per member. Non-greedy to the next card so a missing field cannot borrow the next
@@ -41,7 +47,13 @@ LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 CARD = re.compile(r'<div class="card gz-directory-card.*?(?=<div class="card gz-directory-card|\Z)', re.S)
 MEMBERSHIP = re.compile(r'class="[^"]*gz-membership-type[^"]*"[^>]*>(.*?)</span>', re.S)
 NAME = re.compile(r'itemprop="name"[^>]*>\s*<a[^>]*>(.*?)</a>', re.S)
-SLUG = re.compile(r'/member-directory/Details/([A-Za-z0-9\-]+)')
+# The detail slug carries a per-LISTING id, not a per-member one: A American Container is
+# a-american-container-2575167 in one directory and -2575168 in the other, Autovol is
+# autovol-1923229 and autovol-1960660. So the slug cannot dedupe across the two sweeps — doing
+# that gave 295 rows where 198 members exist. It is still kept as source_identifier, because
+# within a directory it is stable across quarters, which is what a re-run needs.
+SLUG = re.compile(r'/(?:member-directory|manufacturerdirect)/Details/([A-Za-z0-9\-]+)')
+DEDUPE_TRIM = re.compile(r"[^a-z0-9]")
 PROP = 'itemprop="{p}"[^>]*>(.*?)</span>'
 
 # Membership types that denote a factory. MBI sells several tiers; "Manufacturer/Direct" is the
@@ -58,19 +70,19 @@ def _text(pattern: str, blob: str) -> str:
 
 
 def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
-    """26 GETs, one per initial letter, each archived under its own name."""
-    return [http_get(LETTER_URL.format(letter=ch), archive_dir, f"member-directory-{ch}.html")
-            for ch in LETTERS]
+    """52 GETs: 26 letters across each of the two directories, archived under distinct names."""
+    return [http_get(LETTER_URL.format(directory=d, letter=ch), archive_dir, f"{d}-{ch}.html")
+            for d in DIRECTORIES for ch in LETTERS]
 
 
 def parse(paths: list[Path], source: dict) -> list[dict]:
     out: list[dict] = []
-    seen: set[str] = set()
+    seen: set[tuple] = set()
     skipped: dict[str, int] = {}
     position = 0
     total_cards = 0
     for path in paths:
-        letter = path.stem.rsplit("-", 1)[-1]
+        directory, letter = path.stem.rsplit("-", 1)
         blob = path.read_text(encoding="utf-8", errors="replace")
         cards = CARD.findall(blob)
         total_cards += len(cards)
@@ -79,23 +91,26 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
             if not name:
                 continue
             kind = _text(MEMBERSHIP.pattern, card) or "(no membership type)"
-            if not MANUFACTURER.search(kind):
+            # A card in the dedicated manufacturer directory is a manufacturer by construction;
+            # requiring the membership-type span there would drop every card that lacks one.
+            if directory != "manufacturerdirect" and not MANUFACTURER.search(kind):
                 skipped[kind] = skipped.get(kind, 0) + 1
                 continue
             slug_m = SLUG.search(card)
             slug = slug_m.group(1) if slug_m else ""
-            if slug and slug in seen:
-                continue                      # a member can appear under a trade name and a legal name
-            if slug:
-                seen.add(slug)
+            city = _text(PROP.format(p="addressLocality"), card)
+            key = (DEDUPE_TRIM.sub("", name.lower()), DEDUPE_TRIM.sub("", city.lower()))
+            if key in seen:
+                continue          # the same member listed in both directories
+            seen.add(key)
             position += 1
             out.append(contract_row(
                 source, position, name=name,
                 address=_text(PROP.format(p="streetAddress"), card),
-                city=_text(PROP.format(p="addressLocality"), card),
+                city=city,
                 state=_text(PROP.format(p="addressRegion"), card),
                 zip_code=_text(PROP.format(p="postalCode"), card),
-                source_url=LETTER_URL.format(letter=letter),
+                source_url=LETTER_URL.format(directory=directory, letter=letter),
                 source_document=path.name,
                 source_identifier=slug,
                 notes=f"MBI membership type: {kind}"))
