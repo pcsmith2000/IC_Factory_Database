@@ -24,12 +24,15 @@ import re
 # Each entry: (category, pattern). Patterns are deliberately narrow — a national brand whose
 # entire business is the flagged product, or a product word with no IC reading.
 NOT_IC_PATTERNS: list[tuple[str, str]] = [
+    # Plurals matter more than they look: "FLORIDA PLYWOODS, INC." went uncounted against
+    # \bplywood\b because the boundary fails on the trailing s, so the floor measured on runs 13
+    # and 14 was an undercount. Every product noun here takes an optional s.
     ("doors_windows",   r"\bmasonite\b|\bjeld[\s\-]?wen\b|\bandersen\s+window|\banderson\s+window|\bpella\b|\bmarvin\s+window"),
-    ("commodity_panel", r"\blouisiana[\s\-]pacific\b|\bgeorgia[\s\-]?pacific\b|\bweyerhaeuser\b|\bplywood\b|\bveneer\b|\bparticle\s*board\b|\bosb\b"),
-    ("millwork",        r"\bmillwork\b|\bmoulding\b|\bmolding\b|\bcabinet(ry|s)?\b|\bcountertop"),
-    ("pallets_crates",  r"\bpallet\b|\bpallets\b|\bcrating\b"),
-    ("concrete_supply", r"\bready[\s\-]?mix\b|\bredi[\s\-]?mix\b|\baggregate(s)?\b"),
-    ("infrastructure",  r"\bculvert\b|\bseptic\b|\bburial\s+vault|\bconcrete\s+pipe\b"),
+    ("commodity_panel", r"\blouisiana[\s\-]pacific\b|\bgeorgia[\s\-]?pacific\b|\bweyerhaeuser\b|\bplywoods?\b|\bveneers?\b|\bparticle\s*boards?\b|\bosb\b"),
+    ("millwork",        r"\bmillworks?\b|\bmouldings?\b|\bmoldings?\b|\bcabinet(ry|s)?\b|\bcountertop"),
+    ("pallets_crates",  r"\bpallets?\b|\bcrating\b|\bcrates?\b"),
+    ("concrete_supply", r"\bready[\s\-]?mix\b|\bredi[\s\-]?mix\b|\baggregates?\b"),
+    ("infrastructure",  r"\bculverts?\b|\bseptic\b|\bburial\s+vaults?\b|\bconcrete\s+pipes?\b"),
 ]
 
 # A name with one of these reads as a genuine IC plant even when a flagged word is also present,
