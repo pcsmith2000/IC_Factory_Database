@@ -153,3 +153,77 @@ def test_split_city_state_zip_never_corrects():
     assert _common.split_city_state_zip("Mifflinburg, IN") == ("Mifflinburg", "IN", "")
     assert _common.split_city_state_zip("Somewhere Odd") == ("Somewhere Odd", "", "")
     assert _common.iso_date("13/45/2027") == "" and _common.iso_date("2027-01-31") == "2027-01-31"
+
+
+def test_a_location_label_is_qualified_with_the_operating_company():
+    """84 Lumber's page names the SITE, never the operator.
+
+    "Kings Mountain Truss Plant" reached the warehouse with nothing tying it to 84 Lumber — not a
+    reader, not the control list, not a cross-source join. The company goes in FRONT of the label
+    rather than replacing it, because the label is the only thing separating one 84 Lumber plant
+    from another and this database is plant-level.
+    """
+    from pipeline.sources.corporate_locations import _qualify
+    assert _qualify("84 Lumber", "Kings Mountain Truss Plant") == "84 Lumber — Kings Mountain Truss Plant"
+    assert _qualify("The Truss Company", "Sumner") == "The Truss Company — Sumner"
+    # already carries the company: left exactly as the page wrote it
+    assert _qualify("Stark Truss", "Stark Truss - Summerville") == "Stark Truss - Summerville"
+    assert _qualify("UFP Site Built", "UFP Site Built Grand Rapids") == "UFP Site Built Grand Rapids"
+    # no company on record is not a reason to mangle the label
+    assert _qualify("", "Orphan Plant") == "Orphan Plant"
+
+
+def test_qualified_labels_stay_distinct_per_plant():
+    """Plant-level is the point: qualifying must not collapse two sites into one name."""
+    from pipeline.sources.corporate_locations import _qualify
+    a = _qualify("84 Lumber", "Kings Mountain Truss Plant")
+    b = _qualify("84 Lumber", "Coal Center Truss Plant")
+    assert a != b and a.startswith("84 Lumber") and b.startswith("84 Lumber")
+
+
+def test_bldr_keeps_only_manufacturing_branches():
+    """MF is a plant; YD is a lumber yard and MW is doors and mouldings."""
+    from pipeline.sources import bldr_locations as B
+    html = ('<a href="/location/acworth-ga-truss/ACWOGAMF">x</a>'
+            '<a href="/location/abilene-tx-lumber-yard/ABILTXYD">x</a>'
+            '<a href="/location/abilene-tx-millwork/ABILTXMW">x</a>'
+            '<a href="/location/albemarle-nc-truss/ALBENCMF">x</a>')
+    assert [c for _s, c in B._mf_links(html)] == ["ACWOGAMF", "ALBENCMF"]
+    assert B._kind_counts(html) == {"MF": 2, "YD": 1, "MW": 1}
+
+
+def test_bldr_never_takes_the_corporate_footer_address(tmp_path):
+    """Every bldr.com page footers the Irving, TX head office.
+
+    Taking the first street-shaped string in the HTML gave the Albuquerque plant an address in
+    Texas. Only the location block's own placeLink counts, and only where its state agrees with
+    the title's.
+    """
+    from pipeline.sources import bldr_locations as B
+    src = {"id": "bldr_locations", "url": B.INDEX, "status_basis": "on_current_list"}
+    (tmp_path / "all-locations.html").write_text('<a href="/location/albuquerque-nm-truss/ALBQNMMF">x</a>')
+    (tmp_path / "ALBQNMMF.html").write_text(
+        "<title>Albuquerque NM Truss | Builders FirstSource</title>"
+        '<a href="https://www.google.com/maps/place/119 Llano Del Sur South East,Albuquerque,NM,87105/"'
+        ' class="placeLink">here</a>'
+        "<footer>Builders FirstSource<br />6031 Connection Dr<br />Irving, TX 75039</footer>")
+    rows = B.parse(sorted(tmp_path.glob("*.html")), src)
+    assert len(rows) == 1
+    assert rows[0]["address_verbatim"] == "119 Llano Del Sur South East"
+    assert (rows[0]["city_verbatim"], rows[0]["state_verbatim"]) == ("Albuquerque", "NM")
+    assert "Builders FirstSource" in rows[0]["name_verbatim"]
+    assert rows[0]["source_identifier"] == "ALBQNMMF"
+
+
+def test_bldr_drops_a_street_whose_state_contradicts_the_title():
+    """A page rendering another branch's block loses its street; it does not inherit one."""
+    import tempfile, pathlib
+    from pipeline.sources import bldr_locations as B
+    d = pathlib.Path(tempfile.mkdtemp())
+    src = {"id": "bldr_locations", "url": B.INDEX, "status_basis": "on_current_list"}
+    (d / "all-locations.html").write_text('<a href="/location/x/AAAABBMF">x</a>')
+    (d / "AAAABBMF.html").write_text(
+        "<title>Somewhere NM Truss | Builders FirstSource</title>"
+        '<a href="https://www.google.com/maps/place/1 Wrong St,Elsewhere,TX,75039/" class="placeLink">x</a>')
+    rows = B.parse(sorted(d.glob("*.html")), src)
+    assert rows[0]["address_verbatim"] == ""

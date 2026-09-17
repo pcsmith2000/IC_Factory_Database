@@ -17,10 +17,35 @@ import json, re, time, urllib.parse
 from pathlib import Path
 from ._common import http_get, html_text, contract_row, require
 from ._extract import extract_locations
+from ..reconcile import norm_name
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 PROMPT = ROOT / "prompts" / "EXTRACTION-PROMPT.md"
 MAX_FOLLOW = 150
+
+
+def _qualify(company: str, label: str) -> str:
+    """Prefix the operating company onto a location label that does not already carry it.
+
+    84 Lumber's page names its plants "Mt. Airy Truss Plant", "Kings Mountain Truss Plant" — the
+    SITE, never the operator. The row that reached the warehouse was therefore called "Kings
+    Mountain Truss Plant" and nothing could tie it to 84 Lumber: not a reader, not the control
+    list, not a cross-source join. Every multi-site company on this source has the same shape, and
+    between them they are about forty plants.
+
+    The company goes in front rather than replacing the label, because the label is the only thing
+    that tells one 84 Lumber plant from another and this database is plant-level. "84 Lumber —
+    Kings Mountain Truss Plant" is matchable as 84 Lumber and still unique per site.
+
+    A label that already names the company ("Stark Truss - Summerville") is left alone.
+    """
+    c, l = company.strip(), label.strip()
+    if not c:
+        return l
+    cn, ln = norm_name(c), norm_name(l)
+    if not cn or not ln or cn in ln:
+        return l
+    return f"{c} — {l}"
 
 
 def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
@@ -76,6 +101,7 @@ def _from_csv(path: Path, source: dict) -> list[dict]:
         name = (r.get("name") or "").strip()
         if not name:
             continue
+        name = _qualify((r.get("company") or "").strip(), name)
         out.append(contract_row(source, i, name=name, address=(r.get("address") or "").strip(),
                                 city=(r.get("city") or "").strip(), state=(r.get("state") or "").strip().upper(),
                                 zip_code=(r.get("zip") or "").strip(),
@@ -102,7 +128,10 @@ def parse(paths: list[Path], source: dict, cfg: dict | None = None) -> list[dict
         return out
     out, audit, pos = [], [], 0
     for path in paths:
-        company = path.parent.name.replace("-", " ")
+        slug = path.parent.name
+        company = next((pg["company"] for pg in (source.get("pages") or [])
+                        if re.sub(r"[^a-z0-9]+", "-", pg.get("company", "").lower()).strip("-") == slug),
+                       slug.replace("-", " "))
         meta = json.loads((path.parent / f"{path.name}.meta.json").read_text()) if (path.parent / f"{path.name}.meta.json").exists() else {}
         url = meta.get("url", str(path))
         text = html_text(path.read_text(encoding="utf-8", errors="replace"))
@@ -112,7 +141,7 @@ def parse(paths: list[Path], source: dict, cfg: dict | None = None) -> list[dict
         audit.append({"page": url, "kept": len(res["locations"]), "dropped_not_verbatim": len(res["dropped"]), "model": res["model"], "prompt_hash": res["prompt_hash"]})
         for loc in res["locations"]:
             pos += 1
-            out.append(contract_row(source, pos, name=loc["name"], address=loc["address"], city=loc["city"], state=loc["state"],
+            out.append(contract_row(source, pos, name=_qualify(company, loc["name"]), address=loc["address"], city=loc["city"], state=loc["state"],
                                     zip_code=loc["zip"], source_url=url, source_document=path.name,
                                     status=loc.get("kind", ""), notes=(f"evidence: {loc['evidence']}" if loc.get("evidence") else "kind=unclear: page does not say this is a plant")[:200]))
     if paths:
