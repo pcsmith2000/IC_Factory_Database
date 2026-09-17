@@ -6,6 +6,7 @@
     python -m pipeline.enrich.run footprint --out enrich
     python -m pipeline.enrich.run existence --out enrich
     python -m pipeline.enrich.run load      --out enrich   # append every stage's assertions
+    python -m pipeline.enrich.run promote   --out enrich   # survivorship again, so golden shows it
 
 Determinism. The sample is seeded, the Overture release is pinned, the model is pinned, and an
 assertion's row_hash is taken over the evidence that produced it — so a second run over unchanged
@@ -27,7 +28,7 @@ from pathlib import Path
 
 from . import _db
 
-STAGES = ("plan", "locate", "geocode", "footprint", "existence", "load")
+STAGES = ("plan", "locate", "geocode", "footprint", "existence", "load", "promote")
 DEFAULT_AI_LIMIT = 200
 DEFAULT_GEOCODE_LIMIT = 2000        # the free tier is 2500/day and is shared with anyone else using it
 # Footprint cost is per distinct Overture file, not per facility: ten plants in one county read one
@@ -241,6 +242,28 @@ def main(argv=None) -> int:
                ("already present (re-run is a no-op)", wrote["already_present"]),
                ("release tag", tag), ("by field", json.dumps(by_field)),
                *[(r.gate, r.summary) for r in results]])
+        return 0
+
+    if args.stage == "promote":
+        from . import promote
+        rep = promote.run(db, tag, dry_run=args.dry_run)
+        for g in rep["gates"]:
+            print(f"  {g}")
+        if rep.get("halted"):
+            _emit(args.out, "promote", rep,
+                  [("HALTED", "gate E6 failed"), *[("gate", g) for g in rep["gates"]]])
+            print("\nHALT: the rebuilt golden covered less than the one it would replace; "
+                  "nothing was written", file=sys.stderr)
+            return 1
+        _emit(args.out, "promote", rep,
+              [("assertions read", rep["assertions_read"]),
+               ("golden rows built", rep["golden_rows"]),
+               ("golden rows written", rep.get("would_write", rep["written"])),
+               ("conflicts", rep["conflicts"]),
+               ("survivorship version", rep["survivorship_version"]),
+               ("columns added", json.dumps(rep["columns_added"])),
+               ("coverage gained", json.dumps(rep["gained"])),
+               *[("gate", g) for g in rep["gates"]]])
         return 0
     return 1
 

@@ -77,6 +77,31 @@ def e5_existence_is_advisory(assertions: list[dict]) -> GateResult:
                       f"{len(ex)} existence flags, {len(bad)} that were not advisory")
 
 
+def e6_rebuilt_golden_loses_nothing(before: dict[str, int], after: dict[str, int]) -> GateResult:
+    """Stage 13 replaces golden_facility outright, so it is the one stage that can destroy the
+    release rather than merely fail to improve it. The rebuild is survivorship applied to the
+    assertions of the same release the loader used, plus enrichment's, so every field must come
+    back at least as covered as it went in. A field that shrank means the assertions were read
+    wrong or the rules changed under us, and either way the old golden is the better one.
+
+    E4 asks the same question of the stage outputs; this asks it of what actually lands in the
+    table, which is the only version a reader ever sees.
+    """
+    lost = {f: (before[f], after.get(f, 0)) for f in before
+            if f != "__rows" and after.get(f, 0) < before[f]}
+    n0, n1 = before.get("__rows", 0), after.get("__rows", 0)
+    ok = not lost and n1 >= n0
+    detail = ", ".join(f"{f} {a}->{b}" for f, (a, b) in sorted(lost.items()))
+    return GateResult("E6", ok,
+                      f"{n0} golden rows -> {n1}"
+                      + (f" — lost coverage: {detail}" if lost else "")
+                      + ("" if n1 >= n0 else " — fewer facilities than before"))
+
+
+def run_promote(before: dict[str, int], after: dict[str, int]) -> list[GateResult]:
+    return [e6_rebuilt_golden_loses_nothing(before, after)]
+
+
 def run_all(assertions: list[dict], before: list[dict] | None = None,
             after: list[dict] | None = None) -> list[GateResult]:
     results = [e1_every_located_address_is_cited(assertions),

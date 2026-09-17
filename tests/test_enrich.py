@@ -353,3 +353,116 @@ def test_the_snippet_is_readable_text_not_markup(monkeypatch):
     assert ok is True
     assert "&nbsp;" not in snip and "color:red" not in snip and "var x=" not in snip
     assert "Visit us at 1200 Industrial Blvd" in snip
+
+
+# ---------------------------------------------------------------- stage 13: promote
+def _a(fid, field, value, source_id, source_class, basis="none", date="2026-09-01"):
+    return {"facility_id": fid, "field": field, "value": value, "source_id": source_id,
+            "source_class": source_class, "basis": basis, "retrieved_date": date,
+            "row_hash": "h", "site_visit": False, "confidence": 1.0}
+
+
+def _rules():
+    from pipeline.registry import load_yaml
+    from pathlib import Path
+    return load_yaml(Path(__file__).resolve().parent.parent / "registry" / "survivorship.yaml")
+
+
+def test_a_rooftop_geocode_beats_the_epa_coordinate_it_exists_to_replace():
+    """The reason stage 10 is worth running. Before survivorship ranked `basis:rooftop`, an
+    enrichment coordinate lost to epa_frs (class B) on every facility that had one, so the whole
+    stage was invisible in golden."""
+    from pipeline.enrich import promote
+    rows, _ = promote.build([
+        _a("F1", "lat_lon", "33.0,-84.0", "epa_frs", "B", basis="none", date="2026-09-14"),
+        _a("F1", "lat_lon", "33.1,-84.1", "geocode:geocodio", "enrichment", basis="rooftop", date="2026-09-01"),
+    ], _rules())
+    assert rows[0]["lat_lon"] == "33.1,-84.1"
+    assert rows[0]["lat_lon__source"] == "geocode:geocodio"
+
+
+def test_an_operator_correction_still_outranks_the_rooftop_geocode():
+    from pipeline.enrich import promote
+    rows, _ = promote.build([
+        _a("F1", "lat_lon", "33.1,-84.1", "geocode:geocodio", "enrichment", basis="rooftop"),
+        _a("F1", "lat_lon", "33.5,-84.5", "operator", "operator", basis="operator", date="2026-01-01"),
+    ], _rules())
+    assert rows[0]["lat_lon__source"] == "operator"
+
+
+def test_a_web_cited_address_fills_a_gap_but_never_overrides_a_registry():
+    from pipeline.enrich import promote
+    rows, _ = promote.build([
+        _a("F1", "address", "1 Cited Rd", "enrich:locate", "enrichment", basis="web_cited"),
+        _a("F1", "address", "2 Licence Ave", "fl_bcis", "D", date="2026-09-14"),
+        _a("F2", "address", "3 Cited Rd", "enrich:locate", "enrichment", basis="web_cited"),
+    ], _rules())
+    by = {r["facility_id"]: r for r in rows}
+    assert by["F1"]["address"] == "2 Licence Ave", "a registry address must win"
+    assert by["F2"]["address"] == "3 Cited Rd", "and enrichment must fill a facility that has none"
+
+
+def test_a_null_retrieved_date_does_not_crash_the_tie_break():
+    """date_key is nullable in fact_assertions; max() over a mix of str and None raises."""
+    from pipeline.enrich import promote
+    a = _a("F1", "name", "Acme", "fl_bcis", "D")
+    a["retrieved_date"] = None
+    rows, _ = promote.build([a], _rules())
+    assert rows[0]["name"] == "Acme"
+
+
+class _RecordingDB:
+    """Counts round trips: NeonHttp does one HTTPS request per query() call."""
+    def __init__(self, cols):
+        self.cols, self.calls, self.inserts = cols, [], 0
+    def query(self, sql, params=()):
+        self.calls.append((sql, params))
+        if "information_schema.columns" in sql:
+            return [{"column_name": c} for c in self.cols]
+        if sql.startswith("INSERT INTO golden_facility"):
+            self.inserts += 1
+        if sql.startswith("SELECT COUNT(*) AS __rows"):
+            return [{"__rows": 3, **{c: 3 for c in self.cols if not c.endswith("__source")}}]
+        return []
+
+
+def test_replace_golden_batches_instead_of_one_round_trip_per_row():
+    """4,065 rows at one HTTPS request each does not finish inside the 35 minute stage timeout."""
+    from pipeline.enrich import _db
+    fields = ["name", "address"]
+    rows = [{"facility_id": f"F{i}", "name": "n", "name__source": "s",
+             "address": "a", "address__source": "s", "n_assertions": 1, "n_sources": 1}
+            for i in range(1000)]
+    db = _RecordingDB([])
+    n = _db.replace_golden(db, rows, fields, "rel-1", chunk=300)
+    assert n == 1000
+    assert db.inserts == 4, f"expected 4 chunked inserts, got {db.inserts}"
+    # and the parameter count of a chunk stays well under Postgres' 65535 ceiling
+    biggest = max(len(p) for s, p in db.calls if s.startswith("INSERT INTO golden_facility"))
+    assert biggest < 65535
+
+
+def test_promote_widens_a_golden_table_that_predates_a_field():
+    from pipeline.enrich import _db
+    db = _RecordingDB(["name", "name__source"])
+    missing = _db.missing_golden_columns(db, ["name", "building_sqft"])
+    assert missing == ["building_sqft", "building_sqft__source"]
+
+
+def test_a_dry_run_promote_writes_nothing():
+    from pipeline.enrich import promote
+    db = _RecordingDB(["name", "name__source", "__rows"])
+    rep = promote.run(db, "rel-1", dry_run=True)
+    assert rep["written"] == 0 and rep["columns_added"] == []
+    assert not any(s.startswith(("INSERT", "DELETE", "ALTER")) for s, _ in db.calls), \
+        [s.split("\n")[0] for s, _ in db.calls]
+
+
+def test_e6_blocks_a_rebuild_that_would_shrink_golden():
+    from pipeline.enrich import gates
+    assert gates.e6_rebuilt_golden_loses_nothing({"__rows": 10, "address": 5},
+                                                 {"__rows": 10, "address": 7}).passed
+    assert not gates.e6_rebuilt_golden_loses_nothing({"__rows": 10, "address": 5},
+                                                     {"__rows": 10, "address": 4}).passed
+    assert not gates.e6_rebuilt_golden_loses_nothing({"__rows": 10, "address": 5},
+                                                     {"__rows": 9, "address": 5}).passed

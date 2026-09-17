@@ -100,3 +100,36 @@ def test_database_url_selects_postgres_and_is_never_silently_skipped(tmp_path: P
         monkeypatch.setenv("DATABASE_URL", PG_URL)
         w = warehouse.open_warehouse({"warehouse": {"engine": "sqlite"}}, tmp_path)
         assert w.engine == "postgres" and "***" in w.path and ":ic@" not in w.path; w.close()
+
+
+def test_adding_a_golden_field_widens_a_database_that_predates_it(tmp_path: Path):
+    """CREATE TABLE IF NOT EXISTS does not widen an existing table. Without the reconcile step in
+    init_schema, a warehouse built before `building_sqft` joined GOLDEN_FIELDS would keep its old
+    shape and silently drop every write of that field — and CREATE VIEW v_golden_field, which names
+    every golden column, would fail outright."""
+    older = [f for f in warehouse.GOLDEN_FIELDS if f not in ("building_sqft", "existence_flag")]
+    assert len(older) < len(warehouse.GOLDEN_FIELDS), "this test needs a field newer than the rest"
+
+    import sqlite3
+    cols = ", ".join(f'{f} TEXT, "{f}__source" TEXT' for f in older)
+    con = sqlite3.connect(tmp_path / "old.sqlite")
+    con.execute(f"CREATE TABLE golden_facility (facility_key TEXT PRIMARY KEY, release_tag TEXT NOT NULL, "
+                f"{cols}, n_assertions INTEGER, n_sources INTEGER)")
+    con.commit(); con.close()
+
+    w = warehouse.SqliteWarehouse(tmp_path / "old.sqlite")
+    have = w.existing_columns("golden_facility")
+    for f in warehouse.GOLDEN_FIELDS:
+        assert f in have and f"{f}__source" in have, f"{f} was not added to a pre-existing golden_facility"
+    w.query("SELECT COUNT(*) AS n FROM v_golden_field")     # the view builds against the widened table
+    w.close()
+
+
+def test_every_enrichment_source_has_a_dim_source_row():
+    """Enrichment assertions carry source ids that are in no registry. Without a dim_source row,
+    v_provenance answers 'who says so' with a null join."""
+    from pipeline.enrich import _db
+    emitted = {"enrich:locate", "geocode:geocodio", "overture:building", "enrich:existence"}
+    assert emitted <= set(warehouse.SYNTHETIC_SOURCES), emitted - set(warehouse.SYNTHETIC_SOURCES)
+    assert all(warehouse.SYNTHETIC_SOURCES[s]["class"] == _db.assertion("f", "x", "v", source_id=s)["source_class"]
+               for s in emitted), "dim_source class must match the class the assertions carry"

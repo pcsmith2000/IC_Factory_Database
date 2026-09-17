@@ -115,19 +115,19 @@ class NeonHttp:
 
 
 def connect(url: str | None = None):
-    """Postgres when the driver and port are available, else the same database over HTTPS."""
+    """The enrichment database, always over Neon's HTTPS endpoint.
+
+    Earlier this preferred psycopg and fell back to HTTPS. That fallback was the only branch that
+    ever ran — 5432 is not reachable from the sandbox, and the statements below are written with
+    Postgres' numbered placeholders, which the warehouse cursor (which rewrites `?`) would not
+    translate. One path means the stages are exercised the same way in CI and on a laptop, which
+    is what the fallback was there to achieve and did not.
+    """
     import os
     url = url or os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
     if not url:
-        raise RuntimeError("no DATABASE_URL / DATABASE_URL_UNPOOLED for the enrichment branch")
-    try:
-        import psycopg
-        with psycopg.connect(url, connect_timeout=8):
-            pass
-        from ..warehouse import open_warehouse
-        return open_warehouse()
-    except Exception:
-        return NeonHttp(url)
+        raise RuntimeError("no DATABASE_URL / DATABASE_URL_UNPOOLED for the enrichment database")
+    return NeonHttp(url)
 
 
 # fact_assertions has no evidence column — by design: a published source's assertion points at
@@ -189,3 +189,123 @@ def append(db, assertions: list[dict], release_tag: str) -> dict:
         else:
             skipped += 1
     return {"offered": len(assertions), "inserted": inserted, "already_present": skipped}
+
+
+# ---------------------------------------------------------------- stage 13: rebuilding golden
+# Enrichment appends assertions, and until something applies survivorship to them they are invisible
+# to everything that reads the database: golden_facility is what the site, the exports and
+# SELECT_GOLDEN above all read. Layers 1-8 rebuild golden from the assertions of the release they
+# just computed, in memory, so they neither see enrichment's rows nor preserve them — the next
+# release drops them. That is accepted while the stages are separate actions (docs/enrichment.md);
+# this stage is what makes the run visible until then.
+SELECT_ASSERTIONS = """
+    SELECT facility_key AS facility_id, source_key AS source_id,
+           COALESCE(source_class, '?') AS source_class,
+           COALESCE(date_key, '')      AS retrieved_date,
+           COALESCE(row_hash, '')      AS row_hash,
+           COALESCE(basis, 'none')     AS basis,
+           COALESCE(site_visit, 0)     AS site_visit,
+           COALESCE(confidence, 0)     AS confidence,
+           field_key AS field, value
+    FROM fact_assertions
+    WHERE release_tag = $1
+    ORDER BY facility_key, field_key, assertion_id
+    LIMIT $2 OFFSET $3
+"""
+
+GOLDEN_COLUMN_SQL = 'ALTER TABLE golden_facility ADD COLUMN IF NOT EXISTS "{}" TEXT'
+
+UPSERT_SOURCE = """
+INSERT INTO dim_source (source_key, source_id, name, class, method, status_basis, status)
+VALUES ($1,$2,$3,$4,NULL,NULL,'active')
+ON CONFLICT (source_key) DO UPDATE SET name = EXCLUDED.name, class = EXCLUDED.class
+"""
+
+
+def fetch_assertions(db, release_tag: str, page: int = 5000) -> list[dict]:
+    """Every assertion of one release, shaped like golden.assertions_from_rows output.
+
+    Scoped to the release tag on purpose. fact_assertions is append-only across releases, so
+    rebuilding golden from all of it would resurrect facilities a later release dropped — golden
+    would stop being a statement about the current release.
+    """
+    out, offset = [], 0
+    while True:
+        got = db.query(SELECT_ASSERTIONS, (release_tag, page, offset))
+        out.extend(got)
+        if len(got) < page:
+            return out
+        offset += page
+
+
+def golden_columns(db) -> set[str]:
+    return {r["column_name"] for r in db.query(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'golden_facility'", ())}
+
+
+def missing_golden_columns(db, fields: list[str]) -> list[str]:
+    """Columns this build knows that the database has not got.
+
+    Enrichment can run against a database whose last loader predates a new golden field, and an
+    INSERT naming a column that is not there fails the whole rebuild.
+    """
+    have = golden_columns(db)
+    return [x for f in fields for x in (f, f"{f}__source") if x not in have]
+
+
+def add_golden_columns(db, cols: list[str]) -> list[str]:
+    for col in cols:
+        db.query(GOLDEN_COLUMN_SQL.format(col), ())
+    return list(cols)
+
+
+def register_sources(db, sources: dict) -> int:
+    """dim_source rows for the enrichment source ids, so v_provenance can name who says so."""
+    n = 0
+    for sid, meta in sources.items():
+        db.query(UPSERT_SOURCE, (sid, sid, meta["name"], meta["class"]))
+        n += 1
+    return n
+
+
+def replace_golden(db, rows: list[dict], fields: list[str], release_tag: str, chunk: int = 300) -> int:
+    """Replace golden_facility with these rows, in chunks of one multi-row INSERT each.
+
+    Chunked because NeonHttp.executemany is one HTTPS round trip per row: 4,000 of those is over an
+    hour and the stage times out at 35 minutes. Postgres caps a statement at 65,535 parameters, so
+    the chunk size is bounded by columns-per-row; 300 x 30 leaves plenty of room.
+    """
+    cols = ["facility_key", "release_tag"] + [x for f in fields for x in (f, f"{f}__source")] + \
+           ["n_assertions", "n_sources"]
+    quoted = ", ".join(f'"{c}"' for c in cols)
+    db.query("DELETE FROM golden_facility", ())
+    written = 0
+    for i in range(0, len(rows), chunk):
+        batch = rows[i:i + chunk]
+        params, values, n = [], [], 0
+        for g in batch:
+            vals = [g["facility_id"], release_tag] + \
+                   [_text(g.get(x)) for f in fields for x in (f, f"{f}__source")] + \
+                   [g.get("n_assertions"), g.get("n_sources")]
+            values.append("(" + ",".join(f"${n + j + 1}" for j in range(len(vals))) + ")")
+            params.extend(vals)
+            n += len(vals)
+        db.query(f"INSERT INTO golden_facility ({quoted}) VALUES {','.join(values)}", params)
+        written += len(batch)
+    return written
+
+
+def _text(v):
+    return None if v in (None, "") else str(v)
+
+
+def golden_coverage(db, fields: list[str]) -> dict[str, int]:
+    """How many golden rows carry each field, counted in the database rather than in a snapshot.
+
+    SELECT_GOLDEN reads the eight columns the stages need, so measuring the "before" side of gate
+    E6 from it would report zero for every field it does not select and the gate would wave through
+    a rebuild that dropped them. COUNT(col) ignores nulls, which is exactly the question.
+    """
+    cols = ", ".join(f'COUNT("{f}") AS "{f}"' for f in fields)
+    row = db.query(f"SELECT COUNT(*) AS __rows, {cols} FROM golden_facility", ())[0]
+    return {k: int(v or 0) for k, v in row.items()}

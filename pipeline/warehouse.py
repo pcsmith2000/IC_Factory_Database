@@ -24,11 +24,19 @@ from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 
+# The last two are asserted only by enrichment (docs/enrichment.md). Layers 1-8 leave them NULL,
+# which is the honest answer: no published source measures a building or doubts a plant's existence.
 GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_lon", "naics",
-                 "status", "expiry_date", "product_type"]
+                 "status", "expiry_date", "product_type", "building_sqft", "existence_flag"]
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},
     "lookup": {"name": "Layer 4 entity resolution", "class": "lookup"},
+    # enrichment, stages 9-12: they assert into fact_assertions like any source, so dim_source needs
+    # them or v_provenance answers "who says so" with a null join
+    "enrich:locate": {"name": "Enrichment 9 — web-cited address", "class": "enrichment"},
+    "geocode:geocodio": {"name": "Enrichment 10 — Geocodio rooftop geocode", "class": "enrichment"},
+    "overture:building": {"name": "Enrichment 11 — Overture building footprint", "class": "enrichment"},
+    "enrich:existence": {"name": "Enrichment 12 — existence review flag", "class": "enrichment"},
 }
 
 
@@ -81,6 +89,12 @@ DDL = [
         retrieved_date TEXT, row_position TEXT, source_identifier TEXT,
         name_verbatim TEXT, address_verbatim TEXT, city_verbatim TEXT, state_verbatim TEXT, zip_verbatim TEXT,
         facility_key TEXT, match_method TEXT, match_confidence REAL, last_seen_release TEXT)""",
+]
+
+# Views are created after the golden columns are reconciled, not with the tables: they name every
+# column in GOLDEN_FIELDS, so adding a field would make CREATE VIEW fail on a database whose
+# golden_facility predates it. See _Warehouse.init_schema.
+VIEWS = [
     # golden, one row per (facility, field): the wide table unpivoted (v_provenance depends on it: drop that first)
     "DROP VIEW IF EXISTS v_provenance",
     "DROP VIEW IF EXISTS v_golden_field",
@@ -139,9 +153,29 @@ class _Warehouse:
     placeholder = "?"
     path = ""
 
+    def existing_columns(self, table: str) -> set[str]:
+        """Column names of an existing table, or an empty set if it has none yet."""
+        raise NotImplementedError
+
     def init_schema(self):
+        """Tables, then any golden column this build added, then the views.
+
+        CREATE TABLE IF NOT EXISTS does not widen a table that already exists, so a database
+        created before a field joined GOLDEN_FIELDS keeps its old shape and every later write of
+        that field is silently dropped. The reconcile step below is what makes adding a golden
+        field a code change rather than a migration script.
+        """
         with self.transaction() as c:
             for stmt in DDL:
+                c.execute(stmt)
+        have = self.existing_columns("golden_facility")
+        want = [x for f in GOLDEN_FIELDS for x in (f, f"{f}__source")]
+        with self.transaction() as c:
+            for col in want:
+                if col not in have:
+                    c.execute(f'ALTER TABLE golden_facility ADD COLUMN "{col}" TEXT')
+        with self.transaction() as c:
+            for stmt in VIEWS:
                 c.execute(stmt)
 
     @contextmanager
@@ -264,6 +298,9 @@ class SqliteWarehouse(_Warehouse):
     def _rows(self, raw) -> list[dict]:
         return [dict(r) for r in raw.fetchall()]
 
+    def existing_columns(self, table: str) -> set[str]:
+        return {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
 
 class PostgresWarehouse(_Warehouse):
     """Neon (or any Postgres). Prefers the direct/unpooled URL for the loader — DDL and one long
@@ -295,6 +332,10 @@ class PostgresWarehouse(_Warehouse):
 
     def _rows(self, raw) -> list[dict]:
         return [dict(r) for r in raw.fetchall()] if raw.description else []
+
+    def existing_columns(self, table: str) -> set[str]:
+        rows = self.query("SELECT column_name FROM information_schema.columns WHERE table_name = ?", (table,))
+        return {r["column_name"] for r in rows}
 
 
 def open_warehouse(cfg: dict, root: Path):
