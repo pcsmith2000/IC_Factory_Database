@@ -643,3 +643,80 @@ def test_usage_is_counted_so_the_model_choice_can_be_measured(monkeypatch):
     assert rep["usage"] == {"input_tokens": 4000, "output_tokens": 400, "web_searches": 8}
     # one address out of four attempts carries the whole run's cost
     assert rep["usage_per_located"]["web_searches"] == 8.0
+
+
+# ------------------------------------------------- stage 9 on any gateway model, not just Anthropic
+def test_the_search_objective_is_built_per_row_not_left_static():
+    """The gateway applies a tool's `config` as a developer default that OVERRIDES what the model
+    generates, so a static objective would run the same search 1,181 times. Building it per row
+    also makes the search deterministic given the row, which is the property the rest of the
+    pipeline rests on."""
+    from pipeline.enrich.locate import search_objective
+    o = search_objective({"name": "Acme Modular", "city": "Elkhart", "state": "IN"})
+    assert o == "street address of the Acme Modular manufacturing plant in Elkhart, IN"
+    # a facility with no city still produces a usable objective rather than a dangling preposition
+    assert search_objective({"name": "Acme Modular"}) == \
+        "street address of the Acme Modular manufacturing plant"
+
+
+def test_a_chat_completions_reply_is_parsed_for_answer_usage_and_search_count():
+    from pipeline.enrich.locate import parse_gateway_response
+    got = parse_gateway_response({
+        "choices": [{"message": {
+            "content": 'here you go {"found": true, "address": "1 Plant Rd", "confidence": 0.9, '
+                       '"source_url": "https://x.example/p", "quote": "at 1 Plant Rd"}',
+            "provider_metadata": {"gateway": {"gatewayToolCalls": [{"t": "search"}, {"t": "search"}]}}}}],
+        "usage": {"prompt_tokens": 12345, "completion_tokens": 234}})
+    assert got["answer"]["address"] == "1 Plant Rd"
+    assert got["usage"] == {"input_tokens": 12345, "output_tokens": 234, "web_searches": 2}
+    assert got["visited"] == set(), "the gateway path returns no raw search results"
+
+
+def test_a_reply_missing_every_optional_field_does_not_crash_the_stage():
+    """Gateway metadata shape varies by provider; a missing count must cost this facility at most."""
+    from pipeline.enrich.locate import parse_gateway_response
+    got = parse_gateway_response({"choices": [{"message": {"content": "no json here"}}]})
+    assert got["answer"] == {} and got["usage"]["web_searches"] == 0
+
+
+def test_the_gateway_path_needs_no_anthropic_client_and_no_anthropic_model(monkeypatch):
+    """The point of being on a gateway: an open-weight model gets web search too."""
+    from pipeline.enrich import locate
+    seen = {}
+
+    def fake(row, model, key, search):
+        seen.update(model=model, key=key, search=search)
+        return {"answer": {"found": False, "reason": "nothing"}, "visited": set(),
+                "usage": {"input_tokens": 10, "output_tokens": 1, "web_searches": 1}}
+
+    monkeypatch.setattr(locate, "locate_one_gateway", fake)
+    monkeypatch.setattr(locate, "locate_one",
+                        lambda *a: pytest.fail("the Anthropic path must not be used here"))
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "k")
+    rep = locate.run([{"facility_id": "F1", "name": "Acme", "city": "X", "state": "TX"}],
+                     model="alibaba/qwen3.7-flash", verify_page=False)
+    assert seen == {"model": "alibaba/qwen3.7-flash", "key": "k", "search": "parallel"}
+    assert rep["search"] == "parallel" and rep["attempted"] == 1
+
+
+def test_the_default_model_is_not_a_frontier_vendor():
+    """A regression guard with teeth: the gateway exists so this stage can run on cheap open
+    weights, and a default that drifts back to a frontier vendor silently undoes that."""
+    from pipeline.enrich.locate import DEFAULT_MODEL, DEFAULT_SEARCH, SEARCH_TOOLS
+    assert not DEFAULT_MODEL.startswith(("anthropic/", "openai/", "google/"))
+    assert DEFAULT_SEARCH in SEARCH_TOOLS, "the default must not be a provider-native tool"
+
+
+def test_an_unknown_search_provider_is_refused_before_any_call():
+    from pipeline.enrich import locate
+    with pytest.raises(locate.LocateUnavailable, match="unknown --search"):
+        locate.run([{"facility_id": "F1", "name": "A"}], search="bing")
+
+
+def test_a_gateway_http_error_carries_its_status_so_a_spent_key_is_recognised():
+    """GatewayError must expose status_code or _exhausted() cannot tell a spent key from a bad row,
+    and the 402 that cost 152 facilities would be recorded as 152 rejections all over again."""
+    from pipeline.enrich.locate import GatewayError, _exhausted
+    assert _exhausted(GatewayError(402, '{"error":"budget exceeded"}'))
+    assert _exhausted(GatewayError(404, "no such model"))
+    assert not _exhausted(GatewayError(500, "upstream blew up"))

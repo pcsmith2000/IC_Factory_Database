@@ -152,21 +152,45 @@ so that bucket is a floor rather than a bug to fix.
 
 ### Which model, and how that gets decided
 
-Anthropic is not a free choice: the native `web_search` server tool is what lets the model find and
-open a page in one call, and it is what `_searched_urls` checks a citation against. Take it away and
-stage 9 is back to the ~9% of facilities with a publisher-supplied URL.
+An earlier version of this document said Anthropic was not a free choice, because the native
+`web_search` server tool is what lets the model find and open a page in one call. That was wrong.
+It was a constraint of the API shape this stage happened to use, not of the gateway: Vercel's
+`vercel:*_search` server tools run with **any** model it serves, and they are cheaper than the
+provider-native ones. Two paths exist and `--search` picks:
 
-*Which* Anthropic model is a free choice, and it defaults to Haiku. The task is bounded extraction
-behind gates that discard anything uncited, unverified or under 0.7 confidence, so a weaker model's
-failures are rejected rather than stored — which makes the cheap model the one to justify replacing,
-not the one to justify trying.
+    gateway   Chat Completions + vercel:parallel_search   any model       search $5/1000
+    native    Messages API + web_search_20250305          Anthropic only  search $10/1000
 
-The number that settles it is cost per **located** address, not per call, and the two can move in
-opposite directions: web search is billed per search and is model-independent, so a model that
-halves the token bill while halving the yield is more expensive. Stage 9 records input tokens,
-output tokens and searches, per run and per located address, and `--model` (or the workflow's
-`model` input) switches models without a code change. Run the same `--sample` twice and the two
-summaries answer it. The 10% whose page did not contain the address
+**Search is the dominant cost, not the model.** Prices from the gateway's own model list, per
+million tokens, against a projection at 3 searches and 30k input tokens per facility and the
+measured 42% yield:
+
+                                    search   tokens  /facility  /located  1,181 rows
+    sonnet-5    + anthropic search   0.0300   0.0640     0.0940     0.224        $111
+    haiku-4.5   + anthropic search   0.0300   0.0320     0.0620     0.148         $73
+    gpt-5-nano  + openai search      0.0300   0.0017     0.0317     0.075         $37
+    qwen3.7-flash + parallel         0.0150   0.0010     0.0160     0.038         $19
+    mercury-2.5   + parallel         0.0150   0.0013     0.0163     0.039         $19
+
+Going from Sonnet to an open-weight model cuts the token bill about 50x and the total only 6x,
+because at those prices ~90% of what is left is the per-search charge. Half the remaining saving
+comes from leaving Anthropic's $10/1000 search for Parallel's $5/1000, which is a decision about
+the search provider and not about the model at all. The token column is a projection; the search
+column is exact, and stage 9 now records both so the next run replaces the projection.
+
+The default is `alibaba/qwen3.7-flash` with Parallel search. The task is bounded extraction behind
+gates that discard anything uncited, unverified against the fetched page, or under 0.7 confidence,
+so a weaker model's failures are rejected rather than stored — which makes the cheap model the one
+to justify replacing, not the one to justify trying.
+
+What the gateway path gives up: it returns no raw search results, only a call count, so the check
+that the model cited a page search actually opened cannot run. That check caught 1 rejection in 48.
+Fetching the cited page and confirming the address is on it — the check that does the real work —
+is independent of the search path and unaffected.
+
+Settling it is a run, not an argument, and layers 1-8 learned why: their 60-seed bake-off scored
+`nova-lite` at 97/97 and production gave it recall of 20%. So the method is the same `--sample`
+under each candidate, compared on cost per **located** address. The 10% whose page did not contain the address
 is the number that justifies fetching the page independently at all: without that check those five
 would have been stored as cited facts.
 

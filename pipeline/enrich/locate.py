@@ -6,9 +6,18 @@ citation is discarded rather than stored (gate E1). That distinction is the whol
 recalled plant address is confidently wrong often enough to poison a field nothing downstream can
 second-guess, and no consumer of golden_facility can tell a recalled value from a read one.
 
-Search goes through the Vercel AI Gateway, which exposes Anthropic's native web search over the
-Messages API — the same SDK path layer 3's classifier already uses, so provider resolution stays
-in pipeline.ai_client_and_model and only the tool definition is new here.
+Search goes through the Vercel AI Gateway, and deliberately not through one provider's own tool.
+The gateway's `vercel:*_search` server tools run with ANY model it serves, so stage 9 is not tied
+to a frontier vendor to get search — which is the whole reason the pipeline is on a gateway. Two
+paths exist and `--search` picks between them:
+
+    gateway   Chat Completions + vercel:parallel_search   any model, search $5/1000
+    native    Messages API + web_search_20250305          Anthropic models only, search $10/1000
+
+Search, not the model, is the dominant cost here. Against a cheap open-weight model the token bill
+is a rounding error and roughly 90% of what remains is the per-search charge, so the provider of
+the search matters more than the provider of the model. That is why the default path is the one
+that costs $5 rather than $10, and why the model is a switch rather than a decision baked in.
 
 Reach: without search this stage could only extract from pages some source already published a URL
 for, which is about 9% of the facilities that need an address. With search it is not bounded that
@@ -20,17 +29,33 @@ import json, re
 # The gateway documents Anthropic's basic server tool for the Messages API. Newer model families
 # take web_search_20260209 with dynamic filtering; change this constant, not the call site.
 WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search", "max_uses": 4}
-# Haiku until a measurement says otherwise. The task is bounded extraction — open a page, return a
-# street address or found=false — behind gates that discard anything uncited, unverified or under
-# 0.7 confidence, so a weaker model's failures are rejected rather than stored. That makes the
-# cheap model the one to justify replacing, not the one to justify trying.
+
+GATEWAY_CHAT_URL = "https://ai-gateway.vercel.sh/v1/chat/completions"
+# Parallel and Perplexity are both $5/1000; Exa and Tako are $7. The config field differs by tool
+# ("objective" vs "query"), which is why the name is paired with its field rather than bare.
+SEARCH_TOOLS = {"parallel": ("vercel:parallel_search", "objective"),
+                "perplexity": ("vercel:perplexity_search", "query"),
+                "exa": ("vercel:exa_search", "query"),
+                "tako": ("vercel:tako_search", "query")}
+DEFAULT_SEARCH = "parallel"
+MAX_RESULTS = 5
+# An open-weight model, because the gateway is what makes that possible and stage 9 has no reason
+# to pay frontier prices: the task is bounded extraction — open a page, return a street address or
+# found=false — behind gates that discard anything uncited, unverified against the fetched page, or
+# under 0.7 confidence. A weaker model's failures are REJECTED, not stored, which makes the cheap
+# model the one to justify replacing rather than the one to justify trying.
 #
-# The number that decides it is cost per LOCATED address, not per call, and the two can move in
-# opposite directions: web search is billed per search and is model-independent, so a model that
-# halves the token bill while halving the yield is more expensive, not less. Stage 9 now records
-# input tokens, output tokens and searches per run and per located address, so the next pass
-# settles this with its own numbers. `--model` switches it without a code change.
-DEFAULT_MODEL = "anthropic/claude-haiku-4.5"
+# qwen3.7-flash rather than the very cheapest: $0.03/$0.13 per Mtok, tool-use, a 991k context that
+# swallows search results without truncation, and it scored 100/97 in layers 1-8's bake-off without
+# the instability that failed gpt-oss-120b and nova-lite there. That is a starting point, not a
+# finding — layers 1-8 learned the hard way that a bake-off predicts little about production, so
+# the number that settles it is cost per LOCATED address measured on a real --sample.
+#
+# Cost per call and cost per located address can move in opposite directions: search is billed per
+# search and is model-independent, so a model that halves the token bill while halving the yield
+# costs more. Both are recorded per run. `--model` and `--search` switch either without a code
+# change, so the comparison is a workflow input rather than a commit.
+DEFAULT_MODEL = "alibaba/qwen3.7-flash"
 
 PROMPT = """Find the street address of the manufacturing plant below.
 
@@ -111,6 +136,73 @@ def _searched_urls(blocks) -> set[str]:
                 if u:
                     urls.add(u)
     return urls
+
+
+def search_objective(row: dict) -> str:
+    """The search the gateway runs for this facility.
+
+    Built here rather than left to the model. The gateway applies a tool's `config` as a developer
+    default that overrides model-generated values, so a static objective would search for the same
+    thing 1,181 times. Building it per row turns that from a hazard into a feature: the search is
+    deterministic given the row, which is the property the rest of this pipeline is built on.
+    """
+    where = ", ".join(x for x in (row.get("city") or "", row.get("state") or "") if x)
+    return (f"street address of the {row.get('name', '')} manufacturing plant"
+            + (f" in {where}" if where else "")).strip()
+
+
+class GatewayError(RuntimeError):
+    """Carries the HTTP status so _exhausted() can tell a spent key from a bad facility."""
+    def __init__(self, status_code: int, body: str):
+        self.status_code = status_code
+        super().__init__(f"Error code: {status_code} - {body[:300]}")
+
+
+def locate_one_gateway(row: dict, model: str, key: str, search: str = DEFAULT_SEARCH,
+                       timeout: int = 120) -> dict:
+    """One facility, via Chat Completions and a gateway search tool — any model, any provider.
+
+    The gateway runs the search itself and returns only the final answer, so unlike the Messages
+    path there is no list of URLs search actually opened and the `visited` check cannot run. That
+    check caught 1 rejection in 48; the check that does the work — fetching the cited page and
+    confirming the address is on it — is independent of all this and unaffected.
+    """
+    import urllib.error, urllib.request
+    tool_type, field = SEARCH_TOOLS[search]
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": PROMPT.format(
+            name=row.get("name", ""), city=row.get("city", ""), state=row.get("state", ""))}],
+        "tools": [{"type": tool_type,
+                   "config": {field: search_objective(row), "max_results": MAX_RESULTS}}],
+        "tool_choice": "required",       # the prompt forbids answering from memory; enforce it
+        "max_tokens": 1500,
+    }).encode()
+    req = urllib.request.Request(GATEWAY_CHAT_URL, data=body, method="POST",
+                                 headers={"Authorization": f"Bearer {key}",
+                                          "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            out = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        raise GatewayError(e.code, e.read().decode("utf-8", "replace")) from None
+    return parse_gateway_response(out)
+
+
+def parse_gateway_response(out: dict) -> dict:
+    """Pull the answer, the search count and the token usage out of a Chat Completions reply."""
+    choice = (out.get("choices") or [{}])[0]
+    msg = choice.get("message") or {}
+    text = msg.get("content") or ""
+    usage = out.get("usage") or {}
+    # the gateway reports what it ran here; there is no raw search result to read
+    meta = ((msg.get("provider_metadata") or {}).get("gateway") or {})
+    calls = meta.get("gatewayToolCalls")
+    searches = len(calls) if isinstance(calls, list) else (calls or 0)
+    return {"answer": _extract_json(text) or {}, "visited": set(),
+            "usage": {"input_tokens": usage.get("prompt_tokens", 0) or 0,
+                      "output_tokens": usage.get("completion_tokens", 0) or 0,
+                      "web_searches": searches}}
 
 
 def locate_one(row: dict, client, model: str) -> dict:
@@ -237,19 +329,41 @@ def _reason(why: str) -> str:
 
 
 def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
-        min_confidence: float = 0.7, verify_page: bool = True) -> dict:
-    """rows: facilities with no address. Returns assertions plus a report."""
+        min_confidence: float = 0.7, verify_page: bool = True,
+        search: str = DEFAULT_SEARCH) -> dict:
+    """rows: facilities with no address. Returns assertions plus a report.
+
+    `search` picks the path: "native" is Anthropic's own tool over the Messages API and needs an
+    Anthropic model; anything in SEARCH_TOOLS is the gateway's, and works with any model it serves.
+    """
+    import os
     from ._db import assertion
     from ..contract import street_key
-    if client is None:
-        client, model, _provider = _client(model)
+    # An explicit client is a Messages client, so it selects the path it can actually drive.
+    if client is not None:
+        search = "native"
+    if search != "native" and search not in SEARCH_TOOLS:
+        raise LocateUnavailable(
+            f"unknown --search {search!r}: expected native or one of {sorted(SEARCH_TOOLS)}")
+    if search == "native":
+        if client is None:
+            client, model, _provider = _client(model)
+        call = lambda row: locate_one(row, client, model)
+    else:
+        key = os.environ.get("AI_GATEWAY_API_KEY")
+        if not key:
+            raise LocateUnavailable(
+                f"--search {search} goes through the Vercel AI Gateway and needs "
+                "AI_GATEWAY_API_KEY; use --search native for the Anthropic path, or --limit 0 "
+                "to skip the AI stage entirely")
+        call = lambda row: locate_one_gateway(row, model, key, search)
     asserts, rejected = [], []
     attempted, stopped = 0, ""
     usage = {"input_tokens": 0, "output_tokens": 0, "web_searches": 0}
     for row in rows:
         attempted += 1
         try:
-            got = locate_one(row, client, model)
+            got = call(row)
         except Exception as e:
             stopped = _exhausted(e)
             if stopped:
@@ -293,7 +407,7 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
                                  confidence=float(conf), evidence=f"{url} :: {quote[:300]}"))
     import collections
     return {"requested": len(rows), "attempted": attempted, "assertions": asserts,
-            "located": len(asserts), "rejected": rejected, "model": model,
+            "located": len(asserts), "rejected": rejected, "model": model, "search": search,
             "deferred": len(rows) - attempted,
             "budget_exhausted": bool(stopped), "budget_message": stopped[:300],
             "rejected_by_reason": dict(collections.Counter(_reason(r["why"]) for r in rejected)),

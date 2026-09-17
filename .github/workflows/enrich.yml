@@ -39,6 +39,9 @@ on:
       model:
         description: "model id for the AI stage (blank = the pinned default)"
         default: ""
+      search:
+        description: "search provider for the AI stage: parallel | perplexity | exa | tako | native"
+        default: ""
       sample:
         description: "work on a seeded stratified subset of this size (blank = all)"
         default: ""
@@ -135,6 +138,7 @@ jobs:
       args: >-
         ${{ needs.branch.outputs.common_args }} --limit ${{ inputs.ai_limit || 200 }}
         ${{ inputs.model && format('--model {0}', inputs.model) || '' }}
+        ${{ inputs.search && format('--search {0}', inputs.search) || '' }}
 
   geocode:
     needs: [branch, locate]

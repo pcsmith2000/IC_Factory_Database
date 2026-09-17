@@ -81,6 +81,7 @@ def main(argv=None) -> int:
     ap.add_argument("--footprint-limit", type=int, default=DEFAULT_FOOTPRINT_LIMIT,
                     help="hard ceiling on distinct Overture files a run may read (default 40)")
     ap.add_argument("--model", default="", help="model id for the AI stage (default: see locate.DEFAULT_MODEL)")
+    ap.add_argument("--search", default="", help="search provider: parallel | perplexity | exa | tako | native")
     ap.add_argument("--release-tag", default=os.environ.get("ENRICH_RELEASE_TAG", ""))
     ap.add_argument("--dry-run", action="store_true", help="plan the stage; make no external call")
     args = ap.parse_args(argv)
@@ -122,7 +123,12 @@ def main(argv=None) -> int:
             _emit(args.out, "locate", {"planned": len(todo), "ceiling": args.limit, "called": 0},
                   [("would attempt", len(todo)), ("ceiling", args.limit), ("calls made", 0)])
             return 0
-        rep = locate.run(todo, **({"model": args.model} if args.model else {}))
+        kw = {}
+        if args.model:
+            kw["model"] = args.model
+        if args.search:
+            kw["search"] = args.search
+        rep = locate.run(todo, **kw)
         (args.out).mkdir(parents=True, exist_ok=True)
         (args.out / "locate.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
         table = [("eligible", len(need_addr)), ("ceiling", args.limit),
@@ -134,7 +140,7 @@ def main(argv=None) -> int:
                  ("why rejected", json.dumps(rep["rejected_by_reason"])),
                  ("usage", json.dumps(rep["usage"])),
                  ("usage per located address", json.dumps(rep["usage_per_located"])),
-                 ("model", rep["model"])]
+                 ("model", rep["model"]), ("search", rep["search"])]
         if rep.get("budget_exhausted"):
             table.insert(0, ("DEFERRED (AI Gateway budget spent)", rep["deferred"]))
             print(f"::warning::AI Gateway key budget exhausted after {rep['attempted']} of "
