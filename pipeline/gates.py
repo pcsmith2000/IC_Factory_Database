@@ -115,28 +115,78 @@ def g1_dedupe(facilities: list[dict], max_rate: float, thresholds: dict, out_csv
 
 
 # ---------------------------------------------------------------- G2
-def g2_false_merge(rows: list[dict]) -> GateResult:
-    """A cluster holding two irreconcilable street keys in one city is a false merge.
-    Built as a detector over the reconciled rows; flagged clusters fail the gate."""
-    by_fac: dict[str, set[str]] = defaultdict(set)
-    rows_per_fac: dict[str, int] = defaultdict(int)
+def g2_false_merge(rows: list[dict], out_csv: Path | None = None,
+                   max_rate: float = 1.0, target_rate: float | None = None,
+                   min_sim: float = 0.60) -> GateResult:
+    """Two different businesses sharing one facility id.
+
+    This used to look for a cluster holding more than one street key, and reported "0 false merges
+    in 177 merged clusters" on every run. That number was arithmetic, not evidence: a facility's id
+    comes from a signature that CONTAINS the street key, so every addressed row in it carries the
+    same key by construction and len(keys) > 1 was unreachable. The gate could not fail, and said
+    tested=True while saying it — a worse outcome than the honest skip it was meant to avoid.
+
+    The detectable signal under street-key clustering is the opposite one: one address, two
+    unrelated NAMES. Industrial parks, shared buildings and a street key that dropped a unit
+    designator all put distinct firms on one id. On the 2026-09-17 run 41 of 177 multi-row
+    facilities showed it — "spitzer industries" with "volta", "atkinson ind" with "nvent",
+    "bizon group" with "conexwest".
+
+    It reports rather than halts, because the same signal covers legitimate aliasing: "smi homes"
+    and "structural modular innovations" are one firm, "cmh manufacturing west" and "schult homes"
+    are two brands of one Clayton plant, "bildt" is a typo for "boldt". Telling those apart needs a
+    person or an entity resolver, which is Layer 4's job and Layer 4 is a stub. So the pairs go to
+    a review CSV exactly as G1's do, and the ceiling is honest about being provisional.
+    """
+    by_fac: dict[str, list[dict]] = defaultdict(list)
     for r in rows:
         if r.get("street_key"):
-            by_fac[r["facility_id"]].add(r["street_key"])
-            rows_per_fac[r["facility_id"]] += 1
-    flagged = {fid: sorted(keys) for fid, keys in by_fac.items() if len(keys) > 1}
-    # A false merge needs a merge. If no facility was built from more than one addressed row,
-    # there was nothing this detector could have found, and "0 clusters with >1 street key" is
-    # arithmetic rather than evidence. Layer 4 is a stub, so that has been true on every run.
-    merged = sum(1 for fid, n in rows_per_fac.items() if n > 1)
+            by_fac[r["facility_id"]].append(r)
+    merged = {fid: rs for fid, rs in by_fac.items() if len(rs) > 1}
     if not merged:
         return GateResult("G2 false-merge check", True,
                           f"untested: no facility was built from more than one addressed row, so "
-                          f"no merge could be false ({len(by_fac)} clusters, all single-source)",
+                          f"no merge could be false ({len(by_fac)} clusters, all single-row)",
                           {"flagged": {}, "merged_clusters": 0}, tested=False)
-    return GateResult("G2 false-merge check", not flagged,
-                      f"{len(flagged)} false merges in {merged} merged clusters",
-                      {"flagged": flagged, "merged_clusters": merged})
+    # Two signals, and they mean different things. A cluster holding two street keys means the
+    # clustering itself broke — ids come from a signature containing the key, so it cannot happen
+    # while reconcile works, and if it ever does it is a bug, not a judgement call. That fails
+    # outright, at any rate. Unrelated names at ONE key is the data-quality signal, and it is
+    # rate-gated because aliasing produces it too.
+    structural = {fid: sorted({r["street_key"] for r in rs})
+                  for fid, rs in merged.items() if len({r["street_key"] for r in rs}) > 1}
+    flagged = {}
+    for fid, rs in merged.items():
+        names = sorted({norm_name(r.get("name_verbatim", "")) for r in rs if r.get("name_verbatim")})
+        if len(names) < 2:
+            continue
+        worst = min(_sim(a, b) for i, a in enumerate(names) for b in names[i + 1:])
+        if worst < min_sim:
+            flagged[fid] = {"similarity": round(worst, 2), "names": names,
+                            "street_key": rs[0].get("street_key"), "state": rs[0].get("state")}
+    rate = len(flagged) / len(merged)
+    if out_csv is not None:
+        out_csv.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_csv, "w", newline="") as fh:
+            w = csv.writer(fh)
+            w.writerow(["similarity", "facility_id", "state", "street_key", "names", "decision"])
+            for fid, d in sorted(flagged.items(), key=lambda x: x[1]["similarity"]):
+                w.writerow([d["similarity"], fid, d["state"], d["street_key"], " | ".join(d["names"]), ""])
+    debt = ""
+    if target_rate is not None and rate > target_rate:
+        debt = (f"; ABOVE the {target_rate:.0%} target — aliasing and genuine false merges cannot be "
+                f"separated until Layer 4 resolves entities, so every pair needs review")
+    det = {"flagged": flagged, "structural": structural, "merged_clusters": len(merged),
+           "rate": rate, "target_rate": target_rate,
+           "review_csv": str(out_csv) if out_csv else None}
+    if structural:
+        return GateResult("G2 false-merge check", False,
+                          f"{len(structural)} clusters hold more than one street key — the "
+                          f"signature that issues a facility id contains that key, so this means "
+                          f"clustering is broken, not that the data is messy", det)
+    return GateResult("G2 false-merge check", rate <= max_rate,
+                      f"{len(flagged)} of {len(merged)} merged clusters hold unrelated names "
+                      f"= {rate:.1%} (max {max_rate:.0%}){debt}", det)
 
 
 # ---------------------------------------------------------------- G3

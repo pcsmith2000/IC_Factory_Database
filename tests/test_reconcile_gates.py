@@ -423,3 +423,45 @@ def test_an_attached_row_does_not_claim_street_level_provenance(tmp_path: Path):
     assert addressed["match_method"] == "street_key" and addressed["match_confidence"] == 0.90
     assert homeless["match_method"] == "name+city→addressed"
     assert homeless["match_confidence"] == 0.70      # not the cluster's 0.90
+
+
+# ------------------------------------------------- G2, which could not fail before
+def _arow(fid, name, street="100 main st", state="TX"):
+    return {"facility_id": fid, "name_verbatim": name, "street_key": street, "state": state}
+
+
+def test_g2_flags_two_unrelated_businesses_at_one_address(tmp_path: Path):
+    """The real false merge: one street key, two firms. 41 of 177 merged clusters on 2026-09-17."""
+    rows = [_arow("IC-1", "SPITZER INDUSTRIES"), _arow("IC-1", "VOLTA")]
+    r = gates.g2_false_merge(rows, tmp_path / "fm.csv", 1.0, 0.05)
+    assert r.tested and r.details["rate"] == 1.0
+    assert "IC-1" in r.details["flagged"]
+    assert "spitzer industries" in (tmp_path / "fm.csv").read_text()
+
+
+def test_g2_does_not_flag_a_name_variant_of_one_firm(tmp_path: Path):
+    rows = [_arow("IC-1", "PAR KUT INTERNATIONAL"), _arow("IC-1", "PAR KUT INTL")]
+    assert gates.g2_false_merge(rows, tmp_path / "fm.csv", 1.0, 0.05).details["flagged"] == {}
+
+
+def test_g2_says_untested_when_nothing_merged(tmp_path: Path):
+    r = gates.g2_false_merge([_arow("IC-1", "ACME MODULAR")], tmp_path / "fm.csv", 1.0, 0.05)
+    assert r.tested is False and "untested" in r.summary
+
+
+def test_g2_cannot_be_satisfied_by_the_old_street_key_test(tmp_path: Path):
+    """Guards the defect this replaced. Clusters are keyed BY street_key, so every addressed row
+    in a facility shares one and the old 'more than one street key' check was unreachable —
+    it reported 0 of 177 and called itself tested. Here two firms share one key: the old test
+    sees nothing, the new one must flag it."""
+    rows = [_arow("IC-1", "ATKINSON IND", "1801 e 27th st terrace"),
+            _arow("IC-1", "NVENT", "1801 e 27th st terrace")]
+    keys = {r["street_key"] for r in rows}
+    assert len(keys) == 1                       # the old detector's condition can never be met
+    assert gates.g2_false_merge(rows, tmp_path / "fm.csv", 1.0, 0.05).details["flagged"]
+
+
+def test_g2_ceiling_can_fail_a_run(tmp_path: Path):
+    """It reports today, but it must be a gate that CAN halt once a ceiling is set."""
+    rows = [_arow("IC-1", "SPITZER INDUSTRIES"), _arow("IC-1", "VOLTA")]
+    assert not gates.g2_false_merge(rows, tmp_path / "fm.csv", 0.10, 0.05).passed

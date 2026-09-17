@@ -232,7 +232,9 @@ def main(argv=None) -> int:
     results = [
         gates.g1_dedupe(facilities, g["g1_dedupe_max_rate"], g["g1_thresholds"],
                         out / f"dedupe_audit_{started:%Y-%m-%d}.csv", g.get("g1_dedupe_target_rate")),
-        gates.g2_false_merge(rec["rows"]),
+        gates.g2_false_merge(rec["rows"], out / f"false_merge_audit_{started.date()}.csv",
+                             g.get("g2_max_unrelated_name_rate", 1.0),
+                             g.get("g2_target_unrelated_name_rate")),
         gates.g3_id_stability(rec["ids_issued"], g["g3_allow_new_ids_on_rerun"], args.rerun),
         gates.g4_control_isolation(ROOT / cfg["control"]["path"], ROOT / cfg["control"]["checksum_path"], rec["rows"]),
         gates.g5_classifier_eval(labels, seeds, g["g5_min_precision"], g["g5_min_recall"],
