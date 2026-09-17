@@ -285,18 +285,27 @@ sources:
   url: https://www.sbcacomponents.com/member-directory
 - id: pci_certified
   name: PCI certified plants (republished in Ascent magazine)
-  class: D
+  class: C
   method: browser
   needs_classify: false
   ai_extraction: true
   carries:
   - plant_address
-  - product_codes
-  status_basis: certified_as_of_date
+  - product_types
+  - certification_category
+  status_basis: certified
   traps:
-  - Live search is an empty JS form; the Ascent directory ("AS OF JUNE 2026") is the usable form.
-  - Product codes separate building-envelope precast from bridge plants.
-  status: queued
+  - The Ascent magazine PDFs the entry used to point at are real but stop in 2016. The live grid is the directory.
+  - 'A plain fetch returns a REGIONAL DEFAULT of ~12 plants (CO/ID/MT/UT). The roster only appears after the form is submitted,
+    so this is a genuine browser job: one submit per state.'
+  - NOT every PCI plant is IC. The certification covers rail ties, box culverts, pipe and piles as readily as building precast.
+    Keep a plant only when its own 'Products Produced' names a building product.
+  - The state dropdown mixes in Alberta, Yukon, Western Australia and the Armed Forces regions, and 'WA' is the code for BOTH
+    Washington and Western Australia. Filter by LABEL, never by code.
+  - Result cells run name-then-address and many names carry a comma ('Basin Precast, Inc. 34956 Co Rd 126'), so the street
+    starts at its house number, not after the name.
+  status: active
+  url: https://www.pci.org/PCIMS/Directories/Certified_Plants_Search.aspx
 - id: mbi_members
   name: MBI member directory
   class: D

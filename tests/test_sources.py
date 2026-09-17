@@ -462,3 +462,36 @@ def test_the_browser_never_asks_playwright_to_download_a_second_chromium():
     src = (__import__("pathlib").Path(_browser.__file__)).read_text()
     assert "playwright install" not in src.replace("do NOT run `playwright install`", "")
     assert _browser._chromium_path(), "no Chromium found under /opt/pw-browsers"
+
+
+def test_pci_keeps_building_precast_and_skips_infrastructure():
+    """The certification covers rail ties and box culverts as readily as wall panels."""
+    from pipeline.sources.pci_certified import _is_building_precast
+    assert _is_building_precast("Architectural Precast, Double Tees, Structural Wall Panels")
+    assert _is_building_precast("Bleachers, Beams, Columns")
+    assert not _is_building_precast("Rail Road Ties")
+    assert not _is_building_precast("Box Culverts, Pipe, Piles")
+
+
+def test_pci_street_starts_at_the_house_number():
+    """Cells run name-then-address and many names carry their own comma, so the segment before the
+    city is "Inc. 34956 Co Rd 126" — stripping the name off the front does not help."""
+    from pipeline.sources.pci_certified import _rows
+    page = ('<tr class="rgRow"><td>Basin Precast, Inc. 34956 Co Rd 126, Sidney, MT 59270 '
+            'United States Certification Category: C3 Products Produced: Double Tees</td>'
+            '<td>Basin Precast, Inc.</td></tr>')
+    r = _rows(page)[0]
+    assert r["street"] == "34956 Co Rd 126"
+    assert (r["city"], r["state"], r["zip"]) == ("Sidney", "MT", "59270")
+    assert r["products"] == "Double Tees"
+
+
+def test_pci_sweeps_us_states_by_label_not_by_code():
+    """"WA" is Washington AND Western Australia in the same dropdown."""
+    from pipeline.sources.pci_certified import _options
+    page = ('<select id="x_Input3_DropDown1">'
+            '<option value="WA:::78">Washington</option>'
+            '<option value="WA:::80">Western Australia</option>'
+            '<option value="AB:::2">Alberta</option>'
+            '<option value="MT:::26">Montana</option></select>')
+    assert _options(page) == [("WA:::78", "WA"), ("MT:::26", "MT")]
