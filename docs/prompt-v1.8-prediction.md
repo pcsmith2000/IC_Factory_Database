@@ -52,3 +52,31 @@ about 7 rows. The ceiling on today's sources is 49.4%.
 If v1.8 lands at or above 37.3%, take it and stop. If it lands below, revert to v1.4's prompt
 (hash 23e69d2b0d70) and stop anyway. Either way the next hours belong to sources and to the
 per-row enrichment pass, not to this file.
+
+---
+
+## Appendix: the truncation sweep, and its negative result
+
+Two sources were found publishing a fraction of a roster as the whole roster on the same day —
+sipa (one page of five, 10 rows against 14) and mbma (one screen of an infinite scroll). Both were
+found by accident, so every archived list page was swept for the same failure rather than waiting
+for a third.
+
+410 archived HTML files across 10 sources, checked for pager links (`?page=`, `/page/N`, `start=`,
+`offset=`, `pg=`) and for infinite-scroll and `rel="next"` markers, with blog, news, gallery and
+event pagers excluded as irrelevant.
+
+**Only sipa carries a real pager, and it is now followed.** Everything else is clean:
+bldr_locations, corporate_locations, fl_bcis, iibc, in_dhs, mbi_members, mbma, pa_dced,
+superior_walls. mbi_members was the one most worth checking — 52 letter pages, 188 rows — and none
+of its letter pages carries a pager at all.
+
+superior_walls flagged on a first pass and is a false positive worth recording so it is not chased
+again: the pagination markup is on its blog and its photo gallery (`data-max-pages="5"` on an
+`mk-gallery`), not on the licensee list.
+
+The first pass of this sweep was itself wrong and is worth recording too. It stopped downloading
+after six clean files per source, which meant it checked 10 of 410 files and skipped sipa's own
+index — the one file that would have flagged. The second pass targets list-looking filenames with
+no cutoff. A sweep that samples the wrong six files returns "clean" just as confidently as one that
+checked everything.
