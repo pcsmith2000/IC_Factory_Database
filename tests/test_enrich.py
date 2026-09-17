@@ -253,3 +253,29 @@ def test_footprint_defers_rather_than_drops_when_the_file_ceiling_is_hit(monkeyp
     assert all(r["building_sqft"] is None for r in res)
     assert all(r["reason"] == "deferred: file ceiling reached" for r in res)
     assert {r["facility_id"] for r in res} == {p["facility_id"] for p in pts}
+
+
+def test_geocode_records_an_unplaceable_address_so_it_is_not_retried():
+    """Geocodio returns the same answer for the same address until its parcel data changes. Without
+    a record of the attempt, every run spends its ceiling re-learning which rows it cannot place and
+    never reaches the ones it has not tried."""
+    from pipeline.enrich import geocode as gc
+
+    def fake_post(queries, key):
+        return [{"query": q, "response": {"results": [
+            {"location": {"lat": 1.0, "lng": 2.0}, "accuracy": 0.8,
+             "accuracy_type": "street_center", "source": "TIGER/Line"}]}} for q in queries]
+
+    import pipeline.enrich.geocode as mod
+    orig, mod._post = mod._post, fake_post
+    try:
+        rep = gc.run([{"facility_id": "IC-1", "address": "1 Main St", "city": "X",
+                       "state": "TX", "zip": ""}], key="k")
+    finally:
+        mod._post = orig
+
+    assert rep["stored"] == 0                                   # no coordinate: not a rooftop
+    a = rep["assertions"][0]
+    assert a["field"] == "geocode_quality" and a["value"] == "street_center"
+    assert a["basis"] == "not_rooftop"
+    assert not any(x["field"] == "lat_lon" for x in rep["assertions"])

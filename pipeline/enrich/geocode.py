@@ -72,6 +72,15 @@ def run(rows: list[dict], key: str | None = None) -> dict:
                       "accuracy": hits[0].get("accuracy") if hits else None,
                       "dataset": hits[0].get("source") if hits else None})
         if at not in STORABLE:
+            # Recorded so the next run does not spend a lookup re-learning it. Geocodio returns the
+            # same answer for the same address until its underlying parcel data changes, and these
+            # addresses are the tail that never matches: without this, every run burns its ceiling
+            # on the rows it already knows it cannot place, and never reaches new ones.
+            asserts.append(assertion(
+                row["facility_id"], "geocode_quality", at,
+                source_id="geocode:geocodio", basis="not_rooftop",
+                confidence=hits[0].get("accuracy") if hits else None,
+                evidence=f"geocodio:{(hits[0].get('source') if hits else 'no_result')}"))
             continue                                   # a flag only; never a coordinate
         loc = hits[0]["location"]
         asserts.append(assertion(

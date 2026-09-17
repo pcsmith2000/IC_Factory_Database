@@ -23,7 +23,10 @@ SELECT_GOLDEN = """
            d.tier, g.release_tag,
            EXISTS (SELECT 1 FROM fact_assertions a
                     WHERE a.facility_key = g.facility_key
-                      AND a.field_key = 'lat_lon' AND a.basis = 'rooftop') AS has_rooftop
+                      AND a.field_key = 'lat_lon' AND a.basis = 'rooftop') AS has_rooftop,
+           EXISTS (SELECT 1 FROM fact_assertions a
+                    WHERE a.facility_key = g.facility_key
+                      AND a.field_key = 'geocode_quality') AS geocode_tried
     FROM golden_facility g
     LEFT JOIN dim_facility d ON d.facility_key = g.facility_key
 """

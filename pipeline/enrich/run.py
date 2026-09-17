@@ -71,6 +71,8 @@ def main(argv=None) -> int:
                     help="hard ceiling on facilities for the AI stage (default 200)")
     ap.add_argument("--geocode-limit", type=int, default=DEFAULT_GEOCODE_LIMIT,
                     help="hard ceiling on Geocodio lookups per run (default 2000, free tier 2500/day)")
+    ap.add_argument("--regeocode", action="store_true",
+                    help="look up addresses again that a previous run could not place")
     ap.add_argument("--footprint-limit", type=int, default=DEFAULT_FOOTPRINT_LIMIT,
                     help="hard ceiling on distinct Overture files a run may read (default 40)")
     ap.add_argument("--release-tag", default=os.environ.get("ENRICH_RELEASE_TAG", ""))
@@ -84,7 +86,10 @@ def main(argv=None) -> int:
         return r.get("has_rooftop") in (True, "t", "true", 1)
     need_addr = _db.needs(rows, "address")
     # an EPA coordinate does not disqualify a facility from being geocoded — it is the reason to
-    need_coord = [r for r in rows if (r.get("address") or "").strip() and not rooftop(r)]
+    tried = lambda r: r.get("geocode_tried") in (True, "t", "true", 1)
+    # an address already looked up and found unplaceable is not re-looked-up, unless asked
+    need_coord = [r for r in rows if (r.get("address") or "").strip() and not rooftop(r)
+                  and (args.regeocode or not tried(r))]
     have_coord = [r for r in rows if rooftop(r)]
 
     if args.stage == "plan":
