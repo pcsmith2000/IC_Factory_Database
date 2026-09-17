@@ -90,10 +90,28 @@ Read from the release database on 2026-09-17 (`v1.0.0+reg.22389a4`), not estimat
     stage 11 have a coordinate to measure   1878
     neither address nor coordinate          1231
 
-Stage 11 is the one with work to do today: 1,878 facilities already carry a coordinate, almost all
-of them from EPA, and none of them has a footprint. Stage 10's 956 fit inside Geocodio's free tier
-over two days. Stage 9's 1,231 are the hard part, and the number that matters there is not 1,231
-but how many can be reached at all — see below.
+That reading was wrong about stage 11, and the first workflow run proved it. 1,878 facilities carry
+a coordinate, so stage 11 looked like the cheapest large win. But **every** lat_lon in the release
+is asserted by `epa_frs` — 4,141 assertions, none from any other source — and EPA's coordinates are
+facility-self-reported. Measured against Overture on 80 of them:
+
+    EPA coordinates        35 of 80 resolved to a building   median 4,583 sqft
+    rooftop geocodes       18 of 19 resolved                 median 63,968 sqft
+
+An EPA coordinate lands near a site, not on its roof. That is fine for a map pin and useless for
+measuring a building: 21 of the 35 it did resolve fell below the size stage 12 treats as
+implausible, which would have manufactured a flag out of a geocoding artefact.
+
+So stage 11 measures a coordinate only when a rooftop geocode produced it, and an EPA coordinate is
+not a reason to skip geocoding a facility — it is the reason to geocode it. The funnel is therefore:
+
+    stage 9  need an address                     1231
+    stage 10 have address, no rooftop coordinate 2834
+    stage 11 have a rooftop coordinate              0   until stage 10 runs
+
+Stage 11 legitimately has nothing to do yet, which is a better answer than measuring 1,878 EPA
+points and reporting their median as though it meant something. Stage 10's 2,834 exceed Geocodio's
+2,500/day free tier, so it carries a ceiling of its own.
 
 ## Stage 9 reaches far less than its target, and the reason is structural
 
