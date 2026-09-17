@@ -5,3 +5,16 @@ states:
   KY: "No component roster published."
   MO: "No component roster published."
   CA: "HCD issues no plant-level identifier; rows are company-level leads capped at T1."
+  # Out of band HIGH, which the frame's own definition allows. docs/pipeline-v4.md records that
+  # the CBP frame is a FLOOR, not a count: WA holds 63 core-NAICS plants against a floor of 61 and
+  # OR 51 against 58, and a sample of WA's rows is Peninsula Truss, Louws Truss, Noble Truss, Trus
+  # Way, Method Homes, Lindal Cedar Homes and Premier Building Systems — all genuine. Checked
+  # whether the widened 3219/3212 candidate families explained it; they do not, since restricting
+  # to core codes makes the bias worse (OR 2.13 -> 2.43, WA 2.29 -> 2.85). Nothing to fix here: a
+  # floor-type denominator cannot support the band's 1.4 upper bound, which is a property of the
+  # metric rather than of these states.
+  OR: "Above the frame, and the frame is a floor. Timber-belt truss and prefab density; sampled rows are genuine plants."
+  WA: "Above the frame, and the frame is a floor. Timber-belt truss and prefab density; sampled rows are genuine plants."
+  # Out of band LOW with a source already active (pa_dced contributes 114 rows). This one is a
+  # real gap, not an artefact: 83 located against a frame floor of 180, and no cause established.
+  PA: "UNRESOLVED — 46% of the frame floor with pa_dced active. Needs a second PA roster or an audit of what pa_dced omits."
