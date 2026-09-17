@@ -24,10 +24,15 @@ CSZ = re.compile(r"^(.+?),?\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\s*$")
 # Grouping on the city line and calling the first line the name (as this parser first did) put the
 # street in name_verbatim and the "122 Wisconsin Homes Inc PO Box 250" string in address_verbatim,
 # which then geocoded to a town centroid for all 166 rows. The middle line is the reliable anchor:
-# it is the only line carrying a phone number, and its leading CA number is unique and ascending.
-# A name too long for the column wraps onto the street or city line, so each is split apart again.
+# its leading CA number is unique and ascending, and the locality line always follows it. Anchoring
+# on a phone number instead loses the four plants whose phone is absent, unbracketed or malformed;
+# anchoring on a leading number alone invents a plant from "730 Ekastown Road", which is CID
+# Associates' street. Requiring both — a leading number AND a locality line directly below — takes
+# every real entry and no false one. A name too long for the column wraps onto the street or city
+# line, so each is split apart again.
 FURNITURE = {"approved manufacturers", "ca number manufacturer address telephone number"}
-PHONE = re.compile(r"\(\d{3}\)\s*\d{3,4}-\d{4}")
+# (715) 384-2161, 717-440-5497 and the malformed (20) 845-3100 all appear in the file
+PHONE = re.compile(r"\(?\d{2,3}\)?[\s-]*\d{3,4}-\d{4}\s*$")
 ANCHOR = re.compile(r"^(\d{2,4})\s+(.*)$")
 POBOX = re.compile(r"\bP\.?\s?O\.?\s?Box\s+\d+\b", re.I)
 STREET = re.compile(r"^(?:No\.\s*)?\d+[A-Za-z]?\s+\S|^[NSEW]\s?\d+\s")
@@ -37,15 +42,21 @@ SUFFIX = re.compile(r"^((?:Co|Ltd|Inc|LLC|LLP|Corporation|Corp|Company|Partnersh
 FOREIGN = re.compile(r"\b(Canada|China|Mexico|Novia Scotia|Nova Scotia|Alberta|Ontario|Manitoba)\b", re.I)
 
 
+def _is_locality(line: str) -> bool:
+    """A 'City, ST 12345' line, or a foreign one ending in a postal code."""
+    return bool(CSZ.match(line) or re.search(r",\s*[A-Za-z .]+\s+[A-Z0-9][A-Z0-9 -]{3,}$", line))
+
+
 def _blocks(path: Path) -> list[dict]:
     """One dict per approved manufacturer, anchored on the phone/CA-number line."""
     lines = [l.strip() for l in "\n".join(pdf_pages_text(path)).splitlines() if l.strip()]
     lines = [l for l in lines if l.lower() not in FURNITURE]
-    anchors = [i for i, l in enumerate(lines) if PHONE.search(l) and ANCHOR.match(l)]
+    anchors = [i for i, l in enumerate(lines)
+               if ANCHOR.match(l) and i + 1 < len(lines) and _is_locality(lines[i + 1])]
     out, consumed_to = [], -1
     for i in anchors:
         ca, rest = ANCHOR.match(lines[i]).groups()
-        phone = PHONE.search(rest).group(0)
+        phone = PHONE.search(rest).group(0) if PHONE.search(rest) else ""
         rest = PHONE.sub("", rest).strip()
         box = POBOX.search(rest)
         rest = POBOX.sub("", rest).strip(" ,")
