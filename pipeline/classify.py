@@ -468,9 +468,17 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
         if hb:
             # Throttled inside the heartbeat; this is the line an outside watcher actually reads,
             # because GitHub serves no logs for a job that is still running.
+            # Tokens go on the heartbeat, not only into the run record at the end. "What is this
+            # run costing?" is a question asked WHILE it runs, and answering it by extrapolating
+            # from the previous run's per-batch rate is a guess dressed as a measurement — it
+            # assumes the batch mix and the re-ask rate are the same, and the re-ask rate is
+            # exactly what varies. cached batches are counted separately because they cost nothing.
             hb.beat("3_classify", batches_done=n, rows_labelled=len(labels), labels=dict(tally),
                     eta_s=round(eta), secs_per_batch=round(elapsed / n, 1),
-                    reasks=stats.get("reasks", 0), contract_errors=stats.get("contract_errors", 0))
+                    reasks=stats.get("reasks", 0), contract_errors=stats.get("contract_errors", 0),
+                    input_tokens=usage.get("input_tokens", 0),
+                    output_tokens=usage.get("output_tokens", 0),
+                    batches_called=called, batches_cached=cached_n)
     ic = tally.get("IC", 0)
     say(f"  layer 3 done in {(time.time()-t0)/60:.1f}m: {called} calls, {cached_n} cached, "
         f"{stats.get('reasks', 0)} re-asks, {stats.get('contract_errors', 0)} unusable responses · "
