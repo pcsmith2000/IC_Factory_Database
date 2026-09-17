@@ -46,6 +46,17 @@ def main(argv=None) -> int:
     # release tag already records which model actually ran.
     if os.environ.get("IC_CLASSIFIER_MODEL"):
         cfg["classifier"]["model"] = os.environ["IC_CLASSIFIER_MODEL"]
+    # Three env vars redirect state that a release depends on. They exist so a test or an
+    # experiment need not write into the working tree, and a run that silently used them would be
+    # a counterfeit release: a scratch id registry makes G3 assert stability over ids nobody
+    # issued, and a fixture CSV directory makes every downstream count meaningless. Say so on
+    # every run and put it in the record, where the release tag can be read next to it.
+    overrides = {k: os.environ[k] for k in ("IC_CSV_DIR", "IC_ID_REGISTRY", "IC_WAREHOUSE_PATH",
+                                            "IC_WAREHOUSE_ENGINE", "IC_CLASSIFIER_MODEL", "IC_ARCHIVE")
+                 if os.environ.get(k)}
+    if overrides:
+        print("  NOT A CLEAN RELEASE — environment overrides active: "
+              + ", ".join(f"{k}={v}" for k, v in sorted(overrides.items())), file=sys.stderr)
     layers = _layers(args.layers)
     started = datetime.now(timezone.utc)
     out = ROOT / args.out; out.mkdir(exist_ok=True)
@@ -64,6 +75,7 @@ def main(argv=None) -> int:
     norm_dir = out / "normalised"
     record = {
         "pipeline_version": __version__, "started": started.isoformat(),
+        "env_overrides": overrides,
         "registry_version": registry_version(ROOT), "registry_file_sha": sha256_file(ROOT / args.registry),
         "control_sha": (ROOT / cfg["control"]["checksum_path"]).read_text().split()[0] if (ROOT / cfg["control"]["checksum_path"]).exists() else None,
         "layers": {}, "gates": [], "halted_at": None,

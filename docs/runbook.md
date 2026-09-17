@@ -70,6 +70,23 @@ that build is compared to the first release with `pipeline/compare.py`, not merg
   hash in the run record against the last passing one. A wrong seed is corrected in
   `control/seeds.csv` with a note (the resort and marina).
 
+## Environment overrides
+Six env vars redirect state a release depends on. They exist so a test or a side-by-side
+experiment need not write into the working tree — the classified path had no test at all until
+`IC_CSV_DIR` made one possible — and a run that used one without saying so would be a counterfeit
+release. Every run prints `NOT A CLEAN RELEASE` to stderr when any is set and records them under
+`env_overrides` in the run record, so the release tag can be read next to what produced it.
+
+| var | redirects | why it matters |
+|---|---|---|
+| `IC_CSV_DIR` | Layer 2's contract CSVs (default `ic-csv/`) | fixture input makes every downstream count meaningless as a release |
+| `IC_ID_REGISTRY` | Layer 5's id registry (default `id_registry.json`) | ids are never renumbered; a scratch registry makes G3 assert stability over ids nobody issued, and a fixture run once took IC-94453..94456 for addresses that do not exist |
+| `IC_WAREHOUSE_ENGINE` / `IC_WAREHOUSE_PATH` | Layer 8's sink | writes the release somewhere other than Neon |
+| `IC_CLASSIFIER_MODEL` | the pinned classifier | compares models without churning `registry/config.yaml`; the release tag records which model actually ran |
+| `IC_ARCHIVE` | the blob archive | `off` disables acquisition archiving and the heartbeat |
+
+CI sets none of them except `IC_CLASSIFIER_MODEL` and `IC_AI` from the dispatch inputs.
+
 ## Adding a source
 Add an entry to `registry/sources.yaml` with class, method, `url`, `needs_classify`, traps and
 `status: queued`. Write `pipeline/sources/<id>.py` from `_template.py` (fetch / parse / pull).
