@@ -268,8 +268,66 @@ def _relaxed(body: str) -> list[dict]:
         return []
 
 
+def _anchor_key(name: str) -> str:
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).split())
+
+
+def _anchor(got: list[dict], rows: list[dict], stats: dict | None = None) -> dict[int, dict]:
+    """Attach each label object to the establishment it is ABOUT, by the name it echoes.
+
+    Mapping by the index the model echoes back — never by position — was the previous rule, and
+    it is necessary but not sufficient. Read against run 35269300278's cache, batch 4572e36f held
+    99 rows and 94 distinct `i` values, and from i=62 on every reason belonged to the row five
+    places later: "Larocco Architectural millwork" sat on Herrick Mill Work, "Van Voorst Lumber
+    dealer" on QSI Custom Cabinets, "Washington Lumber dealer" on United Structures of America. In
+    run 35272678348 the chain Roseburg -> Formetco -> Pallet One -> Cavco carried each one's reason
+    onto the next: Pallet One was labelled IC because "Formetco makes metal buildings", and Cavco
+    Industries NOT-IC because "Pallets are excluded" — and that second one was a G5 seed, so the
+    slip halted the run. The model skips a row and then counts on by itself; every index after
+    the skip is honest-looking and wrong.
+
+    So the object now carries the name, and the name decides:
+      * name matches the row at `i`            -> attached at i (the ordinary case)
+      * name matches exactly one OTHER row     -> attached there; counted as `realigned`
+      * name matches nothing, or several rows  -> dropped; counted as `misanchored`, and the
+                                                  caller's re-ask covers that row
+      * no name in the object at all           -> attached at i as before; counted as `unanchored`
+    A model that answers the old contract still gets every label through; only a model that
+    contradicts itself loses one, and then only for the row it contradicted.
+    """
+    by_name: dict[str, list[int]] = {}
+    for k, r in enumerate(rows):
+        by_name.setdefault(_anchor_key(r.get("name_verbatim", "")), []).append(k)
+    out: dict[int, dict] = {}
+    for o in got:
+        i, label = _index(o), _label(o)
+        if label is None:
+            continue
+        echoed = o.get("name")
+        if isinstance(echoed, str) and echoed.strip():
+            key = _anchor_key(echoed)
+            at_i = i is not None and 0 <= i < len(rows) and _anchor_key(rows[i].get("name_verbatim", "")) == key
+            if not at_i:
+                homes = by_name.get(key, [])
+                if len(homes) == 1:
+                    i = homes[0]
+                    if stats is not None:
+                        stats["realigned"] = stats.get("realigned", 0) + 1
+                else:
+                    if stats is not None:
+                        stats["misanchored"] = stats.get("misanchored", 0) + 1
+                    continue
+        elif stats is not None:
+            stats["unanchored"] = stats.get("unanchored", 0) + 1
+        if i is None or not 0 <= i < len(rows) or i in out:
+            continue
+        o["i"], o["label"] = i, label
+        out[i] = o
+    return out
+
+
 def _call_once(rows: list[dict], prompt: str, model: str, temperature: float,
-               usage_out: dict | None, repair: bool) -> dict[int, dict]:
+               usage_out: dict | None, repair: bool, stats: dict | None = None) -> dict[int, dict]:
     """One model call. Returns {index into rows: label object}, validated. Never partial-credits
     a bad label: an object that fails the contract is dropped and the caller re-asks for that row.
     """
@@ -278,8 +336,8 @@ def _call_once(rows: list[dict], prompt: str, model: str, temperature: float,
                 "city": r.get("city_verbatim", ""), "state": r.get("state_verbatim", ""),
                 "naics": r.get("naics_verbatim", "")} for i, r in enumerate(rows)]
     user = ("Classify each establishment. Return a JSON array of "
-            "{i, label, confidence, type, reason} with label in IC|NOT-IC|UNCERTAIN, "
-            "confidence 0-1, reason <= 12 words.\n"
+            "{i, name, label, confidence, type, reason} with name copied exactly as given, "
+            "label in IC|NOT-IC|UNCERTAIN, confidence 0-1, reason <= 12 words.\n"
             # These rules are here and not in the frozen prompt on purpose: they are encoding
             # constraints on the transport, not judgements about what is IC, and the frozen
             # prompt's hash is in every release tag.
@@ -333,17 +391,7 @@ def _call_once(rows: list[dict], prompt: str, model: str, temperature: float,
         raise BatchContractError(f"no usable JSON objects in response "
                                  f"(stop_reason={getattr(msg, 'stop_reason', '?')}, {len(text)} chars): "
                                  f"{text[:180]!r}")
-    # Map by the index the model echoes back, never by position. Zipping the response onto the
-    # batch assumes an ordering the model was only asked for, and a model that answers all 100 in
-    # a different order would have every label attached to the wrong establishment — right count,
-    # valid labels, nothing raised.
-    out: dict[int, dict] = {}
-    for o in got:
-        i, label = _index(o), _label(o)
-        if i is None or not 0 <= i < len(rows) or i in out or label is None:
-            continue
-        o["i"], o["label"] = i, label
-        out[i] = o
+    out = _anchor(got, rows, stats)
     if not out:
         # Show an object. "none with a usable index and label" told us run 35164672039 was
         # rejected wholesale and nothing about WHY — gpt-oss-20b returned 100 well-formed objects
@@ -383,7 +431,7 @@ def classify_batch(rows: list[dict], prompt: str, model: str, temperature: float
         try:
             got = _call_once(sub, prompt, model,
                              temperature if not attempt else max(temperature, 0.0) + 0.2 * attempt,
-                             usage_out, repair=bool(attempt))
+                             usage_out, repair=bool(attempt), stats=stats)
         except BatchContractError as e:
             trouble = str(e)
             if stats is not None:
@@ -502,6 +550,8 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
             hb.beat("3_classify", batches_done=n, rows_labelled=len(labels), labels=dict(tally),
                     eta_s=round(eta), secs_per_batch=round(elapsed / n, 1),
                     reasks=stats.get("reasks", 0), contract_errors=stats.get("contract_errors", 0),
+                    realigned=stats.get("realigned", 0), misanchored=stats.get("misanchored", 0),
+                    unanchored=stats.get("unanchored", 0),
                     input_tokens=usage.get("input_tokens", 0),
                     output_tokens=usage.get("output_tokens", 0),
                     batches_called=called, batches_cached=cached_n)
@@ -515,4 +565,7 @@ def run(rows: list[dict], cfg: dict, seeds: list[dict], cache_dir: Path, prompt_
             "prompt_hash": prompt_hash(prompt_path), "n_candidates": len(rows), "n_seeds": len(seeds),
             "input_tokens": usage.get("input_tokens", 0), "output_tokens": usage.get("output_tokens", 0),
             "batches_called": called, "batches_cached": cached_n,
+            "reasks": stats.get("reasks", 0), "contract_errors": stats.get("contract_errors", 0),
+            "realigned": stats.get("realigned", 0), "misanchored": stats.get("misanchored", 0),
+            "unanchored": stats.get("unanchored", 0),
             "classify_seconds": round(time.time() - t0, 1)}

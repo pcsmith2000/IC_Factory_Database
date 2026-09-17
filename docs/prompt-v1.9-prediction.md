@@ -1,6 +1,6 @@
 # v1.9 — one code, one rule, written before the run
 
-Registered 2026-09-17 before dispatch. Prompt hash `b361b8d772ab`. Diagnosed from run 35269300278's
+Registered 2026-09-17 before dispatch. Prompt hash `9118376580c2` (the 321214 rule alone hashed b361b8d772ab; the name-echo in the output contract below is in the same version). Diagnosed from run 35269300278's
 classifier cache (v1.8, `dd4369b1ffae`) joined to the EPA FRS rows by row_hash; the control list
 was consulted only afterwards, to say which of its rows this touches.
 
@@ -50,3 +50,33 @@ Stop-rule note: this is a prompt change after "no further prompt edits" was writ
 difference is that v1.5–v1.8 were sized on the whole population and judged on the aggregate; this
 one is a 436-row slice with a 21-row defect the reasons name themselves, and it is judged on the
 slice.
+
+## Shipped with it: labels anchored on the echoed name, not the index
+
+Found while reading run 28's G5 halt. Run 28 missed 6 of 30 IC seeds where run 27, same prompt,
+missed 2 — and two of the six carried reasons about a different establishment. Cavco Industries
+(321991, an IC seed) was NOT-IC because "Pallets are excluded"; in the same batch, Pallet One of
+Alabama was IC because "Formetco makes metal buildings", and Formetco carried Roseburg's "Wood
+products supply". In run 27's batch 4572e36f, 99 rows came back with 94 distinct `i` values and
+every reason from i=62 on belonged to the row five places later (Herrick Mill Work: "Larocco
+Architectural millwork"; United Structures of America: "Washington Lumber dealer").
+
+The model skips a row and then numbers by its own count. Mapping by echoed index — the previous
+rule — cannot see that, because every index after the skip is well-formed and wrong. So the
+output contract now includes `name`, copied as given, and `pipeline.classify._anchor` attaches each
+object to the row whose name it echoes: at `i` when they agree, at the one other row that carries
+the name when they do not (`realigned`), dropped and re-asked when the name matches nothing or
+several (`misanchored`). An object with no name at all is taken at its index as before
+(`unanchored`), so a model on the old contract loses nothing. All three counts go on the heartbeat
+and into the run record.
+
+Predictions, in addition to the 321214 ones above:
+
+- `realigned` + `misanchored` per run is in the tens to low hundreds, not zero and not thousands.
+  Zero means the model never slips (contradicted by two runs' caches) or is not echoing names
+  (then `unanchored` is ~13,000 and the transport line needs changing). Thousands means the
+  anchor key is too strict and is rejecting names that are the same.
+- Seed misses caused by slippage — Cavco's kind — do not recur. A G5 miss now carries a reason
+  about the seed itself.
+- The run-to-run label flip rate, last measured at ~8% between two v1.4 runs, falls. That is
+  measurable only with two runs on this prompt, and is the number to report when they exist.

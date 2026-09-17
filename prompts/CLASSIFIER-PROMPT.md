@@ -289,7 +289,8 @@ the source, typos included, and a missing address is common and is not itself ev
 Return a JSON array, one object per establishment, in the order given:
 
 ```
-{"i": <index>, "label": "IC" | "NOT-IC" | "UNCERTAIN", "confidence": <0-1>,
+{"i": <index>, "name": "<the name exactly as given>",
+ "label": "IC" | "NOT-IC" | "UNCERTAIN", "confidence": <0-1>,
  "type": "volumetric" | "panel" | "precast" | "mass_timber" | "truss_component" |
          "metal_building" | "hud_code" | "other" | "none",
  "reason": "<at most 12 words>"}
@@ -297,3 +298,8 @@ Return a JSON array, one object per establishment, in the order given:
 
 Return one object for every establishment you were given and nothing else — no preamble, no
 commentary. `type` describes the IC product where the label is IC, and is `none` otherwise.
+
+`name` is how your answer is attached to the establishment. Copy it exactly as it was given to you.
+An object whose name does not match the establishment at its index is attached to the establishment
+whose name it does match, and an object whose name matches nothing is discarded and asked again —
+so a skipped row cannot shift every label after it onto the wrong establishment.

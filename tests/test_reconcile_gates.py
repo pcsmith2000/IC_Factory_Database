@@ -112,7 +112,7 @@ def test_batch_reasks_only_the_rows_that_came_back_broken(monkeypatch):
     rows = [{"row_hash": f"h{i}", "name_verbatim": f"PLANT {i}"} for i in range(3)]
     calls = []
 
-    def fake(sub, prompt, model, temperature, usage_out, repair):
+    def fake(sub, prompt, model, temperature, usage_out, repair, stats=None):
         calls.append((len(sub), repair))
         if len(calls) == 1:                      # row 1 garbled, 0 and 2 fine
             return {0: {"i": 0, "label": "IC"}, 2: {"i": 2, "label": "NOT-IC"}}
@@ -127,7 +127,7 @@ def test_batch_reasks_only_the_rows_that_came_back_broken(monkeypatch):
 def test_batch_raises_rather_than_leave_a_row_unlabelled(monkeypatch):
     # A row the model never labels must not pass silently: run.py reads a missing label as NOT-IC
     # and drops the establishment, so swallowing this would quietly shrink the dataset.
-    def never(sub, prompt, model, temperature, usage_out, repair):
+    def never(sub, prompt, model, temperature, usage_out, repair, stats=None):
         raise classify.BatchContractError("model refused")
 
     monkeypatch.setattr(classify, "_call_once", never)
@@ -140,7 +140,7 @@ def test_retries_raise_the_temperature(monkeypatch):
     # not a retry at all.
     temps = []
 
-    def fake(sub, prompt, model, temperature, usage_out, repair):
+    def fake(sub, prompt, model, temperature, usage_out, repair, stats=None):
         temps.append(temperature)
         if len(temps) < 3:
             raise classify.BatchContractError("no usable JSON objects in response")
@@ -160,7 +160,7 @@ def test_a_seed_that_is_also_a_candidate_is_classified_once(monkeypatch, tmp_pat
     seeds = [dict(r, seed_label="IC") for r in shared[:2]]     # two rows are BOTH
     seen: list[str] = []
 
-    def fake(sub, prompt, model, temperature, usage_out, repair):
+    def fake(sub, prompt, model, temperature, usage_out, repair, stats=None):
         seen.extend(r["row_hash"] for r in sub)
         return {i: {"i": i, "label": "IC"} for i in range(len(sub))}
 
