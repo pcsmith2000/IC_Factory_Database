@@ -203,11 +203,6 @@ sources:
   - plant_address
   status_basis: on_current_list
   pages:
-  - company: Builders FirstSource
-    url: https://www.bldr.com/location/all-locations
-    follow:
-      href: /location/
-      text: truss|manufactur|component
   - company: UFP Site Built
     url: https://ufpsitebuilt.com/our-locations
     follow:
@@ -222,9 +217,16 @@ sources:
     url: https://parr.com/locations/
   - company: ABS
     url: null
+  - company: Banker Steel
+    url: https://www.bankersteel.com/contact/
+  - company: True House
+    url: https://www.truehouse.com/
   traps:
   - Prose pages; extraction only — verbatim check against the archived page.
   - Targets the biased sample; it is a roster, not a regulator.
+  - 'Builders FirstSource was removed from this list on 2026-09-17: bldr_locations reads the same site deterministically from
+    its branch codes. The model extraction here returned zero rows from bldr.com because the index page carries links and
+    no addresses.'
   status: active
 - id: bldr_locations
   name: Builders FirstSource manufacturing plants (own location index)
