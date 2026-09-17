@@ -309,6 +309,12 @@ sources:
     values and a settle delay for the dropdown''s own postback both made no difference. The form wants more than the state:
     try the query-type dropdown (''Search by PCI Certified Plant Location'') or a certification category first. parse() now
     refuses a sweep where half the states come back empty.'
+  - 'Second and third attempts also failed: selecting the query type (''Search by PCI Certified Plant Location'') BEFORE the
+    state still returns 0 rows for TX, and the grid has no pager, no item count and no page-size control — the 12 default
+    rows are the whole result, not page one. Those 12 span CO, ID, MT and UT, four contiguous mountain states, which looks
+    like IP geolocation rather than a saved query. If so the state dropdown may be ANDing with a geographic default and can
+    never widen it. The remaining idea is the OTHER query type, ''Search Miles from Project Zip Code'': sweep ~50 ZIPs at
+    a large radius instead of 50 states. Not attempted — 3 control rows did not justify a fourth approach.'
   status: queued_needs_work
   url: https://www.pci.org/PCIMS/Directories/Certified_Plants_Search.aspx
 - id: mbi_members
