@@ -4,6 +4,16 @@ This file is the system prompt for Layer 3. Its SHA-256 is recorded in every run
 in the release tag. Changing it is a versioned change that gate G5 must re-pass on the seeded
 set before the new version is used for a release.
 
+v1.9 — 2026-09-17. One code, one sentence: on 321214 a dealer's name is that dealer's truss plant.
+Measured on run 35269300278's cache (v1.8): 436 rows carry 321214, truss manufacturing, and 66 were
+labelled NOT-IC — 21 of them for a trading word ("Builders supply distributor not plant", "Truss
+supply dealer not plant", "Lumber dealer") on Builders FirstSource, 84 Lumber, Carter Lumber, HD
+Supply, A-1 Truss, American Builders Supply and Carpenter Contractors of America, which between
+them run more truss plants than any other names in the country. Rule 1 already says "truss and
+building supply" is IC on a core code; the Dealers paragraph was winning anyway. So the exception is
+stated where the dealer rule is, about the code and not the name. Prediction and falsifier in
+docs/prompt-v1.9-prediction.md. Nothing else changes.
+
 v1.8 — 2026-09-17. Stops v1.7's else-branch from eating IC labels. v1.7 scoped the hedge rule
 correctly and then over-reached: read live off run 35262458992 at batch 56 of 132, against run 22's
 own per-batch spread, it projected IC ~1,814 and UNCERTAIN ~196 — both BELOW the 1,969/366 v1.4
@@ -129,6 +139,14 @@ manufacture them. NOT-IC unless the record shows a manufacturing plant.
 **Dealers, rental, supply and realty.** Selling, renting, distributing or broking buildings is
 not making them. A company that sells the *equipment* used to make panels is not a panel plant.
 NOT-IC.
+
+One exception, and it is about the code, not the name. **321214 is truss manufacturing and nothing
+else.** An establishment carries it because it makes trusses; a lumber store or a builders' supply
+yard is coded 444190 or 423310, not this. Builders FirstSource, 84 Lumber, Carter Lumber, HD Supply
+and Carpenter Contractors of America each run dozens of truss plants under their dealer names, and
+every one of those plants is IC. On 321214, a trading word — supply, dealer, distributor, lumber,
+contractors, builders — is not a finding of NOT-IC and neither is "components", which on this code
+means truss components. Only a product that is plainly not a building system is (rule 2 below).
 
 **Building products and millwork.** This is the largest and least obvious wrong answer, because
 the definition above invites it: a window *is* a component that *is* assembled into a building.
