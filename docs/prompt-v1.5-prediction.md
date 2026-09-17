@@ -34,6 +34,33 @@ The three v1.4 runs before it read IC 2,017 / 1,964 / 2,012, so 1,969 is squarel
 and the classifier is reproducible at temperature 0 to within about 3%. Any v1.5 movement larger
 than that is the prompt, not noise.
 
+## The noise floor, measured — read the verdict against this, not against zero
+
+Before trusting any v1.5 diff, promptdiff was run on TWO v1.4 RUNS — runs 35243029519 and
+35255141179, same prompt hash 23e69d2b0d70, same model, temperature 0, same 13,117 rows:
+
+    moves: NOT-IC -> IC 292 · NOT-IC -> UNCERTAIN 253 · IC -> NOT-IC 234
+           UNCERTAIN -> NOT-IC 212 · UNCERTAIN -> IC 29 · IC -> UNCERTAIN 18
+    dropped 252  gained 321
+    core IC NAICS: -161 +200 = net +39
+
+**About 8% of individual labels flip between identical runs.** The aggregate is stable only
+because the flips very nearly cancel: net IC across four v1.4 runs reads 2,017 / 1,964 / 2,012 /
+1,969, a spread of 53 around a mean near 1,990.
+
+This corrects something stated in the previous commit. "The classifier is reproducible at
+temperature 0 to within about 3%" is true of the COUNT and false of the ROWS, and the distinction
+matters here: no single row moving from NOT-IC to IC in the v1.5 run is evidence of anything, and
+a row-level list of "plants v1.5 recovered" would be roughly a quarter noise.
+
+So the verdict is read on the aggregate, against these floors:
+
+| quantity | run-to-run noise (v1.4 vs v1.4) | v1.5 must beat |
+|---|---|---|
+| net IC count | ±27 (1 sd of four runs) | +135 to +226 predicted, 5-8 sd |
+| net core-NAICS | +39 | +226 predicted, ~6x |
+| gross row moves | ~1,038 | not usable as evidence at all |
+
 ## The prediction
 
 On the same 13,057 candidates, same model, temperature 0:
