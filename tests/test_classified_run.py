@@ -103,3 +103,29 @@ def test_the_real_id_registry_is_untouched_by_a_fixture_run(classified):
     real = json.loads((ROOT / "id_registry.json").read_text())
     assert not any(sig.endswith(("700 ash blvd", "300 elm rd", "600 birch way", "200 oak ave"))
                    for sig in real["ids"]), "a fixture address reached the real id registry"
+
+
+def _record(build_dir):
+    import json
+    recs = sorted(build_dir.glob("*.json"))
+    assert recs, f"no run record written beside the build output: {list(build_dir.iterdir())}"
+    return json.loads(recs[-1].read_text())
+
+
+def test_the_precision_audit_reaches_the_run_record(classified):
+    """The floor on known non-IC admissions has to be in the record, or comparing two prompt
+    versions means re-deriving it from artifacts that expire."""
+    cls = _record(classified)["layers"]["3_classify"]
+    pa = cls.get("precision_audit")
+    assert pa is not None, "precision_audit missing — the audit ran but was not recorded"
+    assert pa["admitted"] > 0
+    assert "floor_fp_rate" in pa and "by_product_type" in pa
+    # the fixture admits a truss plant and rejects the plywood and millwork rows
+    assert pa["flagged"] == 0, f"fixture should admit nothing the audit flags: {pa['examples']}"
+
+
+def test_the_run_record_says_it_was_not_a_clean_release(classified):
+    """Overrides redirect state a release depends on; a record that hides them is a counterfeit."""
+    rec = _record(classified)
+    ov = rec.get("env_overrides") or {}
+    assert "IC_CSV_DIR" in ov and "IC_ID_REGISTRY" in ov, ov
