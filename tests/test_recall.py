@@ -378,3 +378,19 @@ def test_one_common_word_in_one_town_is_not_the_same_plant():
         out = reconcile.run(rows, Path(d) / "ids.json")
     names = {f["name"] for f in out["facilities"]}
     assert "Modular Technology" in names and "Modular Solutions, Ltd" in names   # both survive
+
+
+def test_a_rung_takes_the_located_same_state_facility_over_the_bare_lead():
+    """Run 27: "Icon Legacy, Selinsgrove PA" was paired with the T0 lead (no state, no street) while
+    the T2 PA plant with a street sat free — found, and counted as not located, on the tie-break."""
+    facs = [{"facility_id": "IC-T0", "name": "ICON LEGACY CUSTOM MODULAR HOMES", "state": ""},
+            {"facility_id": "IC-T2", "name": "ICON LEGACY CUSTOM MOD. HOMES, LLC", "state": "PA",
+             "street_key": "246 sand hill rd|selinsgrove|pa"}]
+    control = [{"control_id": "1", "name": "Icon Legacy", "city": "Selinsgrove", "state": "PA"}]
+    r = measure.recall(control, facs, {}, _detail=True)
+    assert r["found"] == 1 and r["found_located"] == 1
+    # the name rung (exact) — same shape, two facilities under one exact key
+    facs2 = [{"facility_id": "IC-A", "name": "Z Modular LLC", "state": ""},
+             {"facility_id": "IC-B", "name": "Z Modular LLC", "state": "AZ", "street_key": "6205 s arizona ave|chandler|az"}]
+    r2 = measure.recall([{"control_id": "2", "name": "Z Modular", "state": "AZ"}], facs2, {}, _detail=True)
+    assert r2["found_located"] == 1

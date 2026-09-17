@@ -251,6 +251,19 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
         if cw and cw in fac_ids and cw not in taken:
             matched[i] = "crosswalk"; taken.add(cw); taken_by[i] = cw; by_method["crosswalk"] += 1
     fac_state = {f["facility_id"]: (f.get("state") or "").upper() for f in facilities}
+    fac_located = {f["facility_id"]: bool((f.get("street_key") or "").strip()) for f in facilities}
+
+    def best(fids, cst):
+        """Among several facilities a rung admits, the one to take. One-to-one matching used to
+        take the FIRST, and first was the address-less lead: "Icon Legacy, Selinsgrove PA" was
+        paired with ICON LEGACY CUSTOM MODULAR HOMES (T0, no state) while ICON LEGACY CUSTOM MOD.
+        HOMES, LLC (T2, PA, with a street) sat free — found, and counted as not located, on the
+        matcher's own tie-break. Prefer the facility whose state agrees with the control row over
+        one that carries no state, then a facility with a street over a lead, then the original
+        order. Method labels are unchanged: this decides which facility a rung takes, not whether."""
+        return min(fids, key=lambda fid: (0 if (cst and fac_state.get(fid) == cst) else 1,
+                                          0 if fac_located.get(fid) else 1, fids.index(fid)))
+
     for label, index, keyfn, usable in RUNGS:              # then each rung across the whole list
         for i, c in enumerate(in_scope):
             if i in matched or not usable(c):
@@ -263,7 +276,8 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
             free = [fid for fid in index.get(keyfn(c), ())
                     if fid not in taken and not (cst and fac_state.get(fid) and cst != fac_state[fid])]
             if free:
-                matched[i] = label; taken.add(free[0]); taken_by[i] = free[0]; by_method[label] += 1
+                fid = best(free, cst)
+                matched[i] = label; taken.add(fid); taken_by[i] = fid; by_method[label] += 1
 
     # Rung 5: the control list writes trading names ("Fading West"), the rosters write registered
     # ones ("FADING WEST BUILDING SYSTEMS, LLC"), and exact normalisation calls that a miss. So one
@@ -280,13 +294,12 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
             continue
         cn, cl = norm_name(c.get("name", "")), _light_name(c.get("name", ""))
         cst = (c.get("state") or "").upper()
-        for fid, fn, fl, fst in fac_names:
-            if fid in taken or not (_prefix_match(cn, fn) or _prefix_match(cl, fl)):
-                continue
-            if cst and fst and cst != fst:
-                continue
+        free = [fid for fid, fn, fl, fst in fac_names
+                if fid not in taken and (_prefix_match(cn, fn) or _prefix_match(cl, fl))
+                and not (cst and fst and cst != fst)]
+        if free:
+            fid = best(free, cst)
             matched[i] = "name-prefix"; taken.add(fid); taken_by[i] = fid; by_method["name-prefix"] += 1
-            break
 
     misses, crowded = [], []
     for i, c in enumerate(in_scope):
