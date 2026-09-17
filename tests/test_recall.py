@@ -338,3 +338,43 @@ def test_the_merge_refuses_a_name_that_two_addressed_plants_share():
     with tempfile.TemporaryDirectory() as d:
         out = reconcile.run(rows, Path(d) / "ids.json")
     assert len(out["facilities"]) == 3              # the lead stays separate rather than guess
+
+
+def test_a_lead_with_a_different_name_for_the_same_plant_in_the_same_town_folds():
+    """pa_dced writes "VBC Manufacturing" in Berwick PA; iibc writes "VBC BERWICK, LLC" at 159
+    Power House Rd. Pass 1 needs equal names and these are not, so the plant carried two ids and
+    the control row "VBC" could be asserted to neither. Shared first token plus identical city and
+    state, one candidate.
+    """
+    from pipeline import reconcile
+    from pathlib import Path
+    import tempfile
+    rows = [{"source_id": "iibc", "name_verbatim": "VBC BERWICK, LLC", "state": "PA",
+             "city_norm": "berwick", "street_key": "159 power house rd", "row_hash": "a"},
+            {"source_id": "pa_dced", "name_verbatim": "VBC Manufacturing", "state": "PA",
+             "city_norm": "berwick", "street_key": "", "row_hash": "b"}]
+    with tempfile.TemporaryDirectory() as d:
+        out = reconcile.run(rows, Path(d) / "ids.json")
+    assert len(out["facilities"]) == 1
+    assert "VBC Manufacturing" in out["facilities"][0]["aliases"]
+
+
+def test_one_common_word_in_one_town_is_not_the_same_plant():
+    """"Modular Technology" and "Modular Solutions, Ltd" are different Phoenix firms sharing
+    nothing but "modular". A head token that 199 facilities carry is not evidence on its own."""
+    from pipeline import reconcile
+    from pathlib import Path
+    import tempfile
+    # enough distinct "modular ..." clusters that the token counts as common (>1% of clusters)
+    rows = [{"source_id": "s", "name_verbatim": f"Modular Co {i}", "state": "AZ",
+             "city_norm": f"town{i}", "street_key": f"{i} main st", "row_hash": f"m{i}"} for i in range(60)]
+    rows += [{"source_id": "s", "name_verbatim": f"Other Co {i}", "state": "AZ",
+              "city_norm": f"else{i}", "street_key": f"{i} elm st", "row_hash": f"o{i}"} for i in range(60)]
+    rows += [{"source_id": "iibc", "name_verbatim": "Modular Technology", "state": "AZ",
+              "city_norm": "phoenix", "street_key": "1 tech way", "row_hash": "x"},
+             {"source_id": "pa_dced", "name_verbatim": "Modular Solutions, Ltd", "state": "AZ",
+              "city_norm": "phoenix", "street_key": "", "row_hash": "y"}]
+    with tempfile.TemporaryDirectory() as d:
+        out = reconcile.run(rows, Path(d) / "ids.json")
+    names = {f["name"] for f in out["facilities"]}
+    assert "Modular Technology" in names and "Modular Solutions, Ltd" in names   # both survive

@@ -115,6 +115,56 @@ def _attach_addressless(clusters: dict[str, list[dict]], methods: dict[str, str]
         methods.pop(sig, None)
         folded += 1
 
+    # Pass 1b: the lead that HAS a city and state but a different NAME for the same plant. Pass 1
+    # demands the normalised names be equal, and these are not: pa_dced writes "VBC Manufacturing"
+    # in Berwick PA where iibc writes "VBC BERWICK, LLC" at 159 Power House Rd, and "Cavco
+    # Manufacturing LLC" in Emlenton PA where iibc writes "CAVCO-EMLENTON" at 4 Pennwest Way. Two
+    # ids per plant, and the addressless one is a T0 lead standing beside a located facility.
+    #
+    # The name test is weakened to a shared FIRST token, and the place carries the weight instead:
+    # city and state must both match exactly and exactly one addressed cluster may qualify. That
+    # trade is only safe because both sides are our own rows — the same rule was measured as a
+    # control-matching rung and was 29% wrong, where the failures were a shared city name (York),
+    # a state name (Arizona) or a common word (American). Within one city, with one candidate, a
+    # shared first token plus an identical place is a different proposition, and G2 is watching.
+    # A COMMON head token alone is not evidence, and measuring said so: of 76 merges this pass made
+    # on run 22, 21 turn on a head appearing in more than 1% of facilities — but 18 of those also
+    # share a second token ("CHAMPION HOME BUILDERS" with "CHAMPION HOME BUILDERS #2"), which is
+    # plainly the same plant. Only 3 rest on the common word alone, and one is wrong: "Modular
+    # Technology" and "Modular Solutions, Ltd" are different firms in Phoenix that share nothing
+    # but "modular". So: either the head is distinctive, or there must be more than one shared
+    # token. The threshold is read off this database's own token frequency, not off known answers.
+    df: dict[str, int] = defaultdict(int)
+    for members in clusters.values():
+        for tok in set(norm_name(members[0].get("name_verbatim", "")).split()):
+            df[tok] += 1
+    common = max(5, len(clusters) // 100)     # below five clusters a frequency means nothing
+
+    addressed_place: dict[tuple, list[str]] = defaultdict(list)
+    for sig, members in clusters.items():
+        if methods.get(sig) in ("street_key", "entity+street"):
+            f = members[0]
+            head = norm_name(f.get("name_verbatim", "")).split()
+            if head and f.get("state") and f.get("city_norm"):
+                addressed_place[(f["state"], f["city_norm"], head[0])].append(sig)
+    for sig in [s for s, m in methods.items() if m == "name+city"]:
+        f = clusters[sig][0]
+        head = norm_name(f.get("name_verbatim", "")).split()
+        if not head or len(head[0]) < 3 or not f.get("state") or not f.get("city_norm"):
+            continue
+        targets = addressed_place.get((f["state"], f["city_norm"], head[0]), [])
+        if len(targets) != 1:
+            continue
+        if df[head[0]] > common:
+            shared = set(head) & set(norm_name(clusters[targets[0]][0].get("name_verbatim", "")).split())
+            if len(shared) < 2:
+                continue        # one common word in one town is a coincidence, not a plant
+        for r in clusters[sig]:
+            r["attached_from"] = "name-head+city"
+        clusters[targets[0]].extend(clusters.pop(sig))
+        methods.pop(sig, None)
+        folded += 1
+
     # Second pass: the lead that carries no city OR state either. The pass above needs all three
     # to agree and so cannot see these at all — they key on ('', '', name) and `all(key)` drops
     # them. They are a real duplicate, not a separate plant: run 22 published "Falcon Structures"
