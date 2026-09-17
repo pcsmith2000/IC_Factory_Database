@@ -132,3 +132,21 @@ One row is deliberately imperfect and says so: Mercer's Spokane plant is postall
 Valley**, and the WoodWorks lead says Spokane. The truth is written (Spokane Valley), so the address
 row will NOT fold into the lead by name+city and G1 will raise the pair. Writing "Spokane" to make
 the fold work would have falsified `city_verbatim`.
+
+## Batch four — the last of the attesting-roster tier
+
+Five of six resolved; running rate **25 of 28**. Timberlyne's Wayne NE lead is the miss shape that
+is new: the search finds the company clearly — an office at 116 W 1st St and a showroom at 1614
+Chiefs Way — but not a plant, so nothing is written and the lead stays T0 rather than acquiring
+its head office as an address.
+
+Square footage now has three data points, all cited in `evidence`: Timberlab Piedmont SC 75,000
+sq ft, PROBOX Ellaville GA 25,000 sq ft on 9 acres, Dvele Mesa AZ 220,000 sq ft. The contract has
+no column for it. Two ownership facts too: PROBOX and ProMod are one group (Sunbelt Modular) with
+two Ellaville plants, and Sterling Structural is a division of Sterling Solutions.
+
+Why some enriched leads still read T0 in a local re-reconcile, checked rather than assumed: Panel
+Built runs three plants in Blairsville and ProMod already had a T2 cluster under a name variant,
+so the lead sits beside more than one addressed candidate and `_attach_addressless` refuses to pick
+— which is the rule working. The enrichment row may duplicate one of those plants; that is G1's
+review CSV to raise, not a reason to loosen the merge.
