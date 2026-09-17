@@ -43,18 +43,30 @@ def check(cfg: dict, fix: bool = False) -> list[str]:
     if len(ids) != len(set(ids)):
         problems.append(f"{p.name}: duplicate control_id values")
     for i, r in enumerate(rows, 2):
-        if r.get("triage") not in TRIAGE:
-            problems.append(f"{p.name} line {i}: triage {r.get('triage')!r} not in {sorted(TRIAGE)}")
+        # Blank triage is allowed and is NOT the same as a bad value: Layer 7 treats an untriaged
+        # row as in scope and reports how many it assumed, so a bare verified list scores recall
+        # the day it lands. Rejecting blanks here would have forced a triage nobody has done yet,
+        # and the only way to satisfy it quickly is to invent one.
+        if (r.get("triage") or "").strip() and r["triage"].strip() not in TRIAGE:
+            problems.append(f"{p.name} line {i}: triage {r.get('triage')!r} not in {sorted(TRIAGE)} (blank = untriaged, allowed)")
         if not (r.get("name") or "").strip():
             problems.append(f"{p.name} line {i}: blank name")
         if r.get("state") and not STATE.match(r["state"].strip().upper()):
             problems.append(f"{p.name} line {i}: state {r['state']!r} is not a 2-letter code")
-    in_scope = sum(1 for r in rows if r.get("triage", "").startswith("in_scope"))
+    in_scope = sum(1 for r in rows if not (r.get("triage") or "").strip()
+                   or r["triage"].strip().startswith("in_scope"))
+    untriaged = sum(1 for r in rows if not (r.get("triage") or "").strip())
     exp_total, exp_in = cfg["control"].get("total_rows"), cfg["control"].get("in_scope_rows")
     if rows and exp_total and len(rows) != exp_total:
         problems.append(f"{p.name}: {len(rows)} rows but registry/config.yaml control.total_rows = {exp_total} — update one of them in the same commit")
     if rows and exp_in and in_scope != exp_in:
         problems.append(f"{p.name}: {in_scope} in-scope rows but config control.in_scope_rows = {exp_in}")
+    if untriaged:
+        # A note, not a problem: an untriaged row is measurable, just measured against a wider
+        # denominator. Putting it in `problems` would fail the release for the absence of an
+        # opinion rather than the absence of data.
+        print(f"  note: {p.name}: {untriaged} of {len(rows)} rows untriaged — Layer 7 counts them "
+              f"in scope and reports that it did", file=sys.stderr)
     if not rows:
         problems.append(f"{p.name}: EMPTY — G4 passes on headers alone but Layer 7 recall will be 0/0; place the 241-row triaged list")
     # checksum

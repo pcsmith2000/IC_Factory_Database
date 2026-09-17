@@ -1,1 +1,242 @@
 control_id,name,city,state,triage,reason
+ADL-001,Silver Creek Modular,Perris,CA,,Steel Volumetric Modular
+ADL-002,Z Modular,Chandler,AZ,,Steel Volumetric Modular
+ADL-003,Modlogiq,New Holland,PA,,Steel Volumetric Modular
+ADL-004,Fullstack Modular,Carson,CA,,Steel Volumetric Modular
+ADL-005,Mandeville Modular,Palmdale,CA,,Steel Volumetric Modular
+ADL-006,MMY Modular,Louisville,KY,,Steel Volumetric Modular
+ADL-007,Modern Living Solutions / Greystar,Knox,PA,,Steel Volumetric Modular
+ADL-008,BLOX,Bessemer,AL,,Steel Volumetric Modular
+ADL-009,Modular Steel Systems,Bloomsburg,PA,,Steel-based Panels
+ADL-010,VBC,Berwick,PA,,Wood Volumetric Modular
+ADL-011,VBC,Tracy,VA,,Wood Volumetric Modular
+ADL-012,Vantem Global,Clio,SC,,Wood Volumetric Modular
+ADL-013,Autovol,Nampa,ID,,Wood Volumetric Modular
+ADL-014,Plant prefab,Tejon Ranch,CA,,Wood Volumetric Modular
+ADL-015,Fading West,Buena Vista,CO,,Wood Volumetric Modular
+ADL-016,Biltwise,Greenwood,SC,,Wood Volumetric Modular
+ADL-017,Signature Building Systems,Moosic,PA,,Wood Volumetric Modular
+ADL-018,Ritz Craft PA 1,Mifflinburg,PA,,Wood Volumetric Modular
+ADL-019,Ritz Craft MI,Jonesville,MI,,Wood Volumetric Modular
+ADL-020,Icon Legacy,Selinsgrove,PA,,Wood Volumetric Modular
+ADL-021,Professional Building Systems,Middleburg,PA,,Wood Volumetric Modular
+ADL-022,Studiobuilt,Cuero,TX,,Wood Volumetric Modular
+ADL-023,Apex Homes,Middleburg,PA,,Wood Volumetric Modular
+ADL-024,Cardinal Homes,Wylliesburg,VA,,Wood Volumetric Modular
+ADL-025,Cavco Industries R-Anell,Crouse,NC,,Wood Volumetric Modular
+ADL-026,Rochester Homes,Rochester,IN,,Wood Volumetric Modular
+ADL-027,Cavco - Penn West,Emlenton,PA,,Wood Volumetric Modular
+ADL-028,DuraPod - North Wales,North Wales,PA,,Bathroom Pods
+ADL-029,DuraPod - Chalfont,Chalfont,PA,,Bathroom Pods
+ADL-030,B&T Manufacturing,RAPID CITY,SD,,Bathroom Pods
+ADL-031,SurePod (subsidiary of DPR),ORLANDO,FL,,Bathroom Pods
+ADL-032,SurePod West (subsidairy of DPR),PHOENIX,AZ,,Bathroom Pods
+ADL-033,BathSystems,HOUSTON,TX,,Bathroom Pods
+ADL-034,Baker Triangle Prefab,RICHARDSON,TX,,Closed LGS Panel
+ADL-035,MASTECH PANEL SYSTEMS,LEWISBURG,PA,,Closed LGS Panel
+ADL-036,COMPLETE WALL STRATEGIES / TCM ENTERPRISES,HUTCHINSON,KS,,Closed LGS Panel
+ADL-037,TJ WIES PREFAB,O FALLON,MO,,Closed LGS Panel
+ADL-038,GRAYHAWK LLC,ELIZABETHTOWN,KY,,Closed LGS Panel
+ADL-039,Atlantic PreFab,Wilton,NH,,Closed LGS Panel
+ADL-040,Steele Truss & Panel,Plattsville,NY,,Open LGS Panel
+ADL-041,Forge CFS Components,Norcross,GA,,Open LGS Panel
+ADL-042,Steel Panel Truss,Kissimmee,FL,,Open LGS Panel
+ADL-043,United Structures of Georgia,Cairo,GA,,Open LGS Panel
+ADL-044,Ladabuild,GRAND JUNCTION,CO,,Open LGS Panel
+ADL-045,Offsitek,BESSEMER CITY,NC,,Open LGS Panel
+ADL-046,US FRAME FACTORY,BRADENTON,FL,,Open LGS Panel
+ADL-047,Blueprint Robotics - Baltimore,BALTIMORE,MD,,Closed Wood Panel
+ADL-048,Blueprint Robotics - Windsor,WINDSOR,CT,,Closed Wood Panel
+ADL-049,Bensonwood,Walpole,NH,,Closed Wood Panel
+ADL-050,Bensonwood - Tektoniks & Unity Homes,KEENE,NH,,Closed Wood Panel
+ADL-051,Dvele Modular,MESA,AZ,,Closed Wood Panel
+ADL-052,BPUBLIC PREFAB,SANTA,NM,,Closed Wood Panel
+ADL-053,YANKEE BARN HOMES,NORTHWOOD,NH,,Closed Wood Panel
+ADL-054,LANDMARK HOME AND LAND COMPANY,CLEARWATER,FL,,Closed Wood Panel
+ADL-055,CAPE COD PANEL,HYANNIS,MA,,Open Wood Panel
+ADL-056,BARDEN BUILDING PRODUCTS / NORTH AMERICAN TRUSS,MIDDLEPORT,NY,,Open Wood Panel
+ADL-057,DC STRUCTURES,PORTLAND,OR,,Open Wood Panel
+ADL-058,TIMBERQUEST,SOUTH LAKE TAHOE,CA,,Open Wood Panel
+ADL-059,ACQBUILT INC,EDMONTON,AB,,Open Wood Panel
+ADL-060,84 Lumber,Winchester,VA,,Open Wood Panel
+ADL-061,Annadale Millwork,Winchester,VA,,Open Wood Panel
+ADL-062,Van Metre Companies,Winchester,VA,,Open Wood Panel
+ADL-063,Builders FirstSource,Arlington,WA,,Open Wood Panel
+ADL-064,Innovative Construction Group,Florence,SC,,Open Wood Panel
+ADL-065,Freres Engineered Wood,Lyons,OR,,Mass Timber (CLT)
+ADL-066,Sterling Structural - IL,Phoenix,IL,,Mass Timber (CLT)
+ADL-067,Sterling Structural - TX,LUFKIN,TX,,Mass Timber (CLT)
+ADL-068,Mercer Mass Timber - WA,Spokane,WA,,Mass Timber (CLT)
+ADL-069,Mercer Mass Timber - AR,Conway,AR,,Mass Timber (CLT)
+ADL-070,Mercer Mass Timber - BC,OKANAGAN FALLS,BC,,Mass Timber (CLT)
+ADL-071,SmartLam - AL,Dothan,AL,,Mass Timber (CLT)
+ADL-072,SmartLam - OR,Columbia Falls,OR,,Mass Timber (CLT)
+ADL-073,DR Johnson,Riddle,OR,,Mass Timber (CLT)
+ADL-074,Vaagen Timbers,COLVILLE,WA,,Mass Timber (CLT)
+ADL-075,TimberLab - Middleburg,Millersburg,OR,,Mass Timber (CLT)
+ADL-076,TimberLab - Portland,Portland,OR,,Mass Timber (CLT)
+ADL-077,SUPERIOR WALLS - ADVANCED CONCRETE SYSTEMS,MIDDLEBURG,PA,,Precast Concrete panel
+ADL-078,SUPERIOR WALLS - WEAVER PRECAST,EPHRATA,PA,,Precast Concrete panel
+ADL-079,CLARK PACIFIC - WOODLAND PLANT,WOODLAND,CA,,Precast Concrete panel
+ADL-080,TITAN WALL,ELIZABETHTOWN,PA,,MgO Panel
+ADL-081,FISCHERSIPS,LOUISVILLE,KY,,SIP / ICF (Other Composite panel)
+ADL-082,INSULSPAN SIPS BY PLASTI-FAB,BLISSFIELD,MI,,SIP / ICF (Other Composite panel)
+ADL-083,GENERAL PANEL CORPORATION,GRENADA,MS,,SIP / ICF (Other Composite panel)
+ADL-084,R-CONTROL SIP/AFM CORPORATION,LAKEVILLE,MN,,SIP / ICF (Other Composite panel)
+ADL-085,ACME PANEL COMPANY,RADFORD,VA,,SIP / ICF (Other Composite panel)
+ADL-086,R-CONTROL SIP/BIG SKY,BELGRADE,MT,,SIP / ICF (Other Composite panel)
+ADL-087,R-CONTROL SIP/BRANCH RIVER PLASTICS,SMITHFIELD,RI,,SIP / ICF (Other Composite panel)
+ADL-088,LAMIT BY ARMSTRONG,HEBRON,OH,,SIP / ICF (Other Composite panel)
+ADL-089,PREMIER SIPS,PUYALLUP,WA,,SIP / ICF (Other Composite panel)
+ADL-090,THE MURUS COMPANY INC,MANSFIELD,PA,,SIP / ICF (Other Composite panel)
+ADL-091,EXTREME PANEL TECHNOLOGIES INC,COTTONWOOD,MN,,SIP / ICF (Other Composite panel)
+ADL-092,INNOVA PANEL,OPA LOCKA,FL,,SIP / ICF (Other Composite panel)
+ADL-093,R-CONTROL SIP/THERMAFOAM ARKANSAS LLC,JACKSONVILLE,AR,,SIP / ICF (Other Composite panel)
+ADL-094,ENERCEPT INC,WATERTOWN,SD,,SIP / ICF (Other Composite panel)
+ADL-095,URBAN INDUSTRIES INC,GALION,OH,,SIP / ICF (Other Composite panel)
+ADL-096,FOARD PANEL INC,WEST CHESTERFIELD,NH,,SIP / ICF (Other Composite panel)
+ADL-097,PORTERSIPS DIVISION OF PORTER CORP,HOLLAND,MI,,SIP / ICF (Other Composite panel)
+ADL-098,R-CONTROL SIP/PREMIER BUILDING SYSTEMS,PUYALLUP,WA,,SIP / ICF (Other Composite panel)
+ADL-099,INSULSPAN SIPS,BLISSFIELD,MI,,SIP / ICF (Other Composite panel)
+ADL-100,ENERGY PANEL STRUCTURES INC,GRAETTINGER,IA,,SIP / ICF (Other Composite panel)
+ADL-101,PORTER SIPS DIVISION OF PORTERCORP,COLUMBIA,MS,,SIP / ICF (Other Composite panel)
+ADL-102,ECO-PANELS LLC,MOCKSVILLE,NC,,SIP / ICF (Other Composite panel)
+ADL-103,TIMBERBUILT,NORTH COLLINS,NY,,SIP / ICF (Other Composite panel)
+ADL-104,BRANCH TECHNOLOGY,CHATTANOOGA,TN,,3D Printing
+ADL-105,PANEL BUILT INC,BLAIRSVILLE,GA,,Relocatable Modular
+ADL-106,PACIFIC WALL SYSTEMS,SEATTLE,WA,,Exterior Envelope Panels
+ADL-107,STO PANEL TECHNOLOGY / STO PANEL AFFILIATES,ATLANTA,GA,,Exterior Envelope Panels
+ADL-108,Bankersteel - Lynchburg (Main plant 1619 Wythe Road),LYNCHBURG,VA,,Steel Structural Components
+ADL-109,Bankersteel - Lynchburg (South plant 351 Rangoon St),LYNCHBURG,VA,,Steel Structural Components
+ADL-110,Bankersteel - South Plainfield,SOUTH PLAINFIELD,NJ,,Steel Structural Components
+ADL-111,Bankersteel - Orlando,ORLANDO,FL,,Steel Structural Components
+ADL-112,Bankersteel - Rock Hill,ROCK HILL,SC,,Steel Structural Components
+ADL-113,Angle Truss,Tavares,FL,,Steel Structural Components
+ADL-114,Florida Steel Frame & Truss Mfg,Tampa,FL,,Steel Structural Components
+ADL-115,Cascade Manufacturing,Dublin,GA,,Steel Structural Components
+ADL-116,Contract Building Components,Covington,GA,,Steel Structural Components
+ADL-117,Metalite Truss Systems of FL,West Palm Beach,FL,,Steel Structural Components
+ADL-118,Contract Building Components,Statesville,NC,,Steel Structural Components
+ADL-119,Timplex Corp,Sussex,NJ,,Steel Structural Components
+ADL-120,Clearspan Components,Meridian,MS,,Wood Structural Components (trusses etc)
+ADL-121,Builders FirstSource,Shelby,AL,,Wood Structural Components (trusses etc)
+ADL-122,Arizona Building Supply,Glendale,AZ,,Wood Structural Components (trusses etc)
+ADL-123,Arizona Building Supply,Yuma,AZ,,Wood Structural Components (trusses etc)
+ADL-124,Builders FirstSource,Casa Grande,AZ,,Wood Structural Components (trusses etc)
+ADL-125,FrameTec,Camp Verde,AZ,,Wood Structural Components (trusses etc)
+ADL-126,"Trussworks, LLC",Kingman,AZ,,Wood Structural Components (trusses etc)
+ADL-127,Better Built Truss,Ripon,CA,,Wood Structural Components (trusses etc)
+ADL-128,Builders FirstSource,Perris,CA,,Wood Structural Components (trusses etc)
+ADL-129,Builders FirstSource,Olivehurst,CA,,Wood Structural Components (trusses etc)
+ADL-130,Builders FirstSource,Sanger,CA,,Wood Structural Components (trusses etc)
+ADL-131,NorCal Lumber Company,Marysville,CA,,Wood Structural Components (trusses etc)
+ADL-132,Pacific StrucFrame,Barstow,CA,,Wood Structural Components (trusses etc)
+ADL-133,Ridgefield Building Supply,East Haven,CT,,Wood Structural Components (trusses etc)
+ADL-134,Stark Truss,Bridgeville,DE,,Wood Structural Components (trusses etc)
+ADL-135,A-1 Industries of Florida,Fort Pierce,FL,,Wood Structural Components (trusses etc)
+ADL-136,American Builders Supply,Winter Haven,FL,,Wood Structural Components (trusses etc)
+ADL-137,American Builders Supply,Tampa,FL,,Wood Structural Components (trusses etc)
+ADL-138,Builders FirstSource,Orlando,FL,,Wood Structural Components (trusses etc)
+ADL-139,Builders FirstSource,Lake City,FL,,Wood Structural Components (trusses etc)
+ADL-140,Builders FirstSource,Plant City,FL,,Wood Structural Components (trusses etc)
+ADL-141,Innovative Construction Group,Green Cove Springs,FL,,Wood Structural Components (trusses etc)
+ADL-142,True House,Jacksonville,FL,,Wood Structural Components (trusses etc)
+ADL-143,True House,Crecent City,FL,,Wood Structural Components (trusses etc)
+ADL-144,Builders FirstSource,Norcross,GA,,Wood Structural Components (trusses etc)
+ADL-145,North Georgia Truss Systems,Cartersville,GA,,Wood Structural Components (trusses etc)
+ADL-146,Universal Forest Products,Folkston,GA,,Wood Structural Components (trusses etc)
+ADL-147,"Southern Components, Inc.",Shrevport,LA,,Wood Structural Components (trusses etc)
+ADL-148,Builders FirstSource,New Bedford,MA,,Wood Structural Components (trusses etc)
+ADL-149,Cornerstone Building,Uxbridge,MA,,Wood Structural Components (trusses etc)
+ADL-150,NVR Building Products,Thurmont,MD,,Wood Structural Components (trusses etc)
+ADL-151,Shelter Systems,Westminster,MD,,Wood Structural Components (trusses etc)
+ADL-152,Stark Truss,Baltimore,MD,,Wood Structural Components (trusses etc)
+ADL-153,Mainely Trusses,Fairfield,ME,,Wood Structural Components (trusses etc)
+ADL-154,84 Lumber,Kings Mountain,NC,,Wood Structural Components (trusses etc)
+ADL-155,Atlantic Building Systems,Fairmont,NC,,Wood Structural Components (trusses etc)
+ADL-156,Builders FirstSource,Albermarle,NC,,Wood Structural Components (trusses etc)
+ADL-157,Carolina Structural Systems,Star,NC,,Wood Structural Components (trusses etc)
+ADL-158,Longleaf,West End,NC,,Wood Structural Components (trusses etc)
+ADL-159,The Building Center,Gastonia,NC,,Wood Structural Components (trusses etc)
+ADL-160,Universal Forest Products,Stanfield,NC,,Wood Structural Components (trusses etc)
+ADL-161,LaValley Building,Newport,NH,,Wood Structural Components (trusses etc)
+ADL-162,Builders FirstSource,Ballston Spa,NY,,Wood Structural Components (trusses etc)
+ADL-163,NextGen Building Components,Farmington,NY,,Wood Structural Components (trusses etc)
+ADL-164,PDJ Components,Chester,NY,,Wood Structural Components (trusses etc)
+ADL-165,SR Sloan,Whitesboro,NY,,Wood Structural Components (trusses etc)
+ADL-166,Universal Forest Products,Hudson,NY,,Wood Structural Components (trusses etc)
+ADL-167,Builders FirstSource,Beaverton,OR,,Wood Structural Components (trusses etc)
+ADL-168,Oregon Truss Company,Dayton,OR,,Wood Structural Components (trusses etc)
+ADL-169,Parr Truss,Cornelius,OR,,Wood Structural Components (trusses etc)
+ADL-170,Parr Truss,Redmond,OR,,Wood Structural Components (trusses etc)
+ADL-171,The Truss Company,Eugene,OR,,Wood Structural Components (trusses etc)
+ADL-172,The Truss Company,Redmond,OR,,Wood Structural Components (trusses etc)
+ADL-173,84 Lumber,Coal Center,PA,,Wood Structural Components (trusses etc)
+ADL-174,Builders FirstSource,Paradise,PA,,Wood Structural Components (trusses etc)
+ADL-175,Iron City Steel Component,Pittsburgh,PA,,Wood Structural Components (trusses etc)
+ADL-176,Montgomery Truss & Panel,Grove City,PA,,Wood Structural Components (trusses etc)
+ADL-177,Precision Wall & Truss,Landisville,PA,,Wood Structural Components (trusses etc)
+ADL-178,Toll Integrated Systems,Morrisville,PA,,Wood Structural Components (trusses etc)
+ADL-179,York P-B Truss,York,PA,,Wood Structural Components (trusses etc)
+ADL-180,Trussco Manufacturing,North Kingstown,RI,,Wood Structural Components (trusses etc)
+ADL-181,Atlantic Building Systems,Moncks Corner,SC,,Wood Structural Components (trusses etc)
+ADL-182,Builders FirstSource,Yemassee,SC,,Wood Structural Components (trusses etc)
+ADL-183,Panel Truss,Townville,SC,,Wood Structural Components (trusses etc)
+ADL-184,Stark Truss,Summerville,SC,,Wood Structural Components (trusses etc)
+ADL-185,Universal Forest Products,Conway,SC,,Wood Structural Components (trusses etc)
+ADL-186,84 Lumber,Houston,TX,,Wood Structural Components (trusses etc)
+ADL-187,Builders FirstSource,Conroe,TX,,Wood Structural Components (trusses etc)
+ADL-188,Builders FirstSource,Carrollton,TX,,Wood Structural Components (trusses etc)
+ADL-189,"Longhorn Truss, LLC",Mabank,TX,,Wood Structural Components (trusses etc)
+ADL-190,"Trussworks, LLC",Mabank,TX,,Wood Structural Components (trusses etc)
+ADL-191,Apex Truss,Warsaw,VA,,Wood Structural Components (trusses etc)
+ADL-192,Builders FirstSource,Elkwood,VA,,Wood Structural Components (trusses etc)
+ADL-193,Builders FirstSource,Fredericksburg,VA,,Wood Structural Components (trusses etc)
+ADL-194,Builders FirstSource,West Point,VA,,Wood Structural Components (trusses etc)
+ADL-195,Louws Truss,Burlington,WA,,Wood Structural Components (trusses etc)
+ADL-196,The Truss Company,Sumner,WA,,Wood Structural Components (trusses etc)
+ADL-197,The Truss Company,Burlington,WA,,Wood Structural Components (trusses etc)
+ADL-198,The Truss Company,Centralia,WA,,Wood Structural Components (trusses etc)
+ADL-199,Aura Dwellings & Hospitality,,,,
+ADL-200,ATCO Structures and Logistics (USA) Inc,,,,
+ADL-201,House Factory,,,,
+ADL-202,BYLD Inc.,,,,
+ADL-203,Novarum Homes,,,,
+ADL-204,Steel Tech USA,,,,
+ADL-205,Modutize,,,,
+ADL-206,ATCO Structures,,,,
+ADL-207,US Offsite,,,,
+ADL-208,DORCE Prefabricated & Construction,,,,
+ADL-209,Falcon Structures,,,,
+ADL-210,OCCA OFFSITE,,,,
+ADL-211,Module,,,,
+ADL-212,Ramtech Building Systems,,,,
+ADL-213,"Neopod Systems, LLC.",,,,
+ADL-214,"The Twiin Group, LLC",,,,
+ADL-215,"Fornidos Home Systems, Inc.",,,,
+ADL-216,ICON,,,,
+ADL-217,Synergy Modular,,,,
+ADL-218,Wind River Built,,,,
+ADL-219,Off-Site,,,,
+ADL-220,Azure Printed Homes,,,,
+ADL-221,Assembly OSM,,,,
+ADL-222,Stella Domo,,,,
+ADL-223,NEXGEN Building Products,,,,
+ADL-224,Nibbi Prefab,,,,
+ADL-225,GHOST FACTORY,,,,
+ADL-226,G-pod,,,,
+ADL-227,Irontown Modular,,,,
+ADL-228,Blue Horse Building,,,,
+ADL-229,Tiny Home Tours,,,,
+ADL-230,Impresa Modular,,,,
+ADL-231,Green Canopy NODE,,,,
+ADL-232,Reframe Systems Inc,,,,
+ADL-233,Stream Modular,,,,
+ADL-234,True Volumetric Corp,,,,
+ADL-235,SBCA,,,,
+ADL-236,"ASSEMBLAGEworks, Inc.",,,,
+ADL-237,Promise Robotics,,,,
+ADL-238,Housing Growth Partners,,,,
+ADL-239,"Rmax, a Sika Company",,,,
+ADL-240,Slab to Ridge,,,,
+ADL-241,4Ward Solutions Group,,,,

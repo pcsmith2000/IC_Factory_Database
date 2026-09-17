@@ -29,7 +29,7 @@ frame:
 control:
   path: control/control-triaged.csv
   checksum_path: control/control.sha256
-  in_scope_rows: 213
+  in_scope_rows: 241                       # every row untriaged, so every row counts: see control/README.md
   total_rows: 241
 
 classifier:

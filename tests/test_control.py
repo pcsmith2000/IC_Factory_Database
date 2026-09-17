@@ -10,7 +10,12 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def test_unplaced_control_inputs_are_reported_not_hidden():
     probs = control.check(load_yaml(ROOT / "registry" / "config.yaml"))
-    assert any("control-triaged.csv: EMPTY" in p for p in probs)
+    # control-triaged.csv holds the 241-row ADL list now, so its EMPTY warning is no longer the
+    # thing to assert — that it raises nothing is, because that covers every rule at once: the six
+    # columns, unique control_id, non-blank names, two-letter states, and the row counts matching
+    # registry/config.yaml. Every row is untriaged, which control.check reports as a note and not
+    # a problem: an absent opinion is not an absent input.
+    assert not any("control-triaged.csv" in p for p in probs), [p for p in probs if "control-triaged" in p]
     # frame_state_totals.csv is placed now; that it raises nothing covers its own rules — the
     # state,establishments columns, two-letter states, integer counts, and the config floor the
     # total must clear.
@@ -49,3 +54,19 @@ def test_fix_derives_seed_row_hash_and_rewrites_checksum(tmp_path: Path, monkeyp
     assert not any("row_hash" in p or "sha256" in p for p in probs)
     rows = list(csv.DictReader(open(tmp_path / "control" / "seeds.csv")))
     assert rows[0]["row_hash"] == row_hash(rows[0])
+
+
+def test_the_blob_copy_of_the_control_list_is_outside_the_acquire_prefix():
+    """The ADL list lives at ic-control/ in the store, never under the archive prefix.
+
+    Layer 1 reads `<archive.prefix>/<source_id>/<date>/`. A control list sitting under that prefix
+    would be acquirable by adding one line to the source registry, and G4 — which only checks a
+    checksum and a source_id spelling — would pass while the pipeline scored recall against its
+    own input. Isolation here is the prefix, not the gate.
+    """
+    cfg = load_yaml(ROOT / "registry" / "config.yaml")
+    prefix = cfg["archive"]["prefix"].strip("/")
+    assert prefix == "ic-sources"
+    assert not "ic-control".startswith(prefix + "/") and "ic-control" != prefix
+    readme = (ROOT / "control" / "README.md").read_text()
+    assert "ic-control/adl-control-2026-09-17.csv" in readme

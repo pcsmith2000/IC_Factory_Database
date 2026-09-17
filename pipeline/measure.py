@@ -6,9 +6,30 @@ never goes looking for a source to fix it.
 """
 from __future__ import annotations
 import csv
+import re
 from collections import defaultdict
 from pathlib import Path
 from .reconcile import norm_name
+
+
+def _prefix_match(a: str, b: str) -> bool:
+    """True when the shorter normalised name is a whole-word prefix of the longer one.
+
+    The shorter side must itself be distinctive — two tokens, or eight characters. A one-word
+    prefix matches far too much: "Blue Company" normalises to "blue" and prefix-matched "Blue
+    Horse Building", and "CAVCO" prefix-matched "Cavco Industries R-Anell". Guarding the control
+    name alone missed both, because in each the short side was the WAREHOUSE row.
+    """
+    if not a or not b or a == b:
+        return False
+    short, long = (a, b) if len(a) < len(b) else (b, a)
+    if " " not in short and len(short) < 8:
+        return False
+    return long.startswith(short) and long[len(short)] == " "
+
+
+def _norm_city(city: str | None) -> str:
+    return " ".join(re.sub(r"[^a-z0-9 ]", " ", (city or "").lower()).split())
 
 
 def load_frame(path: Path) -> dict[str, int]:
@@ -23,16 +44,21 @@ def load_frame(path: Path) -> dict[str, int]:
 def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str, str]) -> dict:
     """Did the pipeline find the establishments a human already verified exist?
 
-    Three matchers, strongest first: an explicit crosswalk link, then name+state, then NAME ALONE.
+    The control list is PLANT-level, not company-level: "Builders FirstSource" is 21 rows in 13
+    states, "The Truss Company" is 5. So matching is one-to-one — a database facility satisfies at
+    most one control row — and the rungs are walked strongest-first across the whole list rather
+    than row by row, so a row with a city takes the plant its city names before a bare name can
+    claim it. Without that, 21 control rows matched the one Builders FirstSource plant in the
+    warehouse and recall read 100% for a company we hold 1/21 of.
 
-    The name-only rung is the point of the control list, not a concession to it. The list is a set
-    of companies somebody checked; the question it answers is "is this name in the database", and
-    requiring a state made a names-only list score 0% — indistinguishable from the pipeline having
-    missed every one of them, which is the same false-zero that `recall: 0.0` was reporting before
-    2026-09-17. A control row with a state still uses it, because it is stronger evidence.
+    Rungs: explicit crosswalk link · name+city+state · name+state · name alone. A row with no city
+    starts at the rung its data supports. The name-alone rung is the point of the list, not a
+    concession to it: 43 of the rows are a bare name, and requiring a state scored them 0% —
+    indistinguishable from the pipeline having missed them.
 
-    A name matching facilities in more than one state is counted as found and reported separately:
-    the list says the company exists, and one of those rows is it, but which one is not established.
+    A row whose name is in the database but whose every candidate plant was already claimed by a
+    stronger row is a miss, reported separately as `company_present_plant_missing`. That is the
+    honest reading: the company is known, this establishment is not.
 
     Out-of-scope rows are excluded. A row with no `triage` value is treated as in scope and
     counted, so a bare name list works with no triage column at all — with the untriaged count
@@ -46,25 +72,6 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
             untriaged += 1; in_scope.append(c)
         elif t in IN_SCOPE:
             in_scope.append(c)
-    fac_ids = {f["facility_id"] for f in facilities}
-    by_name_state: dict[tuple, str] = {}
-    by_name: dict[str, set] = defaultdict(set)
-    for f in facilities:
-        by_name_state[(norm_name(f["name"]), (f.get("state") or "").upper())] = f["facility_id"]
-        by_name[norm_name(f["name"])].add(f["facility_id"])
-    hits, by_method, misses = 0, defaultdict(int), []
-    for c in in_scope:
-        nm = norm_name(c.get("name", ""))
-        cw = crosswalk.get(c.get("control_id", ""))
-        if cw and cw in fac_ids:
-            hits += 1; by_method["crosswalk"] += 1; continue
-        if (nm, (c.get("state") or "").upper()) in by_name_state:
-            hits += 1; by_method["name+state"] += 1; continue
-        if nm and nm in by_name:
-            hits += 1
-            by_method["name" if len(by_name[nm]) == 1 else "name (ambiguous: several states)"] += 1
-            continue
-        misses.append(c.get("name", ""))
     if not in_scope:
         # control/control-triaged.csv is empty, so there is nothing to have found. Reporting 0.0
         # states that the pipeline missed every establishment it was asked about, which is both
@@ -75,9 +82,85 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
                 "note": "no control rows triaged in_scope — recall cannot be measured, and 0.0 "
                         "would read as a total miss rather than an absent test",
                 "by_method": {}}
+
+    fac_ids = {f["facility_id"] for f in facilities}
+    by_name_city: dict[tuple, list] = defaultdict(list)
+    by_name_state: dict[tuple, list] = defaultdict(list)
+    by_name: dict[str, list] = defaultdict(list)
+    fac_names: list[tuple] = []
+    for f in facilities:
+        nm, st = norm_name(f["name"]), (f.get("state") or "").upper()
+        # Layer 4 emits city_norm; dim_facility and hand-built fixtures carry city. Take whichever
+        # is there — reading only "city" silently disabled this rung for every real run.
+        by_name_city[(nm, _norm_city(f.get("city") or f.get("city_norm")), st)].append(f["facility_id"])
+        by_name_state[(nm, st)].append(f["facility_id"])
+        by_name[nm].append(f["facility_id"])
+        fac_names.append((f["facility_id"], nm, st))
+
+    def key_city(c):
+        return (norm_name(c.get("name", "")), _norm_city(c.get("city")), (c.get("state") or "").upper())
+
+    def key_state(c):
+        return (norm_name(c.get("name", "")), (c.get("state") or "").upper())
+
+    RUNGS = [("name+city", by_name_city, key_city, lambda c: bool((c.get("city") or "").strip())),
+             ("name+state", by_name_state, key_state, lambda c: bool((c.get("state") or "").strip())),
+             ("name", by_name, lambda c: norm_name(c.get("name", "")), lambda c: bool(norm_name(c.get("name", ""))))]
+
+    taken: set[str] = set()
+    matched: dict[int, str] = {}
+    by_method: dict[str, int] = defaultdict(int)
+    for i, c in enumerate(in_scope):                       # crosswalk first, it is an assertion
+        cw = crosswalk.get(c.get("control_id", ""))
+        if cw and cw in fac_ids and cw not in taken:
+            matched[i] = "crosswalk"; taken.add(cw); by_method["crosswalk"] += 1
+    fac_state = {f["facility_id"]: (f.get("state") or "").upper() for f in facilities}
+    for label, index, keyfn, usable in RUNGS:              # then each rung across the whole list
+        for i, c in enumerate(in_scope):
+            if i in matched or not usable(c):
+                continue
+            cst = (c.get("state") or "").upper()
+            # The name rung is state-blind so a bare-name list works at all, but blind is not the
+            # same as ignoring a state the row DOES carry: two "Cavco Industries, TX" rows used to
+            # take the Texas plant and then the Arizona one. A blank state on the warehouse row is
+            # unknown, not disagreement — about a third of rows carry none.
+            free = [fid for fid in index.get(keyfn(c), ())
+                    if fid not in taken and not (cst and fac_state.get(fid) and cst != fac_state[fid])]
+            if free:
+                matched[i] = label; taken.add(free[0]); by_method[label] += 1
+
+    # Rung 5: the control list writes trading names ("Fading West"), the rosters write registered
+    # ones ("FADING WEST BUILDING SYSTEMS, LLC"), and exact normalisation calls that a miss. So one
+    # more pass where the shorter normalised name is a WORD-PREFIX of the longer — prefix, not
+    # substring, because substring matched "American Truss Company" to "Barden Building Products /
+    # North American Truss". States must agree, which is what rejects "84 Lumber" (VA) against
+    # "84 Lumber Door Shop - Bessemer" (AL); a blank state on the warehouse row is treated as
+    # unknown rather than as disagreement, because ~a third of rows carry no state at all and
+    # holding that defect against the control row would understate recall for a second reason.
+    # Reported under its own method name: it is weaker evidence than an exact name and the reader
+    # should be able to subtract it.
+    for i, c in enumerate(in_scope):
+        if i in matched:
+            continue
+        cn, cst = norm_name(c.get("name", "")), (c.get("state") or "").upper()
+        for fid, fn, fst in fac_names:
+            if fid in taken or not _prefix_match(cn, fn):
+                continue
+            if cst and fst and cst != fst:
+                continue
+            matched[i] = "name-prefix"; taken.add(fid); by_method["name-prefix"] += 1
+            break
+
+    misses, crowded = [], []
+    for i, c in enumerate(in_scope):
+        if i in matched:
+            continue
+        (crowded if by_name.get(norm_name(c.get("name", ""))) else misses).append(c.get("name", ""))
+    hits = len(matched)
     return {"in_scope": len(in_scope), "found": hits, "recall": hits / len(in_scope),
             "tested": True, "by_method": dict(by_method), "untriaged_assumed_in_scope": untriaged,
-            "missed": sorted(misses)[:50], "n_missed": len(misses)}
+            "company_present_plant_missing": len(crowded),
+            "missed": sorted(misses)[:50], "n_missed": len(misses) + len(crowded)}
 
 
 def coverage_and_bias(facilities: list[dict], frame: dict[str, int], band: tuple[float, float], min_share: float) -> dict:

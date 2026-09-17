@@ -32,12 +32,53 @@ def test_state_is_used_when_the_list_has_one():
     assert measure.recall(control, FACS, {})["by_method"] == {"name+state": 1}
 
 
-def test_a_name_in_several_states_is_found_but_flagged():
-    """The list says the company exists and one of these is it; which one is not established."""
+def test_a_name_in_several_states_is_found_once():
     control = [{"control_id": "1", "name": "Cavco Industries"}]
     r = measure.recall(control, FACS, {})
-    assert r["found"] == 1
-    assert r["by_method"] == {"name (ambiguous: several states)": 1}
+    assert r["found"] == 1 and r["by_method"] == {"name": 1}
+
+
+def test_a_plant_is_claimed_by_one_control_row_only():
+    """The control list is plant-level: Builders FirstSource is 21 rows in 13 states. Counting
+    every one of them as found against a single warehouse row read 100% for a company we hold
+    one plant of."""
+    control = [{"control_id": "1", "name": "Cavco Industries", "state": "TX"},
+               {"control_id": "2", "name": "Cavco Industries", "state": "TX"}]
+    r = measure.recall(control, FACS, {})
+    assert r["found"] == 1 and r["recall"] == 0.5
+    assert r["company_present_plant_missing"] == 1    # not a plain miss: the company IS known
+    assert r["missed"] == []
+
+
+def test_city_outranks_state_across_the_whole_list():
+    """Rungs are walked list-wide, not row by row, so the row that names the city takes the plant
+    before a row with only a state can claim it."""
+    facs = [{"facility_id": "IC-9", "name": "Truss Co", "state": "OR", "city_norm": "eugene"}]
+    control = [{"control_id": "1", "name": "Truss Co", "state": "OR"},
+               {"control_id": "2", "name": "Truss Co", "state": "OR", "city": "Eugene"}]
+    r = measure.recall(control, facs, {})
+    assert r["by_method"] == {"name+city": 1}
+
+
+def test_a_trading_name_matches_the_registered_name_within_a_state():
+    """"Fading West" is the control list's name for FADING WEST BUILDING SYSTEMS, LLC."""
+    facs = [{"facility_id": "IC-9", "name": "FADING WEST BUILDING SYSTEMS, LLC", "state": "CO"}]
+    control = [{"control_id": "1", "name": "Fading West", "state": "CO"}]
+    assert measure.recall(control, facs, {})["by_method"] == {"name-prefix": 1}
+
+
+def test_a_prefix_match_does_not_cross_states():
+    """84 Lumber has a plant in most states; the Bessemer AL door shop is not the Virginia one."""
+    facs = [{"facility_id": "IC-9", "name": "84 Lumber Door Shop - Bessemer", "state": "AL"}]
+    control = [{"control_id": "1", "name": "84 Lumber", "state": "VA"}]
+    assert measure.recall(control, facs, {})["found"] == 0
+
+
+def test_a_one_word_prefix_is_not_distinctive_enough():
+    """"Blue Company" normalises to "blue" and prefix-matched "Blue Horse Building"."""
+    facs = [{"facility_id": "IC-9", "name": "Blue Company", "state": "NC"}]
+    control = [{"control_id": "1", "name": "Blue Horse Building", "state": "NC"}]
+    assert measure.recall(control, facs, {})["found"] == 0
 
 
 def test_crosswalk_beats_name_matching():
