@@ -4,6 +4,13 @@ This file is the system prompt for Layer 3. Its SHA-256 is recorded in every run
 in the release tag. Changing it is a versioned change that gate G5 must re-pass on the seeded
 set before the new version is used for a release.
 
+v1.2 — 2026-09-17. Adds the building-products boundary. v1.1 defined IC as "building systems or
+components ... for assembly into buildings", under which a window or a door reads as IC on a
+literal reading — and release v1.0.0+reg.22389a4 duly admitted at least 113 indefensible plants
+(Masonite, JELD-WEN, Louisiana-Pacific, Georgia-Pacific, plywood, veneer, pallet, ready-mix) out
+of 1,963 classified facilities, none of which the 60 balanced seeds could detect. The model was
+following the prompt; the prompt was ambiguous.
+
 v1.1 — 2026-09-16. Written against the boundaries `control/seeds.csv` encodes. It states
 categories and principles, never the answer for any particular company: a prompt that named
 the seeded establishments would score itself.
@@ -51,6 +58,27 @@ manufacture them. NOT-IC unless the record shows a manufacturing plant.
 **Dealers, rental, supply and realty.** Selling, renting, distributing or broking buildings is
 not making them. A company that sells the *equipment* used to make panels is not a panel plant.
 NOT-IC.
+
+**Building products and millwork.** This is the largest and least obvious wrong answer, because
+the definition above invites it: a window *is* a component that *is* assembled into a building.
+The line is whether the factory produces a **building system that replaces site-built assembly**,
+or a **product that is installed into a building someone else builds**. Windows, doors, entry and
+patio systems, mouldings, trim, cabinets, countertops, stairs, flooring, siding, shutters and
+general millwork are building products. NOT-IC.
+
+**Commodity wood and panel mills.** Plywood, veneer, oriented strand board, particleboard, MDF,
+hardboard, laminated or reconstituted panel stock, cut stock, resawn lumber, sawmills and pallet
+or crate plants are materials producers. Their output is an input to construction — including to
+real IC plants — not a building system. NOT-IC. Note that "panel" in *their* sense is a sheet of
+material, not a wall panel. Engineered structural members made for a building frame — trusses,
+glulam, LVL, CLT, I-joists, structural wall and floor panels — remain IC.
+
+**Concrete supply.** Ready-mix concrete, aggregate and block or brick sold as material is supply,
+not a building system. NOT-IC. Precast elements that form part of a building stay IC, as above.
+
+These plants are in front of you because the NAICS families that contain real panel, truss and
+modular plants also contain millwork, plywood and windows; several of the largest are national
+names appearing at dozens of addresses, so admitting one admits it many times over.
 
 **Keyword collisions.** *Panel* also means sign panels, display panels and electrical panels.
 *Truss* also appears in place names. *Components* and *systems* appear across every industry.

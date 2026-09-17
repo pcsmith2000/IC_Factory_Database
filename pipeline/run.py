@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .heartbeat import Heartbeat
-from . import __version__, ai_enabled, ai_client_and_model, acquire, validate, classify, resolve, reconcile, golden, gates, measure, warehouse
+from . import __version__, ai_enabled, ai_client_and_model, acquire, audit, validate, classify, resolve, reconcile, golden, gates, measure, warehouse
 from .registry import load_yaml, active_sources, sha256_file, registry_version
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -169,6 +169,12 @@ def main(argv=None) -> int:
                 else: drop += 1
             _write_csv(out / "review_queue.csv", review)
             record["layers"]["3_classify"].update({"ic": len(keep), "uncertain": len(review), "not_ic_or_uncandidated": drop})
+            # What G5's 60 balanced seeds structurally cannot see: admitted plants that are
+            # well-known non-IC manufacturing. Reported every run, never used to drop a row —
+            # a keyword list that edited the output would just be a second, worse classifier.
+            pa = audit.scan([r.get("name_verbatim") or "" for r in keep if r["source_id"] in needs])
+            record["layers"]["3_classify"]["precision_audit"] = pa
+            print(audit.line(pa))
             rows = keep
         else:
             # IC_AI=off. Nothing is labelled, so nothing may be admitted as IC and nothing may be
