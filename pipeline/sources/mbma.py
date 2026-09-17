@@ -131,7 +131,7 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
         out.append(contract_row(
             source, len(out) + 1, name=r["name"], address=r["street"], city=r["city"],
             state=r["state"], zip_code=r["zip"], source_url=URL, source_document=page.name,
-            source_identifier=r["site"] or r["name"],
+            source_identifier=r["site"] or r["name"], website=r["site"],
             notes=f"MBMA building systems member; AC472 accredited through IAS"))
     require(bool(out), page, f"{len(rows)} members parsed and none was in a US state")
     out[0]["notes"] += (f" | {len(out)} US building-systems members of {len(rows)} listed; "
