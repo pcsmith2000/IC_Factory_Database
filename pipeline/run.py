@@ -49,6 +49,8 @@ def main(argv=None) -> int:
     layers = _layers(args.layers)
     started = datetime.now(timezone.utc)
     out = ROOT / args.out; out.mkdir(exist_ok=True)
+    # A probe's record belongs with its probe output, not in the release history.
+    rec_dir = out if args.limit else None
     csv_dir, norm_dir = ROOT / "ic-csv", out / "normalised"
     record = {
         "pipeline_version": __version__, "started": started.isoformat(),
@@ -82,12 +84,12 @@ def main(argv=None) -> int:
     def halt(where: str, why: str) -> int:
         record["halted_at"] = where; record["halt_reason"] = why
         hb.failed(f"halted at {where}: {why}", phase=where)
-        _write_record(record); print(f"HALT at {where}: {why}", file=sys.stderr); return 2
+        _write_record(record, rec_dir); print(f"HALT at {where}: {why}", file=sys.stderr); return 2
 
     if args.dry_run:
         for s in sources:
             print(f"  would pull {s['id']:<22} class {s['class']} via {s['method']:<9} classify={s.get('needs_classify', False)}")
-        _write_record(record); return 0
+        _write_record(record, rec_dir); return 0
 
     # ---- Layer 1
     hb.beat("1_acquire")
@@ -225,7 +227,7 @@ def main(argv=None) -> int:
     hb.beat("7_measure")
     if 7 not in layers:
         print(f"  layers {sorted(layers)}: stopping before layer 7")
-        _write_record(record); return 0
+        _write_record(record, rec_dir); return 0
     frame_path = ROOT / "control" / "frame_state_totals.csv"
     control_rows = list(csv.DictReader(open(ROOT / cfg["control"]["path"], newline=""))) if (ROOT / cfg["control"]["path"]).exists() else []
     m = {"recall": measure.recall(control_rows, facilities, crosswalk.get("control", {}))}
@@ -244,7 +246,7 @@ def main(argv=None) -> int:
         # side effects is worse than no flag.
         print(f"  layers {sorted(layers)}: stopping before layer 8, nothing written to the warehouse")
         hb.done(phase="stopped_before_warehouse", gates=[{"id": r.gate, "passed": r.passed} for r in results])
-        _write_record(record)
+        _write_record(record, rec_dir)
         return 0
     hb.beat("8_warehouse")
     g1 = results[0].details
@@ -267,7 +269,7 @@ def main(argv=None) -> int:
             print(f"  warehouse {wh.engine}: {record['release']['warehouse']['assertions_appended']} assertions appended → {record['release']['warehouse']['path']}")
     except warehouse.WarehouseNotImplemented as e:
         return halt("layer 8", str(e))
-    _write_record(record)
+    _write_record(record, rec_dir)
     print(f"RELEASE {record['release']['tag']} · {record['release']['published_count']} facilities")
     hb.done(phase="released", release_tag=record["release"]["tag"],
             published_count=record["release"]["published_count"],
@@ -275,8 +277,15 @@ def main(argv=None) -> int:
     return 0
 
 
-def _write_record(record: dict) -> None:
-    d = ROOT / "run_records"; d.mkdir(exist_ok=True)
+def _write_record(record: dict, into: Path | None = None) -> None:
+    """Write the run record. `into` diverts a probe's record out of the release history.
+
+    run_records/ is provenance for releases: every file in it should be a run that was trying to
+    publish. A --limit probe is a model trial over a slice, so its record goes next to its own
+    build output instead, which is gitignored. Five probes in an evening would otherwise bury the
+    real history in experiments that were never meant to ship.
+    """
+    d = into or (ROOT / "run_records"); d.mkdir(parents=True, exist_ok=True)
     p = d / f"{record['started'][:19].replace(':', '')}.json"
     p.write_text(json.dumps(record, indent=1, default=str))
 
