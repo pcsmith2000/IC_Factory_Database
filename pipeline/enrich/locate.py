@@ -20,7 +20,17 @@ import json, re
 # The gateway documents Anthropic's basic server tool for the Messages API. Newer model families
 # take web_search_20260209 with dynamic filtering; change this constant, not the call site.
 WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search", "max_uses": 4}
-DEFAULT_MODEL = "anthropic/claude-sonnet-5"
+# Haiku until a measurement says otherwise. The task is bounded extraction — open a page, return a
+# street address or found=false — behind gates that discard anything uncited, unverified or under
+# 0.7 confidence, so a weaker model's failures are rejected rather than stored. That makes the
+# cheap model the one to justify replacing, not the one to justify trying.
+#
+# The number that decides it is cost per LOCATED address, not per call, and the two can move in
+# opposite directions: web search is billed per search and is model-independent, so a model that
+# halves the token bill while halving the yield is more expensive, not less. Stage 9 now records
+# input tokens, output tokens and searches per run and per located address, so the next pass
+# settles this with its own numbers. `--model` switches it without a code change.
+DEFAULT_MODEL = "anthropic/claude-haiku-4.5"
 
 PROMPT = """Find the street address of the manufacturing plant below.
 
@@ -110,7 +120,15 @@ def locate_one(row: dict, client, model: str) -> dict:
         messages=[{"role": "user", "content": PROMPT.format(
             name=row.get("name", ""), city=row.get("city", ""), state=row.get("state", ""))}])
     text = "".join(getattr(b, "text", "") for b in msg.content)
-    return {"answer": _extract_json(text) or {}, "visited": _searched_urls(msg.content)}
+    u = getattr(msg, "usage", None)
+    # Searches are billed per search and are model-independent, so they are the part of the cost
+    # a cheaper model does not reduce. Counting them separately is what makes "is Sonnet worth it"
+    # answerable: at a low enough yield, a cheap model costs more per address than an expensive one.
+    searches = getattr(getattr(u, "server_tool_use", None), "web_search_requests", 0) or 0
+    return {"answer": _extract_json(text) or {}, "visited": _searched_urls(msg.content),
+            "usage": {"input_tokens": getattr(u, "input_tokens", 0) or 0,
+                      "output_tokens": getattr(u, "output_tokens", 0) or 0,
+                      "web_searches": searches}}
 
 
 def _page_states_the_address(url: str, address: str, timeout: int = 20) -> tuple[bool | None, str]:
@@ -182,7 +200,10 @@ USER_AGENT = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.3
 # This is not hypothetical. The first pass against the release database attempted 200 facilities
 # and reported 180 rejections; 152 of those were a 402 "API key budget exceeded" after the gateway
 # key hit its $10 limit 48 facilities in. The run looked like a 10% success rate. It was 42%.
-FATAL_STATUSES = {401, 402, 403}
+# 404 belongs here for the same reason: a model id the gateway does not serve is a fact about the
+# configuration, and without it a typo in --model would be recorded as 200 facilities the model
+# considered and declined — the exact failure this set exists to prevent, wearing a different hat.
+FATAL_STATUSES = {401, 402, 403, 404}
 
 
 def _exhausted(e: Exception) -> str:
@@ -224,6 +245,7 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
         client, model, _provider = _client(model)
     asserts, rejected = [], []
     attempted, stopped = 0, ""
+    usage = {"input_tokens": 0, "output_tokens": 0, "web_searches": 0}
     for row in rows:
         attempted += 1
         try:
@@ -235,6 +257,8 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
                 break
             rejected.append({"facility_id": row["facility_id"], "why": f"{type(e).__name__}: {e}"})
             continue
+        for k, v in (got.get("usage") or {}).items():
+            usage[k] = usage.get(k, 0) + v
         a, visited = got["answer"], got["visited"]
         addr = (a.get("address") or "").strip()
         url = (a.get("source_url") or "").strip()
@@ -273,4 +297,6 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
             "deferred": len(rows) - attempted,
             "budget_exhausted": bool(stopped), "budget_message": stopped[:300],
             "rejected_by_reason": dict(collections.Counter(_reason(r["why"]) for r in rejected)),
-            "yield_pct": round(100 * len(asserts) / max(1, attempted), 1)}
+            "yield_pct": round(100 * len(asserts) / max(1, attempted), 1),
+            "usage": usage,
+            "usage_per_located": {k: round(v / max(1, len(asserts)), 1) for k, v in usage.items()}}

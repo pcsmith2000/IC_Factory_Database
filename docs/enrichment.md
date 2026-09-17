@@ -148,7 +148,25 @@ key's budget ran out:
      1   2%  cited a page search never opened
 
 The 15% that could not be read are sites that refuse a datacenter IP whatever User-Agent it sends,
-so that bucket is a floor rather than a bug to fix. The 10% whose page did not contain the address
+so that bucket is a floor rather than a bug to fix.
+
+### Which model, and how that gets decided
+
+Anthropic is not a free choice: the native `web_search` server tool is what lets the model find and
+open a page in one call, and it is what `_searched_urls` checks a citation against. Take it away and
+stage 9 is back to the ~9% of facilities with a publisher-supplied URL.
+
+*Which* Anthropic model is a free choice, and it defaults to Haiku. The task is bounded extraction
+behind gates that discard anything uncited, unverified or under 0.7 confidence, so a weaker model's
+failures are rejected rather than stored — which makes the cheap model the one to justify replacing,
+not the one to justify trying.
+
+The number that settles it is cost per **located** address, not per call, and the two can move in
+opposite directions: web search is billed per search and is model-independent, so a model that
+halves the token bill while halving the yield is more expensive. Stage 9 records input tokens,
+output tokens and searches, per run and per located address, and `--model` (or the workflow's
+`model` input) switches models without a code change. Run the same `--sample` twice and the two
+summaries answer it. The 10% whose page did not contain the address
 is the number that justifies fetching the page independently at all: without that check those five
 would have been stored as cited facts.
 

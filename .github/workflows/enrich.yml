@@ -36,6 +36,9 @@ on:
       ai_limit:
         description: "max facilities the AI stage may attempt (0 disables the AI entirely)"
         default: "200"
+      model:
+        description: "model id for the AI stage (blank = the pinned default)"
+        default: ""
       sample:
         description: "work on a seeded stratified subset of this size (blank = all)"
         default: ""
@@ -129,7 +132,9 @@ jobs:
       run_key: ${{ github.run_id }}
       # the AI stage is off unless it is both asked for and given a non-zero ceiling
       enabled: ${{ (contains(inputs.stages, 'locate') || github.event_name == 'workflow_run') && inputs.ai_limit != '0' }}
-      args: ${{ needs.branch.outputs.common_args }} --limit ${{ inputs.ai_limit || 200 }}
+      args: >-
+        ${{ needs.branch.outputs.common_args }} --limit ${{ inputs.ai_limit || 200 }}
+        ${{ inputs.model && format('--model {0}', inputs.model) || '' }}
 
   geocode:
     needs: [branch, locate]

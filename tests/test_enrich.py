@@ -604,3 +604,42 @@ def test_rejections_are_bucketed_by_what_actually_went_wrong():
     assert _reason("not a street address: 'Dallas, TX'") == "not a street address"
     assert _reason("No search results returned a verifiable street address") == \
         "model found nothing it could cite"
+
+
+def test_a_model_id_the_gateway_will_not_serve_stops_the_stage(monkeypatch):
+    """A typo in --model is configuration, not 200 plants the model considered and declined. Without
+    404 in FATAL_STATUSES this reproduces the exact failure the budget fix was written for."""
+    from pipeline.enrich import locate
+
+    class _NotFound(Exception):
+        status_code = 404
+        def __str__(self): return "Error code: 404 - model not found: anthropic/claude-haiku-9"
+
+    monkeypatch.setattr(locate, "locate_one",
+                        lambda row, client, model: (_ for _ in ()).throw(_NotFound()))
+    rows = [{"facility_id": f"F{i}", "name": "Acme", "city": "X", "state": "TX"} for i in range(5)]
+    rep = locate.run(rows, client=object(), model="anthropic/claude-haiku-9", verify_page=False)
+    assert rep["budget_exhausted"] is True and rep["deferred"] == 5
+    assert rep["rejected"] == [], "a bad model id must not be recorded as five rejected facilities"
+
+
+def test_usage_is_counted_so_the_model_choice_can_be_measured(monkeypatch):
+    """Cost per LOCATED address is the number that decides the model, and searches are billed per
+    search and are model-independent — so a cheaper model that halves the yield costs more, not
+    less. That is only visible if both are counted."""
+    from pipeline.enrich import locate
+
+    def fake(row, client, model):
+        return {"answer": {"found": row["facility_id"] == "F0", "address": "1 Plant Rd",
+                           "confidence": 0.9, "source_url": "https://x.example/p",
+                           "quote": "1 Plant Rd", "reason": "no"},
+                "visited": {"https://x.example/p"},
+                "usage": {"input_tokens": 1000, "output_tokens": 100, "web_searches": 2}}
+
+    monkeypatch.setattr(locate, "locate_one", fake)
+    rows = [{"facility_id": f"F{i}", "name": "Acme", "city": "X", "state": "TX"} for i in range(4)]
+    rep = locate.run(rows, client=object(), model="m", verify_page=False)
+    assert rep["located"] == 1
+    assert rep["usage"] == {"input_tokens": 4000, "output_tokens": 400, "web_searches": 8}
+    # one address out of four attempts carries the whole run's cost
+    assert rep["usage_per_located"]["web_searches"] == 8.0
