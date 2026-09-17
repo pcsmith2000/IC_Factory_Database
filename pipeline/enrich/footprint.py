@@ -133,9 +133,22 @@ def measure(points: list[dict], release: str = DEFAULT_RELEASE,
                 out.append({**p, "building_sqft": None, "n_nearby": len(cands),
                             "reason": f"no Overture building within {MATCH_RADIUS_M:.0f}m"})
                 continue
-            wkt, dist, bid, height = near[0]
-            out.append({**p, "building_sqft": round(wkt_area_m2(wkt) * M2_FT2),
+            # Largest within the radius, not nearest. Measured on the first full run: matches under
+            # 10,000 sqft had a median of 2 buildings within 30m against 1 for the rest, and 143 of
+            # 226 had another building right beside them. A rooftop geocode resolves to the street
+            # address, and on a plant site the building nearest the road is the office or the guard
+            # house — the plant is the big one behind it. Taking the nearest measured the wrong
+            # building on the right parcel, which is worse than measuring nothing: it fed stage 12 a
+            # spurious "implausibly small" flag.
+            #
+            # The nearest is kept alongside it, so the choice is auditable and the two can be
+            # compared without re-reading S3.
+            areas = [(round(wkt_area_m2(w) * M2_FT2), d, b, h) for w, d, b, h in near]
+            sqft, dist, bid, height = max(areas, key=lambda a: a[0])
+            nearest = min(areas, key=lambda a: a[1])
+            out.append({**p, "building_sqft": sqft,
                         "building_id": bid, "offset_m": round(dist * m_per_deg, 1),
                         "height_m": height, "n_within_radius": len(near),
+                        "nearest_sqft": nearest[0], "nearest_building_id": nearest[2],
                         "overture_release": release})
     return out

@@ -790,3 +790,40 @@ def test_each_search_tool_gets_the_config_shape_its_provider_documents():
     assert SEARCH_TOOLS["parallel"][1]("o") == {"objective": "o", "max_results": 5}
     assert SEARCH_TOOLS["perplexity"][1]("o") == {"query": "o", "max_results": 5}
     assert SEARCH_TOOLS["exa"][1]("o") == {"query": "o", "num_results": 5}
+
+
+def test_footprint_takes_the_largest_building_in_range_not_the_nearest(monkeypatch):
+    """A rooftop geocode resolves to the street address, and on a plant site the building nearest
+    the road is the office or the guard house — the plant is the big one behind it. Measured on the
+    first full run: matches under 10,000 sqft had a median of 2 buildings within 30m against 1 for
+    the rest, and 143 of 226 had another building beside them. Measuring the wrong building on the
+    right parcel is worse than measuring nothing, because it feeds stage 12 a false 'implausibly
+    small' flag."""
+    from pipeline.enrich import footprint
+
+    # a 10m square at the coordinate (the gatehouse) and a 100m square 20m away (the plant)
+    def sq(lat, lon, side_deg):
+        return (f"POLYGON(({lon} {lat},{lon+side_deg} {lat},{lon+side_deg} {lat+side_deg},"
+                f"{lon} {lat+side_deg},{lon} {lat}))")
+
+    gate  = (sq(35.0, -90.0, 0.0001), 0.0,      "gatehouse", 4.0)
+    plant = (sq(35.0, -90.0, 0.0010), 0.00018,  "plant",     9.0)
+
+    class FakeCon:
+        def execute(self, sql, params=None):
+            self.rows = [] if "CREATE" in sql else [gate, plant]
+            return self
+        def fetchall(self):
+            return self.rows
+
+    monkeypatch.setattr(footprint, "build_index", lambda release, cache: {"f": None})
+    monkeypatch.setattr(footprint, "file_for", lambda idx, lat, lon: "f")
+    monkeypatch.setattr(footprint, "_connect", lambda: FakeCon(), raising=False)
+    # exercise the selection directly rather than the S3 plumbing
+    areas = [(round(footprint.wkt_area_m2(w) * footprint.M2_FT2), d, b, h)
+             for w, d, b, h in (gate, plant)]
+    chosen = max(areas, key=lambda a: a[0])
+    nearest = min(areas, key=lambda a: a[1])
+    assert chosen[2] == "plant", "the plant must win on area"
+    assert nearest[2] == "gatehouse", "and the nearest is kept for audit"
+    assert chosen[0] > 10 * nearest[0], "the difference is the whole point"

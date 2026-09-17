@@ -72,6 +72,12 @@ its area. Two cautions the verification set already raised:
     working area is an open yard with no roof at all (Concrete Modular Systems). Stage 11 therefore
     reports the area of the building it matched and the count of buildings on the parcel, and never
     claims to have measured "the plant".
+  - Within the radius it takes the **largest** building, not the nearest. The first full run made
+    the reason plain: of 790 measured, 226 came back under 10,000 sqft, and those had a median of
+    2 buildings within 30m against 1 for the rest — 143 of the 226 had another building beside
+    them. A rooftop geocode resolves to the street address, so on a plant site the nearest building
+    is the office or the guard house and the plant is the big one behind it. The nearest building's
+    area is kept alongside the chosen one so the decision stays auditable.
 
   DuckDB's `ST_Area_Spheroid` must not be used: it ignores the cosine-of-latitude convergence of
   meridians and returns the same area for the same polygon at every latitude, correct only at the
@@ -114,6 +120,23 @@ not a reason to skip geocoding a facility — it is the reason to geocode it. Th
 Stage 11 legitimately has nothing to do yet, which is a better answer than measuring 1,878 EPA
 points and reporting their median as though it meant something. Stage 10's 2,834 exceed Geocodio's
 2,500/day free tier, so it carries a ceiling of its own.
+
+### What stage 11 actually measured, once stage 10 had run
+
+1,408 rooftop coordinates, measured 2026-09-17:
+
+    attempted                          1408
+    measured                            790   56%
+    deferred (20-file ceiling)          534   38%   picked up by the next run
+    no building within 30m               84    6%
+
+    median   28,751 sqft      p10   2,946
+    mean     64,047 sqft      p90 144,784
+
+The median is less than half the 63,968 sqft measured against the 30 hand-verified rows, and that
+earlier figure came from 19 coordinates of which 18 resolved. n=19 was simply too small: the
+distribution is heavily right-skewed, so a small sample's median says little. The scale figure is
+the one to trust, and it is the reason the building selection changed from nearest to largest.
 
 ## Stage 9 was reach-limited, and search is what lifted it
 
