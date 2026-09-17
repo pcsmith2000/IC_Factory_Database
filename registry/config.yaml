@@ -29,7 +29,7 @@ frame:
 control:
   path: control/control-triaged.csv
   checksum_path: control/control.sha256
-  in_scope_rows: 241                       # every row untriaged, so every row counts: see control/README.md
+  in_scope_rows: 239                       # 2 of the 241 triaged out of scope (AB and BC — not US facilities)
   total_rows: 241
 
 classifier:

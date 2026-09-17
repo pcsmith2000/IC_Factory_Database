@@ -1,5 +1,4 @@
 control_id,name,city,state,segment,split,why_missing,sources_holding_the_company,found_street,found_city,found_state,source_url,notes
-ADL-059,ACQBUILT INC,EDMONTON,AB,Open Wood Panel,dev,never ingested — no source holds this name,,,,,,
 ADL-069,Mercer Mass Timber - AR,Conway,AR,Mass Timber (CLT),dev,never ingested — no source holds this name,,,,,,
 ADL-093,R-CONTROL SIP/THERMAFOAM ARKANSAS LLC,JACKSONVILLE,AR,SIP / ICF (Other Composite panel),dev,never ingested — no source holds this name,,,,,,
 ADL-122,Arizona Building Supply,Glendale,AZ,Wood Structural Components (trusses etc),dev,never ingested — no source holds this name,,,,,,
@@ -8,7 +7,6 @@ ADL-051,Dvele Modular,MESA,AZ,Closed Wood Panel,dev,never ingested — no source
 ADL-125,FrameTec,Camp Verde,AZ,Wood Structural Components (trusses etc),dev,never ingested — no source holds this name,,,,,,
 ADL-032,SurePod West (subsidairy of DPR),PHOENIX,AZ,Bathroom Pods,dev,never ingested — no source holds this name,,,,,,
 ADL-126,"Trussworks, LLC",Kingman,AZ,Wood Structural Components (trusses etc),dev,never ingested — no source holds this name,,,,,,
-ADL-070,Mercer Mass Timber - BC,OKANAGAN FALLS,BC,Mass Timber (CLT),dev,never ingested — no source holds this name,,,,,,
 ADL-079,CLARK PACIFIC - WOODLAND PLANT,WOODLAND,CA,Precast Concrete panel,dev,ingested but lost before publication (not in the published warehouse),epa_frs,,,,,
 ADL-004,Fullstack Modular,Carson,CA,Steel Volumetric Modular,dev,never ingested — no source holds this name,,,,,,
 ADL-131,NorCal Lumber Company,Marysville,CA,Wood Structural Components (trusses etc),dev,never ingested — no source holds this name,,,,,,

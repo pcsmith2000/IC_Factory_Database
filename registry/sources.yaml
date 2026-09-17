@@ -351,6 +351,7 @@ sources:
   - plant_address
   status_basis: certified
   traps:
+  - 'Probed 2026-09-17, two attempts. /about-apa/apa-certified-manufacturers/ answers 200 with 96KB but holds no mill in the HTML, and rendering it with Chromium plus twelve scrolls gives 100KB with zero MemberMill links and one address - the roster comes from an XHR not yet identified. /MemberMill?MemberMillID=<n> 404s when fetched directly, so the list page probably sets something first. WORTH a third attempt from the XHR: APA certifies glulam, CLT and structural panel mills, which is 8 Mass Timber plus 14 wood-panel control rows, and it is the directory that carries Mercer Conway - a control row we do not hold.'
   - Mill numbers are a stable per-facility join key — capture for cross-source dedupe.
   status: queued
 - id: ias_ac472
