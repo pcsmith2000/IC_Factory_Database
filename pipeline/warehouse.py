@@ -50,10 +50,16 @@ def _golden_columns() -> str:
 
 
 DDL = [
+    # asserted_at is when this ROW was written; date_key is when the SOURCE was retrieved. They are
+    # different questions and survivorship needs both: retrieved_date ranks one source against
+    # another, and asserted_at orders two assertions that share it. Without the second, re-measuring
+    # a facility on the same day leaves two rows that `tie: most_recent` cannot separate, and which
+    # one reaches golden is arbitrary — which is exactly what happened to 24 footprints.
     """CREATE TABLE IF NOT EXISTS fact_assertions (
         assertion_id TEXT NOT NULL, release_tag TEXT NOT NULL,
         facility_key TEXT NOT NULL, source_key TEXT NOT NULL, field_key TEXT NOT NULL, date_key TEXT,
         value TEXT, basis TEXT, site_visit INTEGER, row_hash TEXT, confidence REAL, source_class TEXT,
+        asserted_at TEXT,
         PRIMARY KEY (assertion_id, release_tag))""",
     "CREATE INDEX IF NOT EXISTS ix_assertions_facility ON fact_assertions (facility_key, field_key)",
     "CREATE INDEX IF NOT EXISTS ix_assertions_row ON fact_assertions (row_hash)",
@@ -158,22 +164,24 @@ class _Warehouse:
         raise NotImplementedError
 
     def init_schema(self):
-        """Tables, then any golden column this build added, then the views.
+        """Tables, then any column this build added, then the views.
 
         CREATE TABLE IF NOT EXISTS does not widen a table that already exists, so a database
-        created before a field joined GOLDEN_FIELDS keeps its old shape and every later write of
-        that field is silently dropped. The reconcile step below is what makes adding a golden
-        field a code change rather than a migration script.
+        created before a column existed keeps its old shape and every later write of that column is
+        silently dropped. The reconcile step below is what makes adding one a code change rather
+        than a migration script.
         """
         with self.transaction() as c:
             for stmt in DDL:
                 c.execute(stmt)
-        have = self.existing_columns("golden_facility")
-        want = [x for f in GOLDEN_FIELDS for x in (f, f"{f}__source")]
-        with self.transaction() as c:
-            for col in want:
-                if col not in have:
-                    c.execute(f'ALTER TABLE golden_facility ADD COLUMN "{col}" TEXT')
+        wanted = {"golden_facility": [x for f in GOLDEN_FIELDS for x in (f, f"{f}__source")],
+                  "fact_assertions": ["asserted_at"]}
+        for table, want in wanted.items():
+            have = self.existing_columns(table)
+            with self.transaction() as c:
+                for col in want:
+                    if col not in have:
+                        c.execute(f'ALTER TABLE {table} ADD COLUMN "{col}" TEXT')
         with self.transaction() as c:
             for stmt in VIEWS:
                 c.execute(stmt)
@@ -232,10 +240,11 @@ class _Warehouse:
             n_facts = 0
             for a in assertions:
                 dr = _date_row(a.get("retrieved_date") or "")
-                cur = c.execute("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (assertion_id, release_tag) DO NOTHING",
+                cur = c.execute("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (assertion_id, release_tag) DO NOTHING",
                                 (assertion_id(a), tag, a["facility_id"], a["source_id"], a["field"], dr[0] if dr else None,
                                  a["value"], a.get("basis"), 1 if a.get("site_visit") in (True, "True") else 0,
-                                 a.get("row_hash") or None, _float(a.get("confidence")), a.get("source_class")))
+                                 a.get("row_hash") or None, _float(a.get("confidence")), a.get("source_class"),
+                                 a.get("asserted_at") or run_ts))
                 n_facts += cur.rowcount
             # golden: replaced, never edited
             c.execute("DELETE FROM golden_facility")

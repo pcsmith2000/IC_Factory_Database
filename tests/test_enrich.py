@@ -737,10 +737,11 @@ def test_append_batches_instead_of_two_round_trips_per_assertion():
     rows = [_db.assertion(f"IC-{i}", "lat_lon", "1.0,2.0", source_id="geocode:geocodio",
                           basis="rooftop", evidence="geocodio:parcel") for i in range(600)]
     rep = _db.append(FakeDB(), rows, "rel-1", chunk=250)
-    assert len(calls) == 6, f"3 chunks x 2 tables, got {len(calls)} queries"
+    inserts = [c for c in calls if c[0].lstrip().startswith("INSERT")]
+    assert len(inserts) == 6, f"3 chunks x 2 tables, got {len(inserts)} inserts"
     assert rep["offered"] == 600
     # Postgres caps a statement at 65535 parameters; 250 x 12 leaves plenty of room
-    assert max(len(p) for _, p in calls) < 65535
+    assert max(len(p) for _, p in inserts) < 65535
 
 
 def test_append_reports_rows_inserted_not_rows_offered():
@@ -857,3 +858,56 @@ def test_a_strange_usage_value_cannot_take_the_run_down(monkeypatch):
                      verify_page=False)
     assert rep["located"] == 1, "the address must survive a metric it could not add up"
     assert rep["usage"]["input_tokens"] == 10
+
+
+# ------------------------------------------------- re-measuring must supersede, not coexist
+def _measurement(fid, sqft, asserted_at, building):
+    return {"facility_id": fid, "field": "building_sqft", "value": str(sqft),
+            "source_id": "overture:building", "source_class": "enrichment", "basis": "footprint",
+            "retrieved_date": "2026-09-17", "asserted_at": asserted_at,
+            "row_hash": building, "site_visit": False, "confidence": 1.0}
+
+
+def test_a_re_measurement_supersedes_the_one_it_corrected():
+    """The bug this fixes, reproduced. Stage 11 measured 790 facilities, the selection rule was
+    corrected, and the same 790 were measured again the same day. Both measurements carry the same
+    source, basis and retrieved_date, so `tie: most_recent` could not order them and max() returned
+    whichever the sort left first — 24 facilities kept the superseded value."""
+    from pipeline.enrich import promote
+    rows, _ = promote.build([
+        _measurement("F1", 4726, "2026-09-17T05:45:00+00:00", "gatehouse"),   # the old, wrong one
+        _measurement("F1", 13558, "2026-09-17T06:26:00+00:00", "plant"),      # the correction
+    ], _rules())
+    assert rows[0]["building_sqft"] == "13558", "the later measurement must win"
+
+    # and the order they arrive in must not matter
+    rows, _ = promote.build([
+        _measurement("F1", 13558, "2026-09-17T06:26:00+00:00", "plant"),
+        _measurement("F1", 4726, "2026-09-17T05:45:00+00:00", "gatehouse"),
+    ], _rules())
+    assert rows[0]["building_sqft"] == "13558"
+
+
+def test_retrieved_date_still_outranks_asserted_at():
+    """asserted_at is a sub-order, not a replacement. retrieved_date means when the SOURCE was
+    retrieved and must keep deciding between two sources: a stale roster loaded today does not beat
+    a fresh one loaded last week."""
+    from pipeline.enrich import promote
+    stale_but_written_later = {**_measurement("F1", 100, "2026-09-17T23:00:00+00:00", "a"),
+                               "retrieved_date": "2026-01-01"}
+    fresh_but_written_earlier = {**_measurement("F1", 900, "2026-09-17T01:00:00+00:00", "b"),
+                                 "retrieved_date": "2026-09-14"}
+    rows, _ = promote.build([stale_but_written_later, fresh_but_written_earlier], _rules())
+    assert rows[0]["building_sqft"] == "900", "the fresher source wins regardless of write time"
+
+
+def test_an_assertion_predating_the_column_loses_to_one_that_has_it():
+    """Every layers 1-8 assertion written before asserted_at existed reads as ''. Sorting those
+    below an assertion that carries a timestamp is correct: the row that recorded when it was
+    written is the later of the two."""
+    from pipeline.enrich import promote
+    rows, _ = promote.build([
+        {**_measurement("F1", 111, "2026-09-17T06:00:00+00:00", "new")},
+        {**_measurement("F1", 222, "", "old")},
+    ], _rules())
+    assert rows[0]["building_sqft"] == "111"

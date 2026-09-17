@@ -45,6 +45,23 @@ def _rank(a: dict, order: list[str]) -> int:
     return len(order)
 
 
+def _recency(a: dict) -> tuple[str, str]:
+    """How `tie: most_recent` orders two assertions of equal rank.
+
+    `retrieved_date` comes first and keeps its meaning: when the SOURCE was retrieved, which is
+    what should decide between two sources carrying different values. `asserted_at` — when the row
+    was written — only ever breaks a tie that leaves, and that tie is not hypothetical: re-measuring
+    a footprint with a corrected method produced a second assertion with the same source, basis and
+    date, and max() returned whichever the sort happened to leave first. 24 facilities kept the
+    superseded measurement.
+
+    Both are ISO strings, so lexical order is chronological order, and an assertion with no
+    asserted_at (every layers 1-8 assertion written before the column existed) sorts below one that
+    has it — which is right: the one that recorded when it was written is the later of the two.
+    """
+    return (str(a.get("retrieved_date") or ""), str(a.get("asserted_at") or ""))
+
+
 def build_golden(assertions: list[dict], rules: dict) -> tuple[list[dict], list[dict]]:
     """Returns (golden rows, conflicts). A conflict is a field with >1 distinct value on a facility."""
     by_fac: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
@@ -55,11 +72,11 @@ def build_golden(assertions: list[dict], rules: dict) -> tuple[list[dict], list[
         g = {"facility_id": fid}
         for field, asserts in fields.items():
             order = rules["fields"].get(field, {}).get("order", rules["default_order"])
-            asserts_sorted = sorted(asserts, key=lambda a: (_rank(a, order), a["retrieved_date"]), reverse=False)
+            asserts_sorted = sorted(asserts, key=lambda a: (_rank(a, order), _recency(a)), reverse=False)
             # lowest rank wins; among equal rank, most recent
             best_rank = _rank(asserts_sorted[0], order)
             tied = [a for a in asserts_sorted if _rank(a, order) == best_rank]
-            win = max(tied, key=lambda a: a["retrieved_date"])
+            win = max(tied, key=_recency)
             g[field] = win["value"]; g[f"{field}__source"] = win["source_id"]
             distinct = {a["value"] for a in asserts}
             if len(distinct) > 1:

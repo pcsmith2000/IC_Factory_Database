@@ -153,7 +153,7 @@ ON CONFLICT (assertion_id, release_tag) DO NOTHING
 """
 
 
-def _rows_for(a: dict, release_tag: str, today: str) -> tuple[tuple, tuple]:
+def _rows_for(a: dict, release_tag: str, today: str, now: str) -> tuple[tuple, tuple]:
     """The ref_source_row and fact_assertions tuples for one assertion.
 
     source_url means a URL. A located address cites a page, so it has one; a footprint cites an
@@ -170,7 +170,7 @@ def _rows_for(a: dict, release_tag: str, today: str) -> tuple[tuple, tuple]:
              a.get("basis", "none"), conf, release_tag),
             (aid, release_tag, a["facility_id"], a["source_id"], a["field"], when,
              a["value"], a.get("basis", "none"), 0, a["row_hash"], conf,
-             a.get("source_class", "enrichment")))
+             a.get("source_class", "enrichment"), now))
 
 
 def _multi(sql_head: str, tail: str, rows: list[tuple]) -> tuple[str, list]:
@@ -195,11 +195,16 @@ def append(db, assertions: list[dict], release_tag: str, chunk: int = 250) -> di
     the same assertions and inserts none of them, and a summary that called that "2,000 appended"
     would be reporting the opposite of the property the design depends on.
     """
-    from datetime import date
+    from datetime import date, datetime, timezone
     today = date.today().isoformat()
+    # One timestamp for the whole append: every assertion of a run is equally recent, and a run
+    # that re-measures a facility must sort strictly after the run that measured it before.
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    # The only writer of enrichment assertions, so the only place the column has to be guaranteed.
+    add_assertion_columns(db, missing_assertion_columns(db))
     inserted = 0
     for i in range(0, len(assertions), chunk):
-        batch = [_rows_for(a, release_tag, today) for a in assertions[i:i + chunk]]
+        batch = [_rows_for(a, release_tag, today, now) for a in assertions[i:i + chunk]]
         sql, params = _multi(
             "INSERT INTO ref_source_row (row_hash, source_key, source_url, source_document,"
             " retrieved_date, facility_key, match_method, match_confidence, last_seen_release)",
@@ -208,7 +213,8 @@ def append(db, assertions: list[dict], release_tag: str, chunk: int = 250) -> di
         db.query(sql, params)
         sql, params = _multi(
             "INSERT INTO fact_assertions (assertion_id, release_tag, facility_key, source_key,"
-            " field_key, date_key, value, basis, site_visit, row_hash, confidence, source_class)",
+            " field_key, date_key, value, basis, site_visit, row_hash, confidence, source_class,"
+            " asserted_at)",
             "ON CONFLICT (assertion_id, release_tag) DO NOTHING",
             [b[1] for b in batch])
         db.query(sql, params)
@@ -232,6 +238,7 @@ SELECT_ASSERTIONS = """
            COALESCE(basis, 'none')     AS basis,
            COALESCE(site_visit, 0)     AS site_visit,
            COALESCE(confidence, 0)     AS confidence,
+           COALESCE(asserted_at, '')   AS asserted_at,
            field_key AS field, value
     FROM fact_assertions
     WHERE release_tag = $1
@@ -267,6 +274,20 @@ def fetch_assertions(db, release_tag: str, page: int = 5000) -> list[dict]:
 def golden_columns(db) -> set[str]:
     return {r["column_name"] for r in db.query(
         "SELECT column_name FROM information_schema.columns WHERE table_name = 'golden_facility'", ())}
+
+
+def missing_assertion_columns(db) -> list[str]:
+    """asserted_at, on a database whose loader predates it. Without the column the INSERT below
+    fails outright, and without the value survivorship cannot order two same-day measurements."""
+    have = {r["column_name"] for r in db.query(
+        "SELECT column_name FROM information_schema.columns WHERE table_name = 'fact_assertions'", ())}
+    return [c for c in ("asserted_at",) if c not in have]
+
+
+def add_assertion_columns(db, cols: list[str]) -> list[str]:
+    for col in cols:
+        db.query(f'ALTER TABLE fact_assertions ADD COLUMN IF NOT EXISTS "{col}" TEXT', ())
+    return list(cols)
 
 
 def missing_golden_columns(db, fields: list[str]) -> list[str]:

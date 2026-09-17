@@ -165,11 +165,24 @@ The cause is the survivorship tie-break. Both measurements are assertions with t
 same basis and the same `retrieved_date`, because enrichment stamps a date and both ran on the same
 day. `tie: most_recent` cannot order them, so which one wins is arbitrary.
 
-This matters for any field that is a **measurement** rather than an observation: re-running an
-improved method should replace the earlier answer, and right now it merely adds a second one. The
-fix is a design decision, not a patch — either enrichment assertions carry an ordering finer than a
-date, or a measurement assertion is keyed on (source, facility, field, release) and updated in
-place, which trades away strict append-only for the field where append-only is not what is wanted.
+**Fixed** by separating two questions that `retrieved_date` was being asked to answer at once:
+
+    date_key / retrieved_date   when the SOURCE was retrieved   ranks one source against another
+    asserted_at                 when the ROW was written        orders two that share a retrieved_date
+
+`tie: most_recent` now reads `(retrieved_date, asserted_at)`. retrieved_date still decides first, so
+a stale roster loaded today still loses to a fresh one loaded last week — that ordering was correct
+and is untouched. asserted_at only ever breaks a tie retrieved_date leaves, which is exactly the
+re-measurement case.
+
+Neither of the two options considered first was right. Putting a timestamp in `retrieved_date`
+would have corrupted what it means, and updating a measurement assertion in place would have thrown
+away append-only. The whole history is still there; only the reading of it changed.
+
+An assertion with no asserted_at — every one written before the column existed — sorts below one
+that has it, which is the right way round: the row that recorded when it was written is the later
+of the two. `init_schema` adds the column to a database that predates it, the same reconcile that
+adds a new golden field.
 
 ## Stage 9 was reach-limited, and search is what lifted it
 

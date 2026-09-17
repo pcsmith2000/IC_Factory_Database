@@ -158,3 +158,29 @@ def test_promote_rebuilds_exactly_the_golden_the_loader_wrote(wh, tmp_path: Path
                                    if k.endswith("__source") or k in warehouse.GOLDEN_FIELDS}
                 for r in rows}
     assert shape(rebuilt) == shape(gold)
+
+
+def test_asserted_at_is_added_to_a_fact_table_that_predates_it(tmp_path: Path):
+    """Same reconcile as the golden columns, for the same reason: without the column the loader's
+    INSERT fails outright, and without the value survivorship cannot order two same-day
+    measurements of the same facility."""
+    import sqlite3
+    con = sqlite3.connect(tmp_path / "old.sqlite")
+    con.execute("""CREATE TABLE fact_assertions (
+        assertion_id TEXT NOT NULL, release_tag TEXT NOT NULL,
+        facility_key TEXT NOT NULL, source_key TEXT NOT NULL, field_key TEXT NOT NULL, date_key TEXT,
+        value TEXT, basis TEXT, site_visit INTEGER, row_hash TEXT, confidence REAL, source_class TEXT,
+        PRIMARY KEY (assertion_id, release_tag))""")
+    con.commit(); con.close()
+
+    w = warehouse.SqliteWarehouse(tmp_path / "old.sqlite")
+    assert "asserted_at" in w.existing_columns("fact_assertions")
+    w.close()
+
+
+def test_the_loader_stamps_asserted_at_so_a_reload_can_be_ordered(wh, tmp_path: Path):
+    """Every assertion the loader writes carries when it was written, so a later run's assertion
+    sorts after an earlier one even when both claim the same retrieved_date."""
+    _load(wh, tmp_path, "v-stamp")
+    rows = wh.query("SELECT asserted_at FROM fact_assertions WHERE release_tag = ?", ("v-stamp",))
+    assert rows and all(r["asserted_at"] for r in rows), "the loader left asserted_at empty"
