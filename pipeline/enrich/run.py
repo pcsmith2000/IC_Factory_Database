@@ -29,6 +29,7 @@ from . import _db
 
 STAGES = ("plan", "locate", "geocode", "footprint", "existence", "load")
 DEFAULT_AI_LIMIT = 200
+DEFAULT_GEOCODE_LIMIT = 2000        # the free tier is 2500/day and is shared with anyone else using it
 
 
 def _summary(title: str, rows: list[tuple[str, object]]) -> str:
@@ -62,6 +63,8 @@ def main(argv=None) -> int:
     ap.add_argument("--sample", type=int, help="work on a seeded, state-stratified subset")
     ap.add_argument("--limit", type=int, default=DEFAULT_AI_LIMIT,
                     help="hard ceiling on facilities for the AI stage (default 200)")
+    ap.add_argument("--geocode-limit", type=int, default=DEFAULT_GEOCODE_LIMIT,
+                    help="hard ceiling on Geocodio lookups per run (default 2000, free tier 2500/day)")
     ap.add_argument("--release-tag", default=os.environ.get("ENRICH_RELEASE_TAG", ""))
     ap.add_argument("--dry-run", action="store_true", help="plan the stage; make no external call")
     args = ap.parse_args(argv)
@@ -69,20 +72,28 @@ def main(argv=None) -> int:
     db = _db.connect()
     rows = _db.snapshot(db, sample=args.sample)
     tag = args.release_tag or (rows[0].get("release_tag") if rows else "") or "enrich"
+    def rooftop(r):
+        return r.get("has_rooftop") in (True, "t", "true", 1)
     need_addr = _db.needs(rows, "address")
-    need_coord = [r for r in rows if (r.get("address") or "").strip() and not (r.get("lat_lon") or "").strip()]
-    have_coord = [r for r in rows if (r.get("lat_lon") or "").strip()]
+    # an EPA coordinate does not disqualify a facility from being geocoded — it is the reason to
+    need_coord = [r for r in rows if (r.get("address") or "").strip() and not rooftop(r)]
+    have_coord = [r for r in rows if rooftop(r)]
 
     if args.stage == "plan":
         _emit(args.out, "plan",
               {"facilities": len(rows), "release_tag": tag, "engine": db.engine,
-               "stage9_need_address": len(need_addr), "stage10_need_coordinate": len(need_coord),
-               "stage11_have_coordinate": len(have_coord), "ai_limit": args.limit},
+               "stage9_need_address": len(need_addr), "stage10_need_rooftop": len(need_coord),
+               "stage11_have_rooftop": len(have_coord), "ai_limit": args.limit,
+               "geocode_limit": args.geocode_limit,
+               "coordinates_of_any_provenance": sum(1 for r in rows if (r.get("lat_lon") or "").strip())},
               [("facilities", len(rows)), ("release", tag), ("engine", db.engine),
                ("9 locate — need an address", len(need_addr)),
-               ("10 geocode — have address, no coordinate", len(need_coord)),
-               ("11 footprint — have a coordinate", len(have_coord)),
-               ("AI ceiling this run", args.limit)])
+               ("10 geocode — have address, no rooftop coordinate", len(need_coord)),
+               ("11 footprint — have a ROOFTOP coordinate", len(have_coord)),
+               ("(coordinates of any provenance, mostly EPA)",
+                sum(1 for r in rows if (r.get("lat_lon") or "").strip())),
+               ("AI ceiling this run", args.limit),
+               ("geocode ceiling this run", args.geocode_limit)])
         return 0
 
     if args.stage == "locate":
@@ -104,7 +115,7 @@ def main(argv=None) -> int:
 
     if args.stage == "geocode":
         from . import geocode
-        todo = need_coord if args.limit is None else need_coord[:max(args.limit, 0) or len(need_coord)]
+        todo = need_coord[:args.geocode_limit]     # the free tier is shared; never spend it all
         if args.dry_run:
             _emit(args.out, "geocode", {"planned": len(todo), "called": 0},
                   [("would look up", len(todo)), ("calls made", 0)])
@@ -113,7 +124,8 @@ def main(argv=None) -> int:
         (args.out).mkdir(parents=True, exist_ok=True)
         (args.out / "geocode.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
         _emit(args.out, "geocode", {k: v for k, v in rep.items() if k != "assertions"},
-              [("looked up", rep["requested"]), ("rooftop stored", rep["stored"]),
+              [("eligible", len(need_coord)), ("ceiling", args.geocode_limit),
+               ("looked up", rep["requested"]), ("rooftop stored", rep["stored"]),
                ("rooftop %", rep["rooftop_pct"]),
                ("not stored (non-rooftop)", rep["requested"] - rep["stored"]),
                ("accuracy mix", json.dumps(rep["accuracy_type"]))])

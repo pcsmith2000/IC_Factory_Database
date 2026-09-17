@@ -11,10 +11,19 @@ from __future__ import annotations
 import hashlib, random
 from datetime import date
 
+# `has_rooftop` is the distinction stage 11 turns on, and it is not the same as "has a coordinate".
+# Every coordinate in the release today is asserted by epa_frs, and EPA's are facility-self-reported:
+# measured against Overture, 44% of them land within 30m of any building at all and the median
+# footprint of those is 4,583 sqft — small incidental structures, not plants. A rooftop geocode on
+# the same measurement resolved 18 of 19 with a median of 63,968 sqft. So a coordinate is only
+# worth measuring when a rooftop geocode produced it.
 SELECT_GOLDEN = """
     SELECT COALESCE(d.facility_id, g.facility_key) AS facility_id, g.facility_key,
            g.name, g.address, g.city, g.state, g.zip, g.lat_lon, g.status, g.expiry_date,
-           d.tier, g.release_tag
+           d.tier, g.release_tag,
+           EXISTS (SELECT 1 FROM fact_assertions a
+                    WHERE a.facility_key = g.facility_key
+                      AND a.field_key = 'lat_lon' AND a.basis = 'rooftop') AS has_rooftop
     FROM golden_facility g
     LEFT JOIN dim_facility d ON d.facility_key = g.facility_key
 """
