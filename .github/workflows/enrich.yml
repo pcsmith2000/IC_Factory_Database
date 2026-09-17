@@ -127,6 +127,7 @@ jobs:
       stage: footprint
       branch_id: ${{ needs.branch.outputs.branch_id }}
       run_key: ${{ github.run_id }}
+      overture_release: "2026-08-19.0"
       enabled: ${{ contains(inputs.stages, 'footprint') || github.event_name == 'workflow_run' }}
       args: ${{ needs.branch.outputs.common_args }}
 

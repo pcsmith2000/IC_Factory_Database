@@ -16,6 +16,7 @@ on:
       run_key:    { required: true,  type: string }
       args:       { required: false, type: string, default: "" }
       enabled:    { required: false, type: boolean, default: true }
+      overture_release: { required: false, type: string, default: "2026-08-19.0" }
 
 jobs:
   stage:
@@ -56,6 +57,16 @@ jobs:
       # it looked under. Secret names differ across this repo (CENSUS_KEY, IC_DB_ANTHROPIC_API_KEY,
       # NEON_API_KEY), and "GEOCODIO_API_KEY is not set" three minutes into a run does not say
       # whether the secret is absent or merely spelled differently.
+      # The Overture file -> bbox index is derived from parquet footers and is fixed for an Overture
+      # release, but it costs ~110s of S3 metadata reads to build. It was being rebuilt every run
+      # because the stage artifact glob (enrich/<stage>*) does not match overture_index.json.
+      - name: Reuse the Overture file index across runs
+        if: inputs.stage == 'footprint'
+        uses: actions/cache@v4
+        with:
+          path: enrich/overture_index.json
+          key: overture-index-${{ inputs.overture_release }}
+
       - name: Check the credentials this stage needs
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
