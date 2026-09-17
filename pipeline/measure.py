@@ -97,7 +97,7 @@ def ingested_index(normalised_dir: Path) -> dict:
     are kept in separate indexes so a stripped name is never compared against a light one, which
     is the same pairing `_company_known` uses.
     """
-    exact: dict[str, set] = defaultdict(set)
+    exact: dict[str, list] = defaultdict(list)
     first_norm: dict[str, list] = defaultdict(list)
     first_light: dict[str, list] = defaultdict(list)
     for path in sorted(Path(normalised_dir).glob("*.csv")):
@@ -107,24 +107,43 @@ def ingested_index(normalised_dir: Path) -> dict:
                 nm = r.get("name_verbatim") or ""
                 if not nm:
                     continue
-                exact[_key(nm)].add(src)
+                st = (r.get("state") or r.get("state_verbatim") or "").strip().upper()
+                exact[_key(nm)].append((src, st))
                 for form, idx in ((norm_name(nm), first_norm), (_light_name(nm), first_light)):
                     if form:
-                        idx[form.split()[0]].append((form, src))
+                        idx[form.split()[0]].append((form, src, st))
     return {"exact": exact, "first_norm": first_norm, "first_light": first_light}
 
 
-def sources_holding(name: str, index: dict) -> set:
-    """Which sources ingested a row under this name, judged the way the rungs match."""
+def sources_holding(name: str, index: dict, state: str = "") -> set:
+    """Which sources ingested a row under this name IN THIS STATE, the way the rungs match.
+
+    The state is not optional decoration and leaving it out was a real defect in the first version
+    of this function. The control list is PLANT-level: "Apex Truss" is a Virginia row, and the only
+    Apex Truss the pipeline holds is in Hawaii. Matching on the company name alone called that row
+    "ingested but lost before publication" — the company was ingested, the plant never was — which
+    is the same overstatement, one field narrower, as the "not in any source we hold" line this
+    module was rewritten to remove. Stark Truss (MD against OH), Panel Truss (SC against GA and TX)
+    and Universal Forest Products all read the same way.
+
+    A blank state on either side is unknown rather than disagreement, which is the rule the recall
+    rungs already use: about a third of ingested rows carry no state, and holding that against a
+    control row would swing the error back the other way.
+    """
     if not index:
         return set()
-    got = set(index["exact"].get(_key(name), ()))
+    st = (state or "").strip().upper()
+
+    def agrees(row_state: str) -> bool:
+        return not (st and row_state and st != row_state)
+
+    got = {src for src, rst in index["exact"].get(_key(name), ()) if agrees(rst)}
     cn, cl = norm_name(name), _light_name(name)
     for form, idx in ((cn, index["first_norm"]), (cl, index["first_light"])):
         if not form:
             continue
-        for candidate, src in idx.get(form.split()[0], ()):
-            if _prefix_match(form, candidate):
+        for candidate, src, rst in idx.get(form.split()[0], ()):
+            if _prefix_match(form, candidate) and agrees(rst):
                 got.add(src)
     return got
 
@@ -366,7 +385,7 @@ def status_table(control_rows: list[dict], facilities: list[dict], crosswalk: di
         # A plant no source ever fetched is beyond any amount of prompt or matcher work; one that
         # WAS fetched and did not survive is a leak with a fixable cause. Only the second kind is
         # worth an edit, and until this column existed both read identically.
-        srcs = sources_holding(c.get("name", ""), ingested)
+        srcs = sources_holding(c.get("name", ""), ingested, c.get("state", ""))
         out[-1]["ingested_by"] = " ".join(sorted(srcs))
         out[-1]["why_missing"] = ("never ingested — no source holds this name" if not srcs
                                   else f"ingested but lost before publication ({out[-1]['why_missing']})")
@@ -450,8 +469,16 @@ def source_gap(status: list[dict]) -> dict:
 
     `ceiling` is the recall this database would reach if every row that was ingested and lost were
     recovered and nothing else changed — the honest upper bound on classifier, matcher and
-    resolution work against today's sources. Run 22: 90 found, 29 recoverable, 122 never ingested,
-    so the ceiling is 49.4% and 80% is unreachable without fetching 74 more plants.
+    resolution work against today's sources.
+
+    Run 22, measured state-aware: 92 found, 15 recoverable, 134 never ingested, ceiling 44.4%. So
+    80% of the 241 is 193 rows and 86 of them have to be fetched by a source that does not exist
+    yet. No prompt edit, matcher rung or resolution fix reaches a row nothing ever downloaded.
+
+    Those figures first read 29 recoverable, 122 never ingested and a 49.4% ceiling, and that was
+    wrong in this function's own favour: `sources_holding` matched on company name with no state,
+    so a Virginia control row for "Apex Truss" was satisfied by the Hawaii plant and reported as
+    fetched-and-lost. Twelve rows moved back across the line when the state was honoured.
     """
     have = sum(1 for r in status if r["status"] == "HAVE")
     missing = [r for r in status if r["status"] == "MISSING"]
