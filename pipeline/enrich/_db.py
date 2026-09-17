@@ -102,6 +102,7 @@ class NeonHttp:
             out = json.loads(r.read())
         if "rows" not in out:
             raise RuntimeError(f"neon http: {str(out)[:300]}")
+        self.last_row_count = out.get("rowCount", 0)
         return out["rows"]
 
     def executemany(self, sql: str, rows: list[tuple]) -> int:
@@ -135,11 +136,16 @@ ON CONFLICT (assertion_id, release_tag) DO NOTHING
 """
 
 
-def append(db, assertions: list[dict], release_tag: str) -> int:
+def append(db, assertions: list[dict], release_tag: str) -> dict:
     """Append enrichment assertions. ON CONFLICT DO NOTHING plus the evidence-derived row_hash is
-    what makes a re-run a no-op rather than a duplicate."""
+    what makes a re-run a no-op rather than a duplicate.
+
+    Reports rows actually inserted, not rows offered. A second run over unchanged evidence offers
+    the same assertions and inserts none of them, and a summary that called that "30 appended"
+    would be reporting the opposite of the property the design depends on.
+    """
     from datetime import date
-    n = 0
+    inserted = skipped = 0
     for a in assertions:
         aid = f"{a['source_id']}|{a['facility_id']}|{a['field']}|{a['row_hash']}"
         db.query(APPEND_ASSERTION, (aid, release_tag, a["facility_id"], a["source_id"], a["field"],
@@ -147,5 +153,8 @@ def append(db, assertions: list[dict], release_tag: str) -> int:
                                     a["value"], a.get("basis", "none"), 0, a["row_hash"],
                                     None if a.get("confidence") in ("", None) else float(a["confidence"]),
                                     a.get("source_class", "enrichment")))
-        n += 1
-    return n
+        if getattr(db, "last_row_count", 1):
+            inserted += 1
+        else:
+            skipped += 1
+    return {"offered": len(assertions), "inserted": inserted, "already_present": skipped}

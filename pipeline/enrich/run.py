@@ -206,15 +206,18 @@ def main(argv=None) -> int:
             _emit(args.out, "load", {"would_append": len(asserts), "gates": [str(r) for r in results]},
                   [("would append", len(asserts)), *[(r.gate, r.summary) for r in results]])
             return 0
-        n = _db.append(db, asserts, tag)
+        wrote = _db.append(db, asserts, tag)
         by_field: dict[str, int] = {}
         for a in asserts:
             by_field[a["field"]] = by_field.get(a["field"], 0) + 1
         _emit(args.out, "load",
-              {"appended": n, "release_tag": tag, "by_field": by_field,
+              {**wrote, "release_tag": tag, "by_field": by_field,
                "gates": [str(r) for r in results]},
-              [("assertions appended", n), ("release tag", tag),
-               ("by field", json.dumps(by_field)), *[(r.gate, r.summary) for r in results]])
+              [("assertions offered", wrote["offered"]),
+               ("newly inserted", wrote["inserted"]),
+               ("already present (re-run is a no-op)", wrote["already_present"]),
+               ("release tag", tag), ("by field", json.dumps(by_field)),
+               *[(r.gate, r.summary) for r in results]])
         return 0
     return 1
 
