@@ -227,3 +227,39 @@ def test_bldr_drops_a_street_whose_state_contradicts_the_title():
         '<a href="https://www.google.com/maps/place/1 Wrong St,Elsewhere,TX,75039/" class="placeLink">x</a>')
     rows = B.parse(sorted(d.glob("*.html")), src)
     assert rows[0]["address_verbatim"] == ""
+
+
+def test_sipa_takes_the_street_only_from_the_members_own_paragraph(tmp_path):
+    """These profile sidebars also render projects and sponsors.
+
+    A street lifted from the wrong block is worse than no street, so the address paragraph is
+    believed only where it is headed by the member's own name.
+    """
+    from pipeline.sources import sipa
+    src = {"id": "sipa", "url": sipa.INDEX, "status_basis": "on_current_list"}
+    (tmp_path / "manufacturing.html").write_text(
+        '<a href="/members/acme-panel-company" class="font-weight-bold">ACME Panel Company</a>'
+        "<strong>Manufacturing</strong><small>Radford, VA</small><footer>x</footer>")
+    (tmp_path / "acme-panel-company.html").write_text(
+        "<p><strong>Zero-Energy SIP Demonstration House</strong><br />9 Someone Else Rd<br />"
+        "Vienna, VA 22180<br />United States</p>"
+        "<p><strong>ACME Panel Company</strong><br />1905 W Main St<br />"
+        "Radford, VA 24141<br />United States</p>")
+    rows = sipa.parse(sorted(tmp_path.glob("*.html")), src)
+    assert len(rows) == 1
+    assert rows[0]["address_verbatim"] == "1905 W Main St"
+    assert (rows[0]["city_verbatim"], rows[0]["state_verbatim"]) == ("Radford", "VA")
+
+
+def test_sipa_keeps_a_member_whose_profile_has_no_readable_address(tmp_path):
+    """Name, city and state already locate a plant here; dropping the row would have the database
+    claim a SIPA manufacturer does not exist."""
+    from pipeline.sources import sipa
+    src = {"id": "sipa", "url": sipa.INDEX, "status_basis": "on_current_list"}
+    (tmp_path / "manufacturing.html").write_text(
+        '<a href="/members/foard-panel-inc" class="font-weight-bold">Foard Panel, Inc.</a>'
+        "<strong>Manufacturing</strong><small>West Chesterfield, NH</small><footer>x</footer>")
+    (tmp_path / "foard-panel-inc.html").write_text("<p>no address paragraph here</p>")
+    rows = sipa.parse(sorted(tmp_path.glob("*.html")), src)
+    assert len(rows) == 1 and rows[0]["address_verbatim"] == ""
+    assert rows[0]["city_verbatim"] == "West Chesterfield"

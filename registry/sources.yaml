@@ -318,14 +318,19 @@ sources:
   - 403s every plain fetch. Browser job.
   status: queued
 - id: sipa
-  name: SIPA manufacturers
-  class: D
+  name: SIPA manufacturing members
+  class: C
   method: fetch
   needs_classify: false
   carries:
   - plant_address
   status_basis: on_current_list
-  status: queued
+  status: active
+  url: https://www.sips.org/members/manufacturing
+  traps:
+  - Manufacturing is one of five member categories; read only /members/manufacturing.
+  - The street address exists only on the member profile, and only in the paragraph headed by that member's own name — the
+    same sidebar renders projects and sponsors.
 - id: mbma
   name: MBMA members
   class: D
