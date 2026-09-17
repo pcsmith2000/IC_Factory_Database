@@ -14,6 +14,12 @@ row; a source row that names a plant with an address yields ~5 assertions.
 |---|---|
 | `facility_id` | stable IC-number from the id registry |
 | `field` | golden field: name · legal_name · address · city · state · zip · lat_lon · naics · status · expiry_date · product_type |
+
+`product_type` is asserted by the Layer 3 classifier under source `classifier`, not by any
+source roster — it is the model's judgement about the row (volumetric · panel · precast ·
+mass_timber · truss_component · metal_building · hud_code · other), carrying the model's own
+confidence, and an `operator` correction outranks it. `legal_name` is still empty on every
+release: it comes from Layer 4, which is a stub.
 | `value` | verbatim, as asserted |
 | `source_id` · `source_class` | who asserted it; `operator` for a human correction, `lookup` for Layer 4 |
 | `retrieved_date` | when |

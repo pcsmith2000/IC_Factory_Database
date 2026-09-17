@@ -31,10 +31,21 @@ that build is compared to the first release with `pipeline/compare.py`, not merg
    column (merge / keep / co-located). Review `review_queue.csv`: decide each UNCERTAIN row.
 3. Commit the decisions to `control/` (they become seeds and crosswalk entries) and merge the PR.
    The count in the run record's `release.published_count` is the quotable number, with its tag.
+   It counts located facilities only — `reconcile.TIER_RULES` has always said "T0 never counted",
+   and since 2026-09-17 the code agrees. The record carries the whole decomposition, so quote from
+   it rather than recomputing: `raw_count` (clusters) − `t0_leads` (no street address on any row)
+   − `dedupe_removed` = `published_count`. T0 rows stay in the warehouse and stay queryable; they
+   are leads, not facilities. `t0_leads_with_city` counts the subset locatable to a town but not a
+   street, in case that boundary is ever moved.
 
 ## A gate fails
 - **G1 over 2%** — look at the pairs. If they are city-string variances, the fix is
   `norm_city` in `pipeline/contract.py`, not name matching. Re-run from layer 2.
+  Pairs marked *"same name + city, DIFFERENT street"* at confidence 0.40 are **not** duplicates
+  and are not counted as any: one company routinely runs several plants in one city (TAS Energy
+  has five in Houston). They are listed so a reviewer can catch the one case a key split — the
+  same plant written "100 Main St" and "100 N Main Street". Merge one only with evidence; the
+  default answer is *keep*.
 - **G2 flagged clusters** — a false merge. Inspect the cluster's rows; usually two firms sharing
   a street key with a unit designator lost. Fix the key logic or add a crosswalk override.
 - **G3 issued ids on a re-run** — signatures changed. Something in normalisation is
