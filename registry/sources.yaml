@@ -168,15 +168,24 @@ sources:
 - id: osha_enforcement
   name: OSHA enforcement establishments
   class: B
-  method: bulk
+  method: api
   needs_classify: true
-  url: https://preview.osha.gov/
+  url: https://apiprod.dol.gov/v4/get/osha/inspection/csv
   carries:
   - site_visit_address
   status_basis: none
   traps:
-  - Unlocks verification tier T3.
-  status: queued
+  - Unlocks verification tier T3 — an OSHA inspection is the strongest address attestation in open data, because a compliance
+    officer physically travelled to it. T3 is 80 of 4,081 facilities.
+  - NEEDS A FREE DOL API KEY (probed 2026-09-17). The old bulk path enfxfr.dol.gov/data_catalog/OSHA/ now 301s to data.dol.gov,
+    which is a client-rendered SPA serving the same 11 KB shell for every path.
+  - The real endpoint is apiprod.dol.gov/v4/get/<agency>/<endpoint>/csv?X-API-KEY=... . /v4/datasets is public and keyless;
+    every /v4/get/ call returns 401 without a key.
+  - osha.gov/ords/imis/establishment.html answers 403 to any automated fetch, so the legacy establishment search is not a
+    route either.
+  - Register at dol.gov/developer; the key is free and self-serve. Put it in the environment as DOL_API_KEY and this source
+    can be written in an hour.
+  status: blocked_needs_key
 - id: iibc
   name: IIBC registered manufacturers
   class: C
