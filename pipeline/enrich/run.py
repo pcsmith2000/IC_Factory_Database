@@ -134,14 +134,24 @@ def main(argv=None) -> int:
     if args.stage == "footprint":
         from . import footprint
         from ._db import assertion
+        # A rooftop coordinate counts whether it is already in the database or stage 10 produced it
+        # a moment ago in this same run. `load` deliberately runs last so the write is atomic, which
+        # means stage 10's coordinates are not in the database yet when stage 11 runs — reading only
+        # the database would make every first run measure nothing.
+        coords: dict[str, str] = {r["facility_id"]: r["lat_lon"] for r in have_coord}
+        fresh = args.out / "geocode.assertions.json"
+        if fresh.exists():
+            for a in json.loads(fresh.read_text()):
+                if a.get("field") == "lat_lon" and a.get("basis") == "rooftop":
+                    coords[a["facility_id"]] = a["value"]
         pts = []
-        for r in have_coord:
+        for fid, latlon in coords.items():
             try:
-                la, lo = [float(x) for x in (r["lat_lon"] or "").split(",")[:2]]
+                la, lo = [float(x) for x in (latlon or "").split(",")[:2]]
             except ValueError:
                 continue
             if -90 <= la <= 90 and -180 <= lo <= 180:
-                pts.append({"facility_id": r["facility_id"], "lat": la, "lon": lo})
+                pts.append({"facility_id": fid, "lat": la, "lon": lo})
         if args.dry_run:
             _emit(args.out, "footprint", {"planned": len(pts), "called": 0},
                   [("would measure", len(pts)), ("calls made", 0)])
