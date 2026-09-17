@@ -261,13 +261,25 @@ sources:
   - id: mbi_members
     name: MBI member directory
     class: D
-    method: browser
+    # NOT browser. The registry called for a headless browser; the GrowthZone A-Z endpoint serves
+    # the member cards in the response body, so 26 plain GETs get the whole directory. Verified
+    # 2026-09-17: 182 manufacturer members, every one with a street address.
+    method: fetch
+    url: https://members.modular.org/member-directory/FindStartsWith?term={letter}
+    # Per-source override of archive.mode (blob-only). MBI answers 26 plain GETs without a WAF or
+    # a login, so there is no reason to hand-stage files for it: web-first fetches, archives what
+    # came back, and falls back to the newest archived copy if the site breaks — which is what
+    # blob-only exists to protect against, without freezing the source at whatever was uploaded.
+    acquire: web-first
     needs_classify: false
     carries: [street_address, manufacturer_or_dealer_flag]
     status_basis: on_current_list
     traps:
       - 26-fetch A–Z sweep. Manufacturer/Direct field mechanically separates plants from dealers.
-    status: queued
+      - Membership is international. 31 of 182 manufacturers are outside the US (ON, Varsinais-Suomi,
+        ...); a two-letter state is not proof of a US row, since Canadian provinces are two letters too.
+      - An empty letter is normal (Y has 0 members, X and Z have 1); only an empty DIRECTORY is a fault.
+    status: active
 
   - id: apa_mills
     name: APA certified mills

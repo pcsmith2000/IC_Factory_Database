@@ -1,5 +1,11 @@
 # Control — held out, checksummed, never merged
 
+**A bare list of names is enough.** `name` is the only column recall needs: it matches on an
+explicit crosswalk link first, then name+state where the row has a state, then on the name alone.
+A row with no `triage` is treated as in scope and the count of those is reported. So dropping in
+241 verified names with nothing else scores real recall — before 2026-09-17 it would have scored
+0%, because the matcher required a state and a names-only list matched nothing.
+
 `control-triaged.csv` — the 241-row validated list with a `triage` column:
 `in_scope_locatable` · `in_scope_no_location` · `out_of_scope` (28 rows: trade association,
 media, advisory, developer, foreign-only, no factory). Columns: `control_id,name,city,state,triage,reason`.

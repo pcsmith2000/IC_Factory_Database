@@ -21,17 +21,50 @@ def load_frame(path: Path) -> dict[str, int]:
 
 
 def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str, str]) -> dict:
-    """Crosswalk links first; otherwise name+state match. Out-of-scope rows are excluded."""
-    in_scope = [c for c in control_rows if c.get("triage") in {"in_scope_locatable", "in_scope_no_location"}]
+    """Did the pipeline find the establishments a human already verified exist?
+
+    Three matchers, strongest first: an explicit crosswalk link, then name+state, then NAME ALONE.
+
+    The name-only rung is the point of the control list, not a concession to it. The list is a set
+    of companies somebody checked; the question it answers is "is this name in the database", and
+    requiring a state made a names-only list score 0% — indistinguishable from the pipeline having
+    missed every one of them, which is the same false-zero that `recall: 0.0` was reporting before
+    2026-09-17. A control row with a state still uses it, because it is stronger evidence.
+
+    A name matching facilities in more than one state is counted as found and reported separately:
+    the list says the company exists, and one of those rows is it, but which one is not established.
+
+    Out-of-scope rows are excluded. A row with no `triage` value is treated as in scope and
+    counted, so a bare name list works with no triage column at all — with the untriaged count
+    reported, because "we assumed all 241 were in scope" is a claim the reader should see.
+    """
+    IN_SCOPE = {"in_scope_locatable", "in_scope_no_location"}
+    in_scope, untriaged = [], 0
+    for c in control_rows:
+        t = (c.get("triage") or "").strip()
+        if not t:
+            untriaged += 1; in_scope.append(c)
+        elif t in IN_SCOPE:
+            in_scope.append(c)
     fac_ids = {f["facility_id"] for f in facilities}
-    by_name_state = {(norm_name(f["name"]), f["state"]): f["facility_id"] for f in facilities}
-    hits, by_method = 0, defaultdict(int)
+    by_name_state: dict[tuple, str] = {}
+    by_name: dict[str, set] = defaultdict(set)
+    for f in facilities:
+        by_name_state[(norm_name(f["name"]), (f.get("state") or "").upper())] = f["facility_id"]
+        by_name[norm_name(f["name"])].add(f["facility_id"])
+    hits, by_method, misses = 0, defaultdict(int), []
     for c in in_scope:
-        cw = crosswalk.get(c["control_id"])
+        nm = norm_name(c.get("name", ""))
+        cw = crosswalk.get(c.get("control_id", ""))
         if cw and cw in fac_ids:
             hits += 1; by_method["crosswalk"] += 1; continue
-        if (norm_name(c["name"]), (c.get("state") or "").upper()) in by_name_state:
-            hits += 1; by_method["name+state"] += 1
+        if (nm, (c.get("state") or "").upper()) in by_name_state:
+            hits += 1; by_method["name+state"] += 1; continue
+        if nm and nm in by_name:
+            hits += 1
+            by_method["name" if len(by_name[nm]) == 1 else "name (ambiguous: several states)"] += 1
+            continue
+        misses.append(c.get("name", ""))
     if not in_scope:
         # control/control-triaged.csv is empty, so there is nothing to have found. Reporting 0.0
         # states that the pipeline missed every establishment it was asked about, which is both
@@ -43,7 +76,8 @@ def recall(control_rows: list[dict], facilities: list[dict], crosswalk: dict[str
                         "would read as a total miss rather than an absent test",
                 "by_method": {}}
     return {"in_scope": len(in_scope), "found": hits, "recall": hits / len(in_scope),
-            "tested": True, "by_method": dict(by_method)}
+            "tested": True, "by_method": dict(by_method), "untriaged_assumed_in_scope": untriaged,
+            "missed": sorted(misses)[:50], "n_missed": len(misses)}
 
 
 def coverage_and_bias(facilities: list[dict], frame: dict[str, int], band: tuple[float, float], min_share: float) -> dict:
