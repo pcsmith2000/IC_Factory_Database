@@ -155,6 +155,38 @@ def _objects(text: str) -> list[dict]:
             out.append(o)
 
 
+def _index(o: dict):
+    """The row index a label object refers to, or None.
+
+    Models spell it `i`, sometimes `index` or `idx`, and sometimes as the STRING "0" rather than 0.
+    Run 35164672039 lost three batches of 100 to a strict isinstance(i, int): the judgements were
+    all there and all thrown away over a pair of quotes. Reading the value is not the same as
+    trusting it — the caller still checks it is in range and not a duplicate.
+    """
+    for k in ("i", "index", "idx", "row", "n"):
+        v = o.get(k)
+        if isinstance(v, bool):
+            continue
+        if isinstance(v, int):
+            return v
+        if isinstance(v, str) and v.strip().lstrip("-").isdigit():
+            return int(v.strip())
+    return None
+
+
+def _label(o: dict):
+    """The label, normalised to the contract's spelling, or None if it is not one of ours.
+
+    Case and stray whitespace are formatting, not judgement: "not-ic", "NOT_IC" and " IC " all
+    mean what they say. Anything that is not one of the three labels is still rejected.
+    """
+    v = o.get("label") if o.get("label") is not None else o.get("classification")
+    if not isinstance(v, str):
+        return None
+    norm = v.strip().upper().replace("_", "-").replace(" ", "")
+    return norm if norm in LABELS else None
+
+
 _BARE_KEY = re.compile(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:')
 _BARE_VAL = re.compile(r'(:\s*)(?!["\[{])([^,}\]]+?)(\s*[,}\]])')
 _NUMERIC = re.compile(r'^-?\d+(\.\d+)?$')
@@ -261,14 +293,19 @@ def _call_once(rows: list[dict], prompt: str, model: str, temperature: float,
     # valid labels, nothing raised.
     out: dict[int, dict] = {}
     for o in got:
-        i = o.get("i")
-        if not isinstance(i, int) or not 0 <= i < len(rows) or i in out:
+        i, label = _index(o), _label(o)
+        if i is None or not 0 <= i < len(rows) or i in out or label is None:
             continue
-        if o.get("label") not in LABELS:
-            continue
+        o["i"], o["label"] = i, label
         out[i] = o
     if not out:
-        raise BatchContractError(f"{len(got)} objects returned, none with a usable index and label")
+        # Show an object. "none with a usable index and label" told us run 35164672039 was
+        # rejected wholesale and nothing about WHY — gpt-oss-20b returned 100 well-formed objects
+        # and every one failed validation, which is a very different problem from bad JSON and
+        # took a log dive to tell apart. A sample makes the next one diagnosable at a glance.
+        raise BatchContractError(f"{len(got)} objects returned, none with a usable index and label "
+                                 f"(0..{len(rows) - 1} expected, labels {sorted(LABELS)}); "
+                                 f"first object: {json.dumps(got[0])[:300]}")
     return out
 
 

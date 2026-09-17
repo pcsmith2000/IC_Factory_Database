@@ -192,3 +192,40 @@ def test_relaxed_parsing_never_touches_real_json():
                                           "type": "panel", "reason": "x"}]
     assert classify._relaxed(strict) == []      # declines anything already quoted
     assert classify._objects("I cannot help with that.") == []
+
+
+def test_reads_string_indices_and_label_case(monkeypatch, tmp_path):
+    # Run 35164672039 (openai/gpt-oss-20b) returned 100 well-formed objects per batch and every
+    # one was rejected: `isinstance(i, int)` is False for "0", and "not-ic" is not in LABELS. The
+    # judgements were all present and all discarded over formatting, three batches running.
+    assert classify._index({"i": 0}) == 0
+    assert classify._index({"i": "3"}) == 3
+    assert classify._index({"index": "7"}) == 7
+    assert classify._index({"i": True}) is None          # a bool is not an index
+    assert classify._index({"i": "x"}) is None
+    assert classify._label({"label": "not-ic"}) == "NOT-IC"
+    assert classify._label({"label": " IC "}) == "IC"
+    assert classify._label({"label": "NOT_IC"}) == "NOT-IC"
+    assert classify._label({"label": "MAYBE"}) is None   # still rejected
+    assert classify._label({"label": 3}) is None
+
+def test_unusable_batch_error_shows_an_object(monkeypatch):
+    # The old message said only "none with a usable index and label", which could not distinguish
+    # bad JSON from good JSON that failed validation. That cost a log dive.
+    calls = {}
+
+    class FakeMsg:
+        content = [type("B", (), {"type": "text", "text": '[{"i":"zz","label":"NOPE"}]'})()]
+        usage = None
+        stop_reason = "end_turn"
+
+    class FakeClient:
+        class messages:
+            @staticmethod
+            def create(**kw):
+                calls["n"] = calls.get("n", 0) + 1
+                return FakeMsg()
+
+    monkeypatch.setattr(classify, "ai_client_and_model", lambda m: (FakeClient(), m, "test"))
+    with pytest.raises(classify.BatchContractError, match="first object"):
+        classify._call_once([{"row_hash": "h0", "name_verbatim": "X"}], "p", "m", 0, None, False)
