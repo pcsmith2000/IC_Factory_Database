@@ -60,3 +60,16 @@ def test_a_transient_404_is_retried_and_a_persistent_one_leaves_the_state_out(mo
         raise urllib.error.HTTPError(url, 404, "Not Found", {}, None)
     monkeypatch.setattr(fpl, "http_get", down)
     assert fpl._get_state("VA", tmp_path) is None
+
+
+def test_a_mill_list_card_with_only_a_state_still_reads():
+    """Alabama's page lists primary mills under /mill-list/ with ", AL" and no street or ZIP."""
+    page = ('<p class="millTitle"> <span><a href="https://secondary.forestproductslocator.org/mill-list/'
+            'abitibibowater-inc.">Resolute Forest Products</a> </span> </p> <p> <span>, AL <br /></span>'
+            ' <span class="label">Species:</span> Softwood<br> </p> <hr>'
+            '<p class="millTitle"> <span><a href="https://secondary.forestproductslocator.org/mill-list/'
+            'x-truss">X Truss Co</a> </span> </p> <p> <span>6203 FM 1998<br />Marshall, TX 75672<br /></span> </p>')
+    cards = _cards(page)
+    assert (cards[0]["name"], cards[0]["city"], cards[0]["state"], cards[0]["zip"], cards[0]["street"]) == \
+        ("Resolute Forest Products", "", "AL", "", "")
+    assert (cards[1]["street"], cards[1]["city"], cards[1]["state"], cards[1]["zip"]) == ("6203 FM 1998", "Marshall", "TX", "75672")

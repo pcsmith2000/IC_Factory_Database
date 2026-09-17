@@ -45,9 +45,13 @@ STATES = ["AL", "AR", "FL", "GA", "KY", "LA", "MS", "NC", "OK", "SC", "TN", "TX"
 
 # One card: the title paragraph, then the address paragraph.
 CARD_SPLIT = '<p class="millTitle">'
-NAME = re.compile(r'href="([^"]*/manufacturers/([a-z0-9-]+))"[^>]*>(.*?)</a>', re.S)
+# Two link shapes on the same listing: /manufacturers/<slug> for secondary manufacturers and
+# /mill-list/<slug> for the primary mills (pulp, paper, sawmills) the site lists beside them in
+# Alabama, Texas and Arkansas. Both are cards; the keep filter and the classifier sort them.
+NAME = re.compile(r'href="([^"]*/(?:manufacturers|mill-list)/([a-z0-9.\-]+))"[^>]*>(.*?)</a>', re.S)
 ADDR = re.compile(r"<p>\s*<span>(.*?)</span>", re.S)
-CITY_ST_ZIP = re.compile(r"^(?P<city>.+?),\s*(?P<state>[A-Za-z]{2})\s+(?P<zip>\d{5})(?:-\d{4})?\s*$")
+# ", AL" with no city and no ZIP is how a mill card reads; the ZIP is optional and so is the city.
+CITY_ST_ZIP = re.compile(r"^(?P<city>.*?),\s*(?P<state>[A-Za-z]{2})(?:\s+(?P<zip>\d{5})(?:-\d{4})?)?\s*$")
 
 # What the NAME must say for the card to be a candidate. The classifier decides after this.
 KEEP = re.compile(
@@ -74,7 +78,7 @@ def _cards(page: str) -> list[dict]:
             if lines:
                 csz = CITY_ST_ZIP.match(lines[-1])
                 if csz:
-                    city, state, zip_code = csz.group("city").strip(), csz.group("state").upper(), csz.group("zip")
+                    city, state, zip_code = csz.group("city").strip(), csz.group("state").upper(), csz.group("zip") or ""
                     street = " ".join(lines[:-1]).strip()
                 else:
                     street = " ".join(lines).strip()
