@@ -17,4 +17,7 @@ fields:
   naics:           {order: [operator, "class:B"], tie: most_recent}
   status:          {order: [operator, "basis:dated_expiry", "basis:explicit_status_field", "basis:certified_as_of_date", "basis:on_current_list"], tie: most_recent}
   expiry_date:     {order: [operator, "basis:dated_expiry"], tie: most_recent}
-  product_type:    {order: [operator, "class:D", "class:C", "class:A"], tie: most_recent}
+  # product_type is asserted by the Layer 3 classifier, never by a source roster, so the old
+  # class-based order could never match and the field stayed empty. A human correction still
+  # outranks the model.
+  product_type:    {order: [operator, classifier], tie: most_recent}

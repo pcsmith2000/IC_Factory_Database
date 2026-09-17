@@ -29,6 +29,7 @@ GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_l
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},
     "lookup": {"name": "Layer 4 entity resolution", "class": "lookup"},
+    "classifier": {"name": "Layer 3 classifier (IC product type)", "class": "classifier"},
 }
 
 

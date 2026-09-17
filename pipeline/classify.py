@@ -16,6 +16,11 @@ from pathlib import Path
 from . import ai_client_and_model
 
 LABELS = {"IC", "NOT-IC", "UNCERTAIN"}
+# The `type` vocabulary the prompt fixes. A model that answers outside it is not wrong enough
+# to reject the row — run 35170703333 returned "wood" once in 2228 IC rows — but the value is
+# not one the warehouse can group by, so it lands in "other" rather than inventing a category.
+PRODUCT_TYPES = {"volumetric", "panel", "precast", "mass_timber", "truss_component",
+                 "metal_building", "hud_code", "other", "none"}
 
 # keyword × NAICS-family matrix. The pairing carries the signal — neither alone.
 # COMPONENT is near-zero precision unless paired with 3212xx/3219xx. OFFSITE is permit language: excluded.
@@ -185,6 +190,21 @@ def _label(o: dict):
         return None
     norm = v.strip().upper().replace("_", "-").replace(" ", "")
     return norm if norm in LABELS else None
+
+
+def product_type(o: dict) -> str | None:
+    """The IC product category from one classifier object, or None when it says nothing.
+
+    "none" is the contract's answer for a row that is not IC, and carries no information, so it
+    never becomes an assertion. Anything outside the vocabulary becomes "other".
+    """
+    v = o.get("type")
+    if not isinstance(v, str):
+        return None
+    norm = v.strip().lower().replace("-", "_").replace(" ", "_")
+    if not norm or norm == "none":
+        return None
+    return norm if norm in PRODUCT_TYPES else "other"
 
 
 _BARE_KEY = re.compile(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:')

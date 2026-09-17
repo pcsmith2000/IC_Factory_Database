@@ -154,8 +154,17 @@ def main(argv=None) -> int:
             for r in rows:
                 if r["source_id"] not in needs:
                     keep.append(r); continue
-                lab = labels.get(r["row_hash"], {}).get("label")
-                if lab == "IC": keep.append(r)
+                got = labels.get(r["row_hash"], {})
+                lab = got.get("label")
+                if lab == "IC":
+                    # Carry the product category through to Layer 5. golden.assertions_from_rows
+                    # turns it into a `classifier`-sourced assertion; without this the classifier's
+                    # `type` is computed on every row and then dropped on the floor.
+                    pt = classify.product_type(got)
+                    if pt:
+                        r["product_type"] = pt
+                        r["product_type_confidence"] = got.get("confidence", "")
+                    keep.append(r)
                 elif lab == "UNCERTAIN": review.append(r)
                 else: drop += 1
             _write_csv(out / "review_queue.csv", review)
