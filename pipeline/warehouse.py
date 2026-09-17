@@ -164,10 +164,21 @@ class _Warehouse:
     path = ""
 
     def init_schema(self):
+        # Tables first, then the migration, THEN the views. v_golden_field selects every golden
+        # column by name, and Postgres validates a view's columns at CREATE — so on a warehouse laid
+        # down before website/sq_ft/operating_status, creating the view before adding the columns
+        # fails the whole init. SQLite only resolves a view when it is read, which is why a test on
+        # SQLite passed with the migration in the wrong place; the order is now right by
+        # construction rather than by which engine happened to be checking.
         with self.transaction() as c:
+            migrated = False
             for stmt in DDL:
+                if stmt.lstrip().upper().startswith("DROP VIEW") and not migrated:
+                    self._migrate_golden(c)
+                    migrated = True
                 c.execute(stmt)
-            self._migrate_golden(c)
+            if not migrated:
+                self._migrate_golden(c)
 
     def _existing_columns(self, c, table: str) -> set[str]:
         raise NotImplementedError

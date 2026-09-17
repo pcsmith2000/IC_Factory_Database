@@ -22,7 +22,12 @@ def test_an_existing_golden_table_gains_the_new_columns_in_place():
         for f in ("website", "sq_ft", "operating_status"):
             assert f in after and f"{f}__source" in after
         assert before <= after                                   # nothing dropped
+        with wh.transaction() as c:                              # the view built after the migration is readable
+            assert wh._rows(c.execute("SELECT count(*) AS n FROM v_golden_field"))[0]["n"] == 0
         wh.close()
+        # Known limit of this test: SQLite resolves a view's columns on read, Postgres at CREATE. The
+        # ordering that matters for Neon — migrate before the view DDL — is asserted by construction
+        # in init_schema, not observable here.
         wh2 = warehouse.SqliteWarehouse(db)                      # idempotent: second open adds nothing
         with wh2.transaction() as c:
             assert wh2._migrate_golden(c) == []
