@@ -43,6 +43,8 @@ MEMBER = re.compile(r'<div class="member">(.*?)</div></div>', re.S)
 NAME = re.compile(r"<h4><strong>(.*?)</strong></h4>", re.S)
 PARA = re.compile(r"<p>(.*?)</p>", re.S)
 SITE = re.compile(r'<div class="links">\s*<a href="([^"]+)"', re.S)
+# Every card prints the plant's switchboard as a tel: link, one line under the postal address.
+TEL = re.compile(r'<a href="tel:([^"]+)"')
 # "Batesville, Mississippi 38606" — city, spelled-out state, ZIP.
 CITY_STATE_ZIP = re.compile(r"^(?P<city>.+?),\s*(?P<state>[A-Za-z .]+?)\s+(?P<zip>\d{5})(?:-\d{4})?$")
 
@@ -101,9 +103,10 @@ def _rows(page_html: str) -> list[dict]:
             elif not street:
                 street = p
         site = SITE.search(block)
+        tel = TEL.search(block)
         out.append({"name": " ".join(_html.unescape(nm.group(1)).split()), "street": street,
                     "city": city, "state": state, "zip": zip_code,
-                    "site": site.group(1) if site else ""})
+                    "site": site.group(1) if site else "", "tel": tel.group(1) if tel else ""})
     return out
 
 
@@ -131,7 +134,7 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
         out.append(contract_row(
             source, len(out) + 1, name=r["name"], address=r["street"], city=r["city"],
             state=r["state"], zip_code=r["zip"], source_url=URL, source_document=page.name,
-            source_identifier=r["site"] or r["name"], website=r["site"],
+            source_identifier=r["site"] or r["name"], website=r["site"], phone=r["tel"],
             notes=f"MBMA building systems member; AC472 accredited through IAS"))
     require(bool(out), page, f"{len(rows)} members parsed and none was in a US state")
     out[0]["notes"] += (f" | {len(out)} US building-systems members of {len(rows)} listed; "

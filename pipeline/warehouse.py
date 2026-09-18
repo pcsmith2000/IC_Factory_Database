@@ -29,6 +29,7 @@ from pathlib import Path
 GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_lon", "naics",
                  "status", "expiry_date", "product_type",
                  "website", "sq_ft", "operating_status",      # source-stated; added 2026-09-17
+                 "phone",                                     # source-stated; added 2026-09-18
                  "building_sqft", "existence_flag"]           # measured/concluded by stages 11-12
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},

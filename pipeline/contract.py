@@ -19,11 +19,30 @@ COLUMNS = [
 #   website           the plant's or company's site, as the source printed it
 #   sq_ft             plant floor area in square feet, digits only, as the source stated it
 #   operating_status  open | closed | revoked | unknown — a claim the source made, not an inference
-OPTIONAL = ["website", "sq_ft", "operating_status"]
+#   phone             digits only, US 10-digit, as the source printed it (see phone_digits)
+OPTIONAL = ["website", "sq_ft", "operating_status", "phone"]
 ADDED = ["city_norm", "street_key", "state", "no_fixed_plant", "contract_version", "row_hash"]
 REQUIRED = COLUMNS[:5]
 STATUS_BASES = {"dated_expiry", "on_current_list", "explicit_status_field", "certified_as_of_date", "none"}
 VERBATIM = COLUMNS[5:10]
+
+def phone_digits(s: str) -> str:
+    """A US phone reduced to its ten digits, or "" when it is not one.
+
+    Stored as digits because the same plant is printed four ways across the rosters —
+    "(662) 563-4574", "662-563-4574", "662.563.4574", "1-662-563-4574" — and a field that keeps
+    the punctuation cannot be matched, deduplicated or joined on. Formatting is a rendering
+    decision and belongs to whatever displays it.
+
+    A leading country code 1 is dropped. Anything that is not ten digits after that is refused
+    rather than truncated: an extension, a fax range, a partial OCR read and a ZIP+phone run
+    together are all better absent than wrong, because a wrong number reaches a real stranger.
+    """
+    d = "".join(ch for ch in (s or "") if ch.isdigit())
+    if len(d) == 11 and d.startswith("1"):
+        d = d[1:]
+    return d if len(d) == 10 else ""
+
 
 _CITY_MAP = {"st": "saint", "st.": "saint", "ste": "sainte", "mt": "mount", "ft": "fort"}
 _STREET_SUFFIX = {"street": "st", "st.": "st", "avenue": "ave", "ave.": "ave", "road": "rd", "rd.": "rd",

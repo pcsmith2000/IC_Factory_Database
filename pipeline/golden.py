@@ -17,6 +17,7 @@ FIELD_MAP = {  # golden field -> contract column
     # Optional contract columns (2026-09-17). Blank on most rows; asserted only when a source
     # printed them — GA DCA's websites, the enrichment lookups' square footage and status.
     "website": "website", "sq_ft": "sq_ft", "operating_status": "operating_status",
+    "phone": "phone",
 }
 
 

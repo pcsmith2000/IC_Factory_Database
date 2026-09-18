@@ -119,8 +119,12 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
                 name, ca, street = _split_name_line(e[-2], want_street=len(e) < 3)
                 if len(e) >= 3:
                     street = e[-3]
+            # _PHONE was only ever used to strip the number off the end of a line so the name and
+            # CA number could be read. The number itself was thrown away on every row; it is the
+            # plant's own switchboard as filed with the state, so it is kept now.
+            tel = next((m.group(0) for line in e for m in [_PHONE.search(line)] if m), "")
             out.append(contract_row(source, i, name=name, address=street, city=city, state=state, zip_code=zip_,
-                                    source_url=PAGE, source_document=path.name, source_identifier=ca))
+                                    source_url=PAGE, source_document=path.name, source_identifier=ca, phone=tel))
     require(bool(out), path, "no manufacturer rows parsed")
     return out
 

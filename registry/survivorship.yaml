@@ -39,6 +39,11 @@ fields:
   website:          {order: [operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
   sq_ft:            {order: [operator, "class:D", "class:A", "class:B"], tie: most_recent}
   operating_status: {order: [operator, "basis:explicit_status_field", "class:D", "class:A"], tie: most_recent}
+  # Added 2026-09-18. A state registry prints the number the manufacturer filed with it, which is
+  # the one that gets answered; an association directory prints whatever the member last updated,
+  # and a member roster is the likelier place for a sales line. Registry (A) first, roster (B/C)
+  # after, enrichment last because a number found by search is the weakest claim of the four.
+  phone:            {order: [operator, "class:A", "class:B", "class:C", "class:D"], tie: most_recent}
   # Measured, not stated — and deliberately NOT merged into the two fields above.
   #
   # sq_ft is what a source SAYS the plant is; building_sqft is what its Overture footprint

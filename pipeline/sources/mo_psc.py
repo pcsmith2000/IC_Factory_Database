@@ -103,7 +103,7 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
             out.append(contract_row(
                 source, len(out) + 1, name=name, address=addr, city=city, state=st,
                 zip_code=zipc.strip()[:5], source_url=INDEX, source_document=pdf.name,
-                source_identifier=reg.strip() or name,
+                source_identifier=reg.strip() or name, phone=phone,
                 notes=f"Missouri PSC registered manufacturer, {seg}; registration {reg.strip() or '?'}; phone {phone.strip()}"[:200]))
     require(bool(out), pdfs[0], "PDFs found but no manufacturer row parsed")
     out[0]["notes"] = (out[0]["notes"] + f" | {len(out)} registrations across {len(pdfs)} list(s); {po_box} give a PO Box "
