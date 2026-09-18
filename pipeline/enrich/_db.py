@@ -233,7 +233,7 @@ def append(db, assertions: list[dict], release_tag: str, chunk: int = 250) -> di
 # this stage is what makes the run visible until then.
 SELECT_ASSERTIONS = """
     SELECT facility_key AS facility_id, source_key AS source_id,
-           COALESCE(source_class, '?') AS source_class,
+           COALESCE(source_class, '')  AS source_class,
            COALESCE(date_key, '')      AS retrieved_date,
            COALESCE(row_hash, '')      AS row_hash,
            COALESCE(basis, 'none')     AS basis,
@@ -245,10 +245,14 @@ SELECT_ASSERTIONS = """
     WHERE a.release_tag = $1
        OR (a.source_class = 'enrichment'
            AND EXISTS (SELECT 1 FROM fact_assertions c
-                        WHERE c.release_tag = $1 AND c.facility_key = a.facility_key))
+                        WHERE c.release_tag = $2 AND c.facility_key = a.facility_key))
     ORDER BY facility_key, field_key, assertion_id
-    LIMIT $2 OFFSET $3
+    LIMIT $3 OFFSET $4
 """
+# $1 and $2 are the same release tag, deliberately numbered apart. Neon's HTTP endpoint binds
+# numbered parameters, so reusing $1 worked there; the psycopg path translates placeholders
+# positionally, where one $1 and one reference to it are two placeholders and one value. Giving
+# each its own number is the form both drivers read the same way.
 
 GOLDEN_COLUMN_SQL = 'ALTER TABLE golden_facility ADD COLUMN IF NOT EXISTS "{}" TEXT'
 
@@ -276,7 +280,12 @@ def fetch_assertions(db, release_tag: str, page: int = 5000) -> list[dict]:
     """
     out, offset = [], 0
     while True:
-        got = db.query(SELECT_ASSERTIONS, (release_tag, page, offset))
+        got = db.query(SELECT_ASSERTIONS, (release_tag, release_tag, page, offset))
+        for r in got:
+            # '?' is the sentinel golden.py uses for an unknown class. It cannot be written as a
+            # SQL literal here: shared-dialect SQL uses '?' as its parameter placeholder and the
+            # postgres adapter rewrites every one it finds, including the ones inside quotes.
+            r["source_class"] = r["source_class"] or "?"
         out.extend(got)
         if len(got) < page:
             return out
