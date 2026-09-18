@@ -125,7 +125,12 @@ jobs:
       stage: plan
       branch_id: ${{ needs.branch.outputs.branch_id }}
       run_key: ${{ github.run_id }}
-      enabled: ${{ contains(inputs.stages, 'plan') || github.event_name == 'workflow_run' }}
+      # Always on. Every later stage has `needs: plan`, so gating this on the stages input meant
+      # asking for `locate` without also naming `plan` skipped plan, cascaded to locate, and the
+      # run still reported success — run 37 did five stages and quietly did no address lookups at
+      # all. Plan is a read-only count that takes about a second; there is nothing to save by
+      # skipping it, and a silently missing stage costs a whole pass.
+      enabled: true
       args: ${{ needs.branch.outputs.common_args }}
 
   locate:
