@@ -82,8 +82,11 @@ def main(argv=None) -> int:
                     help="hard ceiling on distinct Overture files a run may read (default 40)")
     ap.add_argument("--model", default="", help="model id for the AI stage (default: see locate.DEFAULT_MODEL)")
     ap.add_argument("--search", default="", help="search provider: parallel | perplexity | exa | tako | native")
-    ap.add_argument("--deadline", type=float, default=float(os.environ.get("ENRICH_DEADLINE_S", 1500)),
-                    help="seconds the AI stage may spend before deferring the rest (default 1500, "
+    # 1800 against a 2100s job timeout. Measured on run 33: job setup and the pip install take ~35s
+    # and the artifact upload ~1s, so 300s of slack is ample, and every 60s of deadline is another
+    # four facilities at the measured 13.8s each.
+    ap.add_argument("--deadline", type=float, default=float(os.environ.get("ENRICH_DEADLINE_S", 1800)),
+                    help="seconds the AI stage may spend before deferring the rest (default 1800, "
                          "against a 35 minute job timeout)")
     ap.add_argument("--release-tag", default=os.environ.get("ENRICH_RELEASE_TAG", ""))
     ap.add_argument("--dry-run", action="store_true", help="plan the stage; make no external call")

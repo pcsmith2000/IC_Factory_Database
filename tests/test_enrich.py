@@ -1015,3 +1015,14 @@ def test_the_reasons_histogram_counts_footprints_together(tmp_path):
              "status": "expired"} for i in range(3)]
     rep = existence.run(rows, tmp_path, today=date(2026, 9, 18))
     assert rep["reasons"].get("footprint too small for its trade") == 3, rep["reasons"]
+
+
+def test_the_deadline_leaves_real_slack_under_the_job_timeout():
+    """The deadline is only useful if it fires before the runner's axe. Job timeout is 35 minutes;
+    setup and install measured ~35s on run 33 and the upload ~1s."""
+    import re, pathlib
+    run_py = pathlib.Path("pipeline/enrich/run.py").read_text()
+    deadline = float(re.search(r'ENRICH_DEADLINE_S", (\d+)', run_py).group(1))
+    stage_yml = pathlib.Path(".github/workflows/enrich-stage.yml").read_text()
+    timeout_s = int(re.search(r"timeout-minutes: (\d+)", stage_yml).group(1)) * 60
+    assert deadline < timeout_s - 120, f"deadline {deadline}s leaves under 2 min of {timeout_s}s"
