@@ -80,3 +80,33 @@ Predictions, in addition to the 321214 ones above:
   about the seed itself.
 - The run-to-run label flip rate, last measured at ~8% between two v1.4 runs, falls. That is
   measurable only with two runs on this prompt, and is the number to report when they exist.
+
+
+## Verdict — run 35276704513, read against the predictions above
+
+    321214 slice:   run 27  IC 363 · NOT-IC 66 · UNCERTAIN 7
+                    run 30  IC 411 · NOT-IC 25 · UNCERTAIN 0
+    predicted:      NOT-IC 20-30, IC 395-410       -> both inside or a hair above the range
+
+Of the 21+ trading-word NOT-IC rows named in the diagnosis, 27 of 30 are IC now and 3 stay
+NOT-IC. UNCERTAIN did not balloon (159 in total across 16,606 candidates, against 131 on 13,057).
+Control: PDJ Components, S.R. Sloan and American Builders Supply are found — three of the four
+named as reachable; A-1 Truss did not bridge to "A-1 Industries of Florida", as the prediction
+allowed. G5: precision 97%, recall 97% on the 60 seeds — the best of any run, against 92/80 on
+run 28 where slipped labels halted it.
+
+**Anchoring:** `realigned` 61, `misanchored` 4, `unanchored` 0 across 167 batches. Inside the
+predicted "tens to low hundreds"; the model echoes every name, and 61 objects were sitting on the
+wrong index and are now on the right establishment. Re-asks 10.
+
+**The widened slices, which were not a prediction but are a cost to account for:** steel-named
+3323 rows, 1,121 newly classified -> 79 IC (Valley Joist, Quincy Joist, Carolina Steel Group,
+Skyline Steel...) and 1,041 NOT-IC; 327390 whole, 1,724 newly classified -> 39 IC (Clark Pacific
+x2, Coreslab x2, Rocky Mountain Prestress, Southeastern Prestressed, Structurecast) and 1,672
+NOT-IC. 118 plants for ~28 batches. Clark Pacific - Woodland is found (T1) because of it.
+
+Run-level: recall 41.0% -> 42.3% (101 of 239); located 35.6% -> 40.2%; sealed 16 -> 17 of 38;
+T2+T3 624 -> 720 (+15%). All seven enriched leads from the first lead_addresses batch came in
+located, five of them at T2/T3 — the enrichment street and a second source agreed. Two rows were
+lost: 84 Lumber (its run-27 match was the Austin door shop, a false match now correctly refused)
+and True Volumetric Corp (Ontario; the scope question is still Peter's).

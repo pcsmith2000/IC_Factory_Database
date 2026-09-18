@@ -139,8 +139,10 @@ it. No further prompt edits.
 | 2 | 27 | 41.0% | +0.4 | 624 |
 | 3 | 28 | HALTED at G5 — 6 of 30 IC seeds missed (run 27: 2), no release, no recall | — | — |
 | 3 (re-run) | 29 | HALTED at Layer 1 — forest_products_locator had no blob snapshot (archive.mode blob-only) | — | — |
-| 3 (re-run) | 30 | pending — everything run 28 carried, plus: name-anchored labels, v1.9 321214 rule, steel×3323 and 327390 candidates, forest_products_locator, mo_psc, classify_all, optional columns | | |
+| 3 | 30 | 42.3% (101 of 239) · located 40.2% · sealed 17/38 | +1.3 | 720 (+15%) |
+| 4 | 31 | pending — matcher tie-break (same-state, located over lead), 2 more lead streets, MBMA websites | | |
 
 Rule: stop at 90% fuzzy match, or when four additional passes together yield under 3% — unless
-corroboration is still improving significantly, in which case continue until it stops. Two passes
-in: +2.4 points on matching, +18% on corroboration.
+corroboration is still improving significantly, in which case continue until it stops. Three passes
+in: +3.7 points on matching (38.59% -> 42.3%), corroboration 527 -> 720 (+37%). The four-pass
+test is not yet due; corroboration is still moving, so the loop continues.
