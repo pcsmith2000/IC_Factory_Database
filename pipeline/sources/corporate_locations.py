@@ -146,6 +146,7 @@ def _is_millwork_only(kind: str) -> bool:
 
 
 def parse(paths: list[Path], source: dict, cfg: dict | None = None) -> list[dict]:
+    from .. import ai_enabled
     from ..registry import load_yaml
     cfg = cfg or load_yaml(ROOT / "registry" / "config.yaml")
     # Transcribed CSVs win outright: if the reading is already done, do not pay for it again.
@@ -168,6 +169,15 @@ def parse(paths: list[Path], source: dict, cfg: dict | None = None) -> list[dict
             continue
         if path.parent.name.lower() in transcribed:
             continue          # this company is already read by hand; do not pay for a model call
+        if not ai_enabled():
+            # IC_AI=off is a promise that the run completes deterministically, and acquire lets
+            # this source through whenever ANY transcribed CSV is in the folder. That hatch was
+            # written when a CSV suppressed the whole source; since transcription went
+            # per-company, the un-transcribed pages still reached the model and raised, halting
+            # a run that had asked for no model at all. Record the page as unread and keep the
+            # rows that were read by hand.
+            audit.append({"page": str(path), "skipped": "IC_AI=off and no transcribed CSV for this company"})
+            continue
 
         slug = path.parent.name
         company = next((pg["company"] for pg in (source.get("pages") or [])
