@@ -29,8 +29,9 @@ from pathlib import Path
 GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_lon", "naics",
                  "status", "expiry_date", "product_type",
                  "website", "sq_ft", "operating_status",      # source-stated; added 2026-09-17
-                 "building_sqft", "existence_flag"]           # measured/concluded by stages 11-12
+                 "building_sqft", "existence_flag", "employee_notes"]           # measured/concluded by stages 11-12
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
+    "adl_employee_feedback": {"name": "ADL employee feedback", "class": "human_feedback"},
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},
     "lookup": {"name": "Layer 4 entity resolution", "class": "lookup"},
     "classifier": {"name": "Layer 3 classifier (IC product type)", "class": "classifier"},
@@ -53,6 +54,10 @@ def _golden_columns() -> str:
 
 
 DDL = [
+    """CREATE TABLE IF NOT EXISTS employee_feedback (feedback_id TEXT PRIMARY KEY,
+        facility_key TEXT NOT NULL, employee_name TEXT NOT NULL, auth_method TEXT NOT NULL,
+        channel TEXT NOT NULL, note TEXT NOT NULL, changes_json TEXT NOT NULL, created_at TEXT NOT NULL,
+        request_hash TEXT NOT NULL, creates_facility INTEGER NOT NULL DEFAULT 0)""",
     # asserted_at is when this ROW was written; date_key is when the SOURCE was retrieved. They are
     # different questions and survivorship needs both: retrieved_date ranks one source against
     # another, and asserted_at orders two assertions that share it. Without the second, re-measuring
@@ -124,6 +129,8 @@ VIEWS = [
 
 
 def assertion_id(a: dict) -> str:
+    if a.get("source_id") == "adl_employee_feedback" and a.get("assertion_id"):
+        return a["assertion_id"]
     h = hashlib.sha256()
     for k in ("facility_id", "field", "value", "source_id", "retrieved_date", "row_hash"):
         h.update(str(a.get(k) or "").encode()); h.update(b"\x1f")
@@ -214,6 +221,10 @@ class _Warehouse:
             self._migrate_golden(c)              # widen them before anything selects by name
             for stmt in VIEWS:                   # drops and recreates, so a widened table is seen
                 c.execute(stmt)
+            if self.engine == "postgres":
+                # Execute raw: the migration contains Postgres's JSON existence operator '?'.
+                migration = Path(__file__).resolve().parent / "migrations" / "001_employee_feedback.sql"
+                c.raw.execute(migration.read_text())
 
     def _existing_columns(self, c, table: str) -> set[str]:
         raise NotImplementedError
@@ -269,6 +280,12 @@ class _Warehouse:
         changes nothing. Facts append; golden and conflicts are replaced; dimensions upsert."""
         tag, run_ts = record["release"]["tag"], record["started"]
         with self.transaction() as c:
+            if self.engine == "postgres":
+                c.execute("SELECT pg_advisory_xact_lock(7419026)")
+            from .feedback import carry_forward
+            from .golden import build_golden
+            assertions, facilities = carry_forward(self, c, assertions, facilities)
+            golden, conflicts = build_golden(assertions, rules)
             # dimensions
             c.executemany("""INSERT INTO dim_source VALUES (?,?,?,?,?,?,?)
                              ON CONFLICT(source_key) DO UPDATE SET name=excluded.name, class=excluded.class,
