@@ -238,11 +238,24 @@ def main(argv=None) -> int:
             rows = keep
 
     # ---- Layer 4
+    # The same hole layer 8's comment below describes, in the layers it was never closed for.
+    # --layers gated 1, 3, 7 and 8; 2, 4, 5, 5b and 6 ran whatever was asked for, so `--layers 1-2`
+    # read the sources and then went on to resolve, reconcile and gate them. That is not a wasted
+    # minute, it is a side effect on a file that must never be written speculatively: layer 5 hands
+    # out permanent IC numbers, and a 1-2 run burned 1,998 of them on 2026-09-18 while probing a
+    # blob store. Ids are never renumbered, so every one of those is spent. Stop where the caller
+    # said to stop.
+    if 4 not in layers:
+        print(f"  layers {sorted(layers)}: stopping before layer 4")
+        _write_record(record, rec_dir); return 0
     hb.beat("4_resolve")
     crosswalk = _load_crosswalk(ROOT / "control" / "crosswalk.csv")
     record["layers"]["4_resolve"] = resolve.run(rows, crosswalk.get("rows", {}))
 
     # ---- Layer 5
+    if 5 not in layers:
+        print(f"  layers {sorted(layers)}: stopping before layer 5 — no ids issued")
+        _write_record(record, rec_dir); return 0
     hb.beat("5_reconcile")
     # IC_ID_REGISTRY alongside IC_CSV_DIR and IC_WAREHOUSE_PATH. Ids are never renumbered, so a
     # run against fixture data writing here burns real IC numbers on plants that do not exist —
@@ -268,6 +281,9 @@ def main(argv=None) -> int:
                                      "survivorship_version": rules.get("version"), "operator_assertions": sum(1 for a in asserts if a["source_id"] == "operator")}
 
     # ---- Layer 6
+    if 6 not in layers:
+        print(f"  layers {sorted(layers)}: stopping before layer 6")
+        _write_record(record, rec_dir); return 0
     hb.beat("6_gates")
     g = cfg["gates"]
     results = [

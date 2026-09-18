@@ -123,7 +123,10 @@ against the new value before trusting it.
 **4. Re-point the repository secrets** (Settings → Secrets and variables → **Actions**, repository
 tab, not Environments). Then prove it with a cheap dispatch rather than a full run:
 
-    layers=1-2, ai=off        # reads the store, no model spend — fails fast if the token is wrong
+    layers=1-2, ai=off        # reads the store, no model spend, no ids issued — fails fast if the
+                              # token is wrong. Layers 4-6 used to run whatever --layers said, so
+                              # this probe once issued 1,998 permanent IC numbers; they are gated
+                              # now, and tests/test_layers_flag.py keeps them that way.
 
 ## Cowork's role
 
