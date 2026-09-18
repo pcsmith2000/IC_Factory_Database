@@ -343,6 +343,16 @@ def replace_golden(db, rows: list[dict], fields: list[str], release_tag: str, ch
     hour and the stage times out at 35 minutes. Postgres caps a statement at 65,535 parameters, so
     the chunk size is bounded by columns-per-row; 300 x 30 leaves plenty of room.
     """
+    # Migration-backed promotion is atomic and preserves feedback received after
+    # this stage read its snapshot. Fallback supports warehouses before migration.
+    available = db.query("SELECT to_regprocedure('replace_golden_with_feedback(jsonb,text)') IS NOT NULL AS ready", ())
+    if available and available[0].get("ready"):
+        import json
+        payload = [{"facility_key": g["facility_id"], "release_tag": release_tag,
+                    **{x: _text(g.get(x)) for f in fields for x in (f, f"{f}__source")},
+                    "n_assertions": g.get("n_assertions"), "n_sources": g.get("n_sources")} for g in rows]
+        result = db.query("SELECT replace_golden_with_feedback($1::jsonb,$2) AS written", (json.dumps(payload), release_tag))
+        return int(result[0]["written"])
     cols = ["facility_key", "release_tag"] + [x for f in fields for x in (f, f"{f}__source")] + \
            ["n_assertions", "n_sources"]
     quoted = ", ".join(f'"{c}"' for c in cols)

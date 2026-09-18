@@ -57,7 +57,7 @@ def _rank(a: dict, order: list[str]) -> int:
     return len(order)
 
 
-def _recency(a: dict) -> tuple[str, str]:
+def _recency(a: dict) -> tuple[str, str, str]:
     """How `tie: most_recent` orders two assertions of equal rank.
 
     `retrieved_date` comes first and keeps its meaning: when the SOURCE was retrieved, which is
@@ -71,7 +71,10 @@ def _recency(a: dict) -> tuple[str, str]:
     asserted_at (every layers 1-8 assertion written before the column existed) sorts below one that
     has it — which is right: the one that recorded when it was written is the later of the two.
     """
-    return (str(a.get("retrieved_date") or ""), str(a.get("asserted_at") or ""))
+    # Keep exact timestamp ties deterministic for confirmed feedback only; preserve
+    # historical tie behavior for all existing automated/operator assertions.
+    tie = str(a.get("row_hash") or "") if a.get("source_id") == "adl_employee_feedback" else ""
+    return (str(a.get("retrieved_date") or ""), str(a.get("asserted_at") or ""), tie)
 
 
 def build_golden(assertions: list[dict], rules: dict) -> tuple[list[dict], list[dict]]:
