@@ -50,7 +50,9 @@ page — a variable in the Secrets tab (or the reverse) reads as empty, not as a
 | `DATABASE_URL` + `DATABASE_URL_UNPOOLED` · `IC_DB_DATABASE_URL`(`_UNPOOLED`) | Secrets | the Neon warehouse | falls back to the Neon integration below, else SQLite in the artifact |
 | `NEON_API_KEY` | Secrets | set by the Neon GitHub integration; used only when `DATABASE_URL` is absent | — |
 | `NEON_PROJECT_ID` | **Variables** | same integration path | — |
-| `ANTHROPIC_API_KEY` · `IC_DB_ANTHROPIC_API_KEY` | Secrets | Layer 3 classification, AI extraction | those layers fail loudly |
+| `AI_GATEWAY_API_KEY` · `IC_DB_AI_GATEWAY_API_KEY` · `VERCEL_AI_GATEWAY_API_KEY` | Secrets | Layer 3 through the Vercel AI Gateway, and stage 9's `vercel:*_search` server tools | Layer 3 falls back to `ANTHROPIC_API_KEY` direct; stage 9 has no search and cannot run |
+| `ANTHROPIC_API_KEY` · `IC_DB_ANTHROPIC_API_KEY` | Secrets | Layer 3 classification, AI extraction, the gateway's fallback | those layers fail loudly |
+| `GEOCODIO_API_KEY` · `GEOCODIO_API` · `IC_DB_GEOCODIO_API_KEY` · `GEOCODIO_KEY` | Secrets | stage 10 geocoding | stage 10 refuses to start (the preflight names the key) |
 | `CENSUS_API_KEY` · `CENSUS_KEY` | Secrets | Layer 7 frame refresh | frame is read from the committed CSV |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` | Variables | later, Cloud Run Jobs | the GCP auth step is skipped |
 
@@ -65,13 +67,53 @@ python -m pipeline.control check         # the hand-placed inputs
 
 ## Setup once
 
-1. Create a private Vercel Blob store; copy its read-write token.
+1. Create a Vercel Blob store with **public** access — `registry/config.yaml → archive.access` says `public`, and a store created private rejects every write with *Cannot use private access on a public store*. Copy its read-write token.
 2. Add repo secrets `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`, `BLOB_READ_WRITE_TOKEN` (Vercel Blob),
    and either `DATABASE_URL` + `DATABASE_URL_UNPOOLED` or the Neon GitHub integration (Neon).
 3. Later, for Cloud Run Jobs: Workload Identity Federation for this repo; repo variables
    `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT`.
 4. Pick one scheduler. This repo keeps the cron in Actions so the run, its failure and its
    release PR are in one place; Cloud Scheduler is not used.
+
+## Moving to another Vercel team
+
+Two of the credentials above are Vercel-scoped and do not follow the repository: the Blob store and
+the AI Gateway key. Everything else in the table is a third party (Anthropic, Neon, Geocodio,
+Census) and is unaffected by which Vercel team the project sits in.
+
+**1. The Blob store — the only irreplaceable thing.** It holds every raw source snapshot the
+pipeline reads: 1,130 objects, 116 MB, under `ic-sources/`, `ic-runs/` and `ic-control/`. This is
+not a cache. `archive.mode: blob-only` means Layer 1 reads the store and never scrapes, so a run
+against an empty store halts at Layer 1 on the first source it cannot find (run 35276154465 did
+exactly that with one missing source). Either move the store to the new team in the Vercel
+dashboard, or create one there — **public access**, as above — and copy the objects across:
+
+    python -m pipeline.archive verify        # proves the new token and store before anything else
+    BLOB_READ_WRITE_TOKEN=<old> python -m pipeline.archive list <source_id>
+
+Whichever route, the token changes. Put the new one in the repo secret; the store id is read out
+of the token, so `BLOB_STORE_ID` only matters if you override it.
+
+What survives regardless: the warehouse, `id_registry.json`, `run_records/`, the control file and
+everything else under version control. Losing the store costs the snapshots, not the database —
+but re-fetching them means re-scraping 20-odd sites, several of which are hand-placed uploads
+(`docs/manual-uploads.md`) that cannot be re-fetched at all.
+
+**2. The AI Gateway key.** Issue a new one in the new team. It pays for two things, and a run that
+silently loses it behaves differently in each: Layer 3 falls back to `ANTHROPIC_API_KEY` direct and
+keeps going (the run record names the provider, so check it), while stage 9 has no fallback — the
+`vercel:parallel_search` / `vercel:tako_search` server tools exist only on the gateway.
+
+**3. Check, do not assume, the Neon path.** `.github/scripts/neon_connection_string.py` talks to
+`console.neon.tech` directly, so a Neon project owned by its own account is untouched by a Vercel
+move. A Neon project provisioned *through* the Vercel marketplace integration belongs to the Vercel
+team and moves with it, which changes `DATABASE_URL`. Run `python -m pipeline.warehouse init`
+against the new value before trusting it.
+
+**4. Re-point the repository secrets** (Settings → Secrets and variables → **Actions**, repository
+tab, not Environments). Then prove it with a cheap dispatch rather than a full run:
+
+    layers=1-2, ai=off        # reads the store, no model spend — fails fast if the token is wrong
 
 ## Cowork's role
 
