@@ -86,7 +86,7 @@ def run(rows: list[dict], key: str | None = None, db=None) -> dict:
         raise GeocodioError("GEOCODIO_API_KEY is not set (free key: https://dash.geocod.io/apikey)")
     todo = [r for r in rows if (r.get("address") or "").strip()]
     if not todo:
-        return {"requested": 0, "assertions": [], "accuracy_type": {}, "flags": []}
+        return _report([], [], {}, [], [], [], "")
     if len(todo) > FREE_TIER_PER_DAY:
         print(f"  note: {len(todo)} lookups exceeds the {FREE_TIER_PER_DAY}/day free allowance; "
               f"the excess bills at ${COST_PER_1000_USD:.2f}/1000", file=sys.stderr)
@@ -145,6 +145,18 @@ def run(rows: list[dict], key: str | None = None, db=None) -> dict:
             evidence=f"geocodio:{hits[0].get('source', '?')}"))
     # count coordinates, not assertions: the quality flags are assertions too, and reporting them
     # as "rooftop stored" would say a run placed facilities it explicitly declined to place
+    coords = [a for a in asserts if a["field"] == "lat_lon"]
+    return _report(done, asserts, mix, flags, todo, deferred, stopped, cached)
+
+
+def _report(done, asserts, mix, flags, todo, deferred, stopped, cached=()) -> dict:
+    """Every exit from run() returns this shape.
+
+    The nothing-to-do exit used to return four keys of its own, and the reporter in run.py reads
+    eleven. A run with no address to place — which is what a drained backlog looks like — crashed
+    on KeyError: 'stored' after stage 9 had already spent half an hour. An empty run is a normal
+    outcome, not an error, and the only way to keep the two shapes honest is to build both here.
+    """
     coords = [a for a in asserts if a["field"] == "lat_lon"]
     return {"requested": len(done), "assertions": asserts, "accuracy_type": mix, "flags": flags,
             "stored": len(coords), "quality_flags_recorded": len(asserts) - len(coords),

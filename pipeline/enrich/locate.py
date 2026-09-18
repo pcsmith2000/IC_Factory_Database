@@ -515,7 +515,9 @@ def _report(rows, attempted, asserts, rejected, usage, model, search, stopped,
     return {"requested": len(rows), "attempted": attempted, "assertions": list(asserts),
             "located": len(asserts), "rejected": list(rejected), "model": model, "search": search,
             "from_cache": from_cache,
-            "deferred": len(rows) - attempted,
+            # A row the ledger answered is done, not deferred. Counting it as deferred made run 38
+            # report 801 waiting when 679 were: the other 122 had already been answered for free.
+            "deferred": len(rows) - attempted - from_cache,
             # Named for the fact, not for one of its causes: a deadline, the run ceiling and a
             # spent key all stop the loop, and only stop_reason says which.
             "stopped_early": bool(stopped), "stop_reason": stopped[:300],

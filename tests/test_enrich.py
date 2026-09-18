@@ -1244,3 +1244,25 @@ def test_reading_the_ledger_in_bulk_gives_the_same_answers_as_one_at_a_time():
     assert better[hit]["result"]["address"] == "1 Plant Rd", "positives are reusable by anyone"
 
     assert cache.get_many(db, []) == {}
+
+
+def test_a_geocode_run_with_nothing_to_do_reports_the_same_shape_as_one_that_worked():
+    """Run 38 crashed here, after stage 9 had already spent half an hour.
+
+    geocode.run had two exits: a full report, and a four-key dict for "no address to place". The
+    reporter in run.py reads eleven keys, so the short exit raised KeyError: 'stored' and failed
+    the run. Nothing was wrong — there was simply no work — and an empty backlog is the state this
+    stage is supposed to be heading towards, so the quiet exit gets more likely as it succeeds.
+    """
+    from pipeline.enrich import geocode
+
+    empty = geocode.run([{"facility_id": "F1", "address": ""}], key="k")
+    assert empty["requested"] == 0 and empty["stored"] == 0
+
+    # every key the stage-9 reporter reads off this dict, read the same way it reads them
+    for k in ("requested", "stored", "quality_flags_recorded", "rooftop_pct", "accuracy_type",
+              "assertions", "selected", "deferred", "from_cache", "billed_lookups",
+              "billable_if_allowance_spent_usd", "quota_exhausted"):
+        assert k in empty, f"the nothing-to-do exit is missing {k!r}, which run.py reads"
+    assert empty["requested"] - empty["stored"] == 0
+    assert f"${empty['billable_if_allowance_spent_usd']:.3f}" == "$0.000"
