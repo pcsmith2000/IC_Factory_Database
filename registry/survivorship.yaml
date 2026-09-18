@@ -28,7 +28,24 @@ fields:
   naics:           {order: [operator, "class:B"], tie: most_recent}
   status:          {order: [operator, "basis:dated_expiry", "basis:explicit_status_field", "basis:certified_as_of_date", "basis:on_current_list"], tie: most_recent}
   expiry_date:     {order: [operator, "basis:dated_expiry"], tie: most_recent}
-  product_type:    {order: [operator, "class:D", "class:C", "class:A"], tie: most_recent}
-  # enrichment-only fields: no published source asserts these, so operator is the only thing above them
+  # product_type is asserted by the Layer 3 classifier, never by a source roster, so the old
+  # class-based order could never match and the field stayed empty. A human correction still
+  # outranks the model.
+  product_type:    {order: [operator, classifier], tie: most_recent}
+  # Added 2026-09-17. A registry (class A) states a website as printed; the enrichment pass (class
+  # D) cites the company's own site. Square footage and open/closed status come almost only from
+  # the enrichment pass today, so class D leads; a registry's explicit status field outranks it
+  # for operating_status because a revoked registration is a stronger claim than a listing.
+  website:          {order: [operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
+  sq_ft:            {order: [operator, "class:D", "class:A", "class:B"], tie: most_recent}
+  operating_status: {order: [operator, "basis:explicit_status_field", "class:D", "class:A"], tie: most_recent}
+  # Measured, not stated — and deliberately NOT merged into the two fields above.
+  #
+  # sq_ft is what a source SAYS the plant is; building_sqft is what its Overture footprint
+  # MEASURES. operating_status is what a registry says; existence_flag is what stage 12 concluded
+  # from a footprint too small for the trade or from no building at all. Collapsing each pair would
+  # throw away the only case that carries information: the one where the claim and the measurement
+  # disagree. A consumer wanting one number should read sq_ft and fall back to building_sqft; a
+  # consumer auditing the roster wants both side by side.
   building_sqft:   {order: [operator, "basis:footprint"], tie: most_recent}
   existence_flag:  {order: [operator, "basis:advisory"], tie: most_recent}

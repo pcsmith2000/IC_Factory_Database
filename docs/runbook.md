@@ -29,14 +29,46 @@ that build is compared to the first release with `pipeline/compare.py`, not merg
 1. `run.yml` fires. Watch it. Green → a release PR appears.
 2. Download the workflow artifact. Review `dedupe_audit_<date>.csv`: fill the `decision`
    column (merge / keep / co-located). Review `review_queue.csv`: decide each UNCERTAIN row.
+   That file now carries the classifier's own account of the row — `ic_label`, `ic_confidence`,
+   `ic_type`, `ic_reason` and `ic_candidate_reason` (why the row became a candidate at all) —
+   so a reviewer can see what the model was unsure about instead of re-deciding from the raw
+   record. The reasons are worth reading in bulk: "Manufacturing vague likely not IC." on a
+   HUD-code plant is how prompt v1.2's over-correction was found.
 3. Commit the decisions to `control/` (they become seeds and crosswalk entries) and merge the PR.
    The count in the run record's `release.published_count` is the quotable number, with its tag.
+   It counts located facilities only — `reconcile.TIER_RULES` has always said "T0 never counted",
+   and since 2026-09-17 the code agrees. The record carries the whole decomposition, so quote from
+   it rather than recomputing: `raw_count` (clusters) − `t0_leads` (no street address on any row)
+   − `dedupe_removed` = `published_count`. T0 rows stay in the warehouse and stay queryable; they
+   are leads, not facilities. `t0_leads_with_city` counts the subset locatable to a town but not a
+   street, in case that boundary is ever moved.
 
 ## A gate fails
 - **G1 over 2%** — look at the pairs. If they are city-string variances, the fix is
   `norm_city` in `pipeline/contract.py`, not name matching. Re-run from layer 2.
-- **G2 flagged clusters** — a false merge. Inspect the cluster's rows; usually two firms sharing
-  a street key with a unit designator lost. Fix the key logic or add a crosswalk override.
+  Pairs marked *"same name + city, DIFFERENT street"* at confidence 0.40 are **not** duplicates
+  and are not counted as any: one company routinely runs several plants in one city (TAS Energy
+  has five in Houston). They are listed so a reviewer can catch the one case a key split — the
+  same plant written "100 Main St" and "100 N Main Street". Merge one only with evidence; the
+  default answer is *keep*.
+- **G2 flagged clusters** — one facility id holding two unrelated business names, listed in
+  `build/false_merge_audit_<date>.csv` with their shared street key. Usually an industrial park,
+  a shared building, or a street key that dropped a unit designator. It reports and does not
+  halt, because the same signal covers legitimate aliasing: "smi homes" IS "structural modular
+  innovations", "schult homes" and "cmh manufacturing west" are two brands of one Clayton plant,
+  "bildt" is a typo for "boldt". Split a cluster only with evidence; fix the key logic or add a
+  crosswalk override. The rate is 23% on the deterministic sources and 42% on a classified run,
+  and cannot come down until Layer 4 resolves entities.
+  **Read these before splitting anything.** Measured on run 35177447708, most are corporate
+  history rather than error: "amtex | amtex acquisition | sunbelt modular", "fleetwood homes |
+  cavco industries", "koosharem | probuild", "relco roof and floor | parr truss harrisburg" — one
+  site under successive owners, with rosters collected years apart. Those merges are correct and
+  splitting them would fracture a plant's history. Genuine co-location ("spitzer industries |
+  volta", "atkinson ind | nvent") is the minority. The alias sets are also the closest thing this
+  repo has to entity-resolution training data; do not discard the CSV.
+  If instead G2 says *clusters hold more than one street key*, stop: a facility id comes from a
+  signature containing that key, so it means clustering itself is broken, not that the data is
+  messy. That one halts the run at any rate.
 - **G3 issued ids on a re-run** — signatures changed. Something in normalisation is
   non-deterministic. Do not publish; find it.
 - **G4 checksum mismatch** — the control file changed without a logged triage edit. Restore
@@ -44,6 +76,29 @@ that build is compared to the first release with `pipeline/compare.py`, not merg
 - **G5 below threshold** — the prompt, the model, or the seed set changed. Check the prompt
   hash in the run record against the last passing one. A wrong seed is corrected in
   `control/seeds.csv` with a note (the resort and marina).
+
+## Environment overrides
+Six env vars redirect state a release depends on. They exist so a test or a side-by-side
+experiment need not write into the working tree — the classified path had no test at all until
+`IC_CSV_DIR` made one possible — and a run that used one without saying so would be a counterfeit
+release. Every run prints `NOT A CLEAN RELEASE` to stderr when any is set and records them under
+`env_overrides` in the run record, so the release tag can be read next to what produced it.
+
+| var | redirects | why it matters |
+|---|---|---|
+| `IC_CSV_DIR` | Layer 2's contract CSVs (default `ic-csv/`) | fixture input makes every downstream count meaningless as a release |
+| `IC_ID_REGISTRY` | Layer 5's id registry (default `id_registry.json`) | ids are never renumbered; a scratch registry makes G3 assert stability over ids nobody issued, and a fixture run once took IC-94453..94456 for addresses that do not exist |
+| `IC_WAREHOUSE_ENGINE` / `IC_WAREHOUSE_PATH` | Layer 8's sink | writes the release somewhere other than Neon |
+| `IC_CLASSIFIER_MODEL` | the pinned classifier | compares models without churning `registry/config.yaml`; the release tag records which model actually ran |
+| `IC_ARCHIVE` | the blob archive | `off` disables acquisition archiving and the heartbeat |
+
+The first four redirect **state** — what a release is made of or written to — and a run using
+one is not a release: it prints `NOT A CLEAN RELEASE` to stderr and lands in
+`state_overrides` in the run record. The last two choose between legitimate options, and CI
+passes `IC_CLASSIFIER_MODEL` and `IC_AI` on every dispatch, so they are recorded in
+`env_overrides` without a warning. Warning on a normal CI input is how a warning stops being
+read — the first classified run after the check was added printed NOT A CLEAN RELEASE for a
+perfectly ordinary model dispatch.
 
 ## Adding a source
 Add an entry to `registry/sources.yaml` with class, method, `url`, `needs_classify`, traps and
@@ -61,6 +116,24 @@ do not flip it to `queued` to get green.
 ## Changing the prompt
 Edit `prompts/CLASSIFIER-PROMPT.md`. Run `python -m pipeline.run --layers 2-8` with class-B
 rows present; G5 must pass on the seeds. The new hash lands in the release tag.
+
+**G5 passing is not enough.** It scores 60 hand-picked seeds and cannot see a change that moves
+rows the seeds do not contain. Prompt v1.2 raised precision 96% -> 100% with recall unchanged at
+87%, and in the same stroke stopped admitting about 90 genuine plants — CMH Manufacturing and
+Clayton Wakarusa (both HUD-code), Deltec Homes, Pacific Wall Systems — while removing 539
+millwork, window and door rows nobody had asked it to judge. Both effects were invisible to the
+gate.
+
+So diff the rows against the previous run before believing a prompt change:
+
+    python -m pipeline.promptdiff OLD/build/classify_cache NEW/build/classify_cache \
+        --rows NEW/build/normalised
+
+Drops from millwork, window, door and commodity-panel NAICS are usually the intended effect.
+Drops from 321991, 321992, 321213, 321214, 332311 or 327390 are candidate losses: the tool names
+each one with the model's own reason, so read them. `build/` from any CI run is in its artifact.
+Also compare the `precision_audit` block in the two run records — the floor on known non-IC
+admissions, which fell 9.5% -> 0.2% across that same change.
 
 ## Traps that cost days
 - A stale `.~lock.*` file hangs every LibreOffice recalc. Near-zero CPU on a timeout is a lock.

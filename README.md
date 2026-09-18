@@ -99,5 +99,22 @@ against the contract, and Layer 8 loads the warehouse — SQLite locally, Neon P
 resolution) passes rows through flagged NOT-ATTEMPTED and reports resolution_rate = 0 so the
 gap is visible; Layer 1 has a fetcher for every active source (`docs/sources.md`), written against
 endpoints found by search and not yet run live — the first `python -m pipeline.sources.check <id>`
-on a networked machine is the check. The measured figures in the
-docs are from the 2026-09-09 build (5,026 facilities after dedupe, 96% in-scope recall).
+on a networked machine is the check.
+
+Measured figures, from the classified run of 2026-09-17 against Neon (release tag
+`v1.0.0+reg.22389a4+...+model.inception/mercury-2.5` and its successors):
+
+| | |
+|---|---|
+| published facilities | 1,933 — located clusters only, per `reconcile.TIER_RULES`' "T0 never counted" |
+| leads not counted | 1,414 clusters with no street address on any row, kept and queryable |
+| coverage | 2,008 located against a 2,750-establishment Census CBP floor = 73% |
+| recall vs control | **untested** — `control/control-triaged.csv` holds no in-scope rows |
+| G1 duplicates | 0.6%, inside the 2% the gate is calibrated to |
+| G5 | precision 96-100%, recall 83-90% on 60 seeds; ~86-100% at the 20% production base rate |
+| known non-IC admitted | 0.2-0.3% floor, down from 9.5% before the prompt's building-products boundary |
+
+An older README quoted 5,026 facilities and 96% in-scope recall from the 2026-09-09 build. Both
+are withdrawn: the count included clusters with no address, which the tier rule says are leads
+rather than facilities, and recall has never been measurable because the control set is empty —
+Layer 7 reported 0.0 for it, which read as a total miss rather than an absent test.

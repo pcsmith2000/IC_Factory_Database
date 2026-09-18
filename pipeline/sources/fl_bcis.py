@@ -15,6 +15,12 @@ import re, urllib.parse
 from pathlib import Path
 from ._common import http_get, html_tables, contract_row, require, LayoutChanged
 
+def _iso(d: str) -> str:
+    """MM/DD/YYYY -> ISO, else "" — BCIS leaves the date blank on pending applications."""
+    m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", (d or "").strip())
+    return f"{m.group(3)}-{int(m.group(1)):02d}-{int(m.group(2)):02d}" if m else ""
+
+
 MENU = "https://floridabuilding.org/mb/mb_default.aspx"
 
 
@@ -39,37 +45,96 @@ def fetch(source: dict, cfg: dict, archive_dir: Path) -> list[Path]:
     menu = http_get(source.get("url") or MENU, archive_dir, "menu.html")
     html = menu.read_text(encoding="utf-8", errors="replace")
     links = [h for h, t in re.findall(r'<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', html, re.I | re.S)
-             if re.search(r"organi[sz]ation|manufacturer", re.sub("<[^>]+>", " ", t), re.I) and re.search(r"search", h + t, re.I)]
+             if re.search(r"organi[sz]ation|manufacturer", re.sub("<[^>]+>", " ", t), re.I)
+             and re.search(r"se?a?rch", h + t, re.I)]   # the menu link is mb_org_srch.aspx — "srch", not "search"
     require(bool(links), menu, "no organisation/manufacturer search link on the MB menu")
     search_url = urllib.parse.urljoin(MENU, links[0])
     page = http_get(search_url, archive_dir, "search_form.html")
-    action, fields = _form(page.read_text(encoding="utf-8", errors="replace"))
+    form_html = page.read_text(encoding="utf-8", errors="replace")
+    action, fields = _form(form_html)
     require("__VIEWSTATE" in fields, page, "search page is not the WebForms form expected (no __VIEWSTATE)")
     btn = next((k for k in fields if re.search(r"search|find|submit", k, re.I) and not k.startswith("__")), None)
-    require(btn is not None, page, "no search button input found in the form")
+    if btn is None:
+        # No submit input on this page: the search button is an anchor that posts back through
+        # __doPostBack('btnSearch$lnkBtnLingual', ''). Driving the postback IS the submit — the
+        # target is read off the page, not assumed, so a renamed control still fails loudly.
+        m = re.search(r"__doPostBack\('([^']*(?:search|find|submit)[^']*)'", form_html, re.I)
+        require(m is not None, page, "no search button input and no __doPostBack search target in the form")
+        fields["__EVENTTARGET"], fields["__EVENTARGUMENT"] = m.group(1), ""
     body = urllib.parse.urlencode(fields).encode()
     results = http_get(urllib.parse.urljoin(search_url, action or search_url), archive_dir, "results.html", data=body,
                        headers={"Content-Type": "application/x-www-form-urlencoded", "Referer": search_url})
+    _reject_error_page(results)
     return [results]
+
+
+def _reject_error_page(path: Path) -> None:
+    """BCIS answers a failed postback with HTTP 200 and a 'System Error' page that still contains
+    tables — so an unguarded parse turns the error text into rows. Refuse it here instead."""
+    body = path.read_text(encoding="utf-8", errors="replace")   # whole page: BCIS renders the error mid-document
+    require(not re.search(r"system error|unexpected system error", body, re.I), path,
+            "BCIS returned its System Error page, not results — the WebForms postback was rejected "
+            "(ASP.NET session state). Export the organisation search by hand and upload it to "
+            "ic-sources/fl_bcis/<date>/")
+
+
+# The results grid is an ASP.NET DataGrid whose controls carry stable ids: one
+# grdReport__ctl<N>_hlnkOrgName anchor per organisation, with its status, valid-to date and FBC
+# number in siblings keyed by the same _ctl<N>_. Reading those ids is far steadier than picking a
+# table by size — the page nests ~800 layout tables and the largest of them is a layout wrapper,
+# so the generic "biggest table" shape returned the page furniture as rows.
+_REC = re.compile(r'id="grdReport__ctl(\d+)_hlnkOrgName"[^>]*>(.*?)</a>', re.I | re.S)
+_FIELD = r'id="grdReport__ctl{n}_{f}"[^>]*>(.*?)</span>'
+_ORGNUM = re.compile(r"FBC\s*Organization\s*Number\s*</b>\s*([A-Za-z0-9\-]+)", re.I)
+_ORGTYPE = re.compile(r"Org\s*Type\s*</b>\s*([^<]+)", re.I)
+_PAGES = re.compile(r'id="pagTopPager_lblCurrentPage"[^>]*>(\d+)</span>\s*&nbsp;/\s*<span[^>]*id="pagTopPager_lblTotalPages"[^>]*>(\d+)</span>', re.I | re.S)
+
+
+def _untag(x: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", x or "")).replace("&amp;", "&").strip()
 
 
 def parse(paths: list[Path], source: dict) -> list[dict]:
     path = paths[-1]
+    _reject_error_page(path)
     html = path.read_text(encoding="utf-8", errors="replace")
-    tables = [t for t in html_tables(html) if len(t) > 5]
-    require(bool(tables), path, "no results table with more than 5 rows — the POST did not return the manufacturer list")
-    table = max(tables, key=len)
-    hdr = [c.lower() for c in table[0]]
-    name_i = next((i for i, h in enumerate(hdr) if re.search(r"name|organi[sz]ation|manufacturer", h)), 0)
-    get = lambda cells, pat: next((cells[i] for i, h in enumerate(hdr) if re.search(pat, h) and i < len(cells)), "")
+    require("grdReport" in html, path, "no grdReport results grid on the page — this is not the "
+                                       "organisation-list result (see docs/manual-uploads.md)")
+    recs = list(_REC.finditer(html))
+    require(bool(recs), path, "grdReport is present but holds no organisation rows")
+    pg = _PAGES.search(html)
+    page_note = ""
+    if pg and len(recs) < int(pg.group(2)):
+        # The grid renders every row and paginates in the browser, so a saved page normally holds
+        # the whole list even though the pager still reads "1 / 48". Fewer rows than there are
+        # pages is the case that cannot be a full export — flag only that, on every row, rather
+        # than labelling a complete 959-row save "partial" because a widget says page 1.
+        page_note = f"PARTIAL EXPORT: {len(recs)} rows saved but the pager reports {pg.group(2)} pages"
     out = []
-    for i, cells in enumerate(table[1:], 1):
-        if not cells or not cells[name_i].strip():
+    for i, m in enumerate(recs, 1):
+        n, name = m.group(1), _untag(m.group(2))
+        if not name:
             continue
-        out.append(contract_row(source, i, name=cells[name_i], address=get(cells, "address|street"), city=get(cells, "city"),
-                                state=get(cells, "state"), zip_code=get(cells, "zip"), source_url=MENU, source_document=path.name,
-                                source_identifier=get(cells, "number|id|cert"), status=get(cells, "status|type"),
-                                notes="" if get(cells, "address|street") else "names-only source: no plant address published"))
+        block = html[m.end():recs[i].start() if i < len(recs) else len(html)]
+        fld = lambda f: _untag((re.search(_FIELD.format(n=n, f=f), block, re.I | re.S) or [None, ""])[1]
+                               if re.search(_FIELD.format(n=n, f=f), block, re.I | re.S) else "")
+        num = _ORGNUM.search(block)
+        typ = _ORGTYPE.search(block)
+        expiry = fld("lblValidToDate")
+        notes = "names-only source: no plant address published"
+        if typ:
+            notes += f"; org type: {_untag(typ.group(1))}"
+        if page_note:
+            notes += f"; {page_note}"
+        out.append(contract_row(source, i, name=name, address="", city="", state="", zip_code="",
+                                source_url=MENU, source_document=path.name,
+                                source_identifier=num.group(1) if num else "",
+                                status=fld("lblOrgStatus"), expiry_date=_iso(expiry),
+                                # The registry calls this source on_current_list, but the grid
+                                # carries a real valid-to date and a status of its own, and most
+                                # rows are Expired/Denied/Inactive — treating presence on the list
+                                # as liveness would mark 400+ dead registrations active.
+                                status_basis="dated_expiry" if _iso(expiry) else None, notes=notes))
     return out
 
 

@@ -1,0 +1,12 @@
+{
+ "source_id": "epa_frs",
+ "rows": 7,
+ "retrieved": "2026-09-17",
+ "method": "bulk",
+ "ai_extraction": false,
+ "acquire_mode": "fixture",
+ "source_of_bytes": "hand-written test fixture; not a real acquisition",
+ "archive": {
+  "engine": "none"
+ }
+}

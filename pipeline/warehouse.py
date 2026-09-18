@@ -27,10 +27,13 @@ from pathlib import Path
 # The last two are asserted only by enrichment (docs/enrichment.md). Layers 1-8 leave them NULL,
 # which is the honest answer: no published source measures a building or doubts a plant's existence.
 GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_lon", "naics",
-                 "status", "expiry_date", "product_type", "building_sqft", "existence_flag"]
+                 "status", "expiry_date", "product_type",
+                 "website", "sq_ft", "operating_status",      # source-stated; added 2026-09-17
+                 "building_sqft", "existence_flag"]           # measured/concluded by stages 11-12
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},
     "lookup": {"name": "Layer 4 entity resolution", "class": "lookup"},
+    "classifier": {"name": "Layer 3 classifier (IC product type)", "class": "classifier"},
     # enrichment, stages 9-12: they assert into fact_assertions like any source, so dim_source needs
     # them or v_provenance answers "who says so" with a null join
     "enrich:locate": {"name": "Enrichment 9 — web-cited address", "class": "enrichment"},
@@ -145,10 +148,32 @@ def _float(x) -> float | None:
 # ---------------------------------------------------------------- engines
 class _Cursor:
     """Executes shared-dialect SQL ('?' placeholders) on either driver; exposes rowcount and fetches."""
+    CHUNK = 1000
+
     def __init__(self, wh, raw):
         self.wh, self.raw = wh, raw
+    def _sql(self, sql: str) -> str:
+        return sql.replace("?", self.wh.placeholder) if self.wh.placeholder != "?" else sql
     def execute(self, sql: str, params=()):
-        self.raw.execute(sql.replace("?", self.wh.placeholder) if self.wh.placeholder != "?" else sql, params)
+        self.raw.execute(self._sql(sql), params)
+        return self.raw
+    def executemany(self, sql: str, seq):
+        """Same statement, same parameters, one round trip per CHUNK rows instead of per row.
+
+        Layer 8 writes tens of thousands of rows inside a single transaction, and against Neon each
+        individual INSERT returns in ~2ms — the cost was never the database, it was the number of
+        serial round trips. Nothing about the SQL or the result changes.
+
+        Callers must NOT read rowcount off this to learn how many rows an ON CONFLICT ... DO NOTHING
+        actually inserted: psycopg and sqlite3 do not agree on what executemany's rowcount means.
+        Count before and after instead (see load_release).
+        """
+        rows = list(seq)
+        if not rows:
+            return self.raw
+        stmt = self._sql(sql)
+        for i in range(0, len(rows), self.CHUNK):
+            self.raw.executemany(stmt, rows[i:i + self.CHUNK])
         return self.raw
     def fetchone(self): return self.raw.fetchone()
     def fetchall(self): return self.raw.fetchall()
@@ -160,31 +185,66 @@ class _Warehouse:
     path = ""
 
     def existing_columns(self, table: str) -> set[str]:
-        """Column names of an existing table, or an empty set if it has none yet."""
-        raise NotImplementedError
+        """Column names of an existing table, from outside a transaction.
 
-    def init_schema(self):
-        """Tables, then any column this build added, then the views.
-
-        CREATE TABLE IF NOT EXISTS does not widen a table that already exists, so a database
-        created before a column existed keeps its old shape and every later write of that column is
-        silently dropped. The reconcile step below is what makes adding one a code change rather
-        than a migration script.
+        _existing_columns is the form the migration uses, because it runs inside the cursor that
+        is doing the ALTERs. This is the same question asked from the outside, which is what a
+        test or a caller checking whether a migration landed actually wants.
         """
         with self.transaction() as c:
-            for stmt in DDL:
-                c.execute(stmt)
-        wanted = {"golden_facility": [x for f in GOLDEN_FIELDS for x in (f, f"{f}__source")],
-                  "fact_assertions": ["asserted_at"]}
-        for table, want in wanted.items():
-            have = self.existing_columns(table)
-            with self.transaction() as c:
-                for col in want:
-                    if col not in have:
-                        c.execute(f'ALTER TABLE {table} ADD COLUMN "{col}" TEXT')
+            return self._existing_columns(c, table)
+
+    def init_schema(self):
+        """Tables, then any column this build added, then the views — in that order.
+
+        CREATE TABLE IF NOT EXISTS does not widen a table that already exists, so a database
+        created before a column existed keeps its old shape and every later write of that column
+        is silently dropped. The migration below is what makes adding a field a code change
+        rather than a migration script.
+
+        The order matters and is not cosmetic. v_golden_field selects every golden column by
+        name, and Postgres validates a view's columns at CREATE — so on a warehouse laid down
+        before a column existed, creating the view first fails the whole init. SQLite only
+        resolves a view when it is read, which is why a test on SQLite passed with the migration
+        in the wrong place.
+        """
         with self.transaction() as c:
-            for stmt in VIEWS:
+            for stmt in DDL:                     # tables only; VIEWS is a separate list
                 c.execute(stmt)
+            self._migrate_golden(c)              # widen them before anything selects by name
+            for stmt in VIEWS:                   # drops and recreates, so a widened table is seen
+                c.execute(stmt)
+
+    def _existing_columns(self, c, table: str) -> set[str]:
+        raise NotImplementedError
+
+    # Widened beyond golden_facility when the enrichment stages merged in. asserted_at is when a
+    # ROW was written, as distinct from date_key, when its SOURCE was retrieved. Survivorship needs
+    # both: retrieved_date ranks one source against another, asserted_at separates two assertions
+    # that share it. Without the second, re-measuring a facility on the same day leaves two rows
+    # `tie: most_recent` cannot order, and which one reaches golden is arbitrary — which is exactly
+    # what happened to 24 footprints.
+    MIGRATE = {"golden_facility": None,               # None: every GOLDEN_FIELD and its __source
+               "fact_assertions": ["asserted_at"]}
+
+    def _migrate_golden(self, c) -> list[str]:
+        """Add any column the live tables predate.
+
+        CREATE TABLE IF NOT EXISTS is a no-op on a table that exists, so a field added to
+        GOLDEN_FIELDS after the first release would be in the INSERT column list and absent from
+        the table — every load after that would fail. Each missing column and its __source twin
+        are added in place; nothing is dropped or rewritten, and a table that already has them is
+        left exactly as it was. Both engines accept ALTER TABLE ... ADD COLUMN ... TEXT."""
+        added = []
+        for table, cols in self.MIGRATE.items():
+            want = cols if cols is not None else [x for f in GOLDEN_FIELDS
+                                                  for x in (f, f"{f}__source")]
+            have = self._existing_columns(c, table)
+            for col in want:
+                if col not in have:
+                    c.execute(f'ALTER TABLE {table} ADD COLUMN "{col}" TEXT')
+                    added.append(f"{table}.{col}")
+        return added
 
     @contextmanager
     def transaction(self):
@@ -196,6 +256,11 @@ class _Warehouse:
     def _rows(self, raw) -> list[dict]:
         raise NotImplementedError
 
+    def _assertion_count(self, c, tag: str) -> int:
+        """Facts already held for this release tag. Used either side of the fact_assertions load so
+        `assertions_appended` counts what the ON CONFLICT actually inserted."""
+        return int(self._rows(c.execute("SELECT count(*) AS n FROM fact_assertions WHERE release_tag = ?", (tag,)))[0]["n"])
+
     def load_release(self, record: dict, *, assertions: list[dict], golden: list[dict], conflicts: list[dict],
                      facilities: list[dict], rows: list[dict], registry: dict, registry_text: str,
                      rules: dict, control_rows: list[dict], control_sha: str | None, known_gaps: dict,
@@ -205,57 +270,58 @@ class _Warehouse:
         tag, run_ts = record["release"]["tag"], record["started"]
         with self.transaction() as c:
             # dimensions
-            for s in registry.get("sources", []):
-                c.execute("""INSERT INTO dim_source VALUES (?,?,?,?,?,?,?)
+            c.executemany("""INSERT INTO dim_source VALUES (?,?,?,?,?,?,?)
                              ON CONFLICT(source_key) DO UPDATE SET name=excluded.name, class=excluded.class,
                              method=excluded.method, status_basis=excluded.status_basis, status=excluded.status""",
-                          (s["id"], s["id"], s.get("name"), str(s.get("class")), s.get("method"), s.get("status_basis"), s.get("status")))
-            for sid, meta in SYNTHETIC_SOURCES.items():
-                c.execute("INSERT INTO dim_source VALUES (?,?,?,?,?,?,?) ON CONFLICT (source_key) DO NOTHING",
-                          (sid, sid, meta["name"], meta["class"], None, None, "active"))
+                          [(s["id"], s["id"], s.get("name"), str(s.get("class")), s.get("method"), s.get("status_basis"), s.get("status"))
+                           for s in registry.get("sources", [])])
+            c.executemany("INSERT INTO dim_source VALUES (?,?,?,?,?,?,?) ON CONFLICT (source_key) DO NOTHING",
+                          [(sid, sid, meta["name"], meta["class"], None, None, "active") for sid, meta in SYNTHETIC_SOURCES.items()])
             c.execute("DELETE FROM dim_field")
-            for f in GOLDEN_FIELDS:
-                order = rules.get("fields", {}).get(f, {}).get("order", rules.get("default_order", []))
-                c.execute("INSERT INTO dim_field VALUES (?,?,?,?)", (f, f, json.dumps(order), str(rules.get("version"))))
-            for f in facilities:
-                c.execute("""INSERT INTO dim_facility VALUES (?,?,?,?,?,?,?,?)
+            c.executemany("INSERT INTO dim_field VALUES (?,?,?,?)",
+                          [(f, f, json.dumps(rules.get("fields", {}).get(f, {}).get("order", rules.get("default_order", []))), str(rules.get("version")))
+                           for f in GOLDEN_FIELDS])
+            c.executemany("""INSERT INTO dim_facility VALUES (?,?,?,?,?,?,?,?)
                              ON CONFLICT(facility_key) DO UPDATE SET last_seen_release=excluded.last_seen_release,
                              signature=excluded.signature, name=excluded.name, state=excluded.state, tier=excluded.tier""",
-                          (f["facility_id"], f["facility_id"], f.get("signature"), tag, tag, f.get("name"), f.get("state"), f.get("tier")))
-            for d in {a.get("retrieved_date") for a in assertions} | {r.get("retrieved_date") for r in rows}:
-                dr = _date_row(d or "")
-                if dr:
-                    c.execute("INSERT INTO dim_date VALUES (?,?,?,?) ON CONFLICT (date_key) DO NOTHING", dr)
+                          [(f["facility_id"], f["facility_id"], f.get("signature"), tag, tag, f.get("name"), f.get("state"), f.get("tier"))
+                           for f in facilities])
+            c.executemany("INSERT INTO dim_date VALUES (?,?,?,?) ON CONFLICT (date_key) DO NOTHING",
+                          [dr for dr in (_date_row(d or "") for d in
+                                         {a.get("retrieved_date") for a in assertions} | {r.get("retrieved_date") for r in rows}) if dr])
             # provenance anchor: every reconciled contract row
-            for r in rows:
-                c.execute("INSERT INTO ref_source_row VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (row_hash) DO UPDATE SET "
+            c.executemany("INSERT INTO ref_source_row VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (row_hash) DO UPDATE SET "
                           + ", ".join(f"{k}=excluded.{k}" for k in ("source_key", "source_url", "source_document", "retrieved_date", "row_position",
                                                                    "source_identifier", "name_verbatim", "address_verbatim", "city_verbatim", "state_verbatim",
                                                                    "zip_verbatim", "facility_key", "match_method", "match_confidence", "last_seen_release")),
-                          (r["row_hash"], r["source_id"], r.get("source_url"), r.get("source_document"), r.get("retrieved_date"),
-                           r.get("row_position"), r.get("source_identifier"), r.get("name_verbatim"), r.get("address_verbatim"),
-                           r.get("city_verbatim"), r.get("state_verbatim"), r.get("zip_verbatim"), r.get("facility_id"),
-                           r.get("match_method"), _float(r.get("match_confidence")), tag))
-            # the fact
-            n_facts = 0
-            for a in assertions:
-                dr = _date_row(a.get("retrieved_date") or "")
-                cur = c.execute("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (assertion_id, release_tag) DO NOTHING",
-                                (assertion_id(a), tag, a["facility_id"], a["source_id"], a["field"], dr[0] if dr else None,
-                                 a["value"], a.get("basis"), 1 if a.get("site_visit") in (True, "True") else 0,
-                                 a.get("row_hash") or None, _float(a.get("confidence")), a.get("source_class"),
-                                 a.get("asserted_at") or run_ts))
-                n_facts += cur.rowcount
+                          [(r["row_hash"], r["source_id"], r.get("source_url"), r.get("source_document"), r.get("retrieved_date"),
+                            r.get("row_position"), r.get("source_identifier"), r.get("name_verbatim"), r.get("address_verbatim"),
+                            r.get("city_verbatim"), r.get("state_verbatim"), r.get("zip_verbatim"), r.get("facility_id"),
+                            r.get("match_method"), _float(r.get("match_confidence")), tag) for r in rows])
+            # the fact. ON CONFLICT DO NOTHING means rows offered != rows inserted, and the two
+            # drivers do not agree on what executemany reports in rowcount, so the number that goes
+            # on to fact_release_metrics is measured against the table rather than inferred.
+            #
+            # 13 columns, not 12: asserted_at is the last. It is when this ROW was written, as
+            # against date_key, when its SOURCE was retrieved, and survivorship needs both — see
+            # MIGRATE above.
+            before = self._assertion_count(c, tag)
+            c.executemany("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (assertion_id, release_tag) DO NOTHING",
+                          [(assertion_id(a), tag, a["facility_id"], a["source_id"], a["field"],
+                            (_date_row(a.get("retrieved_date") or "") or (None,))[0],
+                            a["value"], a.get("basis"), 1 if a.get("site_visit") in (True, "True") else 0,
+                            a.get("row_hash") or None, _float(a.get("confidence")), a.get("source_class"),
+                            a.get("asserted_at") or run_ts) for a in assertions])
+            n_facts = self._assertion_count(c, tag) - before
             # golden: replaced, never edited
             c.execute("DELETE FROM golden_facility")
             cols = ["facility_key", "release_tag"] + [x for f in GOLDEN_FIELDS for x in (f, f"{f}__source")] + ["n_assertions", "n_sources"]
-            for g in golden:
-                vals = [g["facility_id"], tag] + [g.get(x) for f in GOLDEN_FIELDS for x in (f, f"{f}__source")] + [g.get("n_assertions"), g.get("n_sources")]
-                c.execute(f"INSERT INTO golden_facility ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})", vals)
+            c.executemany(f"INSERT INTO golden_facility ({','.join(cols)}) VALUES ({','.join('?' * len(cols))})",
+                          [tuple([g["facility_id"], tag] + [g.get(x) for f in GOLDEN_FIELDS for x in (f, f"{f}__source")]
+                                 + [g.get("n_assertions"), g.get("n_sources")]) for g in golden])
             c.execute("DELETE FROM conflicts WHERE release_tag = ?", (tag,))
-            for k in conflicts:
-                c.execute("INSERT INTO conflicts VALUES (?,?,?,?,?,?,?)",
-                          (tag, k["facility_id"], k["field"], k["winner"], k["winner_source"], k["n_values"], k["values"]))
+            c.executemany("INSERT INTO conflicts VALUES (?,?,?,?,?,?,?)",
+                          [(tag, k["facility_id"], k["field"], k["winner"], k["winner_source"], k["n_values"], k["values"]) for k in conflicts])
             # release metrics and versioned references
             rel, g1 = record["release"], next((g for g in record.get("gates", []) if g["gate"].startswith("G1")), {})
             m7, cls = record.get("layers", {}).get("7_measure", {}), record.get("layers", {}).get("3_classify") or {}
@@ -270,11 +336,11 @@ class _Warehouse:
             c.execute("INSERT INTO ref_source_registry VALUES (?,?,?,?) ON CONFLICT (release_tag) DO UPDATE SET registry_version=excluded.registry_version, registry_sha=excluded.registry_sha, yaml=excluded.yaml",
                       (tag, record.get("registry_version"), record.get("registry_file_sha"), registry_text))
             if control_sha:
-                for r in control_rows:
-                    c.execute("INSERT INTO ref_control VALUES (?,?,?,?,?,?,?) ON CONFLICT (checksum, control_id) DO NOTHING",
-                              (control_sha, r.get("control_id"), r.get("name"), r.get("city"), r.get("state"), r.get("triage"), r.get("reason")))
-            for st, cause in (known_gaps.get("states") or {}).items():
-                c.execute("INSERT INTO ref_known_gaps VALUES (?,?,?,?) ON CONFLICT (release_tag, state) DO UPDATE SET cause=excluded.cause, as_of=excluded.as_of", (tag, st, cause, run_ts))
+                c.executemany("INSERT INTO ref_control VALUES (?,?,?,?,?,?,?) ON CONFLICT (checksum, control_id) DO NOTHING",
+                              [(control_sha, r.get("control_id"), r.get("name"), r.get("city"), r.get("state"), r.get("triage"), r.get("reason"))
+                               for r in control_rows])
+            c.executemany("INSERT INTO ref_known_gaps VALUES (?,?,?,?) ON CONFLICT (release_tag, state) DO UPDATE SET cause=excluded.cause, as_of=excluded.as_of",
+                          [(tag, st, cause, run_ts) for st, cause in (known_gaps.get("states") or {}).items()])
             total = self.query("SELECT count(*) AS n FROM fact_assertions")[0]["n"]
         return {"engine": self.engine, "path": str(self.path), "release_tag": tag, "assertions_appended": n_facts,
                 "golden_rows": len(golden), "conflicts": len(conflicts), "source_rows": len(rows), "assertions_total": total}
@@ -307,8 +373,8 @@ class SqliteWarehouse(_Warehouse):
     def _rows(self, raw) -> list[dict]:
         return [dict(r) for r in raw.fetchall()]
 
-    def existing_columns(self, table: str) -> set[str]:
-        return {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    def _existing_columns(self, c, table: str) -> set[str]:
+        return {r["name"] for r in self._rows(c.execute(f"PRAGMA table_info({table})"))}
 
 
 class PostgresWarehouse(_Warehouse):
@@ -342,9 +408,9 @@ class PostgresWarehouse(_Warehouse):
     def _rows(self, raw) -> list[dict]:
         return [dict(r) for r in raw.fetchall()] if raw.description else []
 
-    def existing_columns(self, table: str) -> set[str]:
-        rows = self.query("SELECT column_name FROM information_schema.columns WHERE table_name = ?", (table,))
-        return {r["column_name"] for r in rows}
+    def _existing_columns(self, c, table: str) -> set[str]:
+        return {r["column_name"] for r in self._rows(c.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_name = ?", (table,)))}
 
 
 def open_warehouse(cfg: dict, root: Path):

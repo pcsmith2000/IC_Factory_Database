@@ -1,0 +1,118 @@
+{
+ "pipeline_version": "1.0.0",
+ "started": "2026-09-15T20:02:43.462713+00:00",
+ "registry_version": "01daba2",
+ "registry_file_sha": "1de458767ece71e589ecfcbfde7d7908fa33471496c0e650b3ffa956b2863891",
+ "control_sha": "02c9a3d7695ff3110d1eac891ed14165ee2cc0fca46732b04483b5bed524235e",
+ "layers": {
+  "2_validate": {
+   "sources": {},
+   "halted": [],
+   "problems": {}
+  },
+  "3_classify": {
+   "skipped": "IC_AI=off \u2014 classifier not run",
+   "sources": [
+    "epa_frs"
+   ],
+   "rows_from_those_sources": 0,
+   "n_candidates": 0,
+   "uncertain": 0,
+   "not_candidated": 0,
+   "ic": 0,
+   "note": "candidate generation is deterministic and did run; every candidate is parked in review_queue.csv awaiting a classified run"
+  },
+  "4_resolve": {
+   "rows": 0,
+   "resolved_by_crosswalk": 0,
+   "resolution_rate": 0.0,
+   "layer_built": false
+  },
+  "5_reconcile": {
+   "ids_issued": 0,
+   "n_facilities": 0,
+   "tiers": {}
+  },
+  "5b_golden": {
+   "assertions": 0,
+   "golden_rows": 0,
+   "conflicts": 0,
+   "survivorship_version": 1,
+   "operator_assertions": 0
+  },
+  "7_measure": {
+   "recall": {
+    "in_scope": 0,
+    "found": 0,
+    "recall": 0.0,
+    "by_method": {}
+   },
+   "coverage_bias": {
+    "counted_facilities": 0,
+    "frame_total": 0,
+    "states": {},
+    "out_of_band": {},
+    "mean_abs_bias": null,
+    "out_of_band_causes": {}
+   }
+  }
+ },
+ "gates": [
+  {
+   "gate": "G1 dedupe audit",
+   "passed": true,
+   "summary": "0 pairs, 0 collapses = 0.0% (max 10%); corrected count 0",
+   "details": {
+    "pairs": 0,
+    "collapses": 0,
+    "rate": 0.0,
+    "corrected_count": 0,
+    "review_csv": "/home/runner/work/IC_Factory_Database/IC_Factory_Database/build/dedupe_audit_2026-09-15.csv"
+   }
+  },
+  {
+   "gate": "G2 false-merge check",
+   "passed": true,
+   "summary": "0 clusters with >1 street key",
+   "details": {
+    "flagged": {}
+   }
+  },
+  {
+   "gate": "G3 id stability",
+   "passed": true,
+   "summary": "first run: 0 ids issued (not a re-run; stability not tested)",
+   "details": {}
+  },
+  {
+   "gate": "G4 control isolation",
+   "passed": true,
+   "summary": "checksum ok; 0 rows with control provenance",
+   "details": {}
+  },
+  {
+   "gate": "G5 classifier eval",
+   "passed": true,
+   "summary": "no rows were classified in this run \u2014 nothing to audit",
+   "details": {}
+  }
+ ],
+ "halted_at": null,
+ "release": {
+  "published_count": 0,
+  "raw_count": 0,
+  "tag": "v1.0.0+reg.01daba2+ids.3cf26b5e+ctl.02c9a3d7+surv.4b4845d9",
+  "finished": "2026-09-15T20:02:43.468430+00:00",
+  "ai": "off \u2014 deterministic sources only, classifier and ai_extraction skipped",
+  "warehouse": {
+   "engine": "sqlite",
+   "path": "/home/runner/work/IC_Factory_Database/IC_Factory_Database/build/ic_factory.sqlite",
+   "release_tag": "v1.0.0+reg.01daba2+ids.3cf26b5e+ctl.02c9a3d7+surv.4b4845d9",
+   "assertions_appended": 0,
+   "golden_rows": 0,
+   "conflicts": 0,
+   "source_rows": 0,
+   "assertions_total": 0
+  }
+ }
+}

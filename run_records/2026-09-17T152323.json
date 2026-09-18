@@ -1,0 +1,2268 @@
+{
+ "pipeline_version": "1.0.0",
+ "started": "2026-09-17T15:23:23.776392+00:00",
+ "env_overrides": {
+  "IC_CLASSIFIER_MODEL": "inception/mercury-2.5",
+  "IC_AI": "on"
+ },
+ "state_overrides": {},
+ "registry_version": "e387ea5",
+ "registry_file_sha": "1441602f4f00ea82bdf0e53b84954f5cbc7e8c64b858f585d4da4f70c9c93cd7",
+ "control_sha": "b83b031ab985563c4f4e045d8fa713da11ebf68740b7e733a2017fee31d0215a",
+ "layers": {
+  "1_acquire": {
+   "pulled": [
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/pa_dced.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/tx_tdlr.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mi_lara.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/or_bcd.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/fl_bcis.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/epa_frs.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/iibc.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mhi_plants.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/corporate_locations.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/bldr_locations.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mbi_members.csv"
+   ],
+   "failed": {},
+   "skipped": {}
+  },
+  "2_validate": {
+   "sources": {
+    "bldr_locations": {
+     "rows": 90,
+     "with_street_key": 89,
+     "no_fixed_plant": 0
+    },
+    "corporate_locations": {
+     "rows": 210,
+     "with_street_key": 178,
+     "no_fixed_plant": 0
+    },
+    "epa_frs": {
+     "rows": 99883,
+     "with_street_key": 80582,
+     "no_fixed_plant": 0
+    },
+    "fl_bcis": {
+     "rows": 959,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "iibc": {
+     "rows": 286,
+     "with_street_key": 280,
+     "no_fixed_plant": 0
+    },
+    "mbi_members": {
+     "rows": 188,
+     "with_street_key": 150,
+     "no_fixed_plant": 0
+    },
+    "mhi_plants": {
+     "rows": 150,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "mi_lara": {
+     "rows": 172,
+     "with_street_key": 172,
+     "no_fixed_plant": 0
+    },
+    "or_bcd": {
+     "rows": 164,
+     "with_street_key": 143,
+     "no_fixed_plant": 0
+    },
+    "pa_dced": {
+     "rows": 115,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "tx_tdlr": {
+     "rows": 334,
+     "with_street_key": 324,
+     "no_fixed_plant": 0
+    }
+   },
+   "halted": [],
+   "problems": {}
+  },
+  "3_classify": {
+   "model": "inception/mercury-2.5",
+   "provider": "vercel_ai_gateway",
+   "temperature": 0,
+   "seeds_also_candidates": 60,
+   "prompt_hash": "23e69d2b0d70",
+   "n_candidates": 13057,
+   "n_seeds": 60,
+   "ic": 4715,
+   "uncertain": 283,
+   "not_ic_or_uncandidated": 97553,
+   "precision_audit": {
+    "by_product_type": {
+     "hud_code": {
+      "admitted": 590,
+      "flagged": 0,
+      "rate": 0.0
+     },
+     "metal_building": {
+      "admitted": 553,
+      "flagged": 0,
+      "rate": 0.0
+     },
+     "truss_component": {
+      "admitted": 423,
+      "flagged": 7,
+      "rate": 0.0165
+     },
+     "panel": {
+      "admitted": 300,
+      "flagged": 1,
+      "rate": 0.0033
+     },
+     "volumetric": {
+      "admitted": 61,
+      "flagged": 0,
+      "rate": 0.0
+     },
+     "other": {
+      "admitted": 47,
+      "flagged": 1,
+      "rate": 0.0213
+     },
+     "precast": {
+      "admitted": 46,
+      "flagged": 0,
+      "rate": 0.0
+     },
+     "mass_timber": {
+      "admitted": 27,
+      "flagged": 2,
+      "rate": 0.0741
+     }
+    },
+    "product_naics_admitted": 77,
+    "product_naics_rate": 0.0376,
+    "product_naics_by_code": {
+     "reconstituted wood": 23,
+     "hardwood veneer": 20,
+     "softwood veneer": 10,
+     "cut stock": 8,
+     "other millwork": 8,
+     "wood windows and doors": 7,
+     "wood containers and pallets": 1
+    },
+    "admitted": 2047,
+    "flagged": 11,
+    "floor_fp_rate": 0.0054,
+    "by_category": {
+     "commodity_panel": 11
+    },
+    "examples": {
+     "commodity_panel": [
+      "GEORGIA-PACIFIC WOOD PRODUCTS LLC OCALA I-BEAM PLANT",
+      "ILEVEL BY WEYERHAEUSER - IRONTON FACILITY",
+      "LOUISIANA PACIFIC CORP",
+      "LOUISIANA PACIFIC CORPORATION - HWY 421 N",
+      "LOUISIANA-PACIFIC CORPORATION"
+     ]
+    },
+    "ambiguous_held_back": 0,
+    "ambiguous_examples": []
+   }
+  },
+  "4_resolve": {
+   "rows": 4715,
+   "resolved_by_crosswalk": 0,
+   "resolution_rate": 0.0,
+   "layer_built": false
+  },
+  "5_reconcile": {
+   "ids_issued": 132,
+   "n_facilities": 3935,
+   "tiers": {
+    "T2": 283,
+    "T3": 83,
+    "T1": 2151,
+    "T0": 1418
+   }
+  },
+  "5b_golden": {
+   "assertions": 27850,
+   "golden_rows": 3935,
+   "conflicts": 1361,
+   "survivorship_version": 1,
+   "operator_assertions": 0
+  },
+  "7_measure": {
+   "recall": {
+    "in_scope": 241,
+    "found": 77,
+    "recall": 0.31950207468879666,
+    "tested": true,
+    "by_method": {
+     "name+city": 20,
+     "name+state": 6,
+     "name": 9,
+     "name-prefix": 42
+    },
+    "untriaged_assumed_in_scope": 241,
+    "company_present_plant_missing": 9,
+    "missed": [
+     "4Ward Solutions Group",
+     "A-1 Industries of Florida",
+     "ACME PANEL COMPANY",
+     "ACQBUILT INC",
+     "ASSEMBLAGEworks, Inc.",
+     "American Builders Supply",
+     "American Builders Supply",
+     "Angle Truss",
+     "Annadale Millwork",
+     "Arizona Building Supply",
+     "Arizona Building Supply",
+     "Assembly OSM",
+     "Atlantic Building Systems",
+     "Atlantic Building Systems",
+     "Atlantic PreFab",
+     "Aura Dwellings & Hospitality",
+     "Azure Printed Homes",
+     "B&T Manufacturing",
+     "BARDEN BUILDING PRODUCTS / NORTH AMERICAN TRUSS",
+     "BPUBLIC PREFAB",
+     "BRANCH TECHNOLOGY",
+     "BYLD Inc.",
+     "Baker Triangle Prefab",
+     "Bankersteel - Lynchburg (Main plant 1619 Wythe Road)",
+     "Bankersteel - Lynchburg (South plant 351 Rangoon St)",
+     "Bankersteel - Orlando",
+     "Bankersteel - Rock Hill",
+     "Bankersteel - South Plainfield",
+     "BathSystems",
+     "Bensonwood - Tektoniks & Unity Homes",
+     "Blue Horse Building",
+     "Blueprint Robotics - Baltimore",
+     "Blueprint Robotics - Windsor",
+     "CLARK PACIFIC - WOODLAND PLANT",
+     "COMPLETE WALL STRATEGIES / TCM ENTERPRISES",
+     "Carolina Structural Systems",
+     "Cascade Manufacturing",
+     "Cavco - Penn West",
+     "Cavco Industries R-Anell",
+     "Clearspan Components",
+     "Contract Building Components",
+     "Contract Building Components",
+     "Cornerstone Building",
+     "DC STRUCTURES",
+     "DORCE Prefabricated & Construction",
+     "DR Johnson",
+     "DuraPod - Chalfont",
+     "DuraPod - North Wales",
+     "Dvele Modular",
+     "EXTREME PANEL TECHNOLOGIES INC"
+    ],
+    "n_missed": 164,
+    "dev": {
+     "in_scope": 203,
+     "found": 66,
+     "recall": 0.3251231527093596
+    },
+    "sealed": {
+     "in_scope": 38,
+     "found": 11,
+     "recall": 0.2894736842105263
+    }
+   },
+   "coverage_bias": {
+    "counted_facilities": 2517,
+    "frame_total": 2750,
+    "states": {
+     "AK": {
+      "ours": 4,
+      "frame": 14,
+      "coverage": 0.2857142857142857,
+      "bias": 0.31
+     },
+     "AL": {
+      "ours": 79,
+      "frame": 79,
+      "coverage": 1.0,
+      "bias": 1.09
+     },
+     "AR": {
+      "ours": 20,
+      "frame": 41,
+      "coverage": 0.4878048780487805,
+      "bias": 0.53
+     },
+     "AZ": {
+      "ours": 48,
+      "frame": 55,
+      "coverage": 0.8727272727272727,
+      "bias": 0.95
+     },
+     "CA": {
+      "ours": 187,
+      "frame": 182,
+      "coverage": 1.0274725274725274,
+      "bias": 1.12
+     },
+     "CO": {
+      "ours": 50,
+      "frame": 62,
+      "coverage": 0.8064516129032258,
+      "bias": 0.88
+     },
+     "CT": {
+      "ours": 6,
+      "frame": 13,
+      "coverage": 0.46153846153846156,
+      "bias": 0.5
+     },
+     "DE": {
+      "ours": 5,
+      "frame": 6,
+      "coverage": 0.8333333333333334,
+      "bias": 0.91
+     },
+     "FL": {
+      "ours": 125,
+      "frame": 177,
+      "coverage": 0.7062146892655368,
+      "bias": 0.77
+     },
+     "GA": {
+      "ours": 119,
+      "frame": 121,
+      "coverage": 0.9834710743801653,
+      "bias": 1.07
+     },
+     "HI": {
+      "ours": 8,
+      "frame": 6,
+      "coverage": 1.3333333333333333,
+      "bias": 1.46
+     },
+     "IA": {
+      "ours": 28,
+      "frame": 26,
+      "coverage": 1.0769230769230769,
+      "bias": 1.18
+     },
+     "ID": {
+      "ours": 40,
+      "frame": 49,
+      "coverage": 0.8163265306122449,
+      "bias": 0.89
+     },
+     "IL": {
+      "ours": 49,
+      "frame": 62,
+      "coverage": 0.7903225806451613,
+      "bias": 0.86
+     },
+     "IN": {
+      "ours": 89,
+      "frame": 90,
+      "coverage": 0.9888888888888889,
+      "bias": 1.08
+     },
+     "KS": {
+      "ours": 36,
+      "frame": 24,
+      "coverage": 1.5,
+      "bias": 1.64
+     },
+     "KY": {
+      "ours": 40,
+      "frame": 66,
+      "coverage": 0.6060606060606061,
+      "bias": 0.66
+     },
+     "LA": {
+      "ours": 31,
+      "frame": 35,
+      "coverage": 0.8857142857142857,
+      "bias": 0.97
+     },
+     "MA": {
+      "ours": 13,
+      "frame": 15,
+      "coverage": 0.8666666666666667,
+      "bias": 0.95
+     },
+     "MD": {
+      "ours": 16,
+      "frame": 18,
+      "coverage": 0.8888888888888888,
+      "bias": 0.97
+     },
+     "ME": {
+      "ours": 13,
+      "frame": 28,
+      "coverage": 0.4642857142857143,
+      "bias": 0.51
+     },
+     "MI": {
+      "ours": 69,
+      "frame": 64,
+      "coverage": 1.078125,
+      "bias": 1.18
+     },
+     "MN": {
+      "ours": 71,
+      "frame": 56,
+      "coverage": 1.2678571428571428,
+      "bias": 1.39
+     },
+     "MO": {
+      "ours": 49,
+      "frame": 80,
+      "coverage": 0.6125,
+      "bias": 0.67
+     },
+     "MS": {
+      "ours": 20,
+      "frame": 24,
+      "coverage": 0.8333333333333334,
+      "bias": 0.91
+     },
+     "MT": {
+      "ours": 17,
+      "frame": 36,
+      "coverage": 0.4722222222222222,
+      "bias": 0.52
+     },
+     "NC": {
+      "ours": 100,
+      "frame": 117,
+      "coverage": 0.8547008547008547,
+      "bias": 0.93
+     },
+     "ND": {
+      "ours": 8,
+      "frame": 14,
+      "coverage": 0.5714285714285714,
+      "bias": 0.62
+     },
+     "NE": {
+      "ours": 21,
+      "frame": 27,
+      "coverage": 0.7777777777777778,
+      "bias": 0.85
+     },
+     "NH": {
+      "ours": 12,
+      "frame": 10,
+      "coverage": 1.2,
+      "bias": 1.31
+     },
+     "NJ": {
+      "ours": 23,
+      "frame": 22,
+      "coverage": 1.0454545454545454,
+      "bias": 1.14
+     },
+     "NM": {
+      "ours": 12,
+      "frame": 8,
+      "coverage": 1.5,
+      "bias": 1.64
+     },
+     "NV": {
+      "ours": 15,
+      "frame": 23,
+      "coverage": 0.6521739130434783,
+      "bias": 0.71
+     },
+     "NY": {
+      "ours": 35,
+      "frame": 48,
+      "coverage": 0.7291666666666666,
+      "bias": 0.8
+     },
+     "OH": {
+      "ours": 54,
+      "frame": 97,
+      "coverage": 0.5567010309278351,
+      "bias": 0.61
+     },
+     "OK": {
+      "ours": 30,
+      "frame": 41,
+      "coverage": 0.7317073170731707,
+      "bias": 0.8
+     },
+     "OR": {
+      "ours": 113,
+      "frame": 58,
+      "coverage": 1.9482758620689655,
+      "bias": 2.13
+     },
+     "PA": {
+      "ours": 111,
+      "frame": 180,
+      "coverage": 0.6166666666666667,
+      "bias": 0.67
+     },
+     "SC": {
+      "ours": 36,
+      "frame": 49,
+      "coverage": 0.7346938775510204,
+      "bias": 0.8
+     },
+     "SD": {
+      "ours": 18,
+      "frame": 24,
+      "coverage": 0.75,
+      "bias": 0.82
+     },
+     "TN": {
+      "ours": 78,
+      "frame": 90,
+      "coverage": 0.8666666666666667,
+      "bias": 0.95
+     },
+     "TX": {
+      "ours": 281,
+      "frame": 261,
+      "coverage": 1.0766283524904214,
+      "bias": 1.18
+     },
+     "UT": {
+      "ours": 29,
+      "frame": 41,
+      "coverage": 0.7073170731707317,
+      "bias": 0.77
+     },
+     "VA": {
+      "ours": 59,
+      "frame": 55,
+      "coverage": 1.0727272727272728,
+      "bias": 1.17
+     },
+     "VT": {
+      "ours": 6,
+      "frame": 9,
+      "coverage": 0.6666666666666666,
+      "bias": 0.73
+     },
+     "WA": {
+      "ours": 111,
+      "frame": 61,
+      "coverage": 1.819672131147541,
+      "bias": 1.99
+     },
+     "WI": {
+      "ours": 78,
+      "frame": 63,
+      "coverage": 1.2380952380952381,
+      "bias": 1.35
+     },
+     "WV": {
+      "ours": 9,
+      "frame": 12,
+      "coverage": 0.75,
+      "bias": 0.82
+     },
+     "WY": {
+      "ours": 6,
+      "frame": 11,
+      "coverage": 0.5454545454545454,
+      "bias": 0.6
+     }
+    },
+    "out_of_band": {
+     "KY": 0.66,
+     "MO": 0.67,
+     "OH": 0.61,
+     "OR": 2.13,
+     "PA": 0.67,
+     "WA": 1.99
+    },
+    "mean_abs_bias": 0.276,
+    "out_of_band_causes": {
+     "KY": "No component roster published.",
+     "MO": "No component roster published.",
+     "OH": "No component roster published; ohiowoodproducts.com robots-blocked and compromised (2026-09-09).",
+     "OR": "Above the frame, and the frame is a floor. Timber-belt truss and prefab density; sampled rows are genuine plants.",
+     "PA": "UNRESOLVED \u2014 46% of the frame floor with pa_dced active. Needs a second PA roster or an audit of what pa_dced omits.",
+     "WA": "Above the frame, and the frame is a floor. Timber-belt truss and prefab density; sampled rows are genuine plants."
+    }
+   }
+  }
+ },
+ "gates": [
+  {
+   "gate": "G1 dedupe audit",
+   "passed": true,
+   "tested": true,
+   "summary": "417 pairs, 36 collapses = 0.9% (max 10%); corrected count 3899",
+   "details": {
+    "pairs": 417,
+    "collapses": 36,
+    "rate": 0.00914866581956798,
+    "corrected_count": 3899,
+    "review_csv": "/home/runner/work/IC_Factory_Database/IC_Factory_Database/build/dedupe_audit_2026-09-17.csv"
+   }
+  },
+  {
+   "gate": "G2 false-merge check",
+   "passed": true,
+   "tested": true,
+   "summary": "169 of 465 merged clusters hold unrelated names = 36.3% (max 100%); ABOVE the 5% target \u2014 aliasing and genuine false merges cannot be separated until Layer 4 resolves entities, so every pair needs review",
+   "details": {
+    "flagged": {
+     "IC-69752": {
+      "similarity": 0.2,
+      "names": [
+       "builders firstsource berlin nj truss",
+       "builders firstsource berlin north nj truss",
+       "probuild"
+      ],
+      "street_key": "210 williamstown rd",
+      "state": "NJ"
+     },
+     "IC-10159": {
+      "similarity": 0.36,
+      "names": [
+       "alliance truss",
+       "builders firstsource casa grande az truss"
+      ],
+      "street_key": "1392 n vip blvd",
+      "state": "AZ"
+     },
+     "IC-86692": {
+      "similarity": 0.29,
+      "names": [
+       "bfs cutntxmf",
+       "builders firstsource conroe tx truss",
+       "builders firstsource cut n shoot tx truss"
+      ],
+      "street_key": "8600 waukegan rd",
+      "state": "TX"
+     },
+     "IC-89084": {
+      "similarity": 0.15,
+      "names": [
+       "builders firstsource fredericksburg va truss",
+       "trussway manufacturing"
+      ],
+      "street_key": "11540 shannon dr",
+      "state": "VA"
+     },
+     "IC-86353": {
+      "similarity": 0.19,
+      "names": [
+       "builders firstsource hearne tx truss",
+       "panel truss hearne",
+       "trussworks south"
+      ],
+      "street_key": "407 w 6th st",
+      "state": "TX"
+     },
+     "IC-86695": {
+      "similarity": 0.39,
+      "names": [
+       "bfs hendtxmf",
+       "builders firstsource henderson tx truss"
+      ],
+      "street_key": "700 kilgore dr",
+      "state": "TX"
+     },
+     "IC-13836": {
+      "similarity": 0.41,
+      "names": [
+       "bfs hughcamf",
+       "builders firstsource hughson ca truss"
+      ],
+      "street_key": "2800 tully rd",
+      "state": "CA"
+     },
+     "IC-21935": {
+      "similarity": 0.21,
+      "names": [
+       "builders firstsource lady lake fl truss",
+       "probuild"
+      ],
+      "street_key": "712 duck lake rd",
+      "state": "FL"
+     },
+     "IC-56756": {
+      "similarity": 0.31,
+      "names": [
+       "builders firstsource new bedford ma truss panel",
+       "reliable truss components incorporated"
+      ],
+      "street_key": "200 welby rd",
+      "state": "MA"
+     },
+     "IC-31042": {
+      "similarity": 0.39,
+      "names": [
+       "builders firstsource oakwood ga truss",
+       "panel truss oakwood"
+      ],
+      "street_key": "3703 old oakwood rd",
+      "state": "GA"
+     },
+     "IC-11954": {
+      "similarity": 0.25,
+      "names": [
+       "builders firstsource olivehurst ca truss",
+       "hanson truss components"
+      ],
+      "street_key": "4476 skyway dr",
+      "state": "CA"
+     },
+     "IC-22544": {
+      "similarity": 0.17,
+      "names": [
+       "builders firstsource orlando fl truss",
+       "trussway manufacturing"
+      ],
+      "street_key": "8850 trussway blvd",
+      "state": "FL"
+     },
+     "IC-12778": {
+      "similarity": 0.32,
+      "names": [
+       "builders firstsource perris ca truss",
+       "california trusframe"
+      ],
+      "street_key": "23665 cajalco rd",
+      "state": "CA"
+     },
+     "IC-21127": {
+      "similarity": 0.21,
+      "names": [
+       "builders firstsource punta gorda fl truss",
+       "williams brothers hdwb3100"
+      ],
+      "street_key": "6850 taylor rd",
+      "state": "FL"
+     },
+     "IC-70627": {
+      "similarity": 0.31,
+      "names": [
+       "builders firstsource reno nv truss truckee tahoe lumber",
+       "reno truss"
+      ],
+      "street_key": "3500 white lake pkwy",
+      "state": "NV"
+     },
+     "IC-10190": {
+      "similarity": 0.21,
+      "names": [
+       "builders firstsource surprise az truss foxfire",
+       "campcorp usa"
+      ],
+      "street_key": "13550 w foxfire dr",
+      "state": "AZ"
+     },
+     "IC-87699": {
+      "similarity": 0.56,
+      "names": [
+       "builders firstsource st george ut truss",
+       "st george truss"
+      ],
+      "street_key": "1304 e venture dr",
+      "state": "UT"
+     },
+     "IC-75343": {
+      "similarity": 0.1,
+      "names": [
+       "317705524 relco roof and floor",
+       "parr truss harrisburg",
+       "relco roof and floor"
+      ],
+      "street_key": "30153 substation dr",
+      "state": "OR"
+     },
+     "IC-75324": {
+      "similarity": 0.37,
+      "names": [
+       "northwest structural components",
+       "parr truss redmond"
+      ],
+      "street_key": "1000 se lake rd",
+      "state": "OR"
+     },
+     "IC-90258": {
+      "similarity": 0.4,
+      "names": [
+       "parr truss vancouver",
+       "wa317940277 trus way"
+      ],
+      "street_key": "3901 ne 68th st",
+      "state": "WA"
+     },
+     "IC-90216": {
+      "similarity": 0.46,
+      "names": [
+       "parr truss woodinville",
+       "roof truss supply"
+      ],
+      "street_key": "5910 234th st se",
+      "state": "WA"
+     },
+     "IC-55062": {
+      "similarity": 0.59,
+      "names": [
+       "59843 stark truss",
+       "stark truss franklin"
+      ],
+      "street_key": "822 n main st",
+      "state": "KY"
+     },
+     "IC-72041": {
+      "similarity": 0.38,
+      "names": [
+       "quality component truss systems",
+       "stark truss utica"
+      ],
+      "street_key": "44 old mohawk st",
+      "state": "NY"
+     },
+     "IC-73286": {
+      "similarity": 0.59,
+      "names": [
+       "stark truss",
+       "stark truss cbc marysville"
+      ],
+      "street_key": "14540 industrial pkwy",
+      "state": "OH"
+     },
+     "IC-74637": {
+      "similarity": 0.3,
+      "names": [
+       "317705080 truss and building supply",
+       "truss and building supply",
+       "truss eugene"
+      ],
+      "street_key": "29336 airport rd",
+      "state": "OR"
+     },
+     "IC-90888": {
+      "similarity": 0.32,
+      "names": [
+       "truss pasco",
+       "wa317949094 truss building supply"
+      ],
+      "street_key": "355 n commercial ave",
+      "state": "WA"
+     },
+     "IC-75123": {
+      "similarity": 0.25,
+      "names": [
+       "317715427 truss and building supply",
+       "medford truss",
+       "truss medford"
+      ],
+      "street_key": "1450 antelope rd",
+      "state": "OR"
+     },
+     "IC-66564": {
+      "similarity": 0.46,
+      "names": [
+       "136717 ufp mid atlantic",
+       "ufp site built clinton nc"
+      ],
+      "street_key": "254 superior dr",
+      "state": "NC"
+     },
+     "IC-66562": {
+      "similarity": 0.18,
+      "names": [
+       "134279 ufp mid atlantic",
+       "high level components",
+       "ufp mid atlantic dba high level components",
+       "ufp site built locust nc"
+      ],
+      "street_key": "147 locust level dr",
+      "state": "NC"
+     },
+     "IC-69523": {
+      "similarity": 0.27,
+      "names": [
+       "thermoseal industries",
+       "ufp berlin",
+       "ufp site built berlin nj"
+      ],
+      "street_key": "159 jackson rd",
+      "state": "NJ"
+     },
+     "IC-83483": {
+      "similarity": 0.43,
+      "names": [
+       "ufp mid atlantic",
+       "ufp site built ooltewah tn"
+      ],
+      "street_key": "9356 lumber ln",
+      "state": "TN"
+     },
+     "IC-01208": {
+      "similarity": 0.52,
+      "names": [
+       "american homestar",
+       "platinum homes"
+      ],
+      "street_key": "155 county rd 351",
+      "state": "AL"
+     },
+     "IC-02821": {
+      "similarity": 0.45,
+      "names": [
+       "southern energy homes",
+       "southern energy homes dba russellville formerly southern energy homes in"
+      ],
+      "street_key": "1037 hwy 44",
+      "state": "AL"
+     },
+     "IC-03339": {
+      "similarity": 0.57,
+      "names": [
+       "champion home builders plant 190",
+       "hamilton div of cavalier home builders"
+      ],
+      "street_key": "330 buccaneer st",
+      "state": "AL"
+     },
+     "IC-04282": {
+      "similarity": 0.21,
+      "names": [
+       "allsouth pre engineered components",
+       "apec"
+      ],
+      "street_key": "985 technology dr",
+      "state": "AL"
+     },
+     "IC-08472": {
+      "similarity": 0.38,
+      "names": [
+       "home brands",
+       "leisure time products"
+      ],
+      "street_key": "4560 hwy 412 e",
+      "state": "AR"
+     },
+     "IC-10333": {
+      "similarity": 0.43,
+      "names": [
+       "cmh manufacturing west",
+       "cmh mfg west golden west homes",
+       "cmh mfg west golden west homes dba"
+      ],
+      "street_key": "3100 n perris blvd",
+      "state": "CA"
+     },
+     "IC-10334": {
+      "similarity": 0.46,
+      "names": [
+       "champion home builders",
+       "skyline homes"
+      ],
+      "street_key": "499 w esplanade ave",
+      "state": "CA"
+     },
+     "IC-10372": {
+      "similarity": 0.42,
+      "names": [
+       "louisiana pacific",
+       "pacific woodtech"
+      ],
+      "street_key": "11500 reading rd",
+      "state": "CA"
+     },
+     "IC-10410": {
+      "similarity": 0.29,
+      "names": [
+       "redbuilt",
+       "trus joist macmillan"
+      ],
+      "street_key": "5088 edison ave",
+      "state": "CA"
+     },
+     "IC-10557": {
+      "similarity": 0.34,
+      "names": [
+       "champion home builders",
+       "silvercrest western homes"
+      ],
+      "street_key": "299 n smith ave",
+      "state": "CA"
+     },
+     "IC-10675": {
+      "similarity": 0.22,
+      "names": [
+       "modtech holdings",
+       "silver creek modular"
+      ],
+      "street_key": "2830 barrett ave",
+      "state": "CA"
+     },
+     "IC-12201": {
+      "similarity": 0.26,
+      "names": [
+       "cavco industries",
+       "fleetwood homes"
+      ],
+      "street_key": "7007 jurupa ave",
+      "state": "CA"
+     },
+     "IC-12117": {
+      "similarity": 0.31,
+      "names": [
+       "bamcore",
+       "standard structures"
+      ],
+      "street_key": "5900 pruitt ave",
+      "state": "CA"
+     },
+     "IC-13347": {
+      "similarity": 0.13,
+      "names": [
+       "dixietruss",
+       "employbridge holding"
+      ],
+      "street_key": "12538 vigilante rd",
+      "state": "CA"
+     },
+     "IC-13875": {
+      "similarity": 0.16,
+      "names": [
+       "built rite industries",
+       "ipme"
+      ],
+      "street_key": "19523 s susana rd",
+      "state": "CA"
+     },
+     "IC-14167": {
+      "similarity": 0.58,
+      "names": [
+       "skyline homes div 235 dba champion home builders",
+       "skyline homes div skyline"
+      ],
+      "street_key": "499 w esplanade",
+      "state": "CA"
+     },
+     "IC-14354": {
+      "similarity": 0.44,
+      "names": [
+       "kingspan api",
+       "kingspan insulated panels dba kingspan api"
+      ],
+      "street_key": "2000 morgan rd",
+      "state": "CA"
+     },
+     "IC-17057": {
+      "similarity": 0.41,
+      "names": [
+       "mcgrath remt",
+       "mcgrath rentacorp dba mobile modular management"
+      ],
+      "street_key": "2725 fitzgerald dr",
+      "state": "CA"
+     },
+     "IC-19087": {
+      "similarity": 0.12,
+      "names": [
+       "koosharem",
+       "probuild"
+      ],
+      "street_key": "4058 camelot circle",
+      "state": "CO"
+     },
+     "IC-20063": {
+      "similarity": 0.22,
+      "names": [
+       "cavco manufacturing",
+       "palm harbor homes"
+      ],
+      "street_key": "605 s frontage rd",
+      "state": "FL"
+     },
+     "IC-20076": {
+      "similarity": 0.21,
+      "names": [
+       "champion home builders",
+       "skyline",
+       "skyline homes"
+      ],
+      "street_key": "1230 sw 10th st",
+      "state": "FL"
+     },
+     "IC-20108": {
+      "similarity": 0.11,
+      "names": [
+       "amtex nms",
+       "se modular",
+       "southeast mod mfg leesburg",
+       "southeast modular",
+       "southeast modular manufacturing",
+       "southeast modular manufacturing leesburg",
+       "southeast modular mfg"
+      ],
+      "street_key": "2500 industrial st",
+      "state": "FL"
+     },
+     "IC-20490": {
+      "similarity": 0.31,
+      "names": [
+       "cavco manufacturing",
+       "chariot eagle"
+      ],
+      "street_key": "931 nw 37th ave",
+      "state": "FL"
+     },
+     "IC-20818": {
+      "similarity": 0.17,
+      "names": [
+       "builders firstsource",
+       "modtech holdings"
+      ],
+      "street_key": "1602 industrial park dr",
+      "state": "FL"
+     },
+     "IC-22186": {
+      "similarity": 0.42,
+      "names": [
+       "consolidated industries",
+       "overholt enterprises"
+      ],
+      "street_key": "1221 sw eucalyptus ave",
+      "state": "FL"
+     },
+     "IC-22864": {
+      "similarity": 0.49,
+      "names": [
+       "nci building systems",
+       "whirlwind steel buildings"
+      ],
+      "street_key": "125 pequanoc dr",
+      "state": "GA"
+     },
+     "IC-22935": {
+      "similarity": 0.44,
+      "names": [
+       "fleetwood homes of georgia 39",
+       "valuhomes 39"
+      ],
+      "street_key": "144 stuart way",
+      "state": "GA"
+     },
+     "IC-23661": {
+      "similarity": 0.33,
+      "names": [
+       "all american space solutions",
+       "general manufactured housim 6",
+       "impact housing group"
+      ],
+      "street_key": "137 w park dr",
+      "state": "GA"
+     },
+     "IC-24556": {
+      "similarity": 0.58,
+      "names": [
+       "trachte",
+       "trachte southeast"
+      ],
+      "street_key": "1249 clary connector",
+      "state": "GA"
+     },
+     "IC-30785": {
+      "similarity": 0.28,
+      "names": [
+       "live oak homes of georgia",
+       "wmt housing"
+      ],
+      "street_key": "2875 fulford rd",
+      "state": "GA"
+     },
+     "IC-47491": {
+      "similarity": 0.37,
+      "names": [
+       "ceco building systems",
+       "robertson ceco ii"
+      ],
+      "street_key": "305 n iris rd",
+      "state": "IA"
+     },
+     "IC-48222": {
+      "similarity": 0.17,
+      "names": [
+       "lumber specialties",
+       "us lbm"
+      ],
+      "street_key": "1700 beltline rd",
+      "state": "IA"
+     },
+     "IC-48339": {
+      "similarity": 0.2,
+      "names": [
+       "northwest building systems",
+       "nwbs"
+      ],
+      "street_key": "405 e boeing ln",
+      "state": "ID"
+     },
+     "IC-48555": {
+      "similarity": 0.44,
+      "names": [
+       "guerdon",
+       "guerdon modular buildings"
+      ],
+      "street_key": "5556 s federal way",
+      "state": "ID"
+     },
+     "IC-48571": {
+      "similarity": 0.5,
+      "names": [
+       "nashua builders",
+       "nashua builders dba nashua homes of idaho",
+       "nashua homes of idaho"
+      ],
+      "street_key": "5200 s federal way",
+      "state": "ID"
+     },
+     "IC-51282": {
+      "similarity": 0.22,
+      "names": [
+       "105494 commodore homes of indiana",
+       "cavco goshen",
+       "cavco manufacturing",
+       "commodore homes",
+       "commodore homes systems"
+      ],
+      "street_key": "1902 century dr",
+      "state": "IN"
+     },
+     "IC-51291": {
+      "similarity": 0.42,
+      "names": [
+       "champion enterprises dutch housing plant",
+       "champion home builders"
+      ],
+      "street_key": "1500 n detroit st",
+      "state": "IN"
+     },
+     "IC-51451": {
+      "similarity": 0.12,
+      "names": [
+       "cmh manufacturing clayton middlebury",
+       "cmh manufacturing west",
+       "cmh mfg west dba clayton middlebury",
+       "schult homes"
+      ],
+      "street_key": "437 n main st",
+      "state": "IN"
+     },
+     "IC-51588": {
+      "similarity": 0.16,
+      "names": [
+       "gulf stream coach",
+       "kitchens to go by mobile modular",
+       "schult homes plant 48"
+      ],
+      "street_key": "9876 w old rd 30",
+      "state": "IN"
+     },
+     "IC-51643": {
+      "similarity": 0.57,
+      "names": [
+       "ipg metl span a nucor",
+       "metl span a div of nci group"
+      ],
+      "street_key": "1717 mccall dr",
+      "state": "IN"
+     },
+     "IC-51787": {
+      "similarity": 0.33,
+      "names": [
+       "craftech bldg sys heckaman homes",
+       "heckaman homes division of craftech building systems"
+      ],
+      "street_key": "2676 e market st",
+      "state": "IN"
+     },
+     "IC-51839": {
+      "similarity": 0.29,
+      "names": [
+       "chm manufacturing incorporated",
+       "cmh manufacturing west incorporated dba hart housing",
+       "hart housing"
+      ],
+      "street_key": "66700 sr 19",
+      "state": "IN"
+     },
+     "IC-52151": {
+      "similarity": 0.21,
+      "names": [
+       "champion home builders",
+       "champion home builders arkansas city w skyline rd",
+       "skyline"
+      ],
+      "street_key": "315 w skyline rd",
+      "state": "KS"
+     },
+     "IC-53519": {
+      "similarity": 0.27,
+      "names": [
+       "59113 champion home builders",
+       "fleetwood homes of ky 45"
+      ],
+      "street_key": "200 venture ln",
+      "state": "KY"
+     },
+     "IC-53615": {
+      "similarity": 0.24,
+      "names": [
+       "clayton homes hodgenville",
+       "cmh manufacturing"
+      ],
+      "street_key": "350 commerce pkwy",
+      "state": "KY"
+     },
+     "IC-55224": {
+      "similarity": 0.45,
+      "names": [
+       "hallwood modular buildings",
+       "module x solutions"
+      ],
+      "street_key": "601 benton kelly st",
+      "state": "LA"
+     },
+     "IC-58530": {
+      "similarity": 0.27,
+      "names": [
+       "mardan fabrication",
+       "par kut international",
+       "par kut intl"
+      ],
+      "street_key": "40961 production dr",
+      "state": "MI"
+     },
+     "IC-58847": {
+      "similarity": 0.31,
+      "names": [
+       "northern star industries",
+       "systems control",
+       "systems control a division of northern star industries",
+       "systems control division of northern star industries"
+      ],
+      "street_key": "3201 e industrial dr",
+      "state": "MI"
+     },
+     "IC-59748": {
+      "similarity": 0.22,
+      "names": [
+       "cavco montevideo",
+       "friendship homes of minnesota"
+      ],
+      "street_key": "815 budd rd",
+      "state": "MN"
+     },
+     "IC-60120": {
+      "similarity": 0.24,
+      "names": [
+       "cmh manufacturing west",
+       "cmh manufacturing west dba schult redwood falls",
+       "schult homes"
+      ],
+      "street_key": "201 industrial dr",
+      "state": "MN"
+     },
+     "IC-60923": {
+      "similarity": 0.16,
+      "names": [
+       "95711 champion home builders",
+       "champion 290 highland mfg",
+       "champion home builders dba highland mfg",
+       "highland manufacturing",
+       "highland mfg champion div 290"
+      ],
+      "street_key": "1660 rowe ave",
+      "state": "MN"
+     },
+     "IC-62129": {
+      "similarity": 0.38,
+      "names": [
+       "orchard",
+       "porta fab"
+      ],
+      "street_key": "18080 chesterfield airport rd",
+      "state": "MO"
+     },
+     "IC-64916": {
+      "similarity": 0.21,
+      "names": [
+       "131450 cmh manufacturing",
+       "homes by oakwood plant 7"
+      ],
+      "street_key": "508 palmer rd",
+      "state": "NC"
+     },
+     "IC-65274": {
+      "similarity": 0.11,
+      "names": [
+       "130694 cmh manufacturing",
+       "134776 cmh manufacturing",
+       "clayton homes"
+      ],
+      "street_key": "3212 knotts grove rd",
+      "state": "NC"
+     },
+     "IC-65521": {
+      "similarity": 0.3,
+      "names": [
+       "135533 cavalier homes",
+       "brigadier homes of north carolina incorporated"
+      ],
+      "street_key": "1001 eastern ave",
+      "state": "NC"
+     },
+     "IC-65721": {
+      "similarity": 0.28,
+      "names": [
+       "holmes building systems",
+       "mansion homes"
+      ],
+      "street_key": "2863 plank rd",
+      "state": "NC"
+     },
+     "IC-66260": {
+      "similarity": 0.22,
+      "names": [
+       "131151 cmh manufacturing",
+       "133029 cmh manufacturing",
+       "cmh manufacturing d b a schult homes plant 958",
+       "schult homes richfield"
+      ],
+      "street_key": "304 e church st",
+      "state": "NC"
+     },
+     "IC-68177": {
+      "similarity": 0.53,
+      "names": [
+       "champion 5 atlantic hms",
+       "champion home builders"
+      ],
+      "street_key": "3200 enterprise ave",
+      "state": "NE"
+     },
+     "IC-68611": {
+      "similarity": 0.12,
+      "names": [
+       "family built homes",
+       "karsten gering"
+      ],
+      "street_key": "982 rundell rd",
+      "state": "NE"
+     },
+     "IC-68618": {
+      "similarity": 0.57,
+      "names": [
+       "chief ind bonnavilla homes",
+       "chief industries"
+      ],
+      "street_key": "111 grant st",
+      "state": "NE"
+     },
+     "IC-70415": {
+      "similarity": 0.2,
+      "names": [
+       "clayton albuquerque",
+       "cmh manufacturing west dba karsten homes"
+      ],
+      "street_key": "2700 karsten ct se",
+      "state": "NM"
+     },
+     "IC-71193": {
+      "similarity": 0.42,
+      "names": [
+       "champion home builders",
+       "champion home builders titan homes div 19",
+       "titan homes"
+      ],
+      "street_key": "951 route 12 s",
+      "state": "NY"
+     },
+     "IC-73929": {
+      "similarity": 0.31,
+      "names": [
+       "mbci",
+       "nci group"
+      ],
+      "street_key": "7000 s eastern ave",
+      "state": "OK"
+     },
+     "IC-74049": {
+      "similarity": 0.15,
+      "names": [
+       "317709233 fleetwood homes",
+       "317714609 cavco industries",
+       "fleetwood homes of oregon 48"
+      ],
+      "street_key": "2655 progress way",
+      "state": "OR"
+     },
+     "IC-74084": {
+      "similarity": 0.3,
+      "names": [
+       "317717417 boise cascade",
+       "boise building solutions"
+      ],
+      "street_key": "1155 antelope rd",
+      "state": "OR"
+     },
+     "IC-74090": {
+      "similarity": 0.27,
+      "names": [
+       "317706168 truss t structures",
+       "pacific building systems"
+      ],
+      "street_key": "2100 n pacific hwy",
+      "state": "OR"
+     },
+     "IC-74391": {
+      "similarity": 0.28,
+      "names": [
+       "317717822 diversified wood resources",
+       "elk river enterprises"
+      ],
+      "street_key": "12796 hwy 36",
+      "state": "OR"
+     },
+     "IC-74815": {
+      "similarity": 0.24,
+      "names": [
+       "integrated building solutions plant",
+       "intelifab",
+       "onebuild"
+      ],
+      "street_key": "6601 swan ct",
+      "state": "OR"
+     },
+     "IC-75410": {
+      "similarity": 0.55,
+      "names": [
+       "317710902 shelter one",
+       "shelter one",
+       "shelter one met lab"
+      ],
+      "street_key": "5887 monument dr",
+      "state": "OR"
+     },
+     "IC-75474": {
+      "similarity": 0.55,
+      "names": [
+       "317716469 romtec",
+       "317717124 romtec",
+       "romtec"
+      ],
+      "street_key": "18240 n bank rd",
+      "state": "OR"
+     },
+     "IC-75600": {
+      "similarity": 0.25,
+      "names": [
+       "cavco clarion",
+       "commodore homes of pa colony crafted homes"
+      ],
+      "street_key": "20898 paint blvd",
+      "state": "PA"
+     },
+     "IC-75705": {
+      "similarity": 0.17,
+      "names": [
+       "cavco shippenville",
+       "colony factory crafted homes",
+       "tcc clarion limited partnership"
+      ],
+      "street_key": "20510 paint blvd",
+      "state": "PA"
+     },
+     "IC-75916": {
+      "similarity": 0.37,
+      "names": [
+       "arcon group",
+       "haven homes selinsgrove plt"
+      ],
+      "street_key": "195 airport rd",
+      "state": "PA"
+     },
+     "IC-75953": {
+      "similarity": 0.25,
+      "names": [
+       "mbsp plant 1",
+       "professional bldg sys middleburg plt"
+      ],
+      "street_key": "72 e market st",
+      "state": "PA"
+     },
+     "IC-76282": {
+      "similarity": 0.17,
+      "names": [
+       "champion home builders",
+       "champion mod div 270",
+       "champion modular homes plt 270 clarion",
+       "new era building sys"
+      ],
+      "street_key": "451 southern ave",
+      "state": "PA"
+     },
+     "IC-76328": {
+      "similarity": 0.5,
+      "names": [
+       "bfs ops pleasant valley hms",
+       "pleasant valley homes incorporated",
+       "pleasant vly modular homes pine grove"
+      ],
+      "street_key": "100 hammersmith dr",
+      "state": "PA"
+     },
+     "IC-76366": {
+      "similarity": 0.3,
+      "names": [
+       "champion mod 41",
+       "champion modular pa operations",
+       "excel homes mfg liverpool"
+      ],
+      "street_key": "10642 s susquehanna trail",
+      "state": "PA"
+     },
+     "IC-76592": {
+      "similarity": 0.24,
+      "names": [
+       "deluxe building systems",
+       "triton structural concrete"
+      ],
+      "street_key": "499 w third st",
+      "state": "PA"
+     },
+     "IC-76728": {
+      "similarity": 0.0,
+      "names": [
+       "modlogiq",
+       "modlogiq modular building specialists",
+       "nrb usa"
+      ],
+      "street_key": "191 quality circle",
+      "state": "PA"
+     },
+     "IC-77940": {
+      "similarity": 0.45,
+      "names": [
+       "sbc building systems",
+       "steel built"
+      ],
+      "street_key": "360 14th st",
+      "state": "PA"
+     },
+     "IC-78072": {
+      "similarity": 0.26,
+      "names": [
+       "smi homes",
+       "structural modular innovations",
+       "structural modulars"
+      ],
+      "street_key": "101 southern ave",
+      "state": "PA"
+     },
+     "IC-81077": {
+      "similarity": 0.13,
+      "names": [
+       "bmarko structures long rd",
+       "vertiv"
+      ],
+      "street_key": "134 long rd",
+      "state": "SC"
+     },
+     "IC-81121": {
+      "similarity": 0.13,
+      "names": [
+       "harvard integrations",
+       "harvard integrations lp",
+       "lectrus"
+      ],
+      "street_key": "27157 470th ave",
+      "state": "SD"
+     },
+     "IC-82109": {
+      "similarity": 0.31,
+      "names": [
+       "clayton homes savannah",
+       "cmh manufacturing"
+      ],
+      "street_key": "2600 hwy 226",
+      "state": "TN"
+     },
+     "IC-82231": {
+      "similarity": 0.18,
+      "names": [
+       "hbos manufacturing lp",
+       "oakwood homes"
+      ],
+      "street_key": "1884 mines rd",
+      "state": "TN"
+     },
+     "IC-82233": {
+      "similarity": 0.42,
+      "names": [
+       "robertson ceco ii nci building systems dba star building systems",
+       "star building sys"
+      ],
+      "street_key": "151 judge don lewis rd",
+      "state": "TN"
+     },
+     "IC-82932": {
+      "similarity": 0.27,
+      "names": [
+       "clayton homes",
+       "cmh manufacturing",
+       "cmh manufacturing dba tru mh",
+       "cmh manufacturing dba truhomes white pine"
+      ],
+      "street_key": "2215 walnut st",
+      "state": "TN"
+     },
+     "IC-83766": {
+      "similarity": 0.38,
+      "names": [
+       "al tex homes",
+       "se of texas",
+       "southern energy homes of texas"
+      ],
+      "street_key": "8701 harmon rd",
+      "state": "TX"
+     },
+     "IC-83774": {
+      "similarity": 0.23,
+      "names": [
+       "britco usa",
+       "fleetwood homes of texas 84",
+       "jessup housing 2"
+      ],
+      "street_key": "1101 foundation dr",
+      "state": "TX"
+     },
+     "IC-83816": {
+      "similarity": 0.22,
+      "names": [
+       "cavco manufacturing",
+       "palm harbor homes"
+      ],
+      "street_key": "830 bastrop hwy",
+      "state": "TX"
+     },
+     "IC-83927": {
+      "similarity": 0.15,
+      "names": [
+       "homes by oakwood",
+       "z modular a div of zekelman industries"
+      ],
+      "street_key": "710 swanner loop",
+      "state": "TX"
+     },
+     "IC-84019": {
+      "similarity": 0.23,
+      "names": [
+       "engineered components",
+       "nci building systems lp"
+      ],
+      "street_key": "13410 murphy rd",
+      "state": "TX"
+     },
+     "IC-84342": {
+      "similarity": 0.11,
+      "names": [
+       "cavco fort worth",
+       "fleetwood homes",
+       "masterpiece housing"
+      ],
+      "street_key": "6901 bowman roberts rd",
+      "state": "TX"
+     },
+     "IC-85336": {
+      "similarity": 0.58,
+      "names": [
+       "hunter building site improvements",
+       "hunter buildings manufacturing lp"
+      ],
+      "street_key": "14935 jacintoport blvd",
+      "state": "TX"
+     },
+     "IC-86085": {
+      "similarity": 0.23,
+      "names": [
+       "panelmatic",
+       "protect controls",
+       "protect ctrl"
+      ],
+      "street_key": "3212 old hwy 105 e",
+      "state": "TX"
+     },
+     "IC-86276": {
+      "similarity": 0.06,
+      "names": [
+       "amtex",
+       "amtex acquisition",
+       "sunbelt modular"
+      ],
+      "street_key": "832 e walnut st",
+      "state": "TX"
+     },
+     "IC-86591": {
+      "similarity": 0.58,
+      "names": [
+       "indicom",
+       "indicom bldgs",
+       "indicom buildings"
+      ],
+      "street_key": "721 n burleson blvd",
+      "state": "TX"
+     },
+     "IC-88029": {
+      "similarity": 0.19,
+      "names": [
+       "cavco manufacturing",
+       "nationwide custom homes"
+      ],
+      "street_key": "1100 rives rd",
+      "state": "VA"
+     },
+     "IC-89782": {
+      "similarity": 0.54,
+      "names": [
+       "calvert",
+       "wa317940296 calvert",
+       "wa317940313 calvert"
+      ],
+      "street_key": "218 v st",
+      "state": "WA"
+     },
+     "IC-89934": {
+      "similarity": 0.19,
+      "names": [
+       "garco building systems",
+       "wa317939183 nci group",
+       "wa317940663 nci group"
+      ],
+      "street_key": "2714 s garfield rd",
+      "state": "WA"
+     },
+     "IC-90459": {
+      "similarity": 0.26,
+      "names": [
+       "truss",
+       "wa317935089 truss building supply",
+       "wa317946054 truss building supply"
+      ],
+      "street_key": "2802 142nd ave e",
+      "state": "WA"
+     },
+     "IC-90518": {
+      "similarity": 0.22,
+      "names": [
+       "dogwood industries",
+       "wa317936088 sound building components"
+      ],
+      "street_key": "500 metcalf st",
+      "state": "WA"
+     },
+     "IC-91881": {
+      "similarity": 0.38,
+      "names": [
+       "cavco dorchester",
+       "commodore homes dba midcountry homes"
+      ],
+      "street_key": "337 liberty st",
+      "state": "WI"
+     },
+     "IC-91916": {
+      "similarity": 0.21,
+      "names": [
+       "bildt",
+       "boldt oshkosh fabrication facility"
+      ],
+      "street_key": "43 e 10th ave",
+      "state": "WI"
+     },
+     "IC-93461": {
+      "similarity": 0.26,
+      "names": [
+       "affinity bldg sys",
+       "affinity building system",
+       "vantem"
+      ],
+      "street_key": "62 murray blvd",
+      "state": "GA"
+     },
+     "IC-93468": {
+      "similarity": 0.48,
+      "names": [
+       "astec",
+       "astec ind jerome"
+      ],
+      "street_key": "4101 jerome ave",
+      "state": "TN"
+     },
+     "IC-93469": {
+      "similarity": 0.12,
+      "names": [
+       "atkinson ind",
+       "nvent"
+      ],
+      "street_key": "1801 e 27th st terrace",
+      "state": "KS"
+     },
+     "IC-55401": {
+      "similarity": 0.34,
+      "names": [
+       "cellxion",
+       "cellxion a division of sabre industries",
+       "cellxion div of sabre ind"
+      ],
+      "street_key": "5031 hazel jones rd",
+      "state": "LA"
+     },
+     "IC-93488": {
+      "similarity": 0.2,
+      "names": [
+       "bizon group",
+       "conexwest"
+      ],
+      "street_key": "17100 s harlan rd",
+      "state": "CA"
+     },
+     "IC-84746": {
+      "similarity": 0.27,
+      "names": [
+       "central electric manufacturing houston plant",
+       "custom power enc"
+      ],
+      "street_key": "6100 romona blvd",
+      "state": "TX"
+     },
+     "IC-53713": {
+      "similarity": 0.29,
+      "names": [
+       "enerpan bldg sys",
+       "enerpan building systems",
+       "mpe solutions dba enerpan"
+      ],
+      "street_key": "3908 cane run rd",
+      "state": "KY"
+     },
+     "IC-93512": {
+      "similarity": 0.42,
+      "names": [
+       "excellerate a division of faith technologies incorporated",
+       "excellerate little chute"
+      ],
+      "street_key": "2125 w evergreen dr",
+      "state": "WI"
+     },
+     "IC-93515": {
+      "similarity": 0.51,
+      "names": [
+       "bristlecone ventures 2",
+       "falcon structures"
+      ],
+      "street_key": "7717 gilbert rd",
+      "state": "TX"
+     },
+     "IC-93566": {
+      "similarity": 0.56,
+      "names": [
+       "panelmatic brk",
+       "panelmatic building solutions"
+      ],
+      "street_key": "6882 pkwy dr",
+      "state": "OH"
+     },
+     "IC-93568": {
+      "similarity": 0.58,
+      "names": [
+       "panelmatic electrical solutions",
+       "panelmatic hou"
+      ],
+      "street_key": "410 w rd",
+      "state": "TX"
+     },
+     "IC-93570": {
+      "similarity": 0.31,
+      "names": [
+       "nvent",
+       "parkline"
+      ],
+      "street_key": "328 eleanor industrial park dr",
+      "state": "WV"
+     },
+     "IC-93571": {
+      "similarity": 0.28,
+      "names": [
+       "panel built",
+       "pbi 129 pre assembled welded div"
+      ],
+      "street_key": "193 s mauney rd",
+      "state": "GA"
+     },
+     "IC-93581": {
+      "similarity": 0.54,
+      "names": [
+       "electrical division houston",
+       "powell elec div houston",
+       "powell electrical systems"
+      ],
+      "street_key": "8550 mosley rd",
+      "state": "TX"
+     },
+     "IC-84118": {
+      "similarity": 0.5,
+      "names": [
+       "powell elec div jacintoport",
+       "powell electrical systems"
+      ],
+      "street_key": "16535 jacintoport blvd",
+      "state": "TX"
+     },
+     "IC-93582": {
+      "similarity": 0.58,
+      "names": [
+       "electrical division of north canton",
+       "powell elec div n canton"
+      ],
+      "street_key": "8967 pleasantwood ave nw",
+      "state": "OH"
+     },
+     "IC-55228": {
+      "similarity": 0.44,
+      "names": [
+       "redguard",
+       "redguard prod fac new iberia"
+      ],
+      "street_key": "4817 s lewis st",
+      "state": "LA"
+     },
+     "IC-93590": {
+      "similarity": 0.48,
+      "names": [
+       "redguard",
+       "redguard prod fac wichita"
+      ],
+      "street_key": "401 w 47th st s",
+      "state": "KS"
+     },
+     "IC-93602": {
+      "similarity": 0.19,
+      "names": [
+       "sagebrush bldg sys rockford",
+       "sagebrush building systems",
+       "ventaire rockford"
+      ],
+      "street_key": "1212 n rockford ave",
+      "state": "OK"
+     },
+     "IC-93603": {
+      "similarity": 0.11,
+      "names": [
+       "sagebrush bldg sys wheeling",
+       "sagebrush building systems",
+       "ventaire",
+       "ventaire sagebrush bldg sys"
+      ],
+      "street_key": "909 n wheeling ave",
+      "state": "OK"
+     },
+     "IC-93604": {
+      "similarity": 0.53,
+      "names": [
+       "schneider elec it",
+       "schneider electric it mission critical services"
+      ],
+      "street_key": "9701 windisch rd",
+      "state": "OH"
+     },
+     "IC-93617": {
+      "similarity": 0.2,
+      "names": [
+       "commercial structures",
+       "commerical structures",
+       "speed space plant 2"
+      ],
+      "street_key": "655 n tomahawk trail",
+      "state": "IN"
+     },
+     "IC-94458": {
+      "similarity": 0.5,
+      "names": [
+       "ahs residential",
+       "resia"
+      ],
+      "street_key": "1305 whitewater pl",
+      "state": "GA"
+     },
+     "IC-94467": {
+      "similarity": 0.56,
+      "names": [
+       "aslan modular c o ginosko development",
+       "optimum modular dba as ginosko modular"
+      ],
+      "street_key": "16900 wahrman rd",
+      "state": "MI"
+     },
+     "IC-74270": {
+      "similarity": 0.52,
+      "names": [
+       "blazer industries",
+       "blazer industries dba blazer modular construction"
+      ],
+      "street_key": "945 olney st",
+      "state": "OR"
+     },
+     "IC-93948": {
+      "similarity": 0.16,
+      "names": [
+       "irontown modular",
+       "keb homes"
+      ],
+      "street_key": "1947 n chappel dr",
+      "state": "UT"
+     },
+     "IC-94126": {
+      "similarity": 0.29,
+      "names": [
+       "instabuilt",
+       "stella domo"
+      ],
+      "street_key": "2928 manor rd",
+      "state": "TX"
+     },
+     "IC-89313": {
+      "similarity": 0.4,
+      "names": [
+       "vfp",
+       "vfp plant ii"
+      ],
+      "street_key": "402 industrial park rd",
+      "state": "VA"
+     },
+     "IC-93809": {
+      "similarity": 0.46,
+      "names": [
+       "sturdisteel",
+       "sturdisteel div of schultz industries"
+      ],
+      "street_key": "131 ava dr",
+      "state": "TX"
+     },
+     "IC-93816": {
+      "similarity": 0.45,
+      "names": [
+       "shelter works",
+       "switzer industries"
+      ],
+      "street_key": "2616 s 3rd st",
+      "state": "MO"
+     },
+     "IC-93884": {
+      "similarity": 0.34,
+      "names": [
+       "international cold storage",
+       "thermalrite by crown tonka calif"
+      ],
+      "street_key": "15600 37th ave n",
+      "state": "MN"
+     },
+     "IC-93908": {
+      "similarity": 0.52,
+      "names": [
+       "crusoe",
+       "crusoe industries"
+      ],
+      "street_key": "6692 fig st",
+      "state": "CO"
+     },
+     "IC-84912": {
+      "similarity": 0.09,
+      "names": [
+       "spitzer industries",
+       "volta"
+      ],
+      "street_key": "13863 industrial rd",
+      "state": "TX"
+     },
+     "IC-94216": {
+      "similarity": 0.32,
+      "names": [
+       "insulated panel structures usa",
+       "telamon technologies"
+      ],
+      "street_key": "2340 interstate 35 w",
+      "state": "TX"
+     }
+    },
+    "structural": {},
+    "merged_clusters": 465,
+    "rate": 0.3634408602150538,
+    "target_rate": 0.05,
+    "review_csv": "/home/runner/work/IC_Factory_Database/IC_Factory_Database/build/false_merge_audit_2026-09-17.csv"
+   }
+  },
+  {
+   "gate": "G3 id stability",
+   "passed": true,
+   "tested": false,
+   "summary": "untested: 132 ids issued on a first run; stability needs --rerun over identical inputs",
+   "details": {
+    "ids_issued": 132
+   }
+  },
+  {
+   "gate": "G4 control isolation",
+   "passed": true,
+   "tested": true,
+   "summary": "checksum ok; 0 rows with control provenance",
+   "details": {}
+  },
+  {
+   "gate": "G5 classifier eval",
+   "passed": true,
+   "tested": true,
+   "summary": "precision 93% (min 90%), recall 90% (min 85%), n=60; precision at 20% base rate ~77%",
+   "details": {
+    "tp": 27,
+    "fp": 2,
+    "fn": 3,
+    "tn": 28,
+    "precision": 0.9310344827586207,
+    "recall": 0.9,
+    "base_rate": 0.2,
+    "precision_at_base_rate": 0.7714285714285715
+   }
+  }
+ ],
+ "halted_at": null,
+ "release": {
+  "published_count": 2481,
+  "raw_count": 3935,
+  "located_count": 2517,
+  "t0_leads": 1418,
+  "t0_leads_with_city": 471,
+  "dedupe_removed": 36,
+  "tag": "v1.0.0+reg.e387ea5+ids.de92643b+ctl.b83b031a+surv.61e8e757+prompt.23e69d2b0d70+model.inception/mercury-2.5",
+  "finished": "2026-09-17T15:52:35.497462+00:00",
+  "ai": "on",
+  "warehouse": {
+   "engine": "postgres",
+   "path": "postgresql://neondb_owner:***@ep-floral-water-avxgt1jq.c-11.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require",
+   "release_tag": "v1.0.0+reg.e387ea5+ids.de92643b+ctl.b83b031a+surv.61e8e757+prompt.23e69d2b0d70+model.inception/mercury-2.5",
+   "assertions_appended": 27850,
+   "golden_rows": 3935,
+   "conflicts": 1361,
+   "source_rows": 4715,
+   "assertions_total": 196543
+  }
+ }
+}

@@ -1,0 +1,506 @@
+{
+ "pipeline_version": "1.0.0",
+ "started": "2026-09-16T21:38:14.491621+00:00",
+ "registry_version": "c2e08a4",
+ "registry_file_sha": "b7ec6d00e79489a494deafdb3428f4a5408ea824b530076f94c18d4dbcf23898",
+ "control_sha": "02c9a3d7695ff3110d1eac891ed14165ee2cc0fca46732b04483b5bed524235e",
+ "layers": {
+  "1_acquire": {
+   "pulled": [
+    "/home/user/IC_Factory_Database/ic-csv/pa_dced.csv",
+    "/home/user/IC_Factory_Database/ic-csv/tx_tdlr.csv",
+    "/home/user/IC_Factory_Database/ic-csv/mi_lara.csv",
+    "/home/user/IC_Factory_Database/ic-csv/or_bcd.csv",
+    "/home/user/IC_Factory_Database/ic-csv/fl_bcis.csv",
+    "/home/user/IC_Factory_Database/ic-csv/epa_frs.csv",
+    "/home/user/IC_Factory_Database/ic-csv/iibc.csv",
+    "/home/user/IC_Factory_Database/ic-csv/mhi_plants.csv",
+    "/home/user/IC_Factory_Database/ic-csv/corporate_locations.csv"
+   ],
+   "failed": {},
+   "skipped": {}
+  },
+  "2_validate": {
+   "sources": {
+    "corporate_locations": {
+     "rows": 210,
+     "with_street_key": 178,
+     "no_fixed_plant": 0
+    },
+    "epa_frs": {
+     "rows": 99883,
+     "with_street_key": 80582,
+     "no_fixed_plant": 0
+    },
+    "fl_bcis": {
+     "rows": 959,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "iibc": {
+     "rows": 286,
+     "with_street_key": 280,
+     "no_fixed_plant": 0
+    },
+    "mhi_plants": {
+     "rows": 150,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "mi_lara": {
+     "rows": 172,
+     "with_street_key": 172,
+     "no_fixed_plant": 0
+    },
+    "or_bcd": {
+     "rows": 164,
+     "with_street_key": 143,
+     "no_fixed_plant": 0
+    },
+    "pa_dced": {
+     "rows": 115,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "tx_tdlr": {
+     "rows": 334,
+     "with_street_key": 324,
+     "no_fixed_plant": 0
+    }
+   },
+   "halted": [],
+   "problems": {}
+  },
+  "3_classify": {
+   "skipped": "IC_AI=off \u2014 classifier not run",
+   "sources": [
+    "epa_frs"
+   ],
+   "rows_from_those_sources": 99883,
+   "n_candidates": 13117,
+   "uncertain": 13117,
+   "not_candidated": 86766,
+   "ic": 0,
+   "note": "candidate generation is deterministic and did run; every candidate is parked in review_queue.csv awaiting a classified run"
+  },
+  "4_resolve": {
+   "rows": 2390,
+   "resolved_by_crosswalk": 0,
+   "resolution_rate": 0.0,
+   "layer_built": false
+  },
+  "5_reconcile": {
+   "ids_issued": 0,
+   "n_facilities": 2102,
+   "tiers": {
+    "T1": 671,
+    "T0": 1264,
+    "T2": 167
+   }
+  },
+  "5b_golden": {
+   "assertions": 10370,
+   "golden_rows": 2102,
+   "conflicts": 665,
+   "survivorship_version": 1,
+   "operator_assertions": 0
+  },
+  "7_measure": {
+   "recall": {
+    "in_scope": 0,
+    "found": 0,
+    "recall": 0.0,
+    "by_method": {}
+   },
+   "coverage_bias": {
+    "counted_facilities": 838,
+    "frame_total": 2750,
+    "states": {
+     "AK": {
+      "ours": 2,
+      "frame": 14,
+      "coverage": 0.14285714285714285,
+      "bias": 0.47
+     },
+     "AL": {
+      "ours": 9,
+      "frame": 79,
+      "coverage": 0.11392405063291139,
+      "bias": 0.37
+     },
+     "AR": {
+      "ours": 2,
+      "frame": 41,
+      "coverage": 0.04878048780487805,
+      "bias": 0.16
+     },
+     "AZ": {
+      "ours": 17,
+      "frame": 55,
+      "coverage": 0.3090909090909091,
+      "bias": 1.01
+     },
+     "CA": {
+      "ours": 25,
+      "frame": 182,
+      "coverage": 0.13736263736263737,
+      "bias": 0.45
+     },
+     "CO": {
+      "ours": 28,
+      "frame": 62,
+      "coverage": 0.45161290322580644,
+      "bias": 1.48
+     },
+     "CT": {
+      "ours": 2,
+      "frame": 13,
+      "coverage": 0.15384615384615385,
+      "bias": 0.5
+     },
+     "DE": {
+      "ours": 3,
+      "frame": 6,
+      "coverage": 0.5,
+      "bias": 1.64
+     },
+     "FL": {
+      "ours": 27,
+      "frame": 177,
+      "coverage": 0.15254237288135594,
+      "bias": 0.5
+     },
+     "GA": {
+      "ours": 45,
+      "frame": 121,
+      "coverage": 0.371900826446281,
+      "bias": 1.22
+     },
+     "HI": {
+      "ours": 0,
+      "frame": 6,
+      "coverage": 0.0,
+      "bias": 0.0
+     },
+     "IA": {
+      "ours": 5,
+      "frame": 26,
+      "coverage": 0.19230769230769232,
+      "bias": 0.63
+     },
+     "ID": {
+      "ours": 13,
+      "frame": 49,
+      "coverage": 0.2653061224489796,
+      "bias": 0.87
+     },
+     "IL": {
+      "ours": 19,
+      "frame": 62,
+      "coverage": 0.3064516129032258,
+      "bias": 1.01
+     },
+     "IN": {
+      "ours": 34,
+      "frame": 90,
+      "coverage": 0.37777777777777777,
+      "bias": 1.24
+     },
+     "KS": {
+      "ours": 16,
+      "frame": 24,
+      "coverage": 0.6666666666666666,
+      "bias": 2.19
+     },
+     "KY": {
+      "ours": 12,
+      "frame": 66,
+      "coverage": 0.18181818181818182,
+      "bias": 0.6
+     },
+     "LA": {
+      "ours": 11,
+      "frame": 35,
+      "coverage": 0.3142857142857143,
+      "bias": 1.03
+     },
+     "MA": {
+      "ours": 4,
+      "frame": 15,
+      "coverage": 0.26666666666666666,
+      "bias": 0.88
+     },
+     "MD": {
+      "ours": 6,
+      "frame": 18,
+      "coverage": 0.3333333333333333,
+      "bias": 1.09
+     },
+     "ME": {
+      "ours": 1,
+      "frame": 28,
+      "coverage": 0.03571428571428571,
+      "bias": 0.12
+     },
+     "MI": {
+      "ours": 34,
+      "frame": 64,
+      "coverage": 0.53125,
+      "bias": 1.74
+     },
+     "MN": {
+      "ours": 19,
+      "frame": 56,
+      "coverage": 0.3392857142857143,
+      "bias": 1.11
+     },
+     "MO": {
+      "ours": 16,
+      "frame": 80,
+      "coverage": 0.2,
+      "bias": 0.66
+     },
+     "MS": {
+      "ours": 1,
+      "frame": 24,
+      "coverage": 0.041666666666666664,
+      "bias": 0.14
+     },
+     "MT": {
+      "ours": 1,
+      "frame": 36,
+      "coverage": 0.027777777777777776,
+      "bias": 0.09
+     },
+     "NC": {
+      "ours": 21,
+      "frame": 117,
+      "coverage": 0.1794871794871795,
+      "bias": 0.59
+     },
+     "ND": {
+      "ours": 4,
+      "frame": 14,
+      "coverage": 0.2857142857142857,
+      "bias": 0.94
+     },
+     "NE": {
+      "ours": 6,
+      "frame": 27,
+      "coverage": 0.2222222222222222,
+      "bias": 0.73
+     },
+     "NH": {
+      "ours": 2,
+      "frame": 10,
+      "coverage": 0.2,
+      "bias": 0.66
+     },
+     "NJ": {
+      "ours": 7,
+      "frame": 22,
+      "coverage": 0.3181818181818182,
+      "bias": 1.04
+     },
+     "NM": {
+      "ours": 3,
+      "frame": 8,
+      "coverage": 0.375,
+      "bias": 1.23
+     },
+     "NV": {
+      "ours": 5,
+      "frame": 23,
+      "coverage": 0.21739130434782608,
+      "bias": 0.71
+     },
+     "NY": {
+      "ours": 12,
+      "frame": 48,
+      "coverage": 0.25,
+      "bias": 0.82
+     },
+     "OH": {
+      "ours": 26,
+      "frame": 97,
+      "coverage": 0.26804123711340205,
+      "bias": 0.88
+     },
+     "OK": {
+      "ours": 8,
+      "frame": 41,
+      "coverage": 0.1951219512195122,
+      "bias": 0.64
+     },
+     "OR": {
+      "ours": 33,
+      "frame": 58,
+      "coverage": 0.5689655172413793,
+      "bias": 1.87
+     },
+     "PA": {
+      "ours": 40,
+      "frame": 180,
+      "coverage": 0.2222222222222222,
+      "bias": 0.73
+     },
+     "SC": {
+      "ours": 18,
+      "frame": 49,
+      "coverage": 0.3673469387755102,
+      "bias": 1.21
+     },
+     "SD": {
+      "ours": 11,
+      "frame": 24,
+      "coverage": 0.4583333333333333,
+      "bias": 1.5
+     },
+     "TN": {
+      "ours": 13,
+      "frame": 90,
+      "coverage": 0.14444444444444443,
+      "bias": 0.47
+     },
+     "TX": {
+      "ours": 170,
+      "frame": 261,
+      "coverage": 0.6513409961685823,
+      "bias": 2.14
+     },
+     "UT": {
+      "ours": 10,
+      "frame": 41,
+      "coverage": 0.24390243902439024,
+      "bias": 0.8
+     },
+     "VA": {
+      "ours": 14,
+      "frame": 55,
+      "coverage": 0.2545454545454545,
+      "bias": 0.84
+     },
+     "VT": {
+      "ours": 0,
+      "frame": 9,
+      "coverage": 0.0,
+      "bias": 0.0
+     },
+     "WA": {
+      "ours": 27,
+      "frame": 61,
+      "coverage": 0.4426229508196721,
+      "bias": 1.45
+     },
+     "WI": {
+      "ours": 37,
+      "frame": 63,
+      "coverage": 0.5873015873015873,
+      "bias": 1.93
+     },
+     "WV": {
+      "ours": 5,
+      "frame": 12,
+      "coverage": 0.4166666666666667,
+      "bias": 1.37
+     },
+     "WY": {
+      "ours": 3,
+      "frame": 11,
+      "coverage": 0.2727272727272727,
+      "bias": 0.89
+     }
+    },
+    "out_of_band": {
+     "AL": 0.37,
+     "CA": 0.45,
+     "CO": 1.48,
+     "FL": 0.5,
+     "KY": 0.6,
+     "MI": 1.74,
+     "MO": 0.66,
+     "NC": 0.59,
+     "OR": 1.87,
+     "TN": 0.47,
+     "TX": 2.14,
+     "WA": 1.45,
+     "WI": 1.93
+    },
+    "mean_abs_bias": 0.434,
+    "out_of_band_causes": {
+     "AL": "NO CAUSE ON RECORD",
+     "CA": "HCD issues no plant-level identifier; rows are company-level leads capped at T1.",
+     "CO": "NO CAUSE ON RECORD",
+     "FL": "NO CAUSE ON RECORD",
+     "KY": "No component roster published.",
+     "MI": "NO CAUSE ON RECORD",
+     "MO": "No component roster published.",
+     "NC": "NO CAUSE ON RECORD",
+     "OR": "NO CAUSE ON RECORD",
+     "TN": "NO CAUSE ON RECORD",
+     "TX": "NO CAUSE ON RECORD",
+     "WA": "NO CAUSE ON RECORD",
+     "WI": "NO CAUSE ON RECORD"
+    }
+   }
+  }
+ },
+ "gates": [
+  {
+   "gate": "G1 dedupe audit",
+   "passed": true,
+   "summary": "320 pairs, 84 collapses = 4.0% (max 10%); corrected count 2018",
+   "details": {
+    "pairs": 320,
+    "collapses": 84,
+    "rate": 0.039961941008563276,
+    "corrected_count": 2018,
+    "review_csv": "/home/user/IC_Factory_Database/build/dedupe_audit_2026-09-16.csv"
+   }
+  },
+  {
+   "gate": "G2 false-merge check",
+   "passed": true,
+   "summary": "0 clusters with >1 street key",
+   "details": {
+    "flagged": {}
+   }
+  },
+  {
+   "gate": "G3 id stability",
+   "passed": true,
+   "summary": "first run: 0 ids issued (not a re-run; stability not tested)",
+   "details": {}
+  },
+  {
+   "gate": "G4 control isolation",
+   "passed": true,
+   "summary": "checksum ok; 0 rows with control provenance",
+   "details": {}
+  },
+  {
+   "gate": "G5 classifier eval",
+   "passed": true,
+   "summary": "no rows were classified in this run \u2014 nothing to audit",
+   "details": {}
+  }
+ ],
+ "halted_at": null,
+ "release": {
+  "published_count": 2018,
+  "raw_count": 2102,
+  "tag": "v1.0.0+reg.c2e08a4+ids.1b5b11bd+ctl.02c9a3d7+surv.4b4845d9",
+  "finished": "2026-09-16T21:40:19.288299+00:00",
+  "ai": "off \u2014 deterministic sources only, classifier and ai_extraction skipped",
+  "warehouse": {
+   "engine": "sqlite",
+   "path": "/home/user/IC_Factory_Database/build/ic_factory.sqlite",
+   "release_tag": "v1.0.0+reg.c2e08a4+ids.1b5b11bd+ctl.02c9a3d7+surv.4b4845d9",
+   "assertions_appended": 0,
+   "golden_rows": 2102,
+   "conflicts": 665,
+   "source_rows": 2390,
+   "assertions_total": 29942
+  }
+ }
+}

@@ -20,6 +20,14 @@ from datetime import date
 from pathlib import Path
 from ..contract import COLUMNS
 
+# The 50 states plus DC. Lives here because more than one source needs to tell a US city line from
+# a Canadian one, and two copies of this set would eventually disagree.
+US_STATES = frozenset("""
+AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY
+NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC
+""".split())
+
+
 # Several state sites sit behind a WAF that rejects any unfamiliar product token: Michigan answered
 # 403 and IIBC 500 to a UA naming this project, including when it was appended to a browser string.
 # The UA is therefore a plain mainstream one, and the project identifies itself in X-Contact, which
@@ -332,8 +340,12 @@ def split_city_state_zip(s: str) -> tuple[str, str, str]:
 def contract_row(source: dict, position: int, *, name: str, address: str = "", city: str = "", state: str = "",
                  zip_code: str = "", source_url: str, source_document: str, source_identifier: str = "",
                  naics: str = "", status: str = "", status_basis: str | None = None, expiry_date: str = "",
-                 lat: str = "", lon: str = "", notes: str = "", country: str = "US") -> dict:
-    r = {c: "" for c in COLUMNS}
+                 lat: str = "", lon: str = "", notes: str = "", country: str = "US",
+                 website: str = "", sq_ft: str = "", operating_status: str = "") -> dict:
+    from ..contract import OPTIONAL
+    r = {c: "" for c in COLUMNS + OPTIONAL}
+    r.update(website=(website or "").strip(), sq_ft="".join(ch for ch in (sq_ft or "") if ch.isdigit()),
+             operating_status=(operating_status or "").strip().lower())
     r.update(source_id=source["id"], source_url=source_url, source_document=source_document,
              retrieved_date=date.today().isoformat(), row_position=str(position),
              name_verbatim=name.strip(), address_verbatim=address.strip(), city_verbatim=city.strip(),

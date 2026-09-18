@@ -153,3 +153,362 @@ def test_split_city_state_zip_never_corrects():
     assert _common.split_city_state_zip("Mifflinburg, IN") == ("Mifflinburg", "IN", "")
     assert _common.split_city_state_zip("Somewhere Odd") == ("Somewhere Odd", "", "")
     assert _common.iso_date("13/45/2027") == "" and _common.iso_date("2027-01-31") == "2027-01-31"
+
+
+def test_a_location_label_is_qualified_with_the_operating_company():
+    """84 Lumber's page names the SITE, never the operator.
+
+    "Kings Mountain Truss Plant" reached the warehouse with nothing tying it to 84 Lumber — not a
+    reader, not the control list, not a cross-source join. The company goes in FRONT of the label
+    rather than replacing it, because the label is the only thing separating one 84 Lumber plant
+    from another and this database is plant-level.
+    """
+    from pipeline.sources.corporate_locations import _qualify
+    assert _qualify("84 Lumber", "Kings Mountain Truss Plant") == "84 Lumber — Kings Mountain Truss Plant"
+    assert _qualify("The Truss Company", "Sumner") == "The Truss Company — Sumner"
+    # already carries the company: left exactly as the page wrote it
+    assert _qualify("Stark Truss", "Stark Truss - Summerville") == "Stark Truss - Summerville"
+    assert _qualify("UFP Site Built", "UFP Site Built Grand Rapids") == "UFP Site Built Grand Rapids"
+    # no company on record is not a reason to mangle the label
+    assert _qualify("", "Orphan Plant") == "Orphan Plant"
+
+
+def test_qualified_labels_stay_distinct_per_plant():
+    """Plant-level is the point: qualifying must not collapse two sites into one name."""
+    from pipeline.sources.corporate_locations import _qualify
+    a = _qualify("84 Lumber", "Kings Mountain Truss Plant")
+    b = _qualify("84 Lumber", "Coal Center Truss Plant")
+    assert a != b and a.startswith("84 Lumber") and b.startswith("84 Lumber")
+
+
+def test_bldr_keeps_only_manufacturing_branches():
+    """MF is a plant; YD is a lumber yard and MW is doors and mouldings."""
+    from pipeline.sources import bldr_locations as B
+    html = ('<a href="/location/acworth-ga-truss/ACWOGAMF">x</a>'
+            '<a href="/location/abilene-tx-lumber-yard/ABILTXYD">x</a>'
+            '<a href="/location/abilene-tx-millwork/ABILTXMW">x</a>'
+            '<a href="/location/albemarle-nc-truss/ALBENCMF">x</a>')
+    assert [c for _s, c in B._mf_links(html)] == ["ACWOGAMF", "ALBENCMF"]
+    assert B._kind_counts(html) == {"MF": 2, "YD": 1, "MW": 1}
+
+
+def test_bldr_never_takes_the_corporate_footer_address(tmp_path):
+    """Every bldr.com page footers the Irving, TX head office.
+
+    Taking the first street-shaped string in the HTML gave the Albuquerque plant an address in
+    Texas. Only the location block's own placeLink counts, and only where its state agrees with
+    the title's.
+    """
+    from pipeline.sources import bldr_locations as B
+    src = {"id": "bldr_locations", "url": B.INDEX, "status_basis": "on_current_list"}
+    (tmp_path / "all-locations.html").write_text('<a href="/location/albuquerque-nm-truss/ALBQNMMF">x</a>')
+    (tmp_path / "ALBQNMMF.html").write_text(
+        "<title>Albuquerque NM Truss | Builders FirstSource</title>"
+        '<a href="https://www.google.com/maps/place/119 Llano Del Sur South East,Albuquerque,NM,87105/"'
+        ' class="placeLink">here</a>'
+        "<footer>Builders FirstSource<br />6031 Connection Dr<br />Irving, TX 75039</footer>")
+    rows = B.parse(sorted(tmp_path.glob("*.html")), src)
+    assert len(rows) == 1
+    assert rows[0]["address_verbatim"] == "119 Llano Del Sur South East"
+    assert (rows[0]["city_verbatim"], rows[0]["state_verbatim"]) == ("Albuquerque", "NM")
+    assert "Builders FirstSource" in rows[0]["name_verbatim"]
+    assert rows[0]["source_identifier"] == "ALBQNMMF"
+
+
+def test_bldr_drops_a_street_whose_state_contradicts_the_title():
+    """A page rendering another branch's block loses its street; it does not inherit one."""
+    import tempfile, pathlib
+    from pipeline.sources import bldr_locations as B
+    d = pathlib.Path(tempfile.mkdtemp())
+    src = {"id": "bldr_locations", "url": B.INDEX, "status_basis": "on_current_list"}
+    (d / "all-locations.html").write_text('<a href="/location/x/AAAABBMF">x</a>')
+    (d / "AAAABBMF.html").write_text(
+        "<title>Somewhere NM Truss | Builders FirstSource</title>"
+        '<a href="https://www.google.com/maps/place/1 Wrong St,Elsewhere,TX,75039/" class="placeLink">x</a>')
+    rows = B.parse(sorted(d.glob("*.html")), src)
+    assert rows[0]["address_verbatim"] == ""
+
+
+def test_sipa_takes_the_street_only_from_the_members_own_paragraph(tmp_path):
+    """These profile sidebars also render projects and sponsors.
+
+    A street lifted from the wrong block is worse than no street, so the address paragraph is
+    believed only where it is headed by the member's own name.
+    """
+    from pipeline.sources import sipa
+    src = {"id": "sipa", "url": sipa.INDEX, "status_basis": "on_current_list"}
+    (tmp_path / "manufacturing.html").write_text(
+        '<a href="/members/acme-panel-company" class="font-weight-bold">ACME Panel Company</a>'
+        "<strong>Manufacturing</strong><small>Radford, VA</small><footer>x</footer>")
+    (tmp_path / "acme-panel-company.html").write_text(
+        "<p><strong>Zero-Energy SIP Demonstration House</strong><br />9 Someone Else Rd<br />"
+        "Vienna, VA 22180<br />United States</p>"
+        "<p><strong>ACME Panel Company</strong><br />1905 W Main St<br />"
+        "Radford, VA 24141<br />United States</p>")
+    rows = sipa.parse(sorted(tmp_path.glob("*.html")), src)
+    assert len(rows) == 1
+    assert rows[0]["address_verbatim"] == "1905 W Main St"
+    assert (rows[0]["city_verbatim"], rows[0]["state_verbatim"]) == ("Radford", "VA")
+
+
+def test_sipa_keeps_a_member_whose_profile_has_no_readable_address(tmp_path):
+    """Name, city and state already locate a plant here; dropping the row would have the database
+    claim a SIPA manufacturer does not exist."""
+    from pipeline.sources import sipa
+    src = {"id": "sipa", "url": sipa.INDEX, "status_basis": "on_current_list"}
+    (tmp_path / "manufacturing.html").write_text(
+        '<a href="/members/foard-panel-inc" class="font-weight-bold">Foard Panel, Inc.</a>'
+        "<strong>Manufacturing</strong><small>West Chesterfield, NH</small><footer>x</footer>")
+    (tmp_path / "foard-panel-inc.html").write_text("<p>no address paragraph here</p>")
+    rows = sipa.parse(sorted(tmp_path.glob("*.html")), src)
+    assert len(rows) == 1 and rows[0]["address_verbatim"] == ""
+    assert rows[0]["city_verbatim"] == "West Chesterfield"
+
+
+def test_mass_timber_shares_one_state_across_several_towns():
+    """"Drain, Portland & Swisshome, OR" is three Oregon plants, not one town called all that."""
+    from pipeline.sources.woodworks_mass_timber import _places
+    assert _places(["Drain, Portland & Swisshome, OR;", "Piedmont, SC"]) == [
+        ("Drain", "OR"), ("Portland", "OR"), ("Swisshome", "OR"), ("Piedmont", "SC")]
+
+
+def test_mass_timber_skips_canada_without_coercing_it():
+    from pipeline.sources.woodworks_mass_timber import _places
+    assert _places(["Conway, AR; Okanagan Falls, BC;", "Spokane, WA"]) == [("Conway", "AR"), ("Spokane", "WA")]
+    assert _places(["Boissevian, MB; Edmonton, AB;", "Sturgeon County, AB"]) == []
+
+
+def test_a_stray_pdf_artifact_line_cannot_swallow_the_line_above_it():
+    """Joining the location lines appended the PDF's own filename to the last entry and the
+    segment stopped matching — Western Forest Products' Washougal plant vanished silently."""
+    from pipeline.sources.woodworks_mass_timber import _places
+    assert _places(["Vancouver & Washougal, WA",
+                    "FFRRAA--994499__MMAANNUUFFAACCTTUURREERR__LLOOCCAATTIIOONNSS__MMAAPP__JJaann22002266..iinndddd"]) \
+        == [("Vancouver", "WA"), ("Washougal", "WA")]
+
+
+def test_mass_timber_entries_ignore_the_pages_own_prose():
+    """A line is a company name only when the next line is the parenthesised product list."""
+    from pipeline.sources.woodworks_mass_timber import _entries
+    e = _entries(["As a non-profit, WoodWorks", "They represent the mass timber",
+                  "Mercer", "(CLT, GLT, Glulam, fabricator)", "Conway, AR;", "Spokane, WA",
+                  "Quality Buildings", "(Fabricator)", "Lancaster, PA"])
+    assert [x["name"] for x in e] == ["Mercer", "Quality Buildings"]
+    assert e[0]["locations"] == ["Conway, AR;", "Spokane, WA"]
+
+
+def test_indiana_keeps_a_us_plant_whose_zip_is_dirty_or_missing():
+    """Requiring a clean 5-digit ZIP threw away six real plants.
+
+    "Marco Island, FL" carries none at all, "Hitchcock, TX 775636" has six digits and
+    "Aubrey, TX 762278030" has nine unhyphenated. Those are typos in a state register, not evidence
+    that the row is not a plant. The ZIP is kept exactly as filed.
+    """
+    from pipeline.sources.in_dhs import _listings
+    page = ('<div class="listing"><h3><a href="?method=view&manufacturerNameId=1">Alt Construction</a></h3>'
+            '<p class="listingInfo">992 Winterbery Dr<br />Marco Island, FL<br /></p>'
+            '<div class="listing"><h3><a href="?method=view&manufacturerNameId=2">Parkline</a></h3>'
+            '<p class="listingInfo">5235 Delaney Rd<br />Hitchcock, TX 775636<br /></p>')
+    got = {r["name"]: (r["city"], r["state"], r["zip"], r["foreign"]) for r in _listings(page)}
+    assert got["Alt Construction"] == ("Marco Island", "FL", "", False)
+    assert got["Parkline"] == ("Hitchcock", "TX", "775636", False)
+
+
+def test_indiana_tells_a_us_city_line_from_a_canadian_one_by_the_state_code():
+    """"Hamilton, ON" fails the US-state test and "Marco Island, FL" passes it — no second pattern
+    for postal codes to keep in sync."""
+    from pipeline.sources.in_dhs import _listings
+    page = ('<div class="listing"><h3><a href="?method=view&manufacturerNameId=3">Philip Doyle</a></h3>'
+            '<p class="listingInfo">75 Covington St<br />Hamilton, ON<br /></p>')
+    r = _listings(page)[0]
+    assert r["foreign"] is True and r["city"] == "" and r["state"] == ""
+
+
+def test_indiana_finds_the_city_line_past_a_po_box():
+    """"3549 Highway 16 North / P O Box 428 / Denver, NC 28037" — the box must not become the town."""
+    from pipeline.sources.in_dhs import _listings
+    page = ('<div class="listing"><h3><a href="?method=view&manufacturerNameId=4">Boegh</a></h3>'
+            '<p class="listingInfo">3549 Highway 16 North<br />P O Box 428<br />Denver, NC 28037<br /></p>')
+    r = _listings(page)[0]
+    assert (r["street"], r["city"], r["state"]) == ("3549 Highway 16 North", "Denver", "NC")
+    assert r["extra"] == "P O Box 428"
+
+
+def test_superior_walls_takes_the_licensee_address_not_the_corporate_one():
+    """Every page carries both. New Holland, PA 17557 is Superior Walls of America, not a plant —
+    the same trap that put bldr.com's Albuquerque plant in Irving, Texas."""
+    from pipeline.sources.superior_walls import _licensee
+    page = ("<p>Contact Information<br>Superior Walls by Advanced Concrete<br>570-837-3955<br>"
+            "55 Advanced Lane<br>Middleburg, PA 17842</p>"
+            "<p>CORPORATE OFFICES<br>Superior Walls<br>937 East Earl Road<br>"
+            "New Holland, PA 17557</p>")
+    lic = _licensee(page)
+    assert lic == {"name": "Superior Walls by Advanced Concrete", "street": "55 Advanced Lane",
+                   "city": "Middleburg", "state": "PA", "zip": "17842"}
+
+
+def test_superior_walls_rejects_a_page_that_is_only_the_corporate_office():
+    """A products or news page has no licensee on it, and must not yield the head office as one."""
+    from pipeline.sources.superior_walls import _licensee
+    assert _licensee("<p>CORPORATE OFFICES<br>Superior Walls<br>937 East Earl Road<br>"
+                     "New Holland, PA 17557</p>") is None
+    assert _licensee("<p>Contact Information<br>Superior Walls<br>717-351-9255<br>"
+                     "937 East Earl Road<br>New Holland, PA 17557</p>") is None
+
+
+def test_superior_walls_skips_a_non_us_licensee():
+    """The network includes Alberta and the Bahamas; this is a US plant database."""
+    from pipeline.sources.superior_walls import _licensee
+    assert _licensee("<p>Contact Information<br>Superior Walls of Alberta<br>780-555-1212<br>"
+                     "12 Industrial Way<br>Leduc, AB 99999</p>") is None
+
+
+def test_superior_walls_needs_the_line_breaks_to_split_street_from_city():
+    """Flattening the page loses the <br> between them and "55 Advanced Lane Middleburg" has no
+    delimiter left — the first attempt read the street as "55 Advanced" and the town as "Lane
+    Middleburg"."""
+    from pipeline.sources.superior_walls import _lines
+    got = _lines("<p>Contact Information<br>55 Advanced Lane<br>Middleburg, PA 17842</p>")
+    assert got == ["Contact Information", "55 Advanced Lane", "Middleburg, PA 17842"]
+
+
+def test_superior_walls_counts_a_plant_once_across_two_slugs():
+    """Warrior Precast is both /superior-walls-warrior-precast/ and /superior-walls-east-tennessee/.
+    The street and ZIP are the plant; the slug is only the page."""
+    import tempfile, pathlib
+    from pipeline.sources import superior_walls as SW
+    d = pathlib.Path(tempfile.mkdtemp())
+    block = ("<p>Contact Information<br>Superior Walls by Warrior Precast<br>931-555-0100<br>"
+             "10144 Sparta Hwy.<br>Rock Island, TN 38581</p>")
+    (d / "superior-walls-warrior-precast.html").write_text(block)
+    (d / "superior-walls-east-tennessee.html").write_text(block)
+    rows = SW.parse(sorted(d.glob("*.html")), {"id": "superior_walls", "url": SW.BASE,
+                                               "status_basis": "on_current_list"})
+    assert len(rows) == 1
+    assert "1 licensee plants from 2 pages; 1 pages were a second slug" in rows[0]["notes"]
+
+
+def test_a_bare_town_label_is_not_written_into_the_company_name():
+    """The Truss Company lists its plants as "Sumner, WA" and "Eugene, OR".
+
+    Qualifying those produced "The Truss Company — Sumner, WA", and norm_name strips "The" and
+    "Company": the control row normalised to "truss" while the facility normalised to
+    "trusssumnerwa". All eight plants were extracted correctly, with street addresses, and none of
+    them matched anything. The town already lives in the city and state columns.
+    """
+    from pipeline.sources.corporate_locations import _qualify
+    assert _qualify("The Truss Company", "Sumner, WA") == "The Truss Company"
+    assert _qualify("The Truss Company", "Medford, OR") == "The Truss Company"
+    assert _qualify("Banker Steel", "Lynchburg, VA") == "Banker Steel"
+    # a label that names a SITE is still qualified — that is what 84 Lumber needs
+    assert _qualify("84 Lumber", "Kings Mountain Truss Plant") == "84 Lumber — Kings Mountain Truss Plant"
+    assert _qualify("UFP Site Built", "Shawnlee Construction") == "UFP Site Built — Shawnlee Construction"
+
+
+def test_a_transcribed_csv_wins_for_its_own_company_only(tmp_path):
+    """Six carried-forward CSVs silently suppressed every HTML page in the folder.
+
+    parse() returned as soon as any CSV existed, so Banker Steel and True House — which have no
+    transcription and exist only as pages — produced nothing. The docstring has always said "one
+    file per company ... the others keep their rows".
+    """
+    import csv as _csv
+    from pipeline.sources import corporate_locations as CL
+    (tmp_path / "stark-truss.csv").write_text("")
+    with open(tmp_path / "stark-truss.csv", "w", newline="") as fh:
+        w = _csv.DictWriter(fh, fieldnames=CL.PRE_EXTRACTED_COLUMNS); w.writeheader()
+        w.writerow({"company": "Stark Truss", "name": "Stark Truss - Summerville", "address": "1 A St",
+                    "city": "Summerville", "state": "SC", "zip": "29483", "kind": "plant",
+                    "evidence": "", "source_url": "https://www.starktruss.com/locations/"})
+    (tmp_path / "banker-steel").mkdir()
+    (tmp_path / "banker-steel" / "index.html").write_text("<p>" + "x " * 300 + "</p>")
+    paths = sorted(p for p in tmp_path.rglob("*") if p.is_file())
+    src = {"id": "corporate_locations", "status_basis": "on_current_list",
+           "pages": [{"company": "Stark Truss", "url": "u"}, {"company": "Banker Steel", "url": "u"}]}
+
+    seen = {}
+    def fake_extract(text, company, page_url, cfg, prompt_path, archive_to):
+        seen["company"] = company
+        return {"locations": [], "dropped": [], "model": "test", "prompt_hash": "0"}
+    CL.extract_locations, real = fake_extract, CL.extract_locations
+    try:
+        rows = CL.parse(paths, src, {})
+    finally:
+        CL.extract_locations = real
+    # the transcribed company came from its CSV, and was NOT sent to the model
+    assert [r["name_verbatim"] for r in rows] == ["Stark Truss - Summerville"]
+    # the company WITHOUT a transcription still reached extraction
+    assert seen.get("company") == "Banker Steel"
+
+
+def test_the_browser_pins_the_proxy_ca_by_spki_rather_than_disabling_tls():
+    """Chromium reads the NSS store, not the CA env vars, and this image has no certutil.
+
+    The CA is pinned with --ignore-certificate-errors-spki-list, which whitelists specific public
+    keys; it is NOT --ignore-certificate-errors, which would switch verification off. The pins are
+    read out of the CA file at launch, so a rotated CA is picked up instead of a stale fingerprint.
+    """
+    import base64
+    from pipeline.sources import _browser
+    pins = _browser._spki_pins()
+    assert pins, "no SPKI pins read from the agent-proxy CA — a browser source cannot reach TLS"
+    for p in pins:
+        assert len(base64.b64decode(p)) == 32      # SHA-256 of the SubjectPublicKeyInfo
+
+
+def test_the_browser_never_asks_playwright_to_download_a_second_chromium():
+    """The image ships Chromium under PLAYWRIGHT_BROWSERS_PATH and the docs say not to fetch one."""
+    from pipeline.sources import _browser
+    src = (__import__("pathlib").Path(_browser.__file__)).read_text()
+    assert "playwright install" not in src.replace("do NOT run `playwright install`", "")
+    assert _browser._chromium_path(), "no Chromium found under /opt/pw-browsers"
+
+
+def test_pci_keeps_building_precast_and_skips_infrastructure():
+    """The certification covers rail ties and box culverts as readily as wall panels."""
+    from pipeline.sources.pci_certified import _is_building_precast
+    assert _is_building_precast("Architectural Precast, Double Tees, Structural Wall Panels")
+    assert _is_building_precast("Bleachers, Beams, Columns")
+    assert not _is_building_precast("Rail Road Ties")
+    assert not _is_building_precast("Box Culverts, Pipe, Piles")
+
+
+def test_pci_street_starts_at_the_house_number():
+    """Cells run name-then-address and many names carry their own comma, so the segment before the
+    city is "Inc. 34956 Co Rd 126" — stripping the name off the front does not help."""
+    from pipeline.sources.pci_certified import _rows
+    page = ('<tr class="rgRow"><td>Basin Precast, Inc. 34956 Co Rd 126, Sidney, MT 59270 '
+            'United States Certification Category: C3 Products Produced: Double Tees</td>'
+            '<td>Basin Precast, Inc.</td></tr>')
+    r = _rows(page)[0]
+    assert r["street"] == "34956 Co Rd 126"
+    assert (r["city"], r["state"], r["zip"]) == ("Sidney", "MT", "59270")
+    assert r["products"] == "Double Tees"
+
+
+def test_pci_sweeps_us_states_by_label_not_by_code():
+    """"WA" is Washington AND Western Australia in the same dropdown."""
+    from pipeline.sources.pci_certified import _options
+    page = ('<select id="x_Input3_DropDown1">'
+            '<option value="WA:::78">Washington</option>'
+            '<option value="WA:::80">Western Australia</option>'
+            '<option value="AB:::2">Alberta</option>'
+            '<option value="MT:::26">Montana</option></select>')
+    assert _options(page) == [("WA:::78", "WA"), ("MT:::26", "MT")]
+
+
+def test_pci_refuses_a_sweep_that_is_empty_for_most_states(tmp_path):
+    """The 2026-09-17 sweep archived 46 pages, 42 of them the empty form, and would have published
+    "10 plants across 46 states" from the page's own default region. A roster that is empty for
+    most of the country is a broken query, not a thin industry."""
+    import pytest
+    from pipeline.sources import pci_certified as P
+    from pipeline.sources._common import LayoutChanged
+    row = ('<tr class="rgRow"><td>Wells 2145 E Crown Prince Blvd, Brighton, CO 80603 '
+           'Certification Category: AC Products Produced: Double Tees</td><td>Wells</td></tr>')
+    (tmp_path / "state-CO.html").write_text(row)
+    for st in ("TX", "PA", "CA"):
+        (tmp_path / f"state-{st}.html").write_text("<table></table>")
+    with pytest.raises(LayoutChanged, match="only 1 of 4 state pages"):
+        P.parse(sorted(tmp_path.glob("*.html")), {"id": "pci_certified", "url": P.URL,
+                                                  "status_basis": "certified"})

@@ -21,9 +21,10 @@ from __future__ import annotations
 import importlib, json
 from datetime import date
 from pathlib import Path
-from .contract import COLUMNS, write_rows
+from .contract import COLUMNS, OPTIONAL, write_rows
 from inspect import signature as _sig_of
 from . import archive as _archive
+from . import ai_enabled
 
 
 def _sig(fn):
@@ -38,6 +39,31 @@ class SourceFailed(Exception):
     """A fetcher exists but could not produce rows: layout changed, needs a browser, network error."""
 
 
+class SourceSkipped(Exception):
+    """Deliberately not pulled this run (IC_AI=off vs. an `ai_extraction` source). Not a failure."""
+
+
+def _has_transcribed_rows(arch, sid: str) -> bool:
+    """True when the newest archived folder holds transcribed CSVs.
+
+    An `ai_extraction` source reads prose, so it normally needs a model. But if someone has
+    already done the reading by hand and uploaded it, `parse()` prefers those CSVs and makes no
+    model call at all — the source is deterministic this run. Deciding that from the registry
+    flag alone, before looking in the store, is what made a fully transcribed source vanish from
+    an IC_AI=off run with all of its data sitting in the archive.
+    """
+    if arch is None:
+        return False
+    try:
+        dates = arch.dates_for(sid)
+        if not dates:
+            return False
+        pre = f"{arch.prefix}/{sid}/{dates[0]}/"
+        return any(b["pathname"][len(pre):].lower().endswith(".csv") for b in arch.list_prefix(pre))
+    except Exception:
+        return False          # store unreachable: fall back to the conservative skip
+
+
 def pull_source(source: dict, cfg: dict, out_dir: Path, archive_dir: Path) -> Path:
     sid = source["id"]
     try:
@@ -45,6 +71,9 @@ def pull_source(source: dict, cfg: dict, out_dir: Path, archive_dir: Path) -> Pa
     except ModuleNotFoundError as e:
         raise SourceNotImplemented(f"{sid}: no fetcher at pipeline/sources/{sid}.py") from e
     arch = _archive.open_archive(cfg)
+    if source.get("ai_extraction") and not ai_enabled() and not _has_transcribed_rows(arch, sid):
+        raise SourceSkipped(f"{sid}: ai_extraction source, IC_AI=off, and no transcribed CSV in the "
+                            f"archive — no rows from this source this run")
     day_dir = archive_dir / sid / date.today().isoformat()
     mode = source.get("acquire") or (cfg.get("archive") or {}).get("mode", "web-first")
     note, archived = "", None
@@ -93,10 +122,10 @@ def pull_source(source: dict, cfg: dict, out_dir: Path, archive_dir: Path) -> Pa
         r.setdefault("retrieved_date", date.today().isoformat())
         r.setdefault("country", "US")
         r.setdefault("status_basis", source.get("status_basis", "none"))
-        for c in COLUMNS:
+        for c in COLUMNS + OPTIONAL:
             r.setdefault(c, "")
     out = out_dir / f"{sid}.csv"
-    write_rows(out, rows, COLUMNS)
+    write_rows(out, rows, COLUMNS + OPTIONAL)     # optional fields ride along; blank when a source has none
     pull = {"source_id": sid, "rows": len(rows), "retrieved": date.today().isoformat(),
             "method": source.get("method"), "ai_extraction": bool(source.get("ai_extraction")),
             "acquire_mode": mode, "source_of_bytes": note or "live fetch"}

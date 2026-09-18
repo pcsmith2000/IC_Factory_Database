@@ -11,6 +11,8 @@ from __future__ import annotations
 import hashlib, json, os, re
 from pathlib import Path
 
+from .. import ai_client_and_model
+
 SCHEMA = {
     "type": "object",
     "properties": {"locations": {"type": "array", "items": {
@@ -37,21 +39,18 @@ def verbatim_check(loc: dict, page_text: str) -> list[str]:
 
 def extract_locations(page_text: str, *, company: str, page_url: str, cfg: dict, prompt_path: Path, archive_to: Path) -> dict:
     """Returns {"locations": [...kept...], "dropped": [...], "model": ..., "prompt_hash": ..., "cached": bool}."""
-    key = os.environ.get("ANTHROPIC_API_KEY")
-    if not key:
-        raise RuntimeError("extract_locations: no ANTHROPIC_API_KEY — set it, or pass --file with a pre-extracted JSON")
-    import anthropic  # pinned in pyproject
     prompt = prompt_path.read_text()
     model, temperature = cfg["classifier"]["model"], cfg["classifier"]["temperature"]
+    client, model, _provider = ai_client_and_model(model)
     cache_key = hashlib.sha256((prompt + model + page_text).encode()).hexdigest()[:16]
     archive_to.mkdir(parents=True, exist_ok=True)
     raw_path = archive_to / f"extract_{cache_key}.json"
     if raw_path.exists():
         raw = json.loads(raw_path.read_text()); cached = True
     else:
-        client = anthropic.Anthropic(api_key=key)
         resp = client.messages.create(
-            model=model, max_tokens=16000, temperature=temperature, system=prompt,
+            # temperature via extra_body — see the note in pipeline/classify.py
+            model=model, max_tokens=16000, extra_body={"temperature": temperature}, system=prompt,
             messages=[{"role": "user", "content": f"Company: {company}\nPage: {page_url}\n\nPAGE TEXT:\n{page_text}"}],
             output_config={"format": {"type": "json_schema", "schema": SCHEMA}},
         )

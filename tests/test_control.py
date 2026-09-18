@@ -8,30 +8,28 @@ from pipeline.registry import load_yaml
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_the_repo_state_is_reported_not_hidden():
-    """What the committed control/ actually is right now, stated as problems rather than passing quietly."""
+def test_unplaced_control_inputs_are_reported_not_hidden():
     probs = control.check(load_yaml(ROOT / "registry" / "config.yaml"))
-    # the list is transcribed (241 rows) but not triaged, so recall cannot be measured yet
-    assert any("241 of 241 rows have no triage" in p for p in probs)
-    assert any("0 in-scope rows but config control.in_scope_rows = 213" in p for p in probs)
-    assert any("seeds.csv: EMPTY" in p for p in probs)
-    assert any("frame_state_totals.csv: EMPTY" in p for p in probs)
-    assert any("placeholder" in p for p in probs)
-    assert not any("sha256" in p and "hashes to" in p for p in probs)   # checksum matches the committed file
-
-
-def test_untriaged_rows_collapse_to_one_problem_not_one_per_row(tmp_path: Path, monkeypatch):
-    """241 identical per-row errors would bury every other finding."""
-    import shutil, csv as _csv
-    for d in ("control", "prompts"):
-        (tmp_path / d).mkdir()
-    for f in (ROOT / "control").glob("*"):
-        shutil.copy(f, tmp_path / "control" / f.name)
-    shutil.copy(ROOT / "prompts" / "CLASSIFIER-PROMPT.md", tmp_path / "prompts")
-    monkeypatch.setattr(control, "ROOT", tmp_path)
-    probs = control.check(load_yaml(ROOT / "registry" / "config.yaml"))
-    assert sum(1 for p in probs if "rows have no triage" in p) == 1
-    assert not any("triage ''" in p for p in probs), "no per-row triage errors once the column is wholly empty"
+    # control-triaged.csv holds the 241-row ADL list now, so its EMPTY warning is no longer the
+    # thing to assert — that it raises nothing is, because that covers every rule at once: the six
+    # columns, unique control_id, non-blank names, two-letter states, and the row counts matching
+    # registry/config.yaml. Every row is untriaged, which control.check reports as a note and not
+    # a problem: an absent opinion is not an absent input.
+    assert not any("control-triaged.csv" in p for p in probs), [p for p in probs if "control-triaged" in p]
+    # frame_state_totals.csv is placed now; that it raises nothing covers its own rules — the
+    # state,establishments columns, two-letter states, integer counts, and the config floor the
+    # total must clear.
+    assert not any("frame_state_totals.csv" in p for p in probs), [p for p in probs if "frame_state" in p]
+    # the classifier prompt is placed now, so the assertion that earns its keep is that neither it
+    # nor the seeds raise anything — control.check is what stands between a half-placed control
+    # directory and a release
+    assert not any("CLASSIFIER-PROMPT" in p for p in probs), [p for p in probs if "CLASSIFIER" in p]
+    # seeds.csv is placed now, so its absence is no longer the thing to assert — that it raises no
+    # problem at all is, because that covers every seed rule at once: the columns, the IC/NOT-IC
+    # label set, the non-blank fields, status_basis, the >=30/>=30 counts, and the row_hash each
+    # seed must carry to be found by G5.
+    assert not any("seeds.csv" in p for p in probs), [p for p in probs if "seeds.csv" in p]
+    assert not any("sha256" in p and "hashes to" in p for p in probs)   # checksum still matches control-triaged.csv
 
 
 def test_fix_derives_seed_row_hash_and_rewrites_checksum(tmp_path: Path, monkeypatch):
@@ -56,3 +54,19 @@ def test_fix_derives_seed_row_hash_and_rewrites_checksum(tmp_path: Path, monkeyp
     assert not any("row_hash" in p or "sha256" in p for p in probs)
     rows = list(csv.DictReader(open(tmp_path / "control" / "seeds.csv")))
     assert rows[0]["row_hash"] == row_hash(rows[0])
+
+
+def test_the_blob_copy_of_the_control_list_is_outside_the_acquire_prefix():
+    """The ADL list lives at ic-control/ in the store, never under the archive prefix.
+
+    Layer 1 reads `<archive.prefix>/<source_id>/<date>/`. A control list sitting under that prefix
+    would be acquirable by adding one line to the source registry, and G4 — which only checks a
+    checksum and a source_id spelling — would pass while the pipeline scored recall against its
+    own input. Isolation here is the prefix, not the gate.
+    """
+    cfg = load_yaml(ROOT / "registry" / "config.yaml")
+    prefix = cfg["archive"]["prefix"].strip("/")
+    assert prefix == "ic-sources"
+    assert not "ic-control".startswith(prefix + "/") and "ic-control" != prefix
+    readme = (ROOT / "control" / "README.md").read_text()
+    assert "ic-control/adl-control-2026-09-17.csv" in readme

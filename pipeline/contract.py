@@ -11,6 +11,15 @@ COLUMNS = [
     "country", "source_identifier", "naics_verbatim", "status_verbatim", "status_basis",
     "expiry_date", "lat", "lon", "notes",
 ]
+# Fields a source MAY carry beyond the contract, added 2026-09-17. Optional on read so every
+# archived normalised CSV and the seeds file stay valid; blank by default on write. They are not in
+# VERBATIM, so row_hash — and with it the classifier cache — is unchanged by their presence, and
+# they play no part in the facility signature, so no id moves. Enrichment and GA DCA already carry
+# all three in notes as prose; this is where they become queryable.
+#   website           the plant's or company's site, as the source printed it
+#   sq_ft             plant floor area in square feet, digits only, as the source stated it
+#   operating_status  open | closed | revoked | unknown — a claim the source made, not an inference
+OPTIONAL = ["website", "sq_ft", "operating_status"]
 ADDED = ["city_norm", "street_key", "state", "no_fixed_plant", "contract_version", "row_hash"]
 REQUIRED = COLUMNS[:5]
 STATUS_BASES = {"dated_expiry", "on_current_list", "explicit_status_field", "certified_as_of_date", "none"}
@@ -20,7 +29,25 @@ _CITY_MAP = {"st": "saint", "st.": "saint", "ste": "sainte", "mt": "mount", "ft"
 _STREET_SUFFIX = {"street": "st", "st.": "st", "avenue": "ave", "ave.": "ave", "road": "rd", "rd.": "rd",
                   "drive": "dr", "dr.": "dr", "boulevard": "blvd", "highway": "hwy", "lane": "ln",
                   "parkway": "pkwy", "court": "ct", "place": "pl", "north": "n", "south": "s",
-                  "east": "e", "west": "w"}
+                  "east": "e", "west": "w",
+                  # Added 2026-09-17 from confirmed duplicate facilities in the deployed build.
+                  "terrace": "ter", "terr": "ter", "circle": "cir", "trail": "trl", "square": "sq",
+                  "turnpike": "tpke", "expressway": "expy", "freeway": "fwy", "route": "rte",
+                  "northeast": "ne", "northwest": "nw", "southeast": "se", "southwest": "sw"}
+# "1505 W Third Ave" and "1505 W 3rd Ave" are one plant (Ess Metron, Denver) and were two
+# facilities. Streets are numbered in words as often as in figures.
+_ORDINAL_WORD = {"first": "1st", "second": "2nd", "third": "3rd", "fourth": "4th", "fifth": "5th",
+                 "sixth": "6th", "seventh": "7th", "eighth": "8th", "ninth": "9th", "tenth": "10th",
+                 "eleventh": "11th", "twelfth": "12th", "thirteenth": "13th", "fourteenth": "14th",
+                 "fifteenth": "15th", "sixteenth": "16th", "seventeenth": "17th",
+                 "eighteenth": "18th", "nineteenth": "19th", "twentieth": "20th"}
+# Street TYPES only. Directionals are deliberately excluded: "5980 W Sam Houston Pkwy N" ends in a
+# type followed by a direction, and treating "n" as a type collapsed it to "5980 w sam houston n",
+# merging it with a different address. A direction qualifies a street; it is not one.
+_DIRECTIONALS = {"n", "s", "e", "w", "ne", "nw", "se", "sw"}
+_STREET_TYPES = (set(_STREET_SUFFIX.values()) | {"st", "ave", "rd", "dr", "blvd", "hwy", "ln",
+                                                 "pkwy", "ct", "pl", "ter", "cir", "trl", "sq",
+                                                 "way"}) - _DIRECTIONALS
 
 
 @dataclass
@@ -40,7 +67,17 @@ def norm_city(city: str) -> str:
 def street_key(address: str) -> str:
     """Street number + normalised street name. Survives any city spelling."""
     s = re.sub(r"[^a-z0-9 ]", " ", (address or "").lower())
-    parts = [_STREET_SUFFIX.get(p, p) for p in s.split()]
+    parts = [_STREET_SUFFIX.get(p, _ORDINAL_WORD.get(p, p)) for p in s.split()]
+    # A run of two street-type tokens is a transcription artifact: one register wrote Atkinson
+    # Industries at "1801 E 27th St Terrace" and another at "1801 E 27th Terrace", and they became
+    # two facilities at one address. Keep the LAST of the run — it is the street's actual type.
+    collapsed = []
+    for p in parts:
+        if collapsed and p in _STREET_TYPES and collapsed[-1] in _STREET_TYPES:
+            collapsed[-1] = p
+        else:
+            collapsed.append(p)
+    parts = collapsed
     # drop a unit designator and everything after it ("suite 4", "unit b", "bldg 2")
     for i, p in enumerate(parts):
         if p in {"suite", "ste", "unit", "bldg", "building", "apt"}:
@@ -66,7 +103,11 @@ def read_contract(path: Path) -> list[dict]:
         missing = [c for c in COLUMNS if c not in r.fieldnames]
         if missing:
             raise ValidationError(path.stem, f"missing contract columns: {missing}")
-        return list(r)
+        rows = list(r)
+        for row in rows:
+            for c in OPTIONAL:           # tolerated when absent on disk; present on every row in memory
+                row.setdefault(c, "")
+        return rows
 
 
 def validate_rows(source_id: str, rows: list[dict]) -> list[str]:
@@ -87,6 +128,38 @@ def validate_rows(source_id: str, rows: list[dict]) -> list[str]:
     return problems
 
 
+_US = {"AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA",
+       "ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR",
+       "PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"}
+_US_NAMES = {"alabama":"AL","alaska":"AK","arizona":"AZ","arkansas":"AR","california":"CA","colorado":"CO",
+    "connecticut":"CT","delaware":"DE","district of columbia":"DC","florida":"FL","georgia":"GA","hawaii":"HI",
+    "idaho":"ID","illinois":"IL","indiana":"IN","iowa":"IA","kansas":"KS","kentucky":"KY","louisiana":"LA",
+    "maine":"ME","maryland":"MD","massachusetts":"MA","michigan":"MI","minnesota":"MN","mississippi":"MS",
+    "missouri":"MO","montana":"MT","nebraska":"NE","nevada":"NV","new hampshire":"NH","new jersey":"NJ",
+    "new mexico":"NM","new york":"NY","north carolina":"NC","north dakota":"ND","ohio":"OH","oklahoma":"OK",
+    "oregon":"OR","pennsylvania":"PA","rhode island":"RI","south carolina":"SC","south dakota":"SD",
+    "tennessee":"TN","texas":"TX","utah":"UT","vermont":"VT","virginia":"VA","washington":"WA",
+    "west virginia":"WV","wisconsin":"WI","wyoming":"WY"}
+
+
+def us_state(verbatim: str | None) -> str:
+    """A US state code, or nothing. Never a code invented by truncation.
+
+    This used to be `.upper()[:2]`, which turned every non-US region a source carried into a
+    plausible US state: MBI's Turku, Finland ("Varsinais-Suomi") became VA, Belo Horizonte ("Minas
+    Gerais") became MI, Dubai ("Dubayy") became DU, Shanghai became SH. Sixty of MBI's 188 members
+    are abroad and every one of them landed in the warehouse with a state it never had — two of
+    them with states that exist, where they could match a control row and pollute per-state
+    coverage. A state this database did not read is a state it must not report.
+    """
+    s = " ".join((verbatim or "").split())
+    if not s:
+        return ""
+    if s.upper() in _US:
+        return s.upper()
+    return _US_NAMES.get(s.lower(), "")
+
+
 def normalise(rows: list[dict]) -> list[dict]:
     """Add the Layer 2 columns. Verbatim columns are untouched."""
     out = []
@@ -94,7 +167,7 @@ def normalise(rows: list[dict]) -> list[dict]:
         r = dict(row)
         r["city_norm"] = norm_city(row.get("city_verbatim", ""))
         r["street_key"] = street_key(row.get("address_verbatim", ""))
-        r["state"] = (row.get("state_verbatim") or "").strip().upper()[:2]
+        r["state"] = us_state(row.get("state_verbatim"))
         r["no_fixed_plant"] = "NO-FIXED-PLANT" in (row.get("notes") or "").upper()
         r["contract_version"] = CONTRACT_VERSION
         r["row_hash"] = row_hash(row)
@@ -103,7 +176,7 @@ def normalise(rows: list[dict]) -> list[dict]:
 
 
 def write_rows(path: Path, rows: list[dict], columns: list[str] | None = None) -> None:
-    cols = columns or (COLUMNS + ADDED)
+    cols = columns or (COLUMNS + OPTIONAL + ADDED)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")

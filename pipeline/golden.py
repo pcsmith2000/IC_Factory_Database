@@ -14,6 +14,9 @@ FIELD_MAP = {  # golden field -> contract column
     "name": "name_verbatim", "address": "address_verbatim", "city": "city_verbatim",
     "state": "state_verbatim", "zip": "zip_verbatim", "naics": "naics_verbatim",
     "status": "status_verbatim", "expiry_date": "expiry_date",
+    # Optional contract columns (2026-09-17). Blank on most rows; asserted only when a source
+    # printed them — GA DCA's websites, the enrichment lookups' square footage and status.
+    "website": "website", "sq_ft": "sq_ft", "operating_status": "operating_status",
 }
 
 
@@ -32,14 +35,23 @@ def assertions_from_rows(rows: list[dict], source_class: dict[str, str]) -> list
             out.append({**base, "field": "lat_lon", "value": f"{r['lat']},{r['lon']}"})
         if r.get("legal_entity_id"):
             out.append({**base, "field": "legal_name", "value": r["legal_entity_id"], "source_id": "lookup", "source_class": "lookup"})
+        # The IC product category is the classifier's judgement about the row, not something the
+        # source roster said, so it is asserted under its own source and keeps its own confidence.
+        # Without this the column exists, is declared in survivorship.yaml, and is NULL for every
+        # facility — the classifier's most useful output, computed and discarded.
+        if r.get("product_type"):
+            out.append({**base, "field": "product_type", "value": r["product_type"],
+                        "source_id": "classifier", "source_class": "classifier",
+                        "confidence": r.get("product_type_confidence", "")})
     return out
 
 
 def _rank(a: dict, order: list[str]) -> int:
     for i, pref in enumerate(order):
-        if pref == "operator" and a["source_id"] == "operator": return i
-        if pref == "lookup" and a["source_id"] == "lookup": return i
         if pref == "site_visit" and a.get("site_visit") in (True, "True"): return i
+        # A bare token names a source directly: operator, lookup, classifier. This replaces three
+        # hardcoded comparisons and means a new synthetic source only has to be named in the rules.
+        if not pref.startswith(("class:", "basis:")) and a["source_id"] == pref: return i
         if pref.startswith("class:") and a["source_class"] == pref[6:]: return i
         if pref.startswith("basis:") and a["basis"] == pref[6:]: return i
     return len(order)

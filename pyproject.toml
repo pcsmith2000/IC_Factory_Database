@@ -14,6 +14,7 @@ dependencies = [
 # CI's `[dev,postgres]` install and eight tests silently stop running.
 dev = ["pytest>=8", "openpyxl>=3.1", "beautifulsoup4>=4.12"]
 postgres = ["psycopg[binary]>=3.1"]
+browser = ["playwright>=1.47"]   # _browser.py; Chromium itself ships in the image
 acquire = ["pdfplumber>=0.11", "openpyxl>=3.1", "beautifulsoup4>=4.12", "playwright>=1.47", "google-cloud-storage>=2.18"]
 
 [tool.pytest.ini_options]

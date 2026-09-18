@@ -1,0 +1,40 @@
+# Score classifier models against the 60 hand-labelled seeds with the same gate a release uses.
+# Lives in CI because AI_GATEWAY_API_KEY does, and a bake-off is cheap: ~60 rows per score against
+# ~13,100 for a full run, so scoring ten models costs a fraction of one run.
+name: classifier-bakeoff
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: "comma-separated gateway model ids; blank = the model pinned in registry/config.yaml"
+        default: "openai/gpt-oss-120b,amazon/nova-lite,openai/gpt-oss-20b,alibaba/qwen3.7-flash,inclusionai/ling-3.0-flash,deepseek/deepseek-v4-flash-0731,nvidia/nemotron-nano-9b-v2,amazon/nova-micro"
+      repeat:
+        description: "scores per model. One is not a verdict — the pinned model scored recall 100% then 83% on consecutive runs at temperature 0"
+        default: "3"
+      delay:
+        description: "seconds between calls, to pace ourselves rather than collect 429s and call them results"
+        default: "20"
+
+jobs:
+  bakeoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[acquire]"
+      - name: Score the models
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python -m pipeline.bakeoff \
+            --models "${{ github.event.inputs.models }}" \
+            --repeat "${{ github.event.inputs.repeat }}" \
+            --delay "${{ github.event.inputs.delay }}" | tee bakeoff.txt
+          { echo '```'; cat bakeoff.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: bakeoff, path: bakeoff.txt }

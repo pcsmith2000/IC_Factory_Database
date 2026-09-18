@@ -5,7 +5,7 @@ names the store explicitly; otherwise it is read out of the token). Objects are 
 <prefix>/<source_id>/<date>/<file> (the layout registry/config.yaml has always described), access
 private, overwrite allowed (a re-run on the same day replaces the same keys). A manifest.json per
 source/date lists every file with size and sha256, including files too large to upload — the
-EPA national_combined.zip (~730 MB) is recorded by hash and skipped; the fetcher archives the
+EPA national_combined.zip (1.27 GB) is recorded by hash and skipped; the fetcher archives the
 filtered slice it actually used instead (pipeline/sources/epa_frs.py).
 
 The request contract is the one @vercel/blob 2.x `put()` sends (read from the SDK source):
@@ -52,24 +52,47 @@ class VercelBlobArchive:
         h.update(extra or {})
         return h
 
-    def _call(self, url: str, *, method: str, what: str, data: bytes | None = None, headers: dict | None = None, timeout: int = 600):
-        req = urllib.request.Request(url, data=data, method=method, headers=self._headers(headers))
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                raw = resp.read()
-                return json.loads(raw) if raw else {}
-        except urllib.error.HTTPError as e:
-            raise ArchiveError(f"blob {what}: HTTP {e.code} {e.read()[:300]!r}") from e
-        except urllib.error.URLError as e:
-            raise ArchiveError(f"blob {what}: {e.reason}") from e
+    def _call(self, url: str, *, method: str, what: str, data: bytes | None = None, headers: dict | None = None,
+              timeout: int = 600, retries: int = 3):
+        """One Blob API call, retrying 5xx, 429 and transport errors the way http_get does.
 
-    def put(self, path: Path, pathname: str) -> dict:
+        Layer 1 halts the whole run when any source fails, so an unretried blip here costs the
+        acquisition of every other source too — a single [SSL: UNEXPECTED_EOF_WHILE_READING]
+        listing one prefix is enough. A 4xx other than 429 is not retried: it means the request
+        itself is wrong. Every method here is idempotent (PUT sends x-allow-overwrite, and the
+        rest are reads or a keyed delete), so a retried call cannot double-apply.
+        """
+        for attempt in range(retries + 1):
+            req = urllib.request.Request(url, data=data, method=method, headers=self._headers(headers))
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    raw = resp.read()
+                    return json.loads(raw) if raw else {}
+            except urllib.error.HTTPError as e:
+                if (e.code < 500 and e.code != 429) or attempt == retries:
+                    raise ArchiveError(f"blob {what}: HTTP {e.code} {e.read()[:300]!r}") from e
+            except urllib.error.URLError as e:
+                if attempt == retries:
+                    raise ArchiveError(f"blob {what}: {e.reason}") from e
+            time.sleep(2 ** attempt)
+
+    def put(self, path: Path, pathname: str, *, cache_max_age: int | None = None) -> dict:
+        """Upload one file. cache_max_age sets the object's edge/browser TTL in seconds.
+
+        Archived sources are immutable and want the default (a year at the edge). An object that is
+        OVERWRITTEN in place — the run heartbeat — must pass a small value, because the CDN keys on
+        the pathname alone: a query-string buster on the read side does not work (measured against
+        run 35170703333, x-vercel-cache: HIT with a unique ?cb= every call), so a reader otherwise
+        sees a run frozen, or watches it go backwards as different edges answer.
+        """
         body = path.read_bytes()
+        headers = {"x-vercel-blob-access": self.access, "x-add-random-suffix": "0", "x-allow-overwrite": "1",
+                   "x-content-type": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+                   "x-content-length": str(len(body))}
+        if cache_max_age is not None:
+            headers["x-cache-control-max-age"] = str(int(cache_max_age))
         return self._call(f"{BLOB_API}/?{urllib.parse.urlencode({'pathname': pathname})}", method="PUT", data=body,
-                          what=f"put {pathname}", headers={
-                              "x-vercel-blob-access": self.access, "x-add-random-suffix": "0", "x-allow-overwrite": "1",
-                              "x-content-type": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
-                              "x-content-length": str(len(body))})
+                          what=f"put {pathname}", headers=headers)
 
     def head(self, url_or_pathname: str) -> dict:
         """Metadata for one blob (pathname, size, url). Raises ArchiveError (HTTP 404) when absent."""
@@ -191,6 +214,37 @@ def _verify(a: VercelBlobArchive) -> int:
     return 0
 
 
+def _put(a: VercelBlobArchive, source_id: str, files: list[str], date_str: str | None) -> int:
+    """Upload hand-obtained files for one source, keyed the way the run expects to read them.
+
+    The five sources that publish nothing fetchable (docs/manual-uploads.md) enter the pipeline
+    this way. Constructing <prefix>/<source_id>/<date>/<file> by hand in a dashboard is the easy
+    thing to get wrong — and a file at the wrong key is invisible to the run, which then reports
+    the source as EMPTY. This builds the key and the manifest the same way a fetch would.
+    """
+    import shutil, tempfile
+    from datetime import date as _date
+    day = date_str or _date.today().isoformat()
+    paths = [Path(f) for f in files]
+    missing = [p for p in paths if not p.is_file()]
+    if missing:
+        print("no such file: " + ", ".join(str(p) for p in missing), file=sys.stderr); return 1
+    with tempfile.TemporaryDirectory() as d:
+        day_dir = Path(d) / day
+        day_dir.mkdir()
+        for p in paths:
+            shutil.copy2(p, day_dir / p.name)
+        r = a.archive_dir(source_id, day_dir)
+    print(f"  {source_id}  {r['uploaded']} file(s), {r['bytes']} bytes → {a.prefix}/{source_id}/{day}/")
+    for p in paths:
+        print(f"      {p.name}")
+    if r["skipped"]:
+        print(f"  WARNING {r['skipped']} file(s) over archive.max_file_mb were recorded by hash but NOT "
+              f"uploaded — the run cannot read those back", file=sys.stderr)
+    print(f"\nconfirm with:  python -m pipeline.sources.refresh --list")
+    return 0
+
+
 def main(argv=None) -> int:
     import argparse
     from .registry import load_yaml
@@ -198,6 +252,9 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m pipeline.archive")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("verify", help="put a probe file, read it back, delete it — proves the token and store")
+    pu = sub.add_parser("put", help="upload hand-obtained files for one source (see docs/manual-uploads.md)")
+    pu.add_argument("source_id"); pu.add_argument("file", nargs="+")
+    pu.add_argument("--date", help="date folder to write (default: today)")
     ls = sub.add_parser("list", help="print the manifest one pull recorded")
     ls.add_argument("source_id"); ls.add_argument("date")
     args = ap.parse_args(argv)
@@ -208,6 +265,8 @@ def main(argv=None) -> int:
         print("no archive: BLOB_READ_WRITE_TOKEN is not set (or IC_ARCHIVE=off)", file=sys.stderr); return 1
     if args.cmd == "verify":
         return _verify(a)
+    if args.cmd == "put":
+        return _put(a, args.source_id, args.file, args.date)
     key = f"{a.prefix}/{args.source_id}/{args.date}/manifest.json"
     local = root / cfg["storage"]["local_cache"] / args.source_id / args.date / "manifest.json"
     if local.exists():

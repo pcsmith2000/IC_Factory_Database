@@ -1,387 +1,596 @@
-# Source registry — the fixed input to Layer 1.
-# Every known source, with class, method, what it uniquely carries, its known traps, and status.
-# Adding or changing a source is a versioned edit here; it takes effect on the next full run.
-# Nothing is chosen at run time: every source with status `active` is pulled every run.
-#
-# class:   A state IC registries | B national regulators | C industry rosters | D certification directories
-# method:  download | fetch | browser | bulk | lookup
-# needs_classify: true only where the source has no industry filter (class B)
-# status:  active | queued | leads_only | excluded
-
 version: 1
 sources:
-
-  # ---------------------------------------------------------------- class A
-  - id: pa_dced
-    name: Pennsylvania DCED industrialized housing — plant list
-    class: A
-    method: download
-    url: https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/   # XLSX link discovered on this page each run
-    needs_classify: false
-    url: https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/   # XLSX link discovered on this page each run
-    carries: [plant_address, evaluation_agency, inspection_agency]
-    status_basis: on_current_list
-    traps:
-      - Published by DCED, not L&I. L&I carries the code, not the registry.
-      - Only ~36 of 112 rows are PA plants; the rest are out-of-state and Canadian plants approved to ship in.
-      - Source typos are verbatim ("Bladwin GA", "Mifflinburg, IN") — keep them.
-    status: active
-
-  - id: tx_tdlr
-    name: Texas TDLR industrialized housing — certified and registered manufacturers
-    class: A
-    method: download
-    url: https://www.tdlr.texas.gov/ihb/ihblists.htm   # three PDFs under /ihb/pdf/, all pulled
-    needs_classify: false
-    carries: [plant_address, expiry_date]
-    status_basis: dated_expiry
-    traps:
-      - Certified and registered lists are different populations; pull both.
-      - Only source in class A with expiry dates — the best liveness signal in the dataset.
-    status: active
-
-  - id: mi_lara
-    name: Michigan — premanufactured units (list is under Plan Review)
-    class: A
-    method: download
-    url: https://www.michigan.gov/lara/bureau-list/bcc/sections/plan-review/premanufactured-units/premanufactured-units-program
-    needs_classify: false
-    carries: [plant_address]
-    status_basis: on_current_list
-    traps:
-      - The list lives under Plan Review, not the Premanufactured Units program page (dead end).
-      - Typos verbatim ("Shangahi").
-    acquire_note: no list published; obtain from the Bureau and upload to the archive
-    status: active
-
-  - id: ma_bbrs
-    name: Massachusetts BBRS manufactured buildings
-    class: A
-    method: download
-    url: https://www.mass.gov/info-details/manufactured-building-program   # certified-manufacturers document discovered on this page
-    needs_classify: false
-    carries: [plant_address]
-    status_basis: on_current_list
-    traps:
-      - Undated PDF; still lists Kullman, Excel Homes, Modtech — defunct 10+ years. Status is inferred.
-    acquire_note: no list published and mass.gov blocks automation; upload to the archive
-    status: active
-
-  - id: or_bcd
-    name: Oregon BCD prefabricated structures — by manufacturing location
-    class: A
-    method: browser
-    url: https://www.oregon.gov/bcd/permit-services/prefab/Documents/prefab-registered-manufacturers.pdf   # fallback; licence data file tried first
-    needs_classify: false
-    carries: [plant_address]
-    status_basis: on_current_list
-    traps:
-      - Registers per manufacturing location (cleanest match to our unit of record).
-      - The official "list" PDF contains no data; use the licence search.
-    acquire_note: licence search needs a browser; upload the exported result
-    status: active
-
-  - id: fl_bcis
-    name: Florida BCIS manufactured buildings
-    class: A
-    method: browser
-    url: https://floridabuilding.org/mb/mb_default.aspx   # organisation search reached from this menu (WebForms POST)
-    needs_classify: false
-    carries: [plant_name, material_system_in_plan_docs_only]
-    status_basis: on_current_list
-    traps:
-      - POST-only search; defeats plain fetch.
-      - 852 rows are names only. Do not promote unmatched names to facilities.
-      - Material is not structured data; it lives in plan documents.
-    acquire_note: POST-only search; upload the exported result
-    status: active
-
-  - id: ny_dos
-    name: New York DOS factory manufactured buildings
-    class: A
-    method: download
-    url: https://dos.ny.gov/code/factory-manufactured-buildings-modular   # no list published; the FOIL response is the source
-    needs_classify: false
-    carries: [approval_records]
-    status_basis: on_current_list
-    traps:
-      - Approval-centric, not plant-centric; extraction not clean. FOIL request drafted.
-    acquire_note: no list published and dos.ny.gov blocks automation; upload the FOIL response
-    status: active
-
-  - id: in_dhs
-    name: Indiana DHS industrialized building systems registry
-    class: A
-    method: browser
-    needs_classify: false
-    carries: [plant_address]
-    status_basis: on_current_list
-    traps:
-      - Densest modular corridor in the country; IN ranks 3rd in facilities without being a source yet.
-    status: queued
-
-  - id: nc_osfm
-    name: North Carolina OSFM modular search
-    class: A
-    method: browser
-    needs_classify: false
-    carries: [plant_address, explicit_status]
-    status_basis: explicit_status_field
-    traps:
-      - Form-gated.
-    status: queued
-
-  - id: ca_hcd
-    name: California HCD factory-built housing
-    class: A
-    method: browser
-    needs_classify: false
-    carries: [business_address_often_hq]
-    status_basis: on_current_list
-    traps:
-      - HCD issues no plant-level approval number; identifiers are per-model and per-unit. Plant identity is structurally unavailable.
-      - Treat rows as company-level leads. Cap at T1 without a second source.
-    status: leads_only
-
-  # ---------------------------------------------------------------- class B
-  - id: epa_frs
-    name: EPA Facility Registry Service — national file
-    class: B
-    method: bulk
-    url: https://ofmext.epa.gov/FLA/www3/state_files/national_combined.zip   # ~730 MB
-    needs_classify: true
-    carries: [lat_long, naics, program_ids]
-    status_basis: none
-    core_naics: ["321991", "321992", "332311", "321214"]
-    traps:
-      - 5.3M rows. Joins on the API return 500; use the bulk file.
-      - 321992 is mixed (~45% IC, ~33% sheds); some records are permits, not plants ("...Parking Expansion").
-      - OSHA-OIS program rows are site visits — the strongest address attestation available.
-    status: active
-
-  - id: osha_enforcement
-    name: OSHA enforcement establishments
-    class: B
-    method: bulk
-    needs_classify: true
-    url: https://preview.osha.gov/   # osha.gov 403s bots
-    carries: [site_visit_address]
-    status_basis: none
-    traps:
-      - Unlocks verification tier T3.
-    status: queued
-
-  # ---------------------------------------------------------------- class C
-  - id: iibc
-    name: IIBC registered manufacturers
-    class: C
-    method: fetch
-    url: https://interstateibc.org/manufacturers/
-    needs_classify: false
-    url: https://interstateibc.org/manufacturers/
-    carries: [plant_address]
-    status_basis: on_current_list
-    traps:
-      - 258 rows dated Oct 2024 — not the ~700 a scout claimed. Pre-registered prediction caught this.
-    status: active
-
-  - id: mhi_plants
-    name: MHI HUD-code plant list
-    class: C
-    method: fetch
-    url: https://www.manufacturedhousing.org/wp-content/uploads/2024/10/Plant-List-10_3_24.pdf   # dated file name: update when MHI posts a new list
-    needs_classify: false
-    carries: [plant_code, plant_address]
-    status_basis: on_current_list
-    traps:
-      - Plant codes are durable per-facility identifiers; capture them.
-    status: active
-
-  - id: corporate_locations
-    name: Corporate location pages — 13 multi-site component companies
-    class: C
-    method: fetch
-    needs_classify: false
-    ai_extraction: true
-    carries: [plant_address]
-    status_basis: on_current_list
-    pages:                                   # one per company; a missing url is reported, never guessed
-    - company: Builders FirstSource
-      url: https://www.bldr.com/location/all-locations
-      follow: {href: "/location/", text: "truss|manufactur|component"}   # ~570 locations; only plant pages are followed
-    - company: UFP Site Built
-      url: https://ufpsitebuilt.com/our-locations
-      follow: {href: "/our-locations/"}
-    - company: 84 Lumber
-      url: https://www.84lumber.com/manufacturing/
-    - company: Stark Truss
-      url: https://www.starktruss.com/locations/
-    - company: The Truss Company
-      url: https://www.thetrussco.com/locations/
-    - company: Parr Truss
-      url: https://parr.com/locations/
-    - company: ABS
-      url:                                   # not identified; "Automated Building Components" (abctruss.com) is the nearest match — confirm before use
-    traps:
-      - Prose pages; extraction only — verbatim check against the archived page.
-      - Targets the biased sample; it is a roster, not a regulator.
-    status: active
-
-  - id: sbca
-    name: SBCA component manufacturer directories
-    class: C
-    method: fetch
-    needs_classify: false
-    carries: [plant_address]
-    status_basis: on_current_list
-    traps:
-      - The truss segment is invisible to every regulator source; this is its only roster.
-    status: queued
-
-  # ---------------------------------------------------------------- class D
-  - id: pci_certified
-    name: PCI certified plants (republished in Ascent magazine)
-    class: D
-    method: browser
-    needs_classify: false
-    ai_extraction: true
-    carries: [plant_address, product_codes]
-    status_basis: certified_as_of_date
-    traps:
-      - Live search is an empty JS form; the Ascent directory ("AS OF JUNE 2026") is the usable form.
-      - Product codes separate building-envelope precast from bridge plants.
-    status: queued
-
-  - id: mbi_members
-    name: MBI member directory
-    class: D
-    method: browser
-    needs_classify: false
-    carries: [street_address, manufacturer_or_dealer_flag]
-    status_basis: on_current_list
-    traps:
-      - 26-fetch A–Z sweep. Manufacturer/Direct field mechanically separates plants from dealers.
-    status: queued
-
-  - id: apa_mills
-    name: APA certified mills
-    class: D
-    method: browser
-    needs_classify: false
-    carries: [mill_number, plant_address]
-    status_basis: certified
-    traps:
-      - Mill numbers are a stable per-facility join key — capture for cross-source dedupe.
-    status: queued
-
-  - id: ias_ac472
-    name: IAS AC472 accredited metal building plants
-    class: D
-    method: browser
-    needs_classify: false
-    carries: [plant_address]
-    status_basis: accredited
-    traps:
-      - Accredits the plant, not the corporation (~215 numbers). Better instrument for NAICS 332311 than MBMA.
-    status: queued
-
-  - id: aisc_certified
-    name: AISC certified companies
-    class: D
-    method: browser
-    needs_classify: false
-    carries: [plant_address]
-    status_basis: certified
-    traps:
-      - 403s every plain fetch. Browser job.
-    status: queued
-
-  - id: sipa
-    name: SIPA manufacturers
-    class: D
-    method: fetch
-    needs_classify: false
-    carries: [plant_address]
-    status_basis: on_current_list
-    status: queued
-
-  - id: mbma
-    name: MBMA members
-    class: D
-    method: browser
-    needs_classify: false
-    carries: [company_address]
-    status_basis: on_current_list
-    traps:
-      - Company-level, not plant-level.
-    status: queued
-
-  - id: nfba
-    name: NFBA post-frame manufacturers
-    class: D
-    method: browser
-    needs_classify: false
-    carries: [company_address]
-    status_basis: on_current_list
-    traps:
-      - Unverified.
-    status: queued
-
-  # ---------------------------------------------------------------- Layer 4 lookups (resolution, not discovery)
-  - id: state_sos
-    name: State Secretary of State business registries
-    class: lookup
-    method: lookup
-    needs_classify: false
-    carries: [legal_name, dba, registered_agent]
-    status: queued
-
-  - id: fmcsa_safer
-    name: FMCSA SAFER
-    class: lookup
-    method: lookup
-    carries: [physical_address]
-    traps:
-      - Modular haulers self-register real physical addresses. Found Ghost Factory's corporate address when nothing else could.
-    status: queued
-
-  - id: icc_es_ias
-    name: ICC-ES / IAS evaluation reports
-    class: lookup
-    method: lookup
-    carries: [report_holder, product]
-    traps:
-      - Only home for components that escape state registration; can prove a negative.
-    status: queued
-
-  # ---------------------------------------------------------------- excluded, with reason
-  - id: hud_plant_roster
-    name: HUD as a plant roster
-    class: excluded
-    reason: Confirmed dead end.
-    status: excluded
-  - id: ohio_bbs
-    name: Ohio BBS
-    class: excluded
-    reason: Confirmed dead end. ohiowoodproducts.com is robots-blocked and (2026-09-09) redirects to a fake "MacOS Security Center" page — treat as compromised, never fetch.
-    status: excluded
-  - id: wa_lni
-    name: Washington L&I
-    class: excluded
-    reason: Confirmed dead end.
-    status: excluded
-  - id: nm_rld
-    name: New Mexico RLD
-    class: excluded
-    reason: Confirmed dead end.
-    status: excluded
-  - id: openstreetmap
-    name: OpenStreetMap / Overpass
-    class: excluded
-    reason: landuse=industrial marks zones, not firms; no industry classifier; endpoints failed.
-    status: excluded
-  - id: sec_10k
-    name: SEC 10-K filings
-    class: excluded
-    reason: Plant lists are prose in Item 1, overlap with MHI/corporate pulls is severe. Useful only for dating existing records, not discovery.
-    status: excluded
+- id: pa_dced
+  name: Pennsylvania DCED industrialized housing — plant list
+  class: A
+  method: download
+  url: https://dced.pa.gov/housing-and-development/website-list-of-manufacturers/
+  needs_classify: false
+  carries:
+  - plant_address
+  - evaluation_agency
+  - inspection_agency
+  status_basis: on_current_list
+  traps:
+  - Published by DCED, not L&I. L&I carries the code, not the registry.
+  - Only ~36 of 112 rows are PA plants; the rest are out-of-state and Canadian plants approved to ship in.
+  - Source typos are verbatim ("Bladwin GA", "Mifflinburg, IN") — keep them.
+  status: active
+- id: tx_tdlr
+  name: Texas TDLR industrialized housing — certified and registered manufacturers
+  class: A
+  method: download
+  url: https://www.tdlr.texas.gov/ihb/ihblists.htm
+  needs_classify: false
+  carries:
+  - plant_address
+  - expiry_date
+  status_basis: dated_expiry
+  traps:
+  - Certified and registered lists are different populations; pull both.
+  - Only source in class A with expiry dates — the best liveness signal in the dataset.
+  status: active
+- id: mi_lara
+  name: Michigan — premanufactured units (list is under Plan Review)
+  class: A
+  method: download
+  url: https://www.michigan.gov/lara/bureau-list/bcc/sections/plan-review/premanufactured-units/premanufactured-units-program
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: on_current_list
+  traps:
+  - The list lives under Plan Review, not the Premanufactured Units program page (dead end).
+  - Typos verbatim ("Shangahi").
+  acquire_note: no list published; obtain from the Bureau and upload to the archive
+  status: active
+- id: ma_bbrs
+  name: Massachusetts BBRS manufactured buildings
+  class: A
+  method: download
+  url: https://www.mass.gov/info-details/manufactured-building-program
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: on_current_list
+  traps:
+  - Undated PDF; still lists Kullman, Excel Homes, Modtech — defunct 10+ years. Status is inferred.
+  acquire_note: no list published and mass.gov blocks automation; upload to the archive
+  status: queued
+- id: or_bcd
+  name: Oregon BCD prefabricated structures — by manufacturing location
+  class: A
+  method: browser
+  url: https://www.oregon.gov/bcd/permit-services/prefab/Documents/prefab-registered-manufacturers.pdf
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: on_current_list
+  traps:
+  - Registers per manufacturing location (cleanest match to our unit of record).
+  - The official "list" PDF contains no data; use the licence search.
+  acquire_note: licence search needs a browser; upload the exported result
+  status: active
+- id: fl_bcis
+  name: Florida BCIS manufactured buildings
+  class: A
+  method: browser
+  url: https://floridabuilding.org/mb/mb_default.aspx
+  needs_classify: false
+  carries:
+  - plant_name
+  - material_system_in_plan_docs_only
+  status_basis: on_current_list
+  traps:
+  - POST-only search; defeats plain fetch.
+  - 852 rows are names only. Do not promote unmatched names to facilities.
+  - Material is not structured data; it lives in plan documents.
+  acquire_note: POST-only search; upload the exported result
+  status: active
+- id: ny_dos
+  name: New York DOS factory manufactured buildings
+  class: A
+  method: download
+  url: https://dos.ny.gov/code/factory-manufactured-buildings-modular
+  needs_classify: false
+  carries:
+  - approval_records
+  status_basis: on_current_list
+  traps:
+  - 'Uploaded by hand 2026-09-17: 49 certified manufacturers, city only and no street, so the source lands at T0.'
+  - Approval-centric, not plant-centric; extraction not clean. FOIL request drafted.
+  acquire_note: no list published and dos.ny.gov blocks automation; upload the FOIL response
+  acquire: blob-only
+  status: active
+- id: in_dhs
+  name: Indiana DHS industrialized building systems registry
+  class: A
+  method: fetch
+  needs_classify: false
+  carries:
+  - plant_address
+  - manufacturer_id
+  status_basis: on_current_list
+  traps:
+  - 'NOT an Indiana list: Indiana registers every manufacturer selling into the state, so the roster is national — 409 US
+    plants across 46 states.'
+  - 'Marked method: browser and left queued for months. It is a plain-HTML Struts app; no browser needed.'
+  - Serves Windows-1252. Decoding as UTF-8 turned 'Mécanitec' into mojibake in the company's own name.
+  - 'Keeps tombstones in place: one listing is a manufacturer named DELETE at a street address of DELETE.'
+  - ZIPs are dirty (six and nine digits, some absent). Validate the STATE against the US list, never the ZIP — requiring a
+    clean ZIP threw away six real plants.
+  - Covers volumetric modular and mobile structures, not components. It overlaps the ADL control list by exactly one row.
+  status: active
+  url: https://oas.dhs.in.gov/dfbs/code/main.do
+- id: nc_osfm
+  name: North Carolina OSFM modular search
+  class: A
+  method: browser
+  needs_classify: false
+  carries:
+  - plant_address
+  - explicit_status
+  status_basis: explicit_status_field
+  traps:
+  - 'Uploaded by hand 2026-09-17: 308 modular manufacturers across 39 states, a NATIONAL roster like Indiana''s. The same folder holds 9 approved third-party inspection agencies in an identical schema; they are dropped on their evidence line, never by filename.'
+  - Form-gated.
+  acquire: blob-only
+  status: active
+- id: ca_hcd
+  name: California HCD factory-built housing
+  class: A
+  method: browser
+  needs_classify: false
+  carries:
+  - business_address_often_hq
+  status_basis: on_current_list
+  traps:
+  - 'Uploaded by hand 2026-09-17: 172 Active Manufacturer licences across 33 states. The address is the LICENCE address, not a plant.'
+  - HCD issues no plant-level approval number; identifiers are per-model and per-unit. Plant identity is structurally unavailable.
+  - Treat rows as company-level leads. Cap at T1 without a second source.
+  acquire: blob-only
+  status: active
+- id: epa_frs
+  name: EPA Facility Registry Service — national file
+  class: B
+  method: bulk
+  url: https://ordsext.epa.gov/FLA/www3/state_files/national_combined.zip
+  needs_classify: true
+  carries:
+  - lat_long
+  - naics
+  - program_ids
+  status_basis: none
+  core_naics:
+  - '321991'
+  - '321992'
+  - '332311'
+  - '321214'
+  traps:
+  - 5.3M rows. Joins on the API return 500; use the bulk file.
+  - 321992 is mixed (~45% IC, ~33% sheds); some records are permits, not plants ("...Parking Expansion").
+  - OSHA-OIS program rows are site visits — the strongest address attestation available.
+  status: active
+- id: osha_enforcement
+  name: OSHA enforcement establishments
+  class: B
+  method: api
+  needs_classify: true
+  url: https://apiprod.dol.gov/v4/get/osha/inspection/csv
+  carries:
+  - site_visit_address
+  status_basis: none
+  traps:
+  - Unlocks verification tier T3 — an OSHA inspection is the strongest address attestation in open data, because a compliance
+    officer physically travelled to it. T3 is 80 of 4,081 facilities.
+  - NEEDS A FREE DOL API KEY (probed 2026-09-17). The old bulk path enfxfr.dol.gov/data_catalog/OSHA/ now 301s to data.dol.gov,
+    which is a client-rendered SPA serving the same 11 KB shell for every path.
+  - The real endpoint is apiprod.dol.gov/v4/get/<agency>/<endpoint>/csv?X-API-KEY=... . /v4/datasets is public and keyless;
+    every /v4/get/ call returns 401 without a key.
+  - osha.gov/ords/imis/establishment.html answers 403 to any automated fetch, so the legacy establishment search is not a
+    route either.
+  - Register at dol.gov/developer; the key is free and self-serve. Put it in the environment as DOL_API_KEY and this source
+    can be written in an hour.
+  status: blocked_needs_key
+- id: iibc
+  name: IIBC registered manufacturers
+  class: C
+  method: fetch
+  url: https://interstateibc.org/manufacturers/
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: on_current_list
+  traps:
+  - 258 rows dated Oct 2024 — not the ~700 a scout claimed. Pre-registered prediction caught this.
+  status: active
+- id: mhi_plants
+  name: MHI HUD-code plant list
+  class: C
+  method: fetch
+  url: https://www.manufacturedhousing.org/wp-content/uploads/2024/10/Plant-List-10_3_24.pdf
+  needs_classify: false
+  carries:
+  - plant_code
+  - plant_address
+  status_basis: on_current_list
+  traps:
+  - Plant codes are durable per-facility identifiers; capture them.
+  status: active
+- id: corporate_locations
+  name: Corporate location pages — 13 multi-site component companies
+  class: C
+  method: fetch
+  needs_classify: false
+  ai_extraction: true
+  carries:
+  - plant_address
+  status_basis: on_current_list
+  pages:
+  - company: UFP Site Built
+    url: https://ufpsitebuilt.com/our-locations
+    follow:
+      href: /our-locations/
+  - company: 84 Lumber
+    url: https://www.84lumber.com/manufacturing/
+  - company: Stark Truss
+    url: https://www.starktruss.com/locations/
+  - company: The Truss Company
+    url: https://www.thetrussco.com/locations/
+  - company: Parr Truss
+    url: https://parr.com/locations/
+  - company: ABS
+    url: null
+  - company: Banker Steel
+    url: https://www.bankersteel.com/contact/
+  - company: True House
+    url: https://www.truehouse.com/
+  traps:
+  - Prose pages; extraction only — verbatim check against the archived page.
+  - Targets the biased sample; it is a roster, not a regulator.
+  - 'Builders FirstSource was removed from this list on 2026-09-17: bldr_locations reads the same site deterministically from
+    its branch codes. The model extraction here returned zero rows from bldr.com because the index page carries links and
+    no addresses.'
+  status: active
+- id: bldr_locations
+  name: Builders FirstSource manufacturing plants (own location index)
+  class: C
+  method: fetch
+  url: https://www.bldr.com/location/all-locations
+  needs_classify: false
+  carries:
+  - plant_address
+  - branch_code
+  status_basis: on_current_list
+  traps:
+  - 'Branch code suffix is the only reliable site type: MF is manufacturing, YD a lumber yard. Pull MF only.'
+  - The footer carries the Irving TX corporate address on EVERY page — take city and state from the title, never the body.
+  - Some pages render the address client-side; those rows keep city and state and no street rather than borrowing the footer's.
+  status: active
+- id: sbca
+  name: SBCA component manufacturer directories
+  class: C
+  method: fetch
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: on_current_list
+  traps:
+  - 'Probed 2026-09-17: sbcindustry.com does not answer at all (curl exit 000, no HTTP status), not merely login-gated. Still the single biggest prize - 23 of the 122 never-ingested control rows are Wood Structural Components.'
+  - The truss segment is invisible to every regulator source; this is its only roster.
+  - MEMBER DIRECTORY IS LOGIN-GATED (probed 2026-09-17). /member-directory and every /member-directory/<slug> return 'Restricted
+    Page'; search engines have them indexed but an anonymous fetch does not.
+  - sitemap.xml is public and lists 3,536 URLs, of which exactly ONE is a member-directory page — the roster is genuinely
+    not published.
+  - 'The TMAT directory (/tmat-directory, 73 component manufacturers) IS public, but the detail pages carry only an <h1> name:
+    no address, no city, no state. Names alone would add T0 leads and lift recall without locating a plant.'
+  - Chapter pages (/chapter/<slug>, 28 of them incl. Colorado Truss Manufacturers, TMAT, Wisconsin Truss Manufacturers) are
+    public but list no members — chapter info and site nav only.
+  - 91 of the 241 ADL control rows are trusses and structural components. An SBCA membership is the single highest-value unlock
+    available to this project.
+  - 'Probed 2026-09-17 for a substitute truss-plant roster: MiTek (mii.com/locator, /find-a-fabricator) and Alpine ITW have no public fabricator locator — every path 404s to the site nav — and sfia.com and sbcindustry.com do not complete a TLS handshake through the proxy. The plate suppliers know every truss plant in the country and publish none of it; FPL (South) and EPA 321214 remain the truss coverage.'
+  status: blocked
+  url: https://www.sbcacomponents.com/member-directory
+- id: pci_certified
+  name: PCI certified plants (republished in Ascent magazine)
+  class: C
+  method: browser
+  needs_classify: false
+  ai_extraction: true
+  carries:
+  - plant_address
+  - product_types
+  - certification_category
+  status_basis: certified
+  traps:
+  - The Ascent magazine PDFs the entry used to point at are real but stop in 2016. The live grid is the directory.
+  - 'A plain fetch returns a REGIONAL DEFAULT of ~12 plants (CO/ID/MT/UT). The roster only appears after the form is submitted,
+    so this is a genuine browser job: one submit per state.'
+  - NOT every PCI plant is IC. The certification covers rail ties, box culverts, pipe and piles as readily as building precast.
+    Keep a plant only when its own 'Products Produced' names a building product.
+  - The state dropdown mixes in Alberta, Yukon, Western Australia and the Armed Forces regions, and 'WA' is the code for BOTH
+    Washington and Western Australia. Filter by LABEL, never by code.
+  - Result cells run name-then-address and many names carry a comma ('Basin Precast, Inc. 34956 Co Rd 126'), so the street
+    starts at its house number, not after the name.
+  - '2026-09-17 sweep: selecting a state and clicking submit does NOT filter the grid. 46 pages archived, 42 of them the empty
+    form at exactly 80,648 bytes; the 10 plants that came back are the page''s own default region (CO/ID/MT/UT). Correct option
+    values and a settle delay for the dropdown''s own postback both made no difference. The form wants more than the state:
+    try the query-type dropdown (''Search by PCI Certified Plant Location'') or a certification category first. parse() now
+    refuses a sweep where half the states come back empty.'
+  - 'Second and third attempts also failed: selecting the query type (''Search by PCI Certified Plant Location'') BEFORE the
+    state still returns 0 rows for TX, and the grid has no pager, no item count and no page-size control — the 12 default
+    rows are the whole result, not page one. Those 12 span CO, ID, MT and UT, four contiguous mountain states, which looks
+    like IP geolocation rather than a saved query. If so the state dropdown may be ANDing with a geographic default and can
+    never widen it. The remaining idea is the OTHER query type, ''Search Miles from Project Zip Code'': sweep ~50 ZIPs at
+    a large radius instead of 50 states. Not attempted — 3 control rows did not justify a fourth approach.'
+  status: queued_needs_work
+  url: https://www.pci.org/PCIMS/Directories/Certified_Plants_Search.aspx
+- id: mbi_members
+  name: MBI member directory
+  class: D
+  method: fetch
+  url: https://members.modular.org/{directory}/FindStartsWith?term={letter}
+  acquire: web-first
+  needs_classify: false
+  carries:
+  - street_address
+  - manufacturer_or_dealer_flag
+  status_basis: on_current_list
+  traps:
+  - 26-fetch A–Z sweep. Manufacturer/Direct field mechanically separates plants from dealers.
+  - Membership is international. 31 of 182 manufacturers are outside the US (ON, Varsinais-Suomi, ...); a two-letter state
+    is not proof of a US row, since Canadian provinces are two letters too.
+  - An empty letter is normal (Y has 0 members, X and Z have 1); only an empty DIRECTORY is a fault.
+  status: active
+- id: apa_mills
+  name: APA certified mills
+  class: D
+  method: browser
+  needs_classify: false
+  carries:
+  - mill_number
+  - plant_address
+  status_basis: certified
+  traps:
+  - 'Probed 2026-09-17, two attempts. /about-apa/apa-certified-manufacturers/ answers 200 with 96KB but holds no mill in the HTML, and rendering it with Chromium plus twelve scrolls gives 100KB with zero MemberMill links and one address - the roster comes from an XHR not yet identified. /MemberMill?MemberMillID=<n> 404s when fetched directly, so the list page probably sets something first. WORTH a third attempt from the XHR: APA certifies glulam, CLT and structural panel mills, which is 8 Mass Timber plus 14 wood-panel control rows, and it is the directory that carries Mercer Conway - a control row we do not hold.'
+  - Mill numbers are a stable per-facility join key — capture for cross-source dedupe.
+  status: queued
+- id: ias_ac472
+  name: IAS AC472 accredited metal building plants
+  class: D
+  method: browser
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: accredited
+  traps:
+  - 'Probed 2026-09-17, three approaches, stopping. /directory-of-accredited-companies/ 404s; the real page is /search-accredited-organizations-2/ whose form (action / method GET) offers service=13569 ''Metal Building Systems (AC472)''; a plain GET with that parameter returns 162KB of chrome and zero rows, and rendering it with Chromium and selecting the option returns 200KB with no table and no address. Results are fetched client-side from an endpoint not yet identified - try the wp-json routes or watch the XHR. NOT worth a fourth attempt on current evidence: IAS is the superset of MBMA membership, and MBMA''s 40 AC472 plants reached ~0 control rows, so the segment is already covered where it matters.'
+  - Accredits the plant, not the corporation (~215 numbers). Better instrument for NAICS 332311 than MBMA.
+  status: queued
+- id: aisc_certified
+  name: AISC certified companies
+  class: D
+  method: browser
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: certified
+  traps:
+  - 'Probed 2026-09-17: /certification/ and /certification/certified-company-search/ both return HTTP 403 to an ordinary fetch, so AISC blocks automation at the edge rather than gating on login. Would need a different route entirely.'
+  - 403s every plain fetch. Browser job.
+  status: queued
+- id: sipa
+  name: SIPA manufacturing members
+  class: C
+  method: fetch
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: on_current_list
+  status: active
+  url: https://www.sips.org/members/manufacturing
+  traps:
+  - Manufacturing is one of five member categories; read only /members/manufacturing.
+  - The street address exists only on the member profile, and only in the paragraph headed by that member's own name — the
+    same sidebar renders projects and sponsors.
+- id: superior_walls
+  name: Superior Walls licensed precast manufacturers
+  class: C
+  method: fetch
+  url: https://www.superiorwalls.com/wp-json/wp/v2/pages?per_page=100
+  needs_classify: false
+  carries:
+  - plant_address
+  status_basis: on_current_list
+  status: active
+  traps:
+  - The locator page renders client-side and serves nothing. The licensee list is in the WordPress REST API.
+  - The API's `content` is raw shortcode whose image URLs parse as street numbers — read the RENDERED page.
+  - Every page carries the New Holland PA corporate address as well as the plant's. Anchor on 'Contact Information' and cut
+    at 'CORPORATE OFFICES'.
+- id: woodworks_mass_timber
+  name: WoodWorks mass timber manufacturer & fabricator locations
+  class: C
+  method: fetch
+  url: https://www.woodworks.org/wp-content/uploads/mass_timber_manufacturer_locations.pdf
+  needs_classify: false
+  carries:
+  - plant_city
+  status_basis: on_current_list
+  status: active
+  traps:
+  - 'The PDF is a MAP, not a table: straight text extraction interleaves both panels word by word. Read only x0 < 160, the
+    left alphabetical list.'
+  - Town and state only — this roster prints no street addresses.
+  - About a third of the roster is Canadian; count and skip rather than coercing to a US state.
+  - '''Vancouver & Washougal, WA'' is ambiguous (the company is Vancouver, BC). Both rows are emitted verbatim rather than
+    guessed.'
+- id: mbma
+  name: MBMA members
+  class: D
+  method: browser
+  needs_classify: false
+  carries:
+  - company_address
+  status_basis: on_current_list
+  traps:
+  - 'Built 2026-09-17. The rendered directory is an infinite scroll (views-infinite-scroll-content-wrapper): the first render holds one page, so the fetcher scrolls until the member count stops growing and raises rather than publish a truncated roster. 40 US members, all with a street, 21 states; 4 non-US skipped (the state filter lists Alberta and Ontario beside the states). Archived as rendered HTML because CI has no Chromium - acquire is blob-only.'
+  - 'Probed 2026-09-17: mbma.com/membership/member-directory and /members both 404. The real page is /building-systems-directory, HTTP 200 but 35KB of shell with no member content in the HTML - JS-rendered, so it needs _browser.py, not http_get. /associate-directory is the other half. Worth doing: 10 control rows are Steel Structural Components.'
+  - Company-level, not plant-level.
+  acquire: blob-only
+  status: active
+- id: nfba
+  name: NFBA post-frame manufacturers
+  class: D
+  method: browser
+  needs_classify: false
+  carries:
+  - company_address
+  status_basis: on_current_list
+  traps:
+  - 'Probed 2026-09-17: /members and /find-a-builder both return HTTP 410 Gone. NFBA runs its directory on an AWS-hosted member area (/aws/NFBA/pt/sp/...) that answers 410 to an unauthenticated fetch. Post-frame overlaps the 11 LGS/steel panel control rows only partly; try MBMA first.'
+  - Unverified.
+  status: queued
+- id: state_sos
+  name: State Secretary of State business registries
+  class: lookup
+  method: lookup
+  needs_classify: false
+  carries:
+  - legal_name
+  - dba
+  - registered_agent
+  status: queued
+- id: fmcsa_safer
+  name: FMCSA SAFER
+  class: lookup
+  method: lookup
+  carries:
+  - physical_address
+  traps:
+  - Modular haulers self-register real physical addresses. Found Ghost Factory's corporate address when nothing else could.
+  status: queued
+- id: icc_es_ias
+  name: ICC-ES / IAS evaluation reports
+  class: lookup
+  method: lookup
+  carries:
+  - report_holder
+  - product
+  traps:
+  - Only home for components that escape state registration; can prove a negative.
+  status: queued
+- id: hud_plant_roster
+  name: HUD as a plant roster
+  class: excluded
+  reason: Confirmed dead end.
+  status: excluded
+- id: ohio_bbs
+  name: Ohio BBS
+  class: excluded
+  reason: Confirmed dead end. ohiowoodproducts.com is robots-blocked and (2026-09-09) redirects to a fake "MacOS Security
+    Center" page — treat as compromised, never fetch.
+  status: excluded
+- id: wa_lni
+  name: Washington L&I
+  class: excluded
+  reason: Confirmed dead end.
+  status: excluded
+- id: nm_rld
+  name: New Mexico RLD
+  class: excluded
+  reason: Confirmed dead end.
+  status: excluded
+- id: openstreetmap
+  name: OpenStreetMap / Overpass
+  class: excluded
+  reason: landuse=industrial marks zones, not firms; no industry classifier; endpoints failed.
+  status: excluded
+- id: sec_10k
+  name: SEC 10-K filings
+  class: excluded
+  reason: Plant lists are prose in Item 1, overlap with MHI/corporate pulls is severe. Useful only for dating existing records,
+    not discovery.
+  traps:
+  - 'Re-read 2026-09-17 for the enrichment pass, not discovery: Item 2 Properties in the 10-Ks of the listed IC manufacturers is a TABLE of plants with square footage and owned/leased — Cavco (CIK 278166, ~31 home plants), Skyline Champion (SKY, ~40), Legacy Housing (LEGH), Nobility Homes (NOBH), UFP Industries (UFPI, site-built components plants), Builders FirstSource (BLDR, truss/panel plants counted by state), Nucor (NUE, Vulcraft joist/deck plants), Gibraltar/Cornerstone. It is the only public source of sq_ft per plant for those groups and the only source of segment revenue, capacity utilisation and plant-count changes year on year. EDGAR full-text search (efts.sec.gov) and the per-CIK atom feed both answer 200 through the proxy with a contact User-Agent. Plan: fetch the latest 10-K per CIK, parse the Properties table, emit sq_ft/operating_status onto facilities already held via the golden survivorship rules — never a new facility.'
+  status: excluded
+- id: lead_addresses
+  name: Street addresses found for existing T0 leads (enrichment pass)
+  class: D
+  method: upload
+  needs_classify: false
+  acquire: blob-only
+  carries:
+  - plant_address
+  status_basis: none
+  traps:
+  - 'NOT a way to put the control list into the database. Every row must be a plant a real source already surfaced as a lead; the lookup adds a street, never a facility. Rows added because the control names them make recall self-fulfilling, and G4 refuses control provenance.'
+  - 'Each row is an assertion: source_url names where the street came from and evidence says what kind of page. A street off a search result without a source_url is not a row.'
+  status: active
+- id: ga_dca
+  name: Georgia DCA approved industrialized building manufacturers
+  class: A
+  method: download
+  acquire: blob-only
+  needs_classify: true
+  classify_all: true               # no NAICS on a registry row; every row goes to the classifier
+  carries:
+  - plant_address
+  - explicit_status
+  status_basis: on_current_list
+  url: https://dca.georgia.gov/document/fact-sheets/approved-industrialized-building-manufacturers/download
+  traps:
+  - 'A NATIONAL roster with STREETS: Georgia approves everyone who ships into the state, and every row carries Name, Phone, Address, Occupancy. 101 manufacturers across 20+ states; 58 carry a website. Found 2026-09-17 while enriching ProMod Manufacturing.'
+  - 'A browser print of a web table, and its text order is not its visual order. Read by COLUMN x-position from the header, never as text; a record is complete on its "(City, ST)" tag plus a City-ST-ZIP in the address column, judged with the email/phone/URL that share the column stripped first.'
+  - 'Occupancy is what the manufacturer is APPROVED TO SELL INTO GEORGIA, not what it makes: Trachte is approved for Storage and makes pre-engineered metal buildings. So occupancy rides in notes as evidence and the classifier decides — needs_classify: true. 28 of 101 are storage/hazardous/utility-only.'
+  - 'Two records occasionally print as one (a name tail wraps after its record is complete). Detected as two City-ST-ZIPs in one address column and HELD BACK rather than published wrong; the note counts them.'
+  - 'The second PDF, active-directory-51525, is a 2MB scanned image: zero extractable text. Archived beside the first; not parsed.'
+  status: active
+- id: mo_psc
+  name: Missouri PSC registered manufacturers (modular and HUD-code)
+  class: A
+  method: fetch
+  acquire: blob-only
+  needs_classify: false
+  carries:
+  - plant_address
+  - manufacturer_id
+  status_basis: on_current_list
+  url: https://psc.mo.gov/ManufacturedHousing/Manufacturer_Information
+  traps:
+  - 'TWO lists, both national and both with a street on every row: ACTIVE MOD (135 modular registrations) and ACTIVE HUD (67 HUD-code, NAICS 321991). 202 rows across TX 43, IN 28, AL 19, TN 14, GA 14, WI 10, MO 10. 17 give a PO Box, which correctly yields no street key.'
+  - 'The PDF filename carries a date and the previous URL 404s within months: discover the links from Manufacturer_Information, never pin them. Verified 2026-09-17: the 2-10-25 link recorded that morning was already gone; 6-2-26 and 9-15-25 are current.'
+  - 'Read by COLUMN from the header, with each boundary at the midpoint between the last word of one header group and the first of the next. Midpoints between first words put the Registration/Name boundary inside the name and truncated "ADVENTURE HOMES LLC" to "HOMES LLC"; header x0 alone shifted every column one to the left and the HUD list yielded nothing.'
+  status: active
+- id: sji_members
+  name: Steel Joist Institute member companies and plant locations
+  class: B
+  method: download
+  acquire: blob-only
+  needs_classify: false
+  carries:
+  - plant_city
+  status_basis: on_current_list
+  url: https://steeljoist.org/wp-content/uploads/2026/05/SJI_Member_Companies.pdf
+  traps:
+  - 'Found 2026-09-17 while looking for rosters behind the 10 never-ingested Steel Structural Components control rows. One PDF page, two columns, company name then one plant per line as "City, State[, Country]" — no streets. About 20 US plants: Vulcraft (Fort Payne AL, St. Joe IN, Norfolk NE, Chemung NY, Florence SC, Grapeland TX, Brigham City UT), Canam Steel (Buckeye AZ, Jacksonville FL, Point of Rocks MD, Washington MO), New Millennium (Hope AR, Lake City FL, Butler IN, Fallon NV, Salem VA), Valley Joist + Deck (Fort Payne AL, Fernley NV), Gooder-Henrichsen (Chicago Heights IL), Jodec (Groveland FL); the rest Mexico, Canada and Puerto Rico. Every one is a joist and deck plant, so needs_classify is false. Yield: T0 leads at city level that EPA FRS rows (Nucor, Canam) should corroborate into T2 — a corroboration source, not a recall one; none of the control rows in this segment is a joist maker. Parse by column x-position, the same way as ga_dca.'
+  - 'The URL carries the upload month and will move; discover it from https://steeljoist.org/sji-members/ ("Download a list of member companies") rather than pin it.'
+  status: queued
+- id: forest_products_locator
+  name: Secondary Forest Products Locator (forestproductslocator.org)
+  class: C
+  method: fetch
+  acquire: blob-only               # archive.mode is blob-only: fetch locally, put under ic-sources/forest_products_locator/<date>/, then run
+  needs_classify: true
+  classify_all: true               # a listing card carries no NAICS; the kept rows all go to the classifier
+  carries:
+  - plant_address
+  status_basis: none
+  url: https://secondary.forestproductslocator.org/
+  traps:
+  - 'Found 2026-09-17 while enriching Specialized Structures (Willacoochee GA). A manufacturer locator for secondary wood products with per-company pages; covers truss, panel and modular makers in the wood segments the control is short of, mixed with cabinet and pallet shops, so it needs the classifier. Not yet fetched.'
+  - 'Probed 2026-09-17. The free-text search (SearchableText=truss) returns a server error page, and /manufacturers with no state returns zero cards — the ONLY working scope is getState=XX, one ~1 MB page per state. Georgia alone is 1,273 cards (the sitemap''s 3,782 undercounts the site), every card carries a street address and City, ST ZIP on the listing itself, and the listing has NO product tags — Products: lives on the per-company page only. Georgia by name alone: ~20 truss / building-components plants (Quality-Bilt Trusses, Trussway Manufacturing, Georgia Mountain Components, Gilmer Building Components, Mid-South Truss ...), so the run is the Southern states one page each, cards kept when the NAME carries truss|components|building systems|panel|log home|modular|timber frame|post frame|prefab, then classify_all. Sending all ~1,300 cards a state to the classifier is the wrong shape: 95% are cabinets, pallets and tree services. Operator: SREF (Southern Regional Extension Forestry) — expect coverage of the 13 southern states, not national.'
+  - 'Built 2026-09-17: one page per SREF state (13), cards kept when the NAME says what they make (truss, components, building systems, panel, log home, modular, timber/post frame, prefab, SIP, structural, framing, manufactured/mobile/tiny home, cabin, shed, barn), then classify_all. Georgia dry run: 35 kept of 1,067 cards, 20+ truss plants with streets, North Georgia Truss Co. (control row) among them; the classifier drops the art-framing and marine-panel noise the name filter lets through. Declared limit: a truss plant whose name does not say so (R. C. Peeples) is not found here. Florida (11 kept of 364) and Virginia (18 of 560) hold NONE of their missing control rows, so this is a segment roster for the comprehensive list, not a control-recall lever.'
+  - 'Alabama, Texas and Arkansas list PRIMARY mills (pulp, paper, sawmills) on the same page under /mill-list/ links, with ", AL" and no street; the parser reads both link shapes and the keep filter leaves the mills out. Full snapshot 2026-09-17: 5,454 cards across the 13 states, 135 kept (GA 36/1272, KY 24/802, NC 21/809, VA 18/562, SC 17/806, FL 13/422, TX 4, AR 1, TN 1; AL, MS, OK, LA none). Run 35276154465 halted at Layer 1 because the snapshot was not in the blob yet — this source is blob-only like every other.'
+  - 'The site answers a valid state with HTTP 404 "Resource not found" at random (FL, VA, NC each once, full page on the next request). The fetcher retries a 404 four times and leaves a state that stays down out of the snapshot; parse() then says PARTIAL.'
+  status: active

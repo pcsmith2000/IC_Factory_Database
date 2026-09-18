@@ -4,7 +4,7 @@ Registry traps: 5.3M facilities, API joins return 500 — use the bulk file; NAI
 some records are permits, not plants; OSHA-OIS programme rows are site visits (the strongest
 address attestation) — flagged in `notes` as "OSHA-OIS" so reconcile/golden treat them as such.
 
-Bulk file: https://ofmext.epa.gov/FLA/www3/state_files/national_combined.zip (~730 MB), containing
+Bulk file: https://ordsext.epa.gov/FLA/www3/state_files/national_combined.zip (1.27 GB as of 2026-09-08), containing
 NATIONAL_FACILITY_FILE.CSV, NATIONAL_NAICS_FILE.CSV, NATIONAL_PROGRAM_FILE.CSV (+ others and the
 documentation). The zip is streamed from the archive; nothing is fully loaded into memory:
   pass 1  NAICS file  → registry_ids whose NAICS is in a core code or a keyword×NAICS family prefix
@@ -24,7 +24,7 @@ import csv, io, zipfile
 from pathlib import Path
 from ._common import http_get, contract_row, LayoutChanged
 
-URL = "https://ofmext.epa.gov/FLA/www3/state_files/national_combined.zip"
+URL = "https://ordsext.epa.gov/FLA/www3/state_files/national_combined.zip"
 FAMILIES = {"3219", "3212", "3323", "2362", "2381", "4233", "3273", "3272", "3211"}  # classify.KEYWORD_NAICS values
 
 
