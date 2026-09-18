@@ -1026,3 +1026,24 @@ def test_the_deadline_leaves_real_slack_under_the_job_timeout():
     stage_yml = pathlib.Path(".github/workflows/enrich-stage.yml").read_text()
     timeout_s = int(re.search(r"timeout-minutes: (\d+)", stage_yml).group(1)) * 60
     assert deadline < timeout_s - 120, f"deadline {deadline}s leaves under 2 min of {timeout_s}s"
+
+
+def test_geocode_reports_what_a_run_would_cost():
+    """The account is pay-as-you-go now. 2,500 lookups a day are free and the rest bills at $1/1000,
+    and the 403 that used to stop a run at the boundary no longer comes — the overage is silent. A
+    run that cannot say what it would cost is the wrong shape for that."""
+    from pipeline.enrich import geocode as gc
+
+    def fake_post(queries, key):
+        return [{"query": q, "response": {"results": [
+            {"location": {"lat": 1.0, "lng": 2.0}, "accuracy": 0.9,
+             "accuracy_type": "rooftop", "source": "City"}]}} for q in queries], ""
+
+    orig, gc._post = gc._post, fake_post
+    try:
+        rep = gc.run([{"facility_id": f"IC-{i}", "address": f"{i} Main St", "city": "X",
+                       "state": "TX", "zip": ""} for i in range(250)], key="k")
+    finally:
+        gc._post = orig
+    assert rep["stored"] == 250
+    assert rep["billable_if_allowance_spent_usd"] == 0.25, rep["billable_if_allowance_spent_usd"]

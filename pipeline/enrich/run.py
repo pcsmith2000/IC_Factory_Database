@@ -171,7 +171,10 @@ def main(argv=None) -> int:
 
     if args.stage == "geocode":
         from . import geocode
-        todo = need_coord[:args.geocode_limit]     # the free tier is shared; never spend it all
+        # The spend dial. 2,500 lookups a day are free and the rest bills at $1/1000, so a ceiling
+        # per run is only half the story — a loop of nine runs a day at 2,000 each would bill for
+        # 15,500 of them. Set this against the day's runs, not against one.
+        todo = need_coord[:args.geocode_limit]
         if args.dry_run:
             _emit(args.out, "geocode", {"planned": len(todo), "called": 0},
                   [("would look up", len(todo)), ("calls made", 0)])
@@ -184,7 +187,9 @@ def main(argv=None) -> int:
                  ("recorded unplaceable (not retried next run)", rep["quality_flags_recorded"]),
                  ("rooftop %", rep["rooftop_pct"]),
                  ("not stored (non-rooftop)", rep["requested"] - rep["stored"]),
-                 ("accuracy mix", json.dumps(rep["accuracy_type"]))]
+                 ("accuracy mix", json.dumps(rep["accuracy_type"])),
+               ("billable if the day's 2,500 free are already spent",
+                f"${rep.get('billable_if_allowance_spent_usd', 0):.3f}")]
         if rep.get("quota_exhausted"):
             # Loud, and green. The stage did what it could and the rest is deferred, not lost —
             # but a run that says nothing would leave the ceiling invisible until someone wondered

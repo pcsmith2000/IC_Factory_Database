@@ -22,7 +22,12 @@ import json, os, sys, urllib.error, urllib.request
 API = "https://api.geocod.io/v2/geocode"
 BATCH = 1000                       # the endpoint allows 10,000; smaller chunks fail cheaply
 STORABLE = {"rooftop"}             # everything else is a flag, never a coordinate
-FREE_TIER_PER_DAY = 2500           # shared across everyone using this key
+# 2,500 lookups a day are free on a pay-as-you-go account and do not roll over; past that it bills
+# at $1 per 1,000. The account is no longer free-tier-only, and that removed a guard rather than a
+# limit: the 403 that used to stop a run at 2,500 now never comes, and the overage is silent. So
+# this number is a budget line, not a wall — see --geocode-limit, which is the dial that matters.
+FREE_TIER_PER_DAY = 2500
+COST_PER_1000_USD = 1.00
 
 
 class GeocodioError(RuntimeError):
@@ -77,8 +82,8 @@ def run(rows: list[dict], key: str | None = None) -> dict:
     if not todo:
         return {"requested": 0, "assertions": [], "accuracy_type": {}, "flags": []}
     if len(todo) > FREE_TIER_PER_DAY:
-        print(f"  note: {len(todo)} lookups exceeds the {FREE_TIER_PER_DAY}/day free tier; "
-              f"use --sample or expect to be billed", file=sys.stderr)
+        print(f"  note: {len(todo)} lookups exceeds the {FREE_TIER_PER_DAY}/day free allowance; "
+              f"the excess bills at ${COST_PER_1000_USD:.2f}/1000", file=sys.stderr)
 
     results, stopped = _post([one_line(r) for r in todo], key)
     done, deferred = todo[:len(results)], todo[len(results):]
@@ -116,4 +121,8 @@ def run(rows: list[dict], key: str | None = None) -> dict:
             "stored": len(coords), "quality_flags_recorded": len(asserts) - len(coords),
             "rooftop_pct": round(100 * mix.get("rooftop", 0) / max(1, len(done)), 1),
             "selected": len(todo), "deferred": len(deferred),
-            "quota_exhausted": bool(stopped), "quota_message": stopped}
+            "quota_exhausted": bool(stopped), "quota_message": stopped,
+            # What this run would cost if the day's free allowance were already spent. It is an
+            # upper bound per run, not a bill: the allowance is daily and shared across every run,
+            # so only the sum across a day says what was actually charged.
+            "billable_if_allowance_spent_usd": round(len(done) * COST_PER_1000_USD / 1000, 3)}

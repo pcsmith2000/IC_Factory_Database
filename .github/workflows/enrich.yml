@@ -42,6 +42,9 @@ on:
       search:
         description: "search provider for the AI stage: parallel | perplexity | exa | tako | native"
         default: ""
+      geocode_limit:
+        description: "max Geocodio lookups this run (2500/day are free, the rest bills at $1/1000)"
+        default: "2000"
       sample:
         description: "work on a seeded stratified subset of this size (blank = all)"
         default: ""
@@ -150,7 +153,9 @@ jobs:
       branch_id: ${{ needs.branch.outputs.branch_id }}
       run_key: ${{ github.run_id }}
       enabled: ${{ contains(inputs.stages, 'geocode') || github.event_name == 'workflow_run' }}
-      args: ${{ needs.branch.outputs.common_args }}
+      args: >-
+        ${{ needs.branch.outputs.common_args }}
+        --geocode-limit ${{ inputs.geocode_limit || 2000 }}
 
   footprint:
     needs: [branch, geocode]
