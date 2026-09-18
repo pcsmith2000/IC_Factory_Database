@@ -62,3 +62,12 @@ def test_a_name_the_registry_calls_not_a_manufacturer_is_dropped(tmp_path):
                        'adl_july,Real Plant,Troy,TX,X,,,,1000,,SF,,,,,,,,,,,,\n', encoding="utf-8")
     rows = _adl_list.read([p], SRC, drop_names={"modutize"})
     assert [r["name_verbatim"] for r in rows] == ["Real Plant"]
+
+
+def test_source_url_is_never_blank_even_when_the_registry_names_none(tmp_path):
+    """Run 35406498976 halted at Layer 2 with all 242 rows rejected: source_url is a required
+    column and neither registry entry had a url. An internal document still has a place it lives."""
+    p = tmp_path / "adl_july_2026-09-18.csv"
+    p.write_text(HDR + 'adl_july,Acme,Troy,TX,X,,,,1000,,SF,,,,,,,,,,,,\n', encoding="utf-8")
+    r = _adl_list.read([p], {"id": "adl_july", "status_basis": "none"})[0]
+    assert r["source_url"] == "blob://ic-sources/adl_july/adl_july_2026-09-18.csv"

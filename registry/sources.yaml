@@ -277,6 +277,7 @@ sources:
   - plant_city
   - capability
   - capacity
+  url: blob://ic-sources/adl_4ward/   # internal ADL document: 4Ward component-manufacturer study, uploaded by hand
   status_basis: none
   traps:
   - "ADL's OWN list, which is why the control test is retired: 96 of 96 rows share a normalised name with a control row. Measuring recall against a list you also ingest measures nothing (registry/config.yaml -> control)."
@@ -295,6 +296,7 @@ sources:
   - capability
   - capacity
   - phone
+  url: blob://ic-sources/adl_july/   # internal ADL document: July plant list, uploaded by hand
   status_basis: none
   traps:
   - "ADL's OWN list: 101 of 148 rows share a normalised name with a control row. Retired the control test (registry/config.yaml -> control)."

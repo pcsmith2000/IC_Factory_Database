@@ -70,7 +70,11 @@ def read(paths: list[Path], source: dict, *, drop_names: set[str] = frozenset())
                 source, len(out) + 1, name=name,
                 address="",                                    # the file's "Address" is a city
                 city=_txt(r.get("address")).rstrip(","), state=st,
-                source_url=source.get("url", ""), source_document=path.name,
+                # Falls back to the archived object when the registry names no url: source_url is
+                # a required column, and run 35406498976 halted at Layer 2 with all 242 rows blank
+                # because these entries had none. An internal document still has a place it lives.
+                source_url=source.get("url") or f"blob://ic-sources/{source['id']}/{path.name}",
+                source_document=path.name,
                 source_identifier=f"{name}|{_txt(r.get('address'))}|{st}",
                 notes=_txt(r.get("classification_notes"))[:400],
                 phone=_txt(r.get("phone")), website=_txt(r.get("website")),
