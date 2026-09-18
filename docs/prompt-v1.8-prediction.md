@@ -140,7 +140,18 @@ it. No further prompt edits.
 | 3 | 28 | HALTED at G5 — 6 of 30 IC seeds missed (run 27: 2), no release, no recall | — | — |
 | 3 (re-run) | 29 | HALTED at Layer 1 — forest_products_locator had no blob snapshot (archive.mode blob-only) | — | — |
 | 3 | 30 | 42.3% (101 of 239) · located 40.2% · sealed 17/38 | +1.3 | 720 (+15%) |
-| 4 | 31 | pending — matcher tie-break (same-state, located over lead), 2 more lead streets, MBMA websites | | |
+| 4 | 35401613329 | **53.6%** (128 of 239) · located 51.9% · sealed 60.5% | **+10.9** | 866 (+21%) |
+
+Pass 4 is the largest single gain of the loop and it came from a source, not a rule: SBCA's
+component-manufacturer roster, 869 truss and wall-panel plants that no regulator lists. The sealed
+quarter rose FURTHER than the dev set — 44.7% to 60.5% against 42.7% to 53.6% — which is the check
+that this is coverage and not fitting: the sealed rows were never read while any of it was built.
+
+Cumulative over four passes: 38.59% -> 53.6%, +15 points, corroboration 527 -> 866 (+64%). The
+stop rule asked for 90% or four passes yielding under 3%; four passes have yielded 15, so the
+loop's own test says keep going. What changed is where the remaining work is: 102 of the 111
+misses are rows NO source holds, against a 57.3% ceiling on what we do hold. Prompt and matcher
+work is spent; only new rosters move it now, and SBCA is the proof.
 
 Rule: stop at 90% fuzzy match, or when four additional passes together yield under 3% — unless
 corroboration is still improving significantly, in which case continue until it stops. Three passes
