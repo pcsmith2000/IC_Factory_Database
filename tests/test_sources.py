@@ -1,6 +1,7 @@
 """Parser tests on synthetic fixtures. The live endpoints are exercised by
 `python -m pipeline.sources.check <id>` on a machine with network access; these tests pin the
 parsing contract so a layout change shows up as a failing test, not a plausible partial pull."""
+import pytest
 import csv, io, json, zipfile
 from pathlib import Path
 import openpyxl
@@ -441,6 +442,33 @@ def test_a_transcribed_csv_wins_for_its_own_company_only(tmp_path):
     assert seen.get("company") == "Banker Steel"
 
 
+# The two tests below assert on the agent sandbox's browser stack — the proxy CA at
+# /root/.ccr/agent-proxy-ca.crt and the Chromium preinstalled under PLAYWRIGHT_BROWSERS_PATH.
+# Both are real and worth pinning where they exist; neither exists on a GitHub runner, where they
+# failed as PermissionError and "no Chromium found" and had CI red on every branch that carried
+# them. Skipping on absence keeps the assertion where it means something instead of deleting it.
+def _ca_readable() -> bool:
+    from pipeline.sources._browser import CA_FILES
+    import pathlib as _p
+    for f in CA_FILES:
+        try:
+            if _p.Path(f).read_bytes():
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def _chromium_present() -> bool:
+    from pipeline.sources import _browser
+    try:
+        return bool(_browser._chromium_path())
+    except OSError:
+        return False
+
+
+@pytest.mark.skipif(not _ca_readable(),
+                    reason="no readable agent-proxy CA here; this pins sandbox browser TLS")
 def test_the_browser_pins_the_proxy_ca_by_spki_rather_than_disabling_tls():
     """Chromium reads the NSS store, not the CA env vars, and this image has no certutil.
 
@@ -457,11 +485,21 @@ def test_the_browser_pins_the_proxy_ca_by_spki_rather_than_disabling_tls():
 
 
 def test_the_browser_never_asks_playwright_to_download_a_second_chromium():
-    """The image ships Chromium under PLAYWRIGHT_BROWSERS_PATH and the docs say not to fetch one."""
+    """The image ships Chromium under PLAYWRIGHT_BROWSERS_PATH and the docs say not to fetch one.
+
+    The source rule holds anywhere, so it is asserted anywhere; finding the binary only makes
+    sense where the image that ships it is.
+    """
     from pipeline.sources import _browser
     src = (__import__("pathlib").Path(_browser.__file__)).read_text()
     assert "playwright install" not in src.replace("do NOT run `playwright install`", "")
-    assert _browser._chromium_path(), "no Chromium found under /opt/pw-browsers"
+
+
+@pytest.mark.skipif(not _chromium_present(),
+                    reason="no preinstalled Chromium here; this pins the sandbox image's browser")
+def test_the_preinstalled_chromium_is_found_where_the_image_puts_it():
+    from pipeline.sources import _browser
+    assert _browser._chromium_path(), "no Chromium found under PLAYWRIGHT_BROWSERS_PATH"
 
 
 def test_pci_keeps_building_precast_and_skips_infrastructure():
