@@ -275,6 +275,37 @@ key's budget ran out:
 The 15% that could not be read are sites that refuse a datacenter IP whatever User-Agent it sends,
 so that bucket is a floor rather than a bug to fix.
 
+### What the residual backlog is made of
+
+Those figures come from an early pass, when the easy facilities were still in the queue. Run 36,
+141 attempts deep into the hard tail, measured a different shape:
+
+    19  13.5%  located with a citation
+    105  74%   the model found nothing it could cite
+     12   9%   the cited page could not be read
+      5   4%   not a street address, or the page did not contain it
+
+Three quarters of the residue is reach: the open web does not publish an address for these plants
+at all. That is not a prompt or a model problem, and it sets a floor on what stage 9 can ever
+return.
+
+The same run said something sharper about the value of the addresses it does still find. All 18
+that reached stage 10 geocoded to *nothing* — 0 rooftop, the mix landing on `place` (8) and
+`street_center` (6). Earlier passes converted addresses to rooftop coordinates at a high rate. So
+the residual backlog is not only harder to find; what is found for it tends to be a town rather
+than a street, which stage 10 cannot place and stage 11 therefore cannot measure. The marginal
+facility is worth materially less than the average one already in the database.
+
+### The ceiling counts calls, not facilities
+
+`--limit` bounds the model calls a run may make, and it is enforced inside stage 9, after the
+ledger is consulted. The first version bounded the *selection* instead — `need_addr[:limit]` — and
+that quietly stalls once a ledger exists: a facility the ledger has already answered still consumed
+a slot, so after one pass had cached its first `limit` rows, the next pass spent its entire budget
+re-reading them and attempted nothing new. Every run would have looked full and healthy while the
+backlog stopped moving. The stage now reads the whole eligible list, serves what it can from the
+ledger for free, and spends its calls on rows nobody has asked about yet.
+
 ### Which model, and how that gets decided
 
 An earlier version of this document said Anthropic was not a free choice, because the native

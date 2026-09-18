@@ -369,7 +369,7 @@ def _reason(why: str) -> str:
 def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
         min_confidence: float = 0.7, verify_page: bool = True,
         search: str = DEFAULT_SEARCH, deadline_s: float | None = None,
-        checkpoint=None, checkpoint_every: int = 10, db=None) -> dict:
+        checkpoint=None, checkpoint_every: int = 10, db=None, limit: int | None = None) -> dict:
     """rows: facilities with no address. Returns assertions plus a report.
 
     `search` picks the path: "native" is Anthropic's own tool over the Messages API and needs an
@@ -398,8 +398,15 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
                 "to skip the AI stage entirely")
         call = lambda row: locate_one_gateway(row, model, key, search)
     provider = f"{model}+{search}"
+    cached = {}
     if db is not None:
         cache.ensure(db)
+        # Read the whole ledger for this backlog up front. One query per 200 rows instead of two
+        # round trips each is what makes it affordable to hand this stage every eligible facility
+        # rather than a pre-truncated slice — see the ceiling below.
+        cached = cache.get_many(
+            db, [cache.locate_key(r.get("name", ""), r.get("city", ""), r.get("state", ""))
+                 for r in rows], provider=provider)
     started = time.monotonic()
     asserts, rejected = [], []
     from_cache = 0
@@ -414,12 +421,20 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
             stopped = (f"stage deadline of {deadline_s:.0f}s reached after {attempted} facilities; "
                        f"the rest are deferred to the next run")
             break
+        # The ceiling counts model calls, not facilities considered. Applying it to the selection
+        # instead — rows[:limit] — made a cached answer cost a slot: once a pass had cached its
+        # first `limit` rows, the next pass spent its whole budget re-reading them and attempted
+        # nothing new. The backlog would have stopped moving while every run still looked busy.
+        if limit is not None and attempted >= limit:
+            stopped = (f"ceiling of {limit} model calls reached; "
+                       f"the rest are deferred to the next run")
+            break
         # The ledger first. A located address is a function of the company and the city, so the
         # same question under a changed facility id is the same question. A negative is only reused
         # when the same model and search produced it — see cache.get — so moving to a stronger model
         # re-asks what the cheaper one could not answer instead of inheriting its failures.
         ck = cache.locate_key(row.get("name", ""), row.get("city", ""), row.get("state", ""))
-        hit = cache.get(db, ck, provider=provider) if db is not None else None
+        hit = cached.get(ck)
         if hit is not None:
             from_cache += 1
             if hit["found"]:
@@ -501,7 +516,9 @@ def _report(rows, attempted, asserts, rejected, usage, model, search, stopped,
             "located": len(asserts), "rejected": list(rejected), "model": model, "search": search,
             "from_cache": from_cache,
             "deferred": len(rows) - attempted,
-            "budget_exhausted": bool(stopped), "budget_message": stopped[:300],
+            # Named for the fact, not for one of its causes: a deadline, the run ceiling and a
+            # spent key all stop the loop, and only stop_reason says which.
+            "stopped_early": bool(stopped), "stop_reason": stopped[:300],
             "rejected_by_reason": dict(collections.Counter(_reason(r["why"]) for r in rejected)),
             "yield_pct": round(100 * len(asserts) / max(1, attempted), 1),
             "usage": usage,

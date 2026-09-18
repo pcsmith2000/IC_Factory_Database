@@ -81,6 +81,37 @@ def get(db, cache_key: str, provider: str | None = None) -> dict | None:
             "result": json.loads(row["result"]) if row["result"] else None}
 
 
+def get_many(db, keys, provider: str | None = None, chunk: int = 200) -> dict:
+    """Every cached answer for `keys`, keyed by cache_key, in one query per chunk.
+
+    get() costs two round trips per key, which is fine for a handful and not for a backlog: asking
+    the ledger about 960 facilities one at a time takes longer than the model calls it exists to
+    avoid. The provider rule is the same one get() applies — a negative is only reused by the
+    provider that produced it, so a better model still gets to try what a cheaper one could not
+    answer.
+    """
+    keys = list(dict.fromkeys(k for k in keys if k))
+    out, served = {}, []
+    for i in range(0, len(keys), chunk):
+        part = keys[i:i + chunk]
+        holes = ",".join(f"${n}" for n in range(1, len(part) + 1))
+        rows = db.query(f"SELECT cache_key, result, found, provider FROM cache_lookup "
+                        f"WHERE cache_key IN ({holes})", tuple(part))
+        for row in rows:
+            negative = not int(row["found"] or 0)
+            if negative and provider is not None and row["provider"] != provider:
+                continue
+            out[row["cache_key"]] = {"found": not negative, "provider": row["provider"],
+                                     "result": json.loads(row["result"]) if row["result"] else None}
+            served.append(row["cache_key"])
+    for i in range(0, len(served), chunk):
+        part = served[i:i + chunk]
+        holes = ",".join(f"${n}" for n in range(1, len(part) + 1))
+        db.query(f"UPDATE cache_lookup SET hits = hits + 1 WHERE cache_key IN ({holes})",
+                 tuple(part))
+    return out
+
+
 PUT = """
 INSERT INTO cache_lookup (cache_key, kind, input, result, found, provider, fetched_at, hits)
 VALUES ($1,$2,$3,$4,$5,$6,$7,0)

@@ -564,12 +564,12 @@ def test_a_spent_gateway_budget_stops_the_stage_instead_of_rejecting_every_facil
     rows = [{"facility_id": f"F{i}", "name": "Acme", "city": "X", "state": "TX"} for i in range(10)]
     rep = locate.run(rows, client=object(), model="m", verify_page=False)
 
-    assert rep["budget_exhausted"] is True
+    assert rep["stopped_early"] is True
     assert rep["attempted"] == 2, "the facility that raised never reached the model either"
     assert rep["deferred"] == 8
     assert rep["located"] == 2 and rep["rejected"] == []
     assert seen["n"] == 3, "the stage must stop at the first spent-key error, not grind on"
-    assert "budget exceeded" in rep["budget_message"]
+    assert "budget exceeded" in rep["stop_reason"]
 
 
 def test_an_ordinary_facility_failure_still_only_costs_that_facility(monkeypatch):
@@ -587,7 +587,7 @@ def test_an_ordinary_facility_failure_still_only_costs_that_facility(monkeypatch
     monkeypatch.setattr(locate, "locate_one", fake_locate_one)
     rows = [{"facility_id": f"F{i}", "name": "Acme", "city": "X", "state": "TX"} for i in range(3)]
     rep = locate.run(rows, client=object(), model="m", verify_page=False)
-    assert rep["budget_exhausted"] is False
+    assert rep["stopped_early"] is False
     assert rep["attempted"] == 3 and rep["deferred"] == 0
     assert rep["located"] == 2 and len(rep["rejected"]) == 1
 
@@ -619,7 +619,7 @@ def test_a_model_id_the_gateway_will_not_serve_stops_the_stage(monkeypatch):
                         lambda row, client, model: (_ for _ in ()).throw(_NotFound()))
     rows = [{"facility_id": f"F{i}", "name": "Acme", "city": "X", "state": "TX"} for i in range(5)]
     rep = locate.run(rows, client=object(), model="anthropic/claude-haiku-9", verify_page=False)
-    assert rep["budget_exhausted"] is True and rep["deferred"] == 5
+    assert rep["stopped_early"] is True and rep["deferred"] == 5
     assert rep["rejected"] == [], "a bad model id must not be recorded as five rejected facilities"
 
 
@@ -980,7 +980,7 @@ def test_locate_stops_at_its_deadline_and_defers_the_rest(monkeypatch):
     # runs to completion. One facility of overshoot against 600s of headroom is not worth chasing.
     assert rep["attempted"] == 11, f"attempted {rep['attempted']}"
     assert rep["deferred"] == 89
-    assert rep["budget_exhausted"] is True and "deadline" in rep["budget_message"]
+    assert rep["stopped_early"] is True and "deadline" in rep["stop_reason"]
 
 
 def test_locate_checkpoints_so_a_kill_still_keeps_what_it_found(monkeypatch):
@@ -1061,9 +1061,12 @@ class _Ledger:
         if s.startswith("SELECT result, found, provider"):
             r = self.rows.get(params[0])
             return [r] if r else []
+        if s.startswith("SELECT cache_key, result, found, provider"):
+            return [self.rows[k] for k in params if k in self.rows]
         if s.startswith("UPDATE cache_lookup SET hits"):
-            if params[0] in self.rows:
-                self.rows[params[0]]["hits"] += 1
+            for k in params:                       # one key, or a whole chunk of them
+                if k in self.rows:
+                    self.rows[k]["hits"] += 1
             return []
         if s.startswith("INSERT INTO cache_lookup"):
             self.rows[params[0]] = {"cache_key": params[0], "kind": params[1], "input": params[2],
@@ -1165,3 +1168,79 @@ def test_the_ledger_survives_the_database(tmp_path):
     n = cache.restore(fresh, json.loads((tmp_path / "ledger.json").read_text()))
     assert n == 1
     assert cache.get(fresh, cache.geocode_key("1 MAIN ST,  dallas  tx"))["result"]["lat"] == 1.0
+
+
+def test_a_cached_facility_does_not_spend_a_slot_from_the_run_ceiling(monkeypatch):
+    """The regression that would have quietly stalled the backlog.
+
+    The ceiling used to be applied to the selection — need_addr[:limit] — so a facility the ledger
+    had already answered still consumed one of the run's slots. Once a pass had cached its first
+    `limit` rows, the next pass re-read exactly those rows, attempted nothing new, and reported a
+    full, healthy-looking run. The ceiling has to count model calls.
+    """
+    from pipeline.enrich import locate, cache
+
+    db = _Ledger()
+    provider = "m+native"
+    # the first 5 of 8 are already answered — and answered badly, which is the cheap case to cache
+    for i in range(5):
+        cache.put(db, cache.locate_key("Acme", f"C{i}", "TX"), "locate", "Acme",
+                  {"why": "nothing citable"}, False, provider)
+
+    seen = []
+
+    def fake_locate_one(row, client, model):
+        seen.append(row["facility_id"])
+        addr = f"{100 + len(seen)} Plant Rd"
+        return {"answer": {"found": True, "address": addr, "confidence": 0.9,
+                           "source_url": "https://x.example/p", "quote": addr},
+                "visited": {"https://x.example/p"}}
+
+    monkeypatch.setattr(locate, "locate_one", fake_locate_one)
+    monkeypatch.setattr(locate, "_client", lambda m: (object(), "m", "native"))
+    rows = [{"facility_id": f"F{i}", "name": "Acme", "city": f"C{i}", "state": "TX"}
+            for i in range(8)]
+    rep = locate.run(rows, client=object(), model="m", verify_page=False, db=db, limit=3)
+
+    assert rep["from_cache"] == 5, "the five cached rows must be served without a model call"
+    assert rep["attempted"] == 3, "the ceiling counts model calls, not facilities considered"
+    assert seen == ["F5", "F6", "F7"], "and it spends them on the rows nobody has asked about yet"
+    assert rep["located"] == 3
+
+
+def test_the_run_ceiling_reports_itself_and_is_not_called_a_spent_budget(monkeypatch):
+    """Three different things stop stage 9 and they call for three different responses: wait,
+    raise the ceiling, or top the key up. Run 36 reported 'budget exhausted' for a run the
+    deadline had stopped, so the report must name the cause it actually hit."""
+    from pipeline.enrich import locate
+
+    monkeypatch.setattr(locate, "locate_one", lambda row, client, model: {
+        "answer": {"found": False, "reason": "nothing"}, "visited": set()})
+    rows = [{"facility_id": f"F{i}", "name": "Acme", "city": f"C{i}", "state": "TX"}
+            for i in range(10)]
+    rep = locate.run(rows, client=object(), model="m", verify_page=False, limit=4)
+    assert rep["stopped_early"] is True
+    assert "ceiling" in rep["stop_reason"] and "budget" not in rep["stop_reason"]
+    assert rep["attempted"] == 4 and rep["deferred"] == 6
+
+
+def test_reading_the_ledger_in_bulk_gives_the_same_answers_as_one_at_a_time():
+    """get_many exists only to save round trips, so it must not quietly relax the provider rule
+    that keeps a cache from becoming a ceiling."""
+    from pipeline.enrich import cache
+
+    db = _Ledger()
+    miss = cache.locate_key("Acme", "Elkhart", "IN")
+    hit = cache.locate_key("Beta", "Goshen", "IN")
+    cache.put(db, miss, "locate", "Acme", {"why": "nothing citable"}, False, "qwen+tako")
+    cache.put(db, hit, "locate", "Beta", {"address": "1 Plant Rd"}, True, "qwen+tako")
+
+    same = cache.get_many(db, [miss, hit], provider="qwen+tako")
+    assert set(same) == {miss, hit}
+    assert same[hit]["result"]["address"] == "1 Plant Rd"
+
+    better = cache.get_many(db, [miss, hit], provider="opus+tako")
+    assert miss not in better, "a stronger model must still get to try what qwen could not answer"
+    assert better[hit]["result"]["address"] == "1 Plant Rd", "positives are reusable by anyone"
+
+    assert cache.get_many(db, []) == {}

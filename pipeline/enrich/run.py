@@ -127,10 +127,18 @@ def main(argv=None) -> int:
 
     if args.stage == "locate":
         from . import locate
-        todo = need_addr[:args.limit]                      # the bound, applied before any call
+        # Every eligible facility, not a slice: the ceiling is enforced on model calls inside
+        # locate.run, so a facility the ledger already answered can be skipped without spending
+        # one. Truncating here instead let cached rows eat the budget and stalled the backlog.
+        todo = need_addr
         if args.dry_run:
-            _emit(args.out, "locate", {"planned": len(todo), "ceiling": args.limit, "called": 0},
-                  [("would attempt", len(todo)), ("ceiling", args.limit), ("calls made", 0)])
+            # An upper bound, not a count: how many of these the ledger can answer for free is only
+            # known once it is read, so the real number of calls is at most the ceiling.
+            planned = min(len(todo), args.limit)
+            _emit(args.out, "locate", {"planned": planned, "eligible": len(todo),
+                                       "ceiling": args.limit, "called": 0},
+                  [("eligible", len(todo)), ("would attempt at most", planned),
+                   ("ceiling (model calls)", args.limit), ("calls made", 0)])
             return 0
         kw = {}
         if args.model:
@@ -150,10 +158,11 @@ def main(argv=None) -> int:
             (args.out / "locate.json").write_text(json.dumps(
                 {k: v for k, v in rep.items() if k != "assertions"}, indent=1, default=str))
 
-        rep = locate.run(todo, deadline_s=args.deadline, checkpoint=_save, db=db, **kw)
+        rep = locate.run(todo, deadline_s=args.deadline, checkpoint=_save, db=db,
+                         limit=args.limit, **kw)
         _save(rep)
-        table = [("eligible", len(need_addr)), ("ceiling", args.limit),
-                 ("selected", rep["requested"]),
+        table = [("eligible", len(need_addr)), ("ceiling (model calls)", args.limit),
+                 ("considered", rep["requested"]),
                  ("attempted (reached the model)", rep["attempted"]),
                  ("served from the lookup ledger (no model call)", rep.get("from_cache", 0)),
                  ("located with a citation", rep["located"]),
@@ -163,13 +172,17 @@ def main(argv=None) -> int:
                  ("usage", json.dumps(rep["usage"])),
                  ("usage per located address", json.dumps(rep["usage_per_located"])),
                  ("model", rep["model"]), ("search", rep["search"])]
-        if rep.get("budget_exhausted"):
-            label = ("DEFERRED (stage deadline)" if "deadline" in rep.get("budget_message", "")
-                     else "DEFERRED (AI Gateway budget spent)")
+        if rep.get("stopped_early"):
+            # Say which of the three actually stopped it. This warning used to read "AI Gateway key
+            # budget exhausted" whatever the cause, so a run that simply ran out of clock reported
+            # a spent budget — and was believed.
+            why = rep.get("stop_reason", "")
+            label = ("DEFERRED (stage deadline)" if "deadline" in why else
+                     "DEFERRED (run ceiling)" if "ceiling" in why else
+                     "DEFERRED (AI Gateway budget spent)")
             table.insert(0, (label, rep["deferred"]))
-            print(f"::warning::AI Gateway key budget exhausted after {rep['attempted']} of "
-                  f"{rep['requested']} facilities; {rep['deferred']} deferred to the next run. "
-                  f"{rep['budget_message']}")
+            print(f"::warning::stage 9 stopped early after {rep['attempted']} model calls; "
+                  f"{rep['deferred']} facilities deferred to the next run. {why}")
         _emit(args.out, "locate", {k: v for k, v in rep.items() if k != "assertions"}, table)
         return 0
 
