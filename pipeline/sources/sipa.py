@@ -65,6 +65,18 @@ ADDRESS = re.compile(
 # The index's own pager: /members/manufacturing/page/0 .. /page/N.
 PAGE_LINK = re.compile(r'href="/members/manufacturing/page/(\d+)"')
 
+# The profile sidebar labels its contact lines, and the labels are what make them safe to read:
+#   <p class="mb-0">Phone: <a href="tel:540-267-9988">540-267-9988</a></p>
+#   <p class="mb-0">Fax: 540-808-0824</p>
+#   <p class="mb-0">Website: <a href="/members/<slug>/view/website/13">acmepanel.com</a></p>
+# Two traps. The FAX sits one line under the phone in the same shape, so a bare tel-or-number
+# search returns a fax for any member whose phone is missing. And the website href is a COUNTER
+# redirect through sips.org — the member's real domain is the link TEXT, so the href is exactly
+# the wrong half to take. The one outbound link on these pages that is not the member's is the
+# site developer's footer credit, which is why neither is found by "first external link".
+PHONE = re.compile(r'Phone:\s*<a[^>]+href="tel:([^"]+)"', re.I)
+WEBSITE = re.compile(r'Website:\s*<a[^>]*>([^<]+)</a>', re.I)
+
 PACE_SECONDS = 0.4
 
 
@@ -134,16 +146,24 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
 
     out, no_street, foreign = [], 0, 0
     for position, c in enumerate(cards, 1):
-        street, zip_code = "", ""
+        street, zip_code, phone, website = "", "", "", ""
         prof = profiles.get(c["slug"])
         if prof is not None:
             # EVERY address paragraph, not the first: these sidebars render projects and sponsors
             # in the same shape, and on a profile where a project block comes first, taking the
             # first match cost the member its real street. The paragraph headed by THIS member's
             # name is the one that counts; a street lifted from the wrong block is worse than none.
-            m = next((x for x in ADDRESS.finditer(prof.read_text(encoding="utf-8", errors="replace"))
+            prof_html = prof.read_text(encoding="utf-8", errors="replace")
+            m = next((x for x in ADDRESS.finditer(prof_html)
                       if norm_name(_html.unescape(x.group("name"))) == norm_name(c["name"])), None)
             if m:
+                # Read the contact lines from AFTER this member's own address block, for the same
+                # reason the street is: the sidebar renders projects and sponsors in the same
+                # shape, and a phone taken from the wrong block is worse than no phone.
+                tail = prof_html[m.end():m.end() + 1500]
+                ph, wb = PHONE.search(tail), WEBSITE.search(tail)
+                phone = _html.unescape(ph.group(1)).strip() if ph else ""
+                website = _html.unescape(wb.group(1)).strip() if wb else ""
                 if (m.group("country") or "").strip().lower() in ("", "united states", "usa", "us"):
                     street = _html.unescape(m.group("street")).strip()
                     zip_code = (m.group("zip") or "").strip()
@@ -155,6 +175,7 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
         out.append(contract_row(
             source, position, name=c["name"], address=street, city=c["city"], state=c["state"],
             zip_code=zip_code,
+            phone=phone, website=website,
             source_url=f"{BASE}/members/{c['slug']}",
             source_document=(prof.name if prof is not None else index.name),
             source_identifier=c["slug"],
@@ -163,7 +184,8 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
     require(bool(out), index, "member cards parsed but every one was foreign or unreadable")
     out[0]["notes"] += (f" | {len(out)} SIPA manufacturing members kept from {len(indexes)} index "
                         f"page(s), {foreign} non-US skipped; {no_street} of {len(out)} have no "
-                        f"street on their profile")
+                        f"street on their profile; {sum(1 for r in out if r['phone'])} with a phone, "
+                        f"{sum(1 for r in out if r['website'])} with a website")
     if missing:
         out[0]["notes"] += (f" | PARTIAL: the index advertises pages {missing} that are not in this "
                             f"snapshot — re-fetch sipa, this is a fraction of the roster")
