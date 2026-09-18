@@ -28,7 +28,10 @@ def test_the_id_registry_is_only_written_when_layer_5_was_asked_for(tmp_path, mo
     (tmp_path / "csv").mkdir(exist_ok=True)
 
     try:
-        main(["--layers", spec, "--dry-run"])
+        # --out keeps the record out of the repo's run_records/. Without it this very test left
+        # two stray records and a RUNLOG row behind — the same shape of bug it exists to catch:
+        # a command that writes where the caller did not ask it to.
+        main(["--layers", spec, "--dry-run", "--out", str(tmp_path / "build")])
     except SystemExit:
         pass
     except Exception:
