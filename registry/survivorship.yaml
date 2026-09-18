@@ -44,6 +44,22 @@ fields:
   # and a member roster is the likelier place for a sales line. Registry (A) first, roster (B/C)
   # after, enrichment last because a number found by search is the weakest claim of the four.
   phone:            {order: [operator, "class:A", "class:B", "class:C", "class:D"], tie: most_recent}
+  # ADL's own plant lists (class D) are the only source of any of these, so the order is a
+  # formality — but operator corrections still outrank them, as everywhere else.
+  adl_validated:       {order: [operator, "class:D"], tie: most_recent}
+  primary_capability:  {order: [operator, "class:D"], tie: most_recent}
+  secondary_capability: {order: [operator, "class:D"], tie: most_recent}
+  material:            {order: [operator, "class:D"], tie: most_recent}
+  sector:              {order: [operator, "class:D"], tie: most_recent}
+  throughput:          {order: [operator, "class:D"], tie: most_recent}
+  throughput_unit:     {order: [operator, "class:D"], tie: most_recent}
+  utilisation_pct:     {order: [operator, "class:D"], tie: most_recent}
+  vacant_capacity:     {order: [operator, "class:D"], tie: most_recent}
+  annual_revenue_usd:  {order: [operator, "class:D"], tie: most_recent}
+  automation_level:    {order: [operator, "class:D"], tie: most_recent}
+  states_serviced:     {order: [operator, "class:D"], tie: most_recent}
+  country_based:       {order: [operator, "class:D"], tie: most_recent}
+  value_basis:         {order: [operator, "class:D"], tie: most_recent}
   # Measured, not stated — and deliberately NOT merged into the two fields above.
   #
   # sq_ft is what a source SAYS the plant is; building_sqft is what its Overture footprint

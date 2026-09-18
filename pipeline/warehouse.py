@@ -30,6 +30,12 @@ GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_l
                  "status", "expiry_date", "product_type",
                  "website", "sq_ft", "operating_status",      # source-stated; added 2026-09-17
                  "phone",                                     # source-stated; added 2026-09-18
+                 # ADL's own plant lists, 2026-09-18. adl_validated is what the front end's
+                 # "ADL validated" toggle filters the table and the map on.
+                 "adl_validated", "primary_capability", "secondary_capability", "material",
+                 "sector", "throughput", "throughput_unit", "utilisation_pct", "vacant_capacity",
+                 "annual_revenue_usd", "automation_level", "states_serviced", "country_based",
+                 "value_basis",
                  "building_sqft", "existence_flag"]           # measured/concluded by stages 11-12
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},

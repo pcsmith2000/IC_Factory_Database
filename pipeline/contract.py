@@ -20,7 +20,20 @@ COLUMNS = [
 #   sq_ft             plant floor area in square feet, digits only, as the source stated it
 #   operating_status  open | closed | revoked | unknown — a claim the source made, not an inference
 #   phone             digits only, US 10-digit, as the source printed it (see phone_digits)
-OPTIONAL = ["website", "sq_ft", "operating_status", "phone"]
+#   adl_validated     "1" when ADL's own plant list carries this row — what the front end's
+#                     "ADL validated" toggle filters on
+#   primary_capability / secondary_capability / material / sector  what it makes and for whom
+#   throughput + throughput_unit   annual maximum output as ADL states it
+#   utilisation_pct / vacant_capacity  how much of that output is being used
+#   annual_revenue_usd / automation_level / states_serviced / country_based
+#   value_basis       WHERE the numbers came from, per row, verbatim from ADL's own Sources
+#                     column: a site visit, a cited URL, or an LLM estimate ("CS ChatGPT"). Kept
+#                     because a measured square footage and a guessed one must not look alike.
+OPTIONAL = ["website", "sq_ft", "operating_status", "phone", "adl_validated",
+            "primary_capability", "secondary_capability", "material", "sector",
+            "throughput", "throughput_unit", "utilisation_pct", "vacant_capacity",
+            "annual_revenue_usd", "automation_level", "states_serviced", "country_based",
+            "value_basis"]
 ADDED = ["city_norm", "street_key", "state", "no_fixed_plant", "contract_version", "row_hash"]
 REQUIRED = COLUMNS[:5]
 STATUS_BASES = {"dated_expiry", "on_current_list", "explicit_status_field", "certified_as_of_date", "none"}

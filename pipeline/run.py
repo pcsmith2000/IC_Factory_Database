@@ -18,6 +18,10 @@ from .registry import load_yaml, active_sources, sha256_file, registry_version
 ROOT = Path(__file__).resolve().parent.parent
 
 
+class _ControlRetired(Exception):
+    """control.enabled is false — the per-row control table is part of the retired test."""
+
+
 def _layers(spec: str) -> set[int]:
     a, _, b = spec.partition("-")
     return set(range(int(a), int(b or a) + 1))
@@ -293,7 +297,10 @@ def main(argv=None) -> int:
                              g.get("g2_max_unrelated_name_rate", 1.0),
                              g.get("g2_target_unrelated_name_rate")),
         gates.g3_id_stability(rec["ids_issued"], g["g3_allow_new_ids_on_rerun"], args.rerun),
-        gates.g4_control_isolation(ROOT / cfg["control"]["path"], ROOT / cfg["control"]["checksum_path"], rec["rows"]),
+        gates.g4_control_isolation(ROOT / cfg["control"]["path"], ROOT / cfg["control"]["checksum_path"], rec["rows"])
+        if cfg["control"].get("enabled", True) else
+        gates.GateResult("G4 control isolation", True, "control test retired (control.enabled: false) — "
+                         "nothing to isolate; ADL's lists are sources now", tested=False),
         gates.g5_classifier_eval(labels, seeds, g["g5_min_precision"], g["g5_min_recall"],
                                  g.get("g5_base_rate"), g.get("g5_min_precision_at_base_rate"))
         if (cls_meta and cls_meta["n_candidates"])
@@ -315,8 +322,15 @@ def main(argv=None) -> int:
         print(f"  layers {sorted(layers)}: stopping before layer 7")
         _write_record(record, rec_dir); return 0
     frame_path = ROOT / "control" / "frame_state_totals.csv"
-    control_rows = list(csv.DictReader(open(ROOT / cfg["control"]["path"], newline=""))) if (ROOT / cfg["control"]["path"]).exists() else []
-    m = {"recall": measure.recall(control_rows, facilities, crosswalk.get("control", {}))}
+    control_on = cfg["control"].get("enabled", True)
+    control_rows = (list(csv.DictReader(open(ROOT / cfg["control"]["path"], newline="")))
+                    if control_on and (ROOT / cfg["control"]["path"]).exists() else [])
+    m = {}
+    if control_on:
+        m["recall"] = measure.recall(control_rows, facilities, crosswalk.get("control", {}))
+    else:
+        print("  control recall: RETIRED — ADL's lists are sources now, so the list cannot also be "
+              "the test (registry/config.yaml -> control.enabled)")
     if frame_path.exists():
         m["coverage_bias"] = measure.coverage_and_bias(facilities, measure.load_frame(frame_path), tuple(cfg["measure"]["bias_band"]), cfg["measure"]["bias_min_state_share"])
         gaps = load_yaml(ROOT / "registry" / "known-gaps.yaml") if (ROOT / "registry" / "known-gaps.yaml").exists() else {}
@@ -324,6 +338,8 @@ def main(argv=None) -> int:
     # Per-row control status, written every run from the SAME matcher the metric uses. Hand-built
     # copies of this table drifted from the number they were meant to explain.
     try:
+        if not control_on:
+            raise _ControlRetired
         # Built from the NORMALISED rows, so a missing plant can say whether any source fetched
         # it. Without this the table blamed the classifier for 122 rows no source ever held.
         ingested = measure.ingested_index(out / "normalised") if (out / "normalised").is_dir() else None
@@ -352,10 +368,12 @@ def main(argv=None) -> int:
                 print(f"  source gap: {gap['never_ingested']} of {len(status)} control rows are in "
                       f"no source we hold; {gap['ingested_but_lost']} were ingested and lost. "
                       f"Ceiling on today's sources: {gap['ceiling']:.1%}")
+    except _ControlRetired:
+        pass                     # the whole per-row table is part of the retired test
     except Exception as e:
         print(f"  control-status.csv not written: {type(e).__name__}: {e}")
     record["layers"]["7_measure"] = m
-    rc = m["recall"]
+    rc = m.get("recall") or {}
     if rc.get("tested"):
         # Found first. The question the control asks is "is this establishment on our list", and a
         # T0 lead IS on the list — it is a named plant in the warehouse awaiting a street address,
@@ -368,7 +386,7 @@ def main(argv=None) -> int:
             print(f"    sealed quarter:  {rc['sealed']['found_located']}/{rc['sealed']['in_scope']}"
                   f" located = {rc['sealed']['recall_located']:.0%}   dev "
                   f"{rc['dev']['recall_located']:.0%}")
-    else:
+    elif rc:
         print("  recall vs control: UNTESTED — control/control-triaged.csv holds no in-scope rows")
     cb = m.get("coverage_bias")
     if cb:

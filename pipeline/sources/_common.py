@@ -341,9 +341,14 @@ def contract_row(source: dict, position: int, *, name: str, address: str = "", c
                  zip_code: str = "", source_url: str, source_document: str, source_identifier: str = "",
                  naics: str = "", status: str = "", status_basis: str | None = None, expiry_date: str = "",
                  lat: str = "", lon: str = "", notes: str = "", country: str = "US",
-                 website: str = "", sq_ft: str = "", operating_status: str = "", phone: str = "") -> dict:
+                 website: str = "", sq_ft: str = "", operating_status: str = "", phone: str = "",
+                 **optional: str) -> dict:
     from ..contract import OPTIONAL, phone_digits
     r = {c: "" for c in COLUMNS + OPTIONAL}
+    for k, v in optional.items():
+        if k not in OPTIONAL:
+            raise TypeError(f"contract_row got {k!r}, which is not a contract column")
+        r[k] = (v or "").strip()
     r.update(website=(website or "").strip(), sq_ft="".join(ch for ch in (sq_ft or "") if ch.isdigit()),
              operating_status=(operating_status or "").strip().lower(), phone=phone_digits(phone))
     r.update(source_id=source["id"], source_url=source_url, source_document=source_document,

@@ -33,6 +33,23 @@ frame:
   establishments_total: 2750               # control total; treated as a FLOOR
 
 control:
+  # RETIRED 2026-09-18. The control list was the recall test, and the recall test is over.
+  #
+  # ADL's own plant lists — 4Ward (96 rows) and the July list (148) — are now sources, and they
+  # are where the control list came from: 100% of 4Ward rows and 68% of the July rows share a
+  # normalised name with a control row. Measuring recall against a list you also ingest is
+  # measuring nothing, and the number would have climbed toward 100% while meaning less at every
+  # step. A metric that cannot fail is not a metric.
+  #
+  # Its replacement is the public one already half-built beside it: `frame` below (Census CBP
+  # establishment counts by state and NAICS), which asks what share of a KNOWN industry size the
+  # database holds. That test cannot be gamed by ingesting more of ADL's own data, because the
+  # denominator comes from somewhere ADL does not control.
+  #
+  # `enabled: false` turns off the recall measurement and G4, and leaves everything else — the
+  # files, the matcher, the status table — in place and working. Set it true to get the old
+  # measurement back, which is why this is a switch and not a deletion.
+  enabled: false
   path: control/control-triaged.csv
   checksum_path: control/control.sha256
   in_scope_rows: 239                       # 2 of the 241 triaged out of scope (AB and BC — not US facilities)

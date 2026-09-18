@@ -267,6 +267,43 @@ sources:
   - The footer carries the Irving TX corporate address on EVERY page — take city and state from the title, never the body.
   - Some pages render the address client-side; those rows keep city and state and no street rather than borrowing the footer's.
   status: active
+- id: adl_4ward
+  name: ADL 4Ward component-manufacturer study
+  class: D
+  method: upload
+  acquire: blob-only
+  needs_classify: false
+  carries:
+  - plant_city
+  - capability
+  - capacity
+  status_basis: none
+  traps:
+  - "ADL's OWN list, which is why the control test is retired: 96 of 96 rows share a normalised name with a control row. Measuring recall against a list you also ingest measures nothing (registry/config.yaml -> control)."
+  - 'The "Address" column is a CITY, not a street, so every row is a T0 lead until another source supplies an address. 86 of 96 carry a factory size, 82 a throughput, 81 a revenue, 84 an automation level — none of which any public roster carries.'
+  - 'Sets adl_validated=1, which is what the front end''s "ADL validated" toggle filters the table and the map on.'
+  not_manufacturers: []
+  status: active
+- id: adl_july
+  name: ADL July plant list
+  class: D
+  method: upload
+  acquire: blob-only
+  needs_classify: false
+  carries:
+  - plant_city
+  - capability
+  - capacity
+  - phone
+  status_basis: none
+  traps:
+  - "ADL's OWN list: 101 of 148 rows share a normalised name with a control row. Retired the control test (registry/config.yaml -> control)."
+  - 'Its Sources column is kept per row as value_basis, verbatim, because the rows do NOT agree on where their numbers came from: 2 cite a past site visit, 52 a URL, 10 say "CS ChatGPT" — an LLM estimate — and 71 say nothing at all. A warehouse where a measured square footage and a guessed one look alike cannot be audited.'
+  - 'Carries spreadsheet errors that must never become numbers: #DIV/0! in 15 utilisation cells, "NOT ESTIMABLE" throughput, "[link removed]" websites, and one plant with a literal 0 throughput. The reader refuses all of them rather than coercing.'
+  - 'Two rows carry a company name and nothing else (BuildZ, Ramtech); two are Canadian (Mercer BC, ACQBUILT Edmonton) and are not US plants.'
+  not_manufacturers:
+  - Modutize
+  status: active
 - id: sbca_cm
   name: SBCA Component Manufacturer members
   class: C
