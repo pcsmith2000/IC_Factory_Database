@@ -19,7 +19,7 @@ source fails at Layer 1 (never silently skipped). IC_ARCHIVE=off disables it exp
     python -m pipeline.archive list <source_id> <date>    # what the manifest for one pull recorded
 """
 from __future__ import annotations
-import hashlib, json, mimetypes, os, random, sys, time, urllib.parse, urllib.request
+import hashlib, json, mimetypes, os, random, shutil, sys, tempfile, time, urllib.parse, urllib.request
 from pathlib import Path
 
 BLOB_API = os.environ.get("VERCEL_BLOB_API_URL", "https://vercel.com/api/blob")
@@ -245,6 +245,72 @@ def _put(a: VercelBlobArchive, source_id: str, files: list[str], date_str: str |
     return 0
 
 
+
+def _copy(a: "VercelBlobArchive", dest_token: str, prefixes: list[str], dry_run: bool) -> int:
+    """Copy every object under each prefix from `a` to the store `dest_token` opens.
+
+    Written for the move to a company Vercel team. The store is not a cache — `archive.mode:
+    blob-only` means Layer 1 reads it and never scrapes, so a half-copied store fails a run at
+    Layer 1 rather than degrading. Two properties follow from that:
+
+      * RESUMABLE. An object already at the destination with the same byte size is skipped, so the
+        command can be re-run after a timeout, a reset container or a partial network failure and
+        will finish the job rather than start it again. 116 MB over 1,130 objects does not fit in
+        one comfortable pass on a slow link.
+      * IT COUNTS AT THE END. It re-lists the destination and prints source-vs-destination totals
+        per prefix. "Copied 1,130" is what the loop believes; the listing is what the store says.
+
+    The destination token is read from the environment and never logged — the pathname is the only
+    thing printed per object.
+    """
+    dest = VercelBlobArchive(dest_token, prefix=a.prefix, access=a.access, max_file_mb=a.max_bytes // (1024 * 1024))
+    if dest.store_id == a.store_id:
+        print("source and destination are the SAME store — refusing", file=sys.stderr)
+        return 1
+    print(f"{a.store_id} -> {dest.store_id}  ({'dry run' if dry_run else 'copying'})")
+    tmp = Path(tempfile.mkdtemp(prefix="blobcopy-"))
+    copied = skipped = failed = 0
+    try:
+        for prefix in prefixes:
+            src_objs = a.list_prefix(prefix)
+            have = {d["pathname"]: d["size"] for d in dest.list_prefix(prefix)}
+            print(f"  {prefix:14} source {len(src_objs):5}  destination {len(have):5}")
+            for o in src_objs:
+                name = o["pathname"]
+                if have.get(name) == o["size"]:
+                    skipped += 1
+                    continue
+                if dry_run:
+                    copied += 1
+                    continue
+                local = tmp / name.replace("/", "_")
+                try:
+                    a.download(o["url"], local)
+                    dest.put(local, name)
+                    copied += 1
+                except ArchiveError as e:
+                    failed += 1
+                    print(f"    FAILED {name}: {e}", file=sys.stderr)
+                finally:
+                    local.unlink(missing_ok=True)
+                if (copied + skipped) % 100 == 0:
+                    print(f"    {copied} copied, {skipped} already there, {failed} failed")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print(f"{copied} copied, {skipped} already there, {failed} failed")
+    if dry_run:
+        return 0
+    ok = True
+    for prefix in prefixes:                      # what the STORE says, not what the loop believes
+        src_objs, dst_objs = a.list_prefix(prefix), dest.list_prefix(prefix)
+        s_n, d_n = len(src_objs), len(dst_objs)
+        s_b, d_b = sum(x["size"] for x in src_objs), sum(x["size"] for x in dst_objs)
+        mark = "ok" if (d_n >= s_n and d_b >= s_b) else "SHORT"
+        ok = ok and mark == "ok"
+        print(f"  {prefix:14} source {s_n:5} / {s_b/1e6:7.1f} MB   destination {d_n:5} / {d_b/1e6:7.1f} MB  {mark}")
+    return 0 if (ok and not failed) else 1
+
+
 def main(argv=None) -> int:
     import argparse
     from .registry import load_yaml
@@ -257,6 +323,10 @@ def main(argv=None) -> int:
     pu.add_argument("--date", help="date folder to write (default: today)")
     ls = sub.add_parser("list", help="print the manifest one pull recorded")
     ls.add_argument("source_id"); ls.add_argument("date")
+    cp = sub.add_parser("copy", help="copy every object to another store (BLOB_DEST_TOKEN); resumable")
+    cp.add_argument("--prefix", action="append", dest="prefixes",
+                    help="repeatable; default ic-sources/, ic-runs/, ic-control/")
+    cp.add_argument("--dry-run", action="store_true", help="count what would move, transfer nothing")
     args = ap.parse_args(argv)
 
     cfg = load_yaml(root / "registry" / "config.yaml")
@@ -267,6 +337,13 @@ def main(argv=None) -> int:
         return _verify(a)
     if args.cmd == "put":
         return _put(a, args.source_id, args.file, args.date)
+    if args.cmd == "copy":
+        dest_token = os.environ.get("BLOB_DEST_TOKEN", "").strip()
+        if not dest_token:
+            print("set BLOB_DEST_TOKEN to the DESTINATION store's read-write token "
+                  "(BLOB_READ_WRITE_TOKEN stays the source)", file=sys.stderr)
+            return 1
+        return _copy(a, dest_token, args.prefixes or ["ic-sources/", "ic-runs/", "ic-control/"], args.dry_run)
     key = f"{a.prefix}/{args.source_id}/{args.date}/manifest.json"
     local = root / cfg["storage"]["local_cache"] / args.source_id / args.date / "manifest.json"
     if local.exists():

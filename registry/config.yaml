@@ -11,8 +11,14 @@ archive:                                   # raw files, off the runner. Vercel B
                                            #   python -m pipeline.sources.refresh <source_id|--all>
                                            # `acquire: web-first` per source opts one back into fetching.
   prefix: ic-sources
-  access: public                           # must match how the Blob store itself was created;
-                                           # a mismatch is rejected ('Cannot use private access on a public store')
+  access: private                          # must match how the Blob store itself was created; a mismatch
+                                           # is rejected outright ('Cannot use public access on a private
+                                           # store'). Private is the right setting and public was not:
+                                           # nothing reads these blobs anonymously — archive.download()
+                                           # always sends an Authorization header — while ic-control/ holds
+                                           # ADL's verified control list, which has no business being
+                                           # world-readable. Changed 2026-09-18 with the move to the company
+                                           # team, whose store was created private.
   max_file_mb: 100                         # larger files are recorded by sha256 only (EPA zip: its filtered slice is archived instead)
 
 warehouse:

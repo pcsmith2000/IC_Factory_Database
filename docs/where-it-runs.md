@@ -67,7 +67,7 @@ python -m pipeline.control check         # the hand-placed inputs
 
 ## Setup once
 
-1. Create a Vercel Blob store with **public** access — `registry/config.yaml → archive.access` says `public`, and a store created private rejects every write with *Cannot use private access on a public store*. Copy its read-write token.
+1. Create a Vercel Blob store with **private** access, to match `registry/config.yaml → archive.access`. The two must agree or every write is rejected, and the error names whichever way round you got it (*Cannot use public access on a private store*, and the reverse). Copy its read-write token.
 2. Add repo secrets `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`, `BLOB_READ_WRITE_TOKEN` (Vercel Blob),
    and either `DATABASE_URL` + `DATABASE_URL_UNPOOLED` or the Neon GitHub integration (Neon).
 3. Later, for Cloud Run Jobs: Workload Identity Federation for this repo; repo variables
@@ -86,13 +86,22 @@ pipeline reads: 1,130 objects, 116 MB, under `ic-sources/`, `ic-runs/` and `ic-c
 not a cache. `archive.mode: blob-only` means Layer 1 reads the store and never scrapes, so a run
 against an empty store halts at Layer 1 on the first source it cannot find (run 35276154465 did
 exactly that with one missing source). Either move the store to the new team in the Vercel
-dashboard, or create one there — **public access**, as above — and copy the objects across:
+dashboard, or create one there — **private access**, as above — and copy the objects across:
 
-    python -m pipeline.archive verify        # proves the new token and store before anything else
-    BLOB_READ_WRITE_TOKEN=<old> python -m pipeline.archive list <source_id>
+    BLOB_READ_WRITE_TOKEN=<new> python -m pipeline.archive verify       # token, store and access mode
+    BLOB_READ_WRITE_TOKEN=<old> BLOB_DEST_TOKEN=<new> \
+        python -m pipeline.archive copy --dry-run                       # counts, moves nothing
+    BLOB_READ_WRITE_TOKEN=<old> BLOB_DEST_TOKEN=<new> \
+        python -m pipeline.archive copy                                 # resumable; re-run after a drop
+
+`copy` skips an object already at the destination with the same byte size, so re-running it after a
+timeout finishes the job rather than starting it again, and it re-lists both stores at the end
+rather than trusting its own loop count. Verify FIRST: the access mode is the one thing that fails
+on every single object, and finding that out after an hour of transfer is the avoidable version.
 
 Whichever route, the token changes. Put the new one in the repo secret; the store id is read out
-of the token, so `BLOB_STORE_ID` only matters if you override it.
+of the token, so `BLOB_STORE_ID` only matters if you override it. Rotate the old token once the
+new store is proved — a read-write token that has been pasted anywhere should not outlive the move.
 
 What survives regardless: the warehouse, `id_registry.json`, `run_records/`, the control file and
 everything else under version control. Losing the store costs the snapshots, not the database —
