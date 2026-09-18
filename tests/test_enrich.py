@@ -953,3 +953,50 @@ def test_a_normal_truss_shop_is_no_longer_evidence_against_itself(tmp_path):
     why = next(a for a in rep["assertions"] if a["facility_id"] == "IC-2")["evidence"]
     assert "9,000 sqft is below 17,461" in why, why
     assert "321214" not in json.dumps(rep["reasons"]), "a normal truss shop must not cite its size"
+
+
+# ------------------------------------------- a long stage must degrade, not be killed outright
+def test_locate_stops_at_its_deadline_and_defers_the_rest(monkeypatch):
+    """A ceiling in facilities is a guess about how long a facility takes; the job timeout is the
+    real constraint. Run 33 set --limit 150 on a measured 10.6s/facility and locate was still going
+    at 31 minutes against a 35 minute timeout — and a killed job uploads nothing, because the stage
+    only wrote its files after the loop."""
+    from pipeline.enrich import locate
+    clock = {"t": 0.0}
+    monkeypatch.setattr(locate, "DEFAULT_SEARCH", "tako", raising=False)
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "k")
+
+    def fake(row, model, key, search):
+        clock["t"] += 10.0                       # ten seconds a facility
+        return {"answer": {"found": False, "reason": "no"}, "visited": set(),
+                "usage": {"input_tokens": 1, "output_tokens": 1, "web_searches": 1}}
+
+    monkeypatch.setattr(locate, "locate_one_gateway", fake)
+    monkeypatch.setattr(locate.time, "monotonic", lambda: clock["t"], raising=False)
+    rows = [{"facility_id": f"F{i}", "name": "Acme", "city": "X", "state": "TX"} for i in range(100)]
+    rep = locate.run(rows, deadline_s=100, verify_page=False)
+
+    # 11, not 10: the check runs before each facility, so one starts at exactly the deadline and
+    # runs to completion. One facility of overshoot against 600s of headroom is not worth chasing.
+    assert rep["attempted"] == 11, f"attempted {rep['attempted']}"
+    assert rep["deferred"] == 89
+    assert rep["budget_exhausted"] is True and "deadline" in rep["budget_message"]
+
+
+def test_locate_checkpoints_so_a_kill_still_keeps_what_it_found(monkeypatch):
+    """The artifact upload runs `if: always()`, so a killed stage would upload — but there was
+    nothing on disk. Writing as it goes is what makes that upload worth having."""
+    from pipeline.enrich import locate
+    seen = []
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "k")
+    monkeypatch.setattr(locate, "locate_one_gateway", lambda row, model, key, search: {
+        "answer": {"found": True, "address": "1 Plant Rd", "confidence": 0.9,
+                   "source_url": "https://x.example/p", "quote": "1 Plant Rd"},
+        "visited": set(), "usage": {"input_tokens": 1, "output_tokens": 1, "web_searches": 1}})
+    rows = [{"facility_id": f"F{i}", "name": "Acme", "city": "X", "state": "TX"} for i in range(25)]
+    rep = locate.run(rows, verify_page=False, checkpoint=seen.append, checkpoint_every=10)
+
+    assert [len(r["assertions"]) for r in seen] == [10, 20], "a checkpoint every 10 located"
+    assert rep["located"] == 25
+    # a checkpoint carries the same shape as the final report, so the two cannot drift
+    assert set(seen[0]) == set(rep)

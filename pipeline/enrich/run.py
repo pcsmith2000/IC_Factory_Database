@@ -82,6 +82,9 @@ def main(argv=None) -> int:
                     help="hard ceiling on distinct Overture files a run may read (default 40)")
     ap.add_argument("--model", default="", help="model id for the AI stage (default: see locate.DEFAULT_MODEL)")
     ap.add_argument("--search", default="", help="search provider: parallel | perplexity | exa | tako | native")
+    ap.add_argument("--deadline", type=float, default=float(os.environ.get("ENRICH_DEADLINE_S", 1500)),
+                    help="seconds the AI stage may spend before deferring the rest (default 1500, "
+                         "against a 35 minute job timeout)")
     ap.add_argument("--release-tag", default=os.environ.get("ENRICH_RELEASE_TAG", ""))
     ap.add_argument("--dry-run", action="store_true", help="plan the stage; make no external call")
     args = ap.parse_args(argv)
@@ -128,9 +131,21 @@ def main(argv=None) -> int:
             kw["model"] = args.model
         if args.search:
             kw["search"] = args.search
-        rep = locate.run(todo, **kw)
         (args.out).mkdir(parents=True, exist_ok=True)
-        (args.out / "locate.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
+
+        def _save(rep):
+            """Written as the stage goes, not only when it ends.
+
+            The artifact upload runs `if: always()`, so a stage killed by the job timeout would
+            still upload — but there was nothing on disk to upload, because the files were written
+            after the loop. Everything a long run had found was lost with it.
+            """
+            (args.out / "locate.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
+            (args.out / "locate.json").write_text(json.dumps(
+                {k: v for k, v in rep.items() if k != "assertions"}, indent=1, default=str))
+
+        rep = locate.run(todo, deadline_s=args.deadline, checkpoint=_save, **kw)
+        _save(rep)
         table = [("eligible", len(need_addr)), ("ceiling", args.limit),
                  ("selected", rep["requested"]),
                  ("attempted (reached the model)", rep["attempted"]),
@@ -142,7 +157,9 @@ def main(argv=None) -> int:
                  ("usage per located address", json.dumps(rep["usage_per_located"])),
                  ("model", rep["model"]), ("search", rep["search"])]
         if rep.get("budget_exhausted"):
-            table.insert(0, ("DEFERRED (AI Gateway budget spent)", rep["deferred"]))
+            label = ("DEFERRED (stage deadline)" if "deadline" in rep.get("budget_message", "")
+                     else "DEFERRED (AI Gateway budget spent)")
+            table.insert(0, (label, rep["deferred"]))
             print(f"::warning::AI Gateway key budget exhausted after {rep['attempted']} of "
                   f"{rep['requested']} facilities; {rep['deferred']} deferred to the next run. "
                   f"{rep['budget_message']}")

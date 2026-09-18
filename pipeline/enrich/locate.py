@@ -24,7 +24,7 @@ for, which is about 9% of the facilities that need an address. With search it is
 way, but recall is still an open question until measured against control/seeds.csv.
 """
 from __future__ import annotations
-import json, re
+import json, re, time
 from datetime import date
 
 # The gateway documents Anthropic's basic server tool for the Messages API. Newer model families
@@ -368,7 +368,8 @@ def _reason(why: str) -> str:
 
 def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
         min_confidence: float = 0.7, verify_page: bool = True,
-        search: str = DEFAULT_SEARCH) -> dict:
+        search: str = DEFAULT_SEARCH, deadline_s: float | None = None,
+        checkpoint=None, checkpoint_every: int = 10) -> dict:
     """rows: facilities with no address. Returns assertions plus a report.
 
     `search` picks the path: "native" is Anthropic's own tool over the Messages API and needs an
@@ -395,10 +396,19 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
                 "AI_GATEWAY_API_KEY; use --search native for the Anthropic path, or --limit 0 "
                 "to skip the AI stage entirely")
         call = lambda row: locate_one_gateway(row, model, key, search)
+    started = time.monotonic()
     asserts, rejected = [], []
     attempted, stopped = 0, ""
     usage = {"input_tokens": 0, "output_tokens": 0, "web_searches": 0}
     for row in rows:
+        # A ceiling in facilities is a guess about how long a facility takes; the job timeout is
+        # the real constraint. Stopping against the clock makes --limit safe at any value, and
+        # turns a killed job — which uploads nothing, because the stage only writes when it
+        # finishes — into a short one that keeps everything it found.
+        if deadline_s is not None and time.monotonic() - started > deadline_s:
+            stopped = (f"stage deadline of {deadline_s:.0f}s reached after {attempted} facilities; "
+                       f"the rest are deferred to the next run")
+            break
         attempted += 1
         try:
             got = call(row)
@@ -446,9 +456,17 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
         asserts.append(assertion(row["facility_id"], "address", addr,
                                  source_id="enrich:locate", basis="web_cited",
                                  confidence=float(conf), evidence=f"{url} :: {quote[:300]}"))
+        if checkpoint and len(asserts) % checkpoint_every == 0:
+            checkpoint(_report(rows, attempted, asserts, rejected, usage, model, search, stopped))
+    return _report(rows, attempted, asserts, rejected, usage, model, search, stopped)
+
+
+def _report(rows, attempted, asserts, rejected, usage, model, search, stopped) -> dict:
+    """A snapshot. `assertions` and `rejected` are copied because a checkpoint hands this to a
+    caller that may keep it, and the originals go on being appended to for the rest of the run."""
     import collections
-    return {"requested": len(rows), "attempted": attempted, "assertions": asserts,
-            "located": len(asserts), "rejected": rejected, "model": model, "search": search,
+    return {"requested": len(rows), "attempted": attempted, "assertions": list(asserts),
+            "located": len(asserts), "rejected": list(rejected), "model": model, "search": search,
             "deferred": len(rows) - attempted,
             "budget_exhausted": bool(stopped), "budget_message": stopped[:300],
             "rejected_by_reason": dict(collections.Counter(_reason(r["why"]) for r in rejected)),
