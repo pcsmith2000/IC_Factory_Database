@@ -86,13 +86,32 @@ def wkt_area_m2(wkt: str) -> float:
 
 def measure(points: list[dict], release: str = DEFAULT_RELEASE,
             cache: Path | None = None, box_deg: float = 0.0035,
-            max_files: int | None = None) -> list[dict]:
+            max_files: int | None = None, db=None) -> list[dict]:
     """points: [{facility_id, lat, lon}] -> one result each, grouped by file so each is read once.
 
     `max_files` bounds the run by the thing that actually costs: one S3 parquet read per distinct
     region, around a minute each. Points in files beyond the ceiling are returned with a reason
     rather than dropped, so the next run picks them up and nothing is silently skipped.
+
+    `cache` is the file -> bbox index on disk; `db` is the lookup ledger, which is a different
+    thing. A footprint is a pure function of (coordinate, Overture release), so a coordinate already
+    measured is answered without reading S3 at all — and because the release is in the key, a new
+    Overture release correctly re-measures everything rather than serving a stale building.
     """
+    from . import cache as lookup_cache
+    known: list[dict] = []
+    if db is not None:
+        lookup_cache.ensure(db)
+        rest = []
+        for p in points:
+            hit = lookup_cache.get(db, lookup_cache.footprint_key(p["lat"], p["lon"], release))
+            if hit and hit["found"]:
+                known.append({**p, **hit["result"]})
+            elif hit:
+                known.append({**p, "building_sqft": None, **hit["result"]})
+            else:
+                rest.append(p)
+        points = rest
     idx = build_index(release, cache)
     by_file: dict[str, list[dict]] = {}
     out: list[dict] = []
@@ -110,7 +129,7 @@ def measure(points: list[dict], release: str = DEFAULT_RELEASE,
                             "reason": "deferred: file ceiling reached"})
         files = files[:max_files]
     if not files:
-        return out                      # nothing to read, so do not open a connection
+        return out + known                      # nothing to read, so do not open a connection
     con = _connect()
     for f in files:
         ps = by_file[f]
@@ -130,8 +149,13 @@ def measure(points: list[dict], release: str = DEFAULT_RELEASE,
             m_per_deg = math.pi * R / 180
             near = [c for c in cands if c[1] * m_per_deg <= MATCH_RADIUS_M]
             if not near:
-                out.append({**p, "building_sqft": None, "n_nearby": len(cands),
-                            "reason": f"no Overture building within {MATCH_RADIUS_M:.0f}m"})
+                miss = {"n_nearby": len(cands),
+                        "reason": f"no Overture building within {MATCH_RADIUS_M:.0f}m"}
+                out.append({**p, "building_sqft": None, **miss})
+                if db is not None:
+                    lookup_cache.put(db, lookup_cache.footprint_key(p["lat"], p["lon"], release),
+                                     "footprint", f"{p['lat']:.6f},{p['lon']:.6f}", miss, False,
+                                     f"overture:{release}")
                 continue
             # Largest within the radius, not nearest. Measured on the first full run: matches under
             # 10,000 sqft had a median of 2 buildings within 30m against 1 for the rest, and 143 of
@@ -146,9 +170,13 @@ def measure(points: list[dict], release: str = DEFAULT_RELEASE,
             areas = [(round(wkt_area_m2(w) * M2_FT2), d, b, h) for w, d, b, h in near]
             sqft, dist, bid, height = max(areas, key=lambda a: a[0])
             nearest = min(areas, key=lambda a: a[1])
-            out.append({**p, "building_sqft": sqft,
-                        "building_id": bid, "offset_m": round(dist * m_per_deg, 1),
-                        "height_m": height, "n_within_radius": len(near),
-                        "nearest_sqft": nearest[0], "nearest_building_id": nearest[2],
-                        "overture_release": release})
+            got = {"building_sqft": sqft, "building_id": bid,
+                   "offset_m": round(dist * m_per_deg, 1), "height_m": height,
+                   "n_within_radius": len(near), "nearest_sqft": nearest[0],
+                   "nearest_building_id": nearest[2], "overture_release": release}
+            out.append({**p, **got})
+            if db is not None:
+                lookup_cache.put(db, lookup_cache.footprint_key(p["lat"], p["lon"], release),
+                                 "footprint", f"{p['lat']:.6f},{p['lon']:.6f}", got, True,
+                                 f"overture:{release}")
     return out

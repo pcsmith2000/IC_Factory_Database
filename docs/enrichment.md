@@ -406,6 +406,44 @@ way an enrichment pass is actually published. It creates no branch, which is als
 cleanup having anything to delete — and `neon_branch.py delete` refuses a default branch outright,
 because the failure it prevents is unrecoverable and the check costs one API call.
 
+## The lookup ledger — cache the question, not the asker
+
+`fact_assertions` already survives an ingestion re-run. Nothing in layers 1-8 truncates it; a load
+deletes `golden_facility`, `dim_field` and the release's `conflicts`, and nothing else. Stage 13
+carries enrichment across release tags. So the warehouse is not where enrichment gets lost.
+
+It gets lost when the same *question* is asked again under a different name:
+
+  - a facility id changes, so `has_rooftop` and `geocode_tried` — which ask "has THIS FACILITY been
+    done?" — both answer no, and the work is bought a second time;
+  - two facilities share an address and each pays for the same lookup;
+  - the database itself is recreated, and the only record of a year of API calls goes with it.
+
+`cache_lookup` is keyed on the question instead:
+
+    geocode     sha256(normalised one-line address)
+    footprint   sha256(lat, lon to 6dp, Overture release)
+    locate      sha256(company name, city, state)
+
+None of those depend on facility identity, release tags or golden, so none of them are invalidated
+by a rebuild. Two rules give the table its meaning:
+
+  A **positive** result is reusable by anyone — an address is an address, whoever found it.
+  A **negative** result is reusable only by the provider that produced it. "qwen found nothing" is
+  a fact about qwen, and caching it under the input alone would permanently block a stronger model
+  from ever trying. That is the difference between a cache and a ceiling.
+
+Negatives are cached at all because they are most of the waste: an address Geocodio cannot place
+costs exactly as much to re-ask as one it can, and the tail that never matches is the larger share.
+
+The Overture release is inside the footprint key, so a new release correctly re-measures everything
+rather than serving a stale building.
+
+`python -m pipeline.enrich.run cache --cache-dump ledger.json` writes the whole ledger out, and
+`--cache-restore` reads it back into an empty database. That is the only version that survives
+losing Neon, and it is what makes an eventual from-zero end-to-end rebuild free rather than a
+second full spend.
+
 ## Gates
 
 Enrichment gets its own gates, in the spirit of G1-G5: they block rather than advise.

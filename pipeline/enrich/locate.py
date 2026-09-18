@@ -369,7 +369,7 @@ def _reason(why: str) -> str:
 def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
         min_confidence: float = 0.7, verify_page: bool = True,
         search: str = DEFAULT_SEARCH, deadline_s: float | None = None,
-        checkpoint=None, checkpoint_every: int = 10) -> dict:
+        checkpoint=None, checkpoint_every: int = 10, db=None) -> dict:
     """rows: facilities with no address. Returns assertions plus a report.
 
     `search` picks the path: "native" is Anthropic's own tool over the Messages API and needs an
@@ -377,6 +377,7 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
     """
     import os
     from ._db import assertion
+    from . import cache
     from ..contract import street_key
     # An explicit client is a Messages client, so it selects the path it can actually drive.
     if client is not None:
@@ -396,8 +397,12 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
                 "AI_GATEWAY_API_KEY; use --search native for the Anthropic path, or --limit 0 "
                 "to skip the AI stage entirely")
         call = lambda row: locate_one_gateway(row, model, key, search)
+    provider = f"{model}+{search}"
+    if db is not None:
+        cache.ensure(db)
     started = time.monotonic()
     asserts, rejected = [], []
+    from_cache = 0
     attempted, stopped = 0, ""
     usage = {"input_tokens": 0, "output_tokens": 0, "web_searches": 0}
     for row in rows:
@@ -409,6 +414,23 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
             stopped = (f"stage deadline of {deadline_s:.0f}s reached after {attempted} facilities; "
                        f"the rest are deferred to the next run")
             break
+        # The ledger first. A located address is a function of the company and the city, so the
+        # same question under a changed facility id is the same question. A negative is only reused
+        # when the same model and search produced it — see cache.get — so moving to a stronger model
+        # re-asks what the cheaper one could not answer instead of inheriting its failures.
+        ck = cache.locate_key(row.get("name", ""), row.get("city", ""), row.get("state", ""))
+        hit = cache.get(db, ck, provider=provider) if db is not None else None
+        if hit is not None:
+            from_cache += 1
+            if hit["found"]:
+                asserts.append(assertion(row["facility_id"], "address", hit["result"]["address"],
+                                         source_id="enrich:locate", basis="web_cited",
+                                         confidence=float(hit["result"]["confidence"]),
+                                         evidence=hit["result"]["evidence"]))
+            else:
+                rejected.append({"facility_id": row["facility_id"],
+                                 "why": hit["result"].get("why", "cached: nothing citable")})
+            continue
         attempted += 1
         try:
             got = call(row)
@@ -452,21 +474,32 @@ def run(rows: list[dict], model: str = DEFAULT_MODEL, client=None,
                 quote = snippet         # what the page says, not what the model said it says
         if why:
             rejected.append({"facility_id": row["facility_id"], "why": why})
+            if db is not None:
+                cache.put(db, ck, "locate", f"{row.get('name','')} | {row.get('city','')} "
+                          f"{row.get('state','')}", {"why": why}, False, provider)
             continue
         asserts.append(assertion(row["facility_id"], "address", addr,
                                  source_id="enrich:locate", basis="web_cited",
                                  confidence=float(conf), evidence=f"{url} :: {quote[:300]}"))
+        if db is not None:
+            cache.put(db, ck, "locate",
+                      f"{row.get('name','')} | {row.get('city','')} {row.get('state','')}",
+                      {"address": addr, "confidence": float(conf),
+                       "evidence": f"{url} :: {quote[:300]}"}, True, provider)
         if checkpoint and len(asserts) % checkpoint_every == 0:
-            checkpoint(_report(rows, attempted, asserts, rejected, usage, model, search, stopped))
-    return _report(rows, attempted, asserts, rejected, usage, model, search, stopped)
+            checkpoint(_report(rows, attempted, asserts, rejected, usage, model, search, stopped,
+                               from_cache))
+    return _report(rows, attempted, asserts, rejected, usage, model, search, stopped, from_cache)
 
 
-def _report(rows, attempted, asserts, rejected, usage, model, search, stopped) -> dict:
+def _report(rows, attempted, asserts, rejected, usage, model, search, stopped,
+            from_cache: int = 0) -> dict:
     """A snapshot. `assertions` and `rejected` are copied because a checkpoint hands this to a
     caller that may keep it, and the originals go on being appended to for the rest of the run."""
     import collections
     return {"requested": len(rows), "attempted": attempted, "assertions": list(asserts),
             "located": len(asserts), "rejected": list(rejected), "model": model, "search": search,
+            "from_cache": from_cache,
             "deferred": len(rows) - attempted,
             "budget_exhausted": bool(stopped), "budget_message": stopped[:300],
             "rejected_by_reason": dict(collections.Counter(_reason(r["why"]) for r in rejected)),

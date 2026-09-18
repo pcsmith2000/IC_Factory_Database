@@ -72,9 +72,15 @@ def _post(queries: list[str], key: str) -> tuple[list[dict], str]:
     return out, ""
 
 
-def run(rows: list[dict], key: str | None = None) -> dict:
-    """rows: facilities with an address and no coordinate. Returns assertions plus a report."""
+def run(rows: list[dict], key: str | None = None, db=None) -> dict:
+    """rows: facilities with an address and no coordinate. Returns assertions plus a report.
+
+    `db` enables the lookup ledger. A geocode is a pure function of an address string, so an
+    address already looked up — for this facility, for another one sharing it, or under a facility
+    id that has since changed — is answered from cache_lookup and never billed twice.
+    """
     from ._db import assertion
+    from . import cache
     key = key or os.environ.get("GEOCODIO_API_KEY")
     if not key:
         raise GeocodioError("GEOCODIO_API_KEY is not set (free key: https://dash.geocod.io/apikey)")
@@ -85,13 +91,36 @@ def run(rows: list[dict], key: str | None = None) -> dict:
         print(f"  note: {len(todo)} lookups exceeds the {FREE_TIER_PER_DAY}/day free allowance; "
               f"the excess bills at ${COST_PER_1000_USD:.2f}/1000", file=sys.stderr)
 
-    results, stopped = _post([one_line(r) for r in todo], key)
-    done, deferred = todo[:len(results)], todo[len(results):]
+    # Split the work before spending anything: what the ledger already knows, and what it does not.
+    lines = {r["facility_id"]: one_line(r) for r in todo}
+    cached: dict[str, dict] = {}
+    if db is not None:
+        cache.ensure(db)
+        for r in todo:
+            hit = cache.get(db, cache.geocode_key(lines[r["facility_id"]]), provider="geocodio")
+            if hit:
+                cached[r["facility_id"]] = hit["result"]
+    fresh = [r for r in todo if r["facility_id"] not in cached]
+
+    results, stopped = _post([lines[r["facility_id"]] for r in fresh], key) if fresh else ([], "")
+    done, deferred = fresh[:len(results)], fresh[len(results):]
+
+    # A cached answer re-enters the same pipeline as a fresh one, so there is one code path deciding
+    # what becomes a coordinate and what becomes a quality flag.
+    for r in todo:
+        if r["facility_id"] in cached:
+            done.append(r)
+            results.append(cached[r["facility_id"]])
     asserts, flags, mix = [], [], {}
     for row, res in zip(done, results):
         hits = (res.get("response") or {}).get("results") or []
         at = hits[0].get("accuracy_type", "unknown") if hits else "no_result"
         mix[at] = mix.get(at, 0) + 1
+        if db is not None and row["facility_id"] not in cached:
+            # Both outcomes are worth recording. An address Geocodio cannot place costs exactly as
+            # much to re-ask as one it can, and the tail that never matches is most of the waste.
+            cache.put(db, cache.geocode_key(lines[row["facility_id"]]), "geocode",
+                      lines[row["facility_id"]], res, bool(hits), "geocodio")
         flags.append({"facility_id": row["facility_id"], "accuracy_type": at,
                       "accuracy": hits[0].get("accuracy") if hits else None,
                       "dataset": hits[0].get("source") if hits else None})
@@ -125,4 +154,6 @@ def run(rows: list[dict], key: str | None = None) -> dict:
             # What this run would cost if the day's free allowance were already spent. It is an
             # upper bound per run, not a bill: the allowance is daily and shared across every run,
             # so only the sum across a day says what was actually charged.
-            "billable_if_allowance_spent_usd": round(len(done) * COST_PER_1000_USD / 1000, 3)}
+            "from_cache": len(cached), "billed_lookups": len(done) - len(cached),
+            "billable_if_allowance_spent_usd":
+                round((len(done) - len(cached)) * COST_PER_1000_USD / 1000, 3)}

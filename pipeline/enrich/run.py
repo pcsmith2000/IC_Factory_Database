@@ -7,6 +7,7 @@
     python -m pipeline.enrich.run existence --out enrich
     python -m pipeline.enrich.run load      --out enrich   # append every stage's assertions
     python -m pipeline.enrich.run promote   --out enrich   # survivorship again, so golden shows it
+    python -m pipeline.enrich.run cache     --out enrich --cache-dump ledger.json
 
 Determinism. The sample is seeded, the Overture release is pinned, the model is pinned, and an
 assertion's row_hash is taken over the evidence that produced it — so a second run over unchanged
@@ -28,7 +29,7 @@ from pathlib import Path
 
 from . import _db
 
-STAGES = ("plan", "locate", "geocode", "footprint", "existence", "load", "promote")
+STAGES = ("plan", "locate", "geocode", "footprint", "existence", "load", "promote", "cache")
 DEFAULT_AI_LIMIT = 200
 DEFAULT_GEOCODE_LIMIT = 2000        # the free tier is 2500/day and is shared with anyone else using it
 # Footprint cost is per distinct Overture file, not per facility: ten plants in one county read one
@@ -88,6 +89,8 @@ def main(argv=None) -> int:
     ap.add_argument("--deadline", type=float, default=float(os.environ.get("ENRICH_DEADLINE_S", 1800)),
                     help="seconds the AI stage may spend before deferring the rest (default 1800, "
                          "against a 35 minute job timeout)")
+    ap.add_argument("--cache-dump", default="", help="cache stage: write the ledger to this file")
+    ap.add_argument("--cache-restore", default="", help="cache stage: load a ledger from this file")
     ap.add_argument("--release-tag", default=os.environ.get("ENRICH_RELEASE_TAG", ""))
     ap.add_argument("--dry-run", action="store_true", help="plan the stage; make no external call")
     args = ap.parse_args(argv)
@@ -147,11 +150,12 @@ def main(argv=None) -> int:
             (args.out / "locate.json").write_text(json.dumps(
                 {k: v for k, v in rep.items() if k != "assertions"}, indent=1, default=str))
 
-        rep = locate.run(todo, deadline_s=args.deadline, checkpoint=_save, **kw)
+        rep = locate.run(todo, deadline_s=args.deadline, checkpoint=_save, db=db, **kw)
         _save(rep)
         table = [("eligible", len(need_addr)), ("ceiling", args.limit),
                  ("selected", rep["requested"]),
                  ("attempted (reached the model)", rep["attempted"]),
+                 ("served from the lookup ledger (no model call)", rep.get("from_cache", 0)),
                  ("located with a citation", rep["located"]),
                  ("yield %", rep["yield_pct"]),
                  ("rejected", len(rep["rejected"])),
@@ -179,10 +183,11 @@ def main(argv=None) -> int:
             _emit(args.out, "geocode", {"planned": len(todo), "called": 0},
                   [("would look up", len(todo)), ("calls made", 0)])
             return 0
-        rep = geocode.run(todo)
+        rep = geocode.run(todo, db=db)
         (args.out).mkdir(parents=True, exist_ok=True)
         (args.out / "geocode.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
         table = [("eligible", len(need_coord)), ("ceiling", args.geocode_limit),
+                 ("served from the lookup ledger (not billed)", rep.get("from_cache", 0)),
                  ("looked up", rep["requested"]), ("rooftop coordinates stored", rep["stored"]),
                  ("recorded unplaceable (not retried next run)", rep["quality_flags_recorded"]),
                  ("rooftop %", rep["rooftop_pct"]),
@@ -228,7 +233,7 @@ def main(argv=None) -> int:
                   [("would measure", len(pts)), ("calls made", 0)])
             return 0
         res = footprint.measure(pts, cache=args.out / "overture_index.json",
-                                max_files=args.footprint_limit)
+                                max_files=args.footprint_limit, db=db)
         got = [r for r in res if r.get("building_sqft")]
         asserts = [assertion(r["facility_id"], "building_sqft", str(r["building_sqft"]),
                              source_id="overture:building", basis="footprint",
@@ -294,6 +299,27 @@ def main(argv=None) -> int:
                ("already present (re-run is a no-op)", wrote["already_present"]),
                ("release tag", tag), ("by field", json.dumps(by_field)),
                *[(r.gate, r.summary) for r in results]])
+        return 0
+
+    if args.stage == "cache":
+        from . import cache as lookup_cache
+        lookup_cache.ensure(db)
+        if args.cache_restore:
+            rows = json.loads(Path(args.cache_restore).read_text())
+            n = lookup_cache.restore(db, rows)
+            _emit(args.out, "cache", {"restored": n}, [("restored from file", n)])
+            return 0
+        rows = lookup_cache.dump(db)
+        if args.cache_dump:
+            Path(args.cache_dump).write_text(json.dumps(rows, indent=1, default=str))
+        st = lookup_cache.stats(db)
+        _emit(args.out, "cache", {"entries": len(rows), "by_kind": st,
+                                  "dumped_to": args.cache_dump or None},
+              [("entries", len(rows)),
+               *[(f"{r['kind']} / {r['provider']}",
+                  f"{r['entries']} entries, {r['positives']} positive, "
+                  f"{r['calls_saved']} calls saved") for r in st],
+               ("dumped to", args.cache_dump or "(not written)")])
         return 0
 
     if args.stage == "promote":

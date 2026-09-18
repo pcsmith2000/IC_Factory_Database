@@ -1047,3 +1047,121 @@ def test_geocode_reports_what_a_run_would_cost():
         gc._post = orig
     assert rep["stored"] == 250
     assert rep["billable_if_allowance_spent_usd"] == 0.25, rep["billable_if_allowance_spent_usd"]
+
+
+# ------------------------------------- the lookup ledger: keyed by the question, not by the asker
+class _Ledger:
+    """An in-memory stand-in for cache_lookup, honouring the same SQL the real one is given."""
+    def __init__(self):
+        self.rows = {}
+    def query(self, sql, params=()):
+        s = " ".join(sql.split())
+        if s.startswith("CREATE TABLE"):
+            return []
+        if s.startswith("SELECT result, found, provider"):
+            r = self.rows.get(params[0])
+            return [r] if r else []
+        if s.startswith("UPDATE cache_lookup SET hits"):
+            if params[0] in self.rows:
+                self.rows[params[0]]["hits"] += 1
+            return []
+        if s.startswith("INSERT INTO cache_lookup"):
+            self.rows[params[0]] = {"cache_key": params[0], "kind": params[1], "input": params[2],
+                                    "result": params[3], "found": params[4], "provider": params[5],
+                                    "fetched_at": params[6], "hits": 0}
+            return []
+        if "GROUP BY" in s:
+            return []
+        return list(self.rows.values())
+
+
+def test_the_same_address_is_never_geocoded_twice(monkeypatch):
+    """A geocode is a pure function of an address string. Two facilities sharing an address, or one
+    facility whose id changed, must not each be billed for the same lookup."""
+    from pipeline.enrich import geocode as gc
+    calls = []
+
+    def fake_post(queries, key):
+        calls.append(list(queries))
+        return [{"query": q, "response": {"results": [
+            {"location": {"lat": 1.0, "lng": 2.0}, "accuracy": 0.9,
+             "accuracy_type": "rooftop", "source": "City"}]}} for q in queries], ""
+
+    db = _Ledger()
+    orig, gc._post = gc._post, fake_post
+    try:
+        a = [{"facility_id": "IC-1", "address": "1 Main St", "city": "Dallas", "state": "TX", "zip": ""}]
+        # a different facility, the same address, spelled differently
+        b = [{"facility_id": "IC-2", "address": "1 MAIN ST.", "city": "dallas", "state": "TX", "zip": ""}]
+        r1 = gc.run(a, key="k", db=db)
+        r2 = gc.run(b, key="k", db=db)
+    finally:
+        gc._post = orig
+
+    assert r1["stored"] == 1 and r2["stored"] == 1, "both facilities still get a coordinate"
+    assert len(calls) == 1, f"the second must not reach Geocodio; calls={calls}"
+    assert r2["from_cache"] == 1 and r2["billed_lookups"] == 0
+    assert r2["billable_if_allowance_spent_usd"] == 0.0
+
+
+def test_an_address_geocodio_cannot_place_is_cached_too(monkeypatch):
+    """The tail that never matches is most of the waste: it costs exactly as much to re-ask."""
+    from pipeline.enrich import geocode as gc
+    calls = []
+
+    def fake_post(queries, key):
+        calls.append(list(queries))
+        return [{"query": q, "response": {"results": []}} for q in queries], ""
+
+    db = _Ledger()
+    orig, gc._post = gc._post, fake_post
+    try:
+        row = [{"facility_id": "IC-1", "address": "9 Nowhere", "city": "X", "state": "TX", "zip": ""}]
+        gc.run(row, key="k", db=db)
+        gc.run(row, key="k", db=db)
+    finally:
+        gc._post = orig
+    assert len(calls) == 1, "a no_result must be remembered, not re-bought"
+
+
+def test_a_positive_is_reusable_by_anyone_and_a_negative_only_by_its_own_provider():
+    """The rule that keeps a cache from becoming a ceiling. 'qwen found nothing' is a fact about
+    qwen; storing it under the input alone would permanently stop a better model from trying."""
+    from pipeline.enrich import cache
+    db = _Ledger()
+    k = cache.locate_key("Acme Modular", "Elkhart", "IN")
+
+    cache.put(db, k, "locate", "Acme", {"why": "nothing citable"}, False, "qwen+tako")
+    assert cache.get(db, k, provider="qwen+tako") is not None, "the same model reuses its own miss"
+    assert cache.get(db, k, provider="opus+tako") is None, "a better model must get to try"
+
+    cache.put(db, k, "locate", "Acme", {"address": "1 Plant Rd"}, True, "qwen+tako")
+    assert cache.get(db, k, provider="opus+tako")["result"]["address"] == "1 Plant Rd", \
+        "an address is an address, whoever found it"
+
+
+def test_a_new_overture_release_re_measures_rather_than_serving_a_stale_building():
+    from pipeline.enrich import cache
+    old = cache.footprint_key(35.0, -90.0, "2026-08-19.0")
+    new = cache.footprint_key(35.0, -90.0, "2026-11-19.0")
+    assert old != new, "the release is part of the question"
+    # and float formatting drift must not miss a hit
+    assert cache.footprint_key(35.0, -90.0, "2026-08-19.0") == \
+        cache.footprint_key(35.000000, -90.000000, "2026-08-19.0")
+
+
+def test_the_ledger_survives_the_database(tmp_path):
+    """The one failure the warehouse cannot protect against: the database itself being recreated.
+    A ledger that can be dumped and restored is what makes a from-zero rebuild free."""
+    from pipeline.enrich import cache
+    import json
+    src = _Ledger()
+    cache.put(src, cache.geocode_key("1 Main St, Dallas TX"), "geocode", "1 main st dallas tx",
+              {"lat": 1.0}, True, "geocodio")
+    rows = cache.dump(src)
+    (tmp_path / "ledger.json").write_text(json.dumps(rows, default=str))
+
+    fresh = _Ledger()                                   # a brand new, empty database
+    n = cache.restore(fresh, json.loads((tmp_path / "ledger.json").read_text()))
+    assert n == 1
+    assert cache.get(fresh, cache.geocode_key("1 MAIN ST,  dallas  tx"))["result"]["lat"] == 1.0
