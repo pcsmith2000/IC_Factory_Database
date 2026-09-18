@@ -426,8 +426,16 @@ def main(argv=None) -> int:
                 known_gaps=load_yaml(ROOT / "registry" / "known-gaps.yaml") if (ROOT / "registry" / "known-gaps.yaml").exists() else {})
             wh.close()
             print(f"  warehouse {wh.engine}: {record['release']['warehouse']['assertions_appended']} assertions appended → {record['release']['warehouse']['path']}")
-    except warehouse.WarehouseNotImplemented as e:
+    except (warehouse.WarehouseNotImplemented, warehouse.WarehouseUnreachable) as e:
         return halt("layer 8", str(e))
+    except Exception as e:
+        # Anything else the driver raises — psycopg.OperationalError on a bad password, a dropped
+        # connection mid-load — used to leave the process as a bare traceback: no run record, no
+        # failed heartbeat, and forty minutes of measured work recoverable only because the
+        # artifact upload runs on always(). Layer 8 is the last step; by the time it runs, the
+        # record is the whole point.
+        import traceback; traceback.print_exc()
+        return halt("layer 8", f"{type(e).__name__}: {str(e).strip().splitlines()[0]}")
     _write_record(record, rec_dir)
     try:
         from . import runlog

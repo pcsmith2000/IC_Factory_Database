@@ -43,6 +43,15 @@ SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
 }
 
 
+class WarehouseUnreachable(RuntimeError):
+    """The warehouse is configured but the connection failed — bad credential, host or network.
+
+    Separate from WarehouseNotImplemented (a missing driver or an unknown engine) because the
+    caller treats them the same way and the operator does not: one is a code/deploy problem, the
+    other is a secret to correct.
+    """
+
+
 class WarehouseNotImplemented(Exception):
     pass
 
@@ -417,6 +426,12 @@ def open_warehouse(cfg: dict, root: Path):
     """Engine: IC_WAREHOUSE_ENGINE env · else postgres when DATABASE_URL (or DATABASE_URL_UNPOOLED) is set ·
     else warehouse.engine in config (default sqlite). IC_WAREHOUSE_PATH overrides the SQLite path."""
     w = cfg.get("warehouse") or {}
+    # UNPOOLED wins, and which one won is worth saying out loud. Run 35393440727 died on
+    # "password authentication failed for user 'neondb_owner'" with a perfectly good
+    # DATABASE_URL set: DATABASE_URL_UNPOOLED held a different role's password and is read
+    # first, so the working URL was never tried. The error named the host and the role, and
+    # neither of those is the thing you have to go and fix.
+    var = "DATABASE_URL_UNPOOLED" if os.environ.get("DATABASE_URL_UNPOOLED") else "DATABASE_URL"
     url = os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
     engine = os.environ.get("IC_WAREHOUSE_ENGINE") or ("postgres" if url else w.get("engine", "sqlite"))
     if engine in ("none", "off"):
@@ -426,7 +441,16 @@ def open_warehouse(cfg: dict, root: Path):
     if engine in ("postgres", "neon"):
         if not url:
             raise WarehouseNotImplemented("warehouse engine is postgres but DATABASE_URL is not set (neon env pull, or a GitHub secret)")
-        return PostgresWarehouse(url)
+        try:
+            return PostgresWarehouse(url)
+        except WarehouseNotImplemented:
+            raise
+        except Exception as e:
+            raise WarehouseUnreachable(
+                f"{var} did not connect: {type(e).__name__}: {str(e).strip().splitlines()[0]}\n"
+                f"       url {PostgresWarehouse._redact(url)}\n"
+                f"       (DATABASE_URL_UNPOOLED is read BEFORE DATABASE_URL, so a bad value there "
+                f"hides a good one here)") from e
     raise WarehouseNotImplemented(f"unknown warehouse engine {engine!r} (sqlite | postgres | none)")
 
 
