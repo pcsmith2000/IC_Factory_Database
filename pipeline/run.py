@@ -449,7 +449,17 @@ def _write_csv(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
         path.write_text(""); return
-    cols = list(rows[0].keys())
+    # The union of every row's keys, in first-seen order — NOT the first row's. Golden rows carry
+    # only the fields some source asserted, so with the header taken from row 0 the website,
+    # sq_ft and operating_status columns were silently dropped from golden.csv on run 35276704513
+    # (51 website assertions, 2 square footages, all resolved, none printed) while the warehouse
+    # load, which names its columns, kept them.
+    cols: list[str] = []
+    seen: set[str] = set()
+    for r in rows:
+        for k in r.keys():
+            if k not in seen:
+                seen.add(k); cols.append(k)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore"); w.writeheader(); w.writerows(rows)
 
