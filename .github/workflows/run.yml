@@ -65,10 +65,8 @@ jobs:
         # Each credential accepts either the canonical name or this repo's IC_DB_ / short naming.
         # A secret that is not set reads as an empty string, so `||` falls through to the next name.
         env:
-          # Vercel AI Gateway first, Anthropic direct as the fallback — pipeline.ai_client_and_model
-          # picks whichever is set. Neither is needed while IC_AI is off.
-          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
+          # The Vercel AI Gateway is the one AI provider; not needed while IC_AI is off.
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
           CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY || secrets.CENSUS_KEY }}
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN || secrets.IC_DB_PRI_SOURCE_READ_WRITE_TOKEN }}
           BLOB_STORE_ID: ${{ secrets.BLOB_STORE_ID || secrets.IC_DB_PRI_SOURCE_STORE_ID }}

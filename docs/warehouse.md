@@ -106,7 +106,7 @@ plus the run date is the key into it. Secret: `BLOB_READ_WRITE_TOKEN`.
 2. ~~BigQuery dataset `ic_factory`~~ — superseded by Neon / Cloud SQL for PostgreSQL
 3. Service account `ic-pipeline@<project>.iam.gserviceaccount.com`
 4. Workload Identity Federation pool + provider trusting repo `pcsmith2000/IC_Factory_Database`
-5. Secret Manager: `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`
+5. Secret Manager: `AI_GATEWAY_API_KEY`, `CENSUS_API_KEY`
 6. (later) Cloud Run Job `ic-pipeline-heavy` built from this repo
 
 ## Roles on the service account
@@ -123,4 +123,4 @@ People: `roles/bigquery.dataViewer` on the dataset for anyone who reads the gold
 
 ## Repo variables and secrets
 Variables: `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` (raw archives, later).
-Secrets: `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`.
+Secrets: `AI_GATEWAY_API_KEY`, `CENSUS_API_KEY`, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`.

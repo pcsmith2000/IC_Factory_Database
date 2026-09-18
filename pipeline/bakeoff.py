@@ -9,7 +9,7 @@ model that clears the gate is the answer; everything above it is money spent on 
     python -m pipeline.bakeoff --list            # candidates, cheapest first, no calls made
     python -m pipeline.bakeoff --estimate        # what a full run would cost, no calls made
 
-Needs AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY). Each scored model costs roughly a cent: the
+Needs AI_GATEWAY_API_KEY. Each scored model costs roughly a cent: the
 seeds are ~60 rows, against ~12,973 for a full run. Scoring ten models is cheaper than one run.
 
 The seeds are graded here in a single 60-row batch, which is NOT the shape a real run uses —

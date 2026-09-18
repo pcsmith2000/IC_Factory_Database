@@ -64,7 +64,7 @@ jobs:
           echo "### Stage ${{ inputs.stage }} — database: ${BRANCH_ID:-main (the release database)}" >> "$GITHUB_STEP_SUMMARY"
 
       # A stage that needs a credential says so before it does any work, and names every spelling
-      # it looked under. Secret names differ across this repo (CENSUS_KEY, IC_DB_ANTHROPIC_API_KEY,
+      # it looked under. Secret names differ across this repo (CENSUS_KEY, IC_DB_AI_GATEWAY_API_KEY,
       # NEON_API_KEY), and "GEOCODIO_API_KEY is not set" three minutes into a run does not say
       # whether the secret is absent or merely spelled differently.
       # The Overture file -> bbox index is derived from parquet footers and is fixed for an Overture
@@ -80,14 +80,13 @@ jobs:
       - name: Check the credentials this stage needs
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
           GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.GEOCODIO_API || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
           SECRETS_JSON: ${{ toJSON(secrets) }}
         run: |
           set -u
           need=""
           case "${{ inputs.stage }}" in
-            locate)  [ -n "${AI_GATEWAY_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || need="AI_GATEWAY_API_KEY | IC_DB_AI_GATEWAY_API_KEY | VERCEL_AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY | IC_DB_ANTHROPIC_API_KEY)" ;;
+            locate)  [ -n "${AI_GATEWAY_API_KEY:-}" ] || need="AI_GATEWAY_API_KEY | IC_DB_AI_GATEWAY_API_KEY | VERCEL_AI_GATEWAY_API_KEY" ;;
             geocode) [ -n "${GEOCODIO_API_KEY:-}" ] || need="GEOCODIO_API_KEY | GEOCODIO_API | IC_DB_GEOCODIO_API_KEY | GEOCODIO_KEY" ;;
           esac
           if [ -n "$need" ]; then
@@ -124,7 +123,6 @@ jobs:
         # an unset secret reads as an empty string, so `||` falls through to the next spelling.
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY || secrets.IC_DB_ANTHROPIC_API_KEY }}
           GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.GEOCODIO_API || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
         run: python -m pipeline.enrich.run "${{ inputs.stage }}" --out enrich ${{ inputs.args }}
 

@@ -29,7 +29,7 @@ source in the run record and halt Layer 1. Nothing is skipped silently and nothi
 | `or_bcd` | **needs a browser** | the programme PDF is empty as the registry predicted, and no licence data file was linked. Playwright sweep of the licence search |
 | `fl_bcis` | **search link not found** | the MB menu no longer carries a link matching the organisation search; the POST form needs re-locating from the archived menu |
 | `epa_frs` | **not run** | ~730 MB bulk file; not exercised in this environment |
-| `corporate_locations` | **not run** | needs `ANTHROPIC_API_KEY` for extraction |
+| `corporate_locations` | **not run** | needs `AI_GATEWAY_API_KEY` for extraction |
 
 Three of the eleven sources publish no list at all, and two more (`pa_dced`, `mhi_plants`) publish
 no street address — their rows cannot pass tier T0 alone and reach a plant address only by
@@ -99,14 +99,14 @@ deleted first; and a simulated site outage falling back to the stored copy.
 model and temperature from `classifier` in `registry/config.yaml`, JSON-schema output, raw
 response archived beside the page and cached by content hash. Every name / address / city
 returned is checked against the archived page text; a value not on the page is dropped and
-counted. Needs `ANTHROPIC_API_KEY`.
+counted. Needs `AI_GATEWAY_API_KEY`.
 
 ## Secrets and access the sources need
 | need | used by |
 |---|---|
 | none — public GET | pa_dced, tx_tdlr, mi_lara, ma_bbrs, or_bcd (data file / PDF), iibc, mhi_plants, epa_frs |
 | WebForms POST (no login) | fl_bcis |
-| `ANTHROPIC_API_KEY` | corporate_locations (extraction), Layer 3 classification |
+| `AI_GATEWAY_API_KEY` | corporate_locations (extraction), Layer 3 classification |
 | `CENSUS_API_KEY` | Layer 7 frame refresh only (not a Layer 1 source) |
 | `BLOB_READ_WRITE_TOKEN` | raw-file archive to Vercel Blob after every pull (optional locally; the run record says when it is off). Check it with `python -m pipeline.archive verify` |
 | Playwright (`pip install -e ".[acquire]"` + `playwright install chromium`) | or_bcd if the data file route fails |

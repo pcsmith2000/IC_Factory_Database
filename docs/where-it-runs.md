@@ -28,7 +28,7 @@ GitHub ↔ GCP connects through Workload Identity Federation — no long-lived k
   7 GB): the EPA FRS bulk parse, Playwright sweeps of the certification directories,
   classifier batches. The workflow launches the job and waits; the container is built once
   from this repo's `pyproject.toml`.
-- **Secret Manager** for `ANTHROPIC_API_KEY`, `CENSUS_API_KEY` when running in Cloud Run;
+- **Secret Manager** for `AI_GATEWAY_API_KEY`, `CENSUS_API_KEY` when running in Cloud Run;
   GitHub secrets when running on the runner.
 - **Warehouse: Neon (Postgres)** when `DATABASE_URL` is set — the persistent store across
   quarterly runs; a SQLite file in `build/` otherwise (`docs/warehouse.md`). Cloud SQL for
@@ -50,8 +50,7 @@ page — a variable in the Secrets tab (or the reverse) reads as empty, not as a
 | `DATABASE_URL` + `DATABASE_URL_UNPOOLED` · `IC_DB_DATABASE_URL`(`_UNPOOLED`) | Secrets | the Neon warehouse | falls back to the Neon integration below, else SQLite in the artifact |
 | `NEON_API_KEY` | Secrets | set by the Neon GitHub integration; used only when `DATABASE_URL` is absent | — |
 | `NEON_PROJECT_ID` | **Variables** | same integration path | — |
-| `AI_GATEWAY_API_KEY` · `IC_DB_AI_GATEWAY_API_KEY` · `VERCEL_AI_GATEWAY_API_KEY` | Secrets | Layer 3 through the Vercel AI Gateway, and stage 9's `vercel:*_search` server tools | Layer 3 falls back to `ANTHROPIC_API_KEY` direct; stage 9 has no search and cannot run |
-| `ANTHROPIC_API_KEY` · `IC_DB_ANTHROPIC_API_KEY` | Secrets | Layer 3 classification, AI extraction, the gateway's fallback | those layers fail loudly |
+| `AI_GATEWAY_API_KEY` · `IC_DB_AI_GATEWAY_API_KEY` · `VERCEL_AI_GATEWAY_API_KEY` | Secrets | every AI step: Layer 3 classification, Layer 1 `ai_extraction`, and stage 9's `vercel:*_search` server tools | all of them fail loudly — there is no second provider to fall through to |
 | `GEOCODIO_API_KEY` · `GEOCODIO_API` · `IC_DB_GEOCODIO_API_KEY` · `GEOCODIO_KEY` | Secrets | stage 10 geocoding | stage 10 refuses to start (the preflight names the key) |
 | `CENSUS_API_KEY` · `CENSUS_KEY` | Secrets | Layer 7 frame refresh | frame is read from the committed CSV |
 | `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` | Variables | later, Cloud Run Jobs | the GCP auth step is skipped |
@@ -68,8 +67,9 @@ python -m pipeline.control check         # the hand-placed inputs
 ## Setup once
 
 1. Create a Vercel Blob store with **private** access, to match `registry/config.yaml → archive.access`. The two must agree or every write is rejected, and the error names whichever way round you got it (*Cannot use public access on a private store*, and the reverse). Copy its read-write token.
-2. Add repo secrets `ANTHROPIC_API_KEY`, `CENSUS_API_KEY`, `BLOB_READ_WRITE_TOKEN` (Vercel Blob),
-   and either `DATABASE_URL` + `DATABASE_URL_UNPOOLED` or the Neon GitHub integration (Neon).
+2. Add repo secrets `AI_GATEWAY_API_KEY` (Vercel AI Gateway), `CENSUS_API_KEY`,
+   `BLOB_READ_WRITE_TOKEN` (Vercel Blob), `GEOCODIO_API_KEY` (stage 10), and either
+   `DATABASE_URL` + `DATABASE_URL_UNPOOLED` or the Neon GitHub integration (Neon).
 3. Later, for Cloud Run Jobs: Workload Identity Federation for this repo; repo variables
    `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT`.
 4. Pick one scheduler. This repo keeps the cron in Actions so the run, its failure and its
@@ -108,10 +108,11 @@ everything else under version control. Losing the store costs the snapshots, not
 but re-fetching them means re-scraping 20-odd sites, several of which are hand-placed uploads
 (`docs/manual-uploads.md`) that cannot be re-fetched at all.
 
-**2. The AI Gateway key.** Issue a new one in the new team. It pays for two things, and a run that
-silently loses it behaves differently in each: Layer 3 falls back to `ANTHROPIC_API_KEY` direct and
-keeps going (the run record names the provider, so check it), while stage 9 has no fallback — the
-`vercel:parallel_search` / `vercel:tako_search` server tools exist only on the gateway.
+**2. The AI Gateway key.** Issue a new one in the new team. It is now the only AI credential: the
+first-party `ANTHROPIC_API_KEY` fallback was removed on 2026-09-18, so a run without this key
+fails at once and says so instead of quietly finishing against a different provider. The `anthropic`
+SDK is still a dependency — the gateway serves the Anthropic Messages API and that package is how
+the pipeline speaks it — but it carries the gateway key, never a first-party one.
 
 **3. Check, do not assume, the Neon path.** `.github/scripts/neon_connection_string.py` talks to
 `console.neon.tech` directly, so a Neon project owned by its own account is untouched by a Vercel

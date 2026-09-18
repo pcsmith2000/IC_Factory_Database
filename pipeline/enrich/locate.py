@@ -127,16 +127,15 @@ def _client(model: str):
         pass
     import os
     import anthropic
-    gateway = os.environ.get("AI_GATEWAY_API_KEY")
-    if gateway:
-        return (anthropic.Anthropic(api_key=gateway, base_url=AI_GATEWAY_BASE_URL, max_retries=8),
-                model if "/" in model else f"anthropic/{model}", "vercel_ai_gateway")
-    key = os.environ.get("ANTHROPIC_API_KEY")
+    # Gateway only. Stage 9's search runs as the gateway's own `vercel:*_search` server tools, so
+    # a first-party key could never have served this stage anyway — the fallback that used to sit
+    # here bought a client that then failed on the first search call.
+    key = os.environ.get("AI_GATEWAY_API_KEY")
     if not key:
-        raise LocateUnavailable("stage 9 needs AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY); "
+        raise LocateUnavailable("stage 9 needs AI_GATEWAY_API_KEY; "
                                 "set --limit 0 to skip the AI stage entirely")
-    return (anthropic.Anthropic(api_key=key, max_retries=8),
-            model.split("/", 1)[-1].replace(".", "-"), "anthropic")
+    return (anthropic.Anthropic(api_key=key, base_url=AI_GATEWAY_BASE_URL, max_retries=8),
+            model if "/" in model else f"anthropic/{model}", "vercel_ai_gateway")
 
 
 def _extract_json(text: str) -> dict | None:

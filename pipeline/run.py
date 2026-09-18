@@ -98,7 +98,7 @@ def main(argv=None) -> int:
             print(f"  ai on · classifier {_model} via {_provider}")
         except RuntimeError as e:
             print(f"HALT before layer 1: {e}", file=sys.stderr)
-            print("       set AI_GATEWAY_API_KEY (or ANTHROPIC_API_KEY), or run with IC_AI=off",
+            print("       set AI_GATEWAY_API_KEY, or run with IC_AI=off",
                   file=sys.stderr)
             return 2
 
