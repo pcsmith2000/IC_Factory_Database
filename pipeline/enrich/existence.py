@@ -88,7 +88,11 @@ def run(rows: list[dict], out: Path, today: date | None = None) -> dict:
         if len(ev) < 2:
             continue
         for e in ev:
-            key = e.split(" ")[0] + " " + e.split(" ")[1]
+            # The label, not the label plus its number. Splitting on the first two words gave
+            # "licence expired" and "source status" but "footprint 3,459" — so every footprint
+            # observation landed in its own bucket and the histogram could not count them.
+            key = ("footprint too small for its trade" if e.startswith("footprint")
+                   else " ".join(e.split(" ")[:2]))
             reasons[key] = reasons.get(key, 0) + 1
         asserts.append(assertion(fid, "existence_flag", "review",
                                  source_id="enrich:existence", basis="advisory",

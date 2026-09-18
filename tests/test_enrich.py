@@ -1000,3 +1000,18 @@ def test_locate_checkpoints_so_a_kill_still_keeps_what_it_found(monkeypatch):
     assert rep["located"] == 25
     # a checkpoint carries the same shape as the final report, so the two cannot drift
     assert set(seen[0]) == set(rep)
+
+
+def test_the_reasons_histogram_counts_footprints_together(tmp_path):
+    """The first live run reported eleven separate buckets — "footprint 3,459", "footprint 2,222" —
+    because the key was the first two words and the second word was the number. A histogram that
+    cannot count its largest category is not a histogram."""
+    from pipeline.enrich import existence
+    from datetime import date
+    import json
+    (tmp_path / "footprint.rows.json").write_text(json.dumps(
+        [{"facility_id": f"IC-{i}", "building_sqft": 2_000 + i, "n_nearby": 1} for i in range(3)]))
+    rows = [{"facility_id": f"IC-{i}", "naics": "321991", "expiry_date": "2015-01-01",
+             "status": "expired"} for i in range(3)]
+    rep = existence.run(rows, tmp_path, today=date(2026, 9, 18))
+    assert rep["reasons"].get("footprint too small for its trade") == 3, rep["reasons"]
