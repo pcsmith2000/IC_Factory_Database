@@ -267,30 +267,23 @@ sources:
   - The footer carries the Irving TX corporate address on EVERY page — take city and state from the title, never the body.
   - Some pages render the address client-side; those rows keep city and state and no street rather than borrowing the footer's.
   status: active
-- id: sbca
-  name: SBCA component manufacturer directories
+- id: sbca_cm
+  name: SBCA Component Manufacturer members
   class: C
-  method: fetch
+  method: upload
+  acquire: blob-only
   needs_classify: false
   carries:
   - plant_address
+  - phone
   status_basis: on_current_list
+  url: https://www.sbcindustry.com/
   traps:
-  - 'Probed 2026-09-17: sbcindustry.com does not answer at all (curl exit 000, no HTTP status), not merely login-gated. Still the single biggest prize - 23 of the 122 never-ingested control rows are Wood Structural Components.'
-  - The truss segment is invisible to every regulator source; this is its only roster.
-  - MEMBER DIRECTORY IS LOGIN-GATED (probed 2026-09-17). /member-directory and every /member-directory/<slug> return 'Restricted
-    Page'; search engines have them indexed but an anonymous fetch does not.
-  - sitemap.xml is public and lists 3,536 URLs, of which exactly ONE is a member-directory page — the roster is genuinely
-    not published.
-  - 'The TMAT directory (/tmat-directory, 73 component manufacturers) IS public, but the detail pages carry only an <h1> name:
-    no address, no city, no state. Names alone would add T0 leads and lift recall without locating a plant.'
-  - Chapter pages (/chapter/<slug>, 28 of them incl. Colorado Truss Manufacturers, TMAT, Wisconsin Truss Manufacturers) are
-    public but list no members — chapter info and site nav only.
-  - 91 of the 241 ADL control rows are trusses and structural components. An SBCA membership is the single highest-value unlock
-    available to this project.
-  - 'Probed 2026-09-17 for a substitute truss-plant roster: MiTek (mii.com/locator, /find-a-fabricator) and Alpine ITW have no public fabricator locator — every path 404s to the site nav — and sfia.com and sbcindustry.com do not complete a TLS handshake through the proxy. The plate suppliers know every truss plant in the country and publish none of it; FPL (South) and EPA 321214 remain the truss coverage.'
-  status: blocked
-  url: https://www.sbcacomponents.com/member-directory
+  - 'THE truss roster. 932 rows, 868 US, 863 with a street, 785 with a phone, 493 with a website. Matched against the control list before ingesting: it reaches 26 of the 137 rows no source held — Apex Truss, Stark Truss Baltimore, Panel Truss Townville, Carolina Structural Systems, Mainely Trusses, Montgomery Truss & Panel, York PB Truss and twenty more. The truss segment needs no state licence and files no HUD registration, so no regulator source can see it.'
+  - 'sbcindustry.com does not answer a crawler at all — curl exit 000, no HTTP status, not merely login-gated (probed 2026-09-17). The roster arrived as a hand transcription of SBCA''s own "Current CM Members" BatchGeo map, so this source is blob-only and has no fetcher.'
+  - 'Every row claims geocode accuracy=ROOFTOP because that is what BatchGeo reports whatever it resolved, and every coordinate is of the MAILING address — the head office for a multi-plant company. Carried as evidence, ranked LAST for lat_lon by survivorship, so stage 10''s real rooftop geocode replaces them. The transcriber''s caveat rides into notes verbatim on every row.'
+  - 'A company with several plants is listed once per plant with the plant in the name ("Contract Building Components - Covington", "Panel Truss - Townville"), which is why the name-prefix rung reaches them and the exact rung does not.'
+  status: active
 - id: pci_certified
   name: PCI certified plants (republished in Ascent magazine)
   class: C

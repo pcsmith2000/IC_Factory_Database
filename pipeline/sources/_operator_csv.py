@@ -58,7 +58,14 @@ def read(paths: list[Path], source: dict, *, drop_if_evidence: str = "", note: s
                     # Optional columns a transcriber may add; absent in the state-registry uploads,
                     # present in the enrichment CSV where the lookup found them.
                     website=(r.get("website") or ""), sq_ft=(r.get("sq_ft") or ""),
-                    operating_status=(r.get("operating_status") or "")))
+                    operating_status=(r.get("operating_status") or ""),
+                    phone=(r.get("phone") or ""),
+                    # Coordinates only when the transcriber supplied both. They are ranked by the
+                    # source's own status_basis like any other assertion, so a roster geocode of a
+                    # mailing address cannot outrank the rooftop geocode stage 10 exists to produce
+                    # — which matters here because BatchGeo reports accuracy=ROOFTOP on every row
+                    # it returns, including the ones that are nothing of the kind.
+                    lat=(r.get("lat") or "").strip(), lon=(r.get("lon") or "").strip()))
     # An empty roster is a real answer for some of these — MA publishes no list — but it must be
     # said out loud rather than read as a broken parse.
     if out:
