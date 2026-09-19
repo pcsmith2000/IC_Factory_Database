@@ -306,6 +306,43 @@ sources:
   not_manufacturers:
   - Modutize
   status: active
+- id: ic_directories
+  name: Certification directories — AISC, PCI, APA, IAS AC472, NFBA (2026-09-18 collection)
+  class: B
+  method: upload
+  acquire: blob-only
+  needs_classify: true
+  classify_all: true               # AISC certifies bridge shops too; a certificate is not a product
+  carries:
+  - plant_address
+  - phone
+  - website
+  status_basis: on_current_list
+  url: blob://ic-sources/ic_directories/
+  traps:
+  - 'The combined file IS the five per-source files: 2,862 rows = AISC 1,872 + NFBA 458 + PCI 253 + APA 158 + IAS 121, verified by record_id. Its own README says "import either these files OR the combined directory CSV, not both". Only the combined one is registered.'
+  - 'Its README is explicit that a listing is not a factory: "Supplier does not mean factory; builder does not mean manufacturer", "AISC covers the US directory, including erectors and infrastructure fabricators", "Current directory listing is not an independent verification of production capacity or factory operation". So rows are kept only where the source''s own entity_type names a maker — 1,093 of 2,778 US rows are erector, builder, supplier, designer or accredited_facility and would otherwise publish 537 steel erectors as plants.'
+  - 'ic_scope and entity_type are the collector''s own words: "derived triage categories, not authoritative product certifications". They filter, and they also ride into notes with product_types, the certification programme and its categories, the source status and the collector''s data_quality_notes, so any row can be argued with.'
+  - 'APA rows are MILL registrations, several numbers can mean one site, and plant streets are deliberately blank rather than copied from headquarters. IAS covers AC472 only, not AC478 assemblers. PCI covers the public map response and is not proven to cover facilities absent from it.'
+  - 'Verified on arrival against the collection''s own file_manifest.json: all 8 SHA-256 hashes match.'
+  status: active
+- id: osha_inspections
+  name: OSHA manufacturing inspections 2021-2026, IC NAICS only
+  class: B
+  method: upload
+  acquire: blob-only
+  needs_classify: true
+  carries:
+  - plant_address
+  - naics
+  status_basis: none
+  url: blob://ic-sources/osha_inspections/
+  traps:
+  - '4,443 inspections at 3,810 distinct establishments, every one with a street and a real NAICS — 332312 2,030, 327390 766, 332311 474, 321214 314, 321992 270, 321991 230. An inspection is a federal officer standing in the building, which is stronger address evidence than a directory listing.'
+  - 'Selected from 5,200,748 archive rows opened 2021-01-01 to 2026-09-18 on eleven IC NAICS codes. The README warns the selection "includes broad concrete and steel categories and requires capability verification" — hence needs_classify.'
+  - 'An inspection date is when a CASE OPENED, not proof the plant runs today, and repeated inspections at one establishment stay separate records rather than being collapsed. Layer 5 dedupes them on the street key like any other repeated row.'
+  - 'No personal injury information was extracted by the collector, and none is read here.'
+  status: active
 - id: sbca_cm
   name: SBCA Component Manufacturer members
   class: C
