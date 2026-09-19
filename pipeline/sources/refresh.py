@@ -103,6 +103,16 @@ def main(argv=None) -> int:
 
     if args.list:
         for s in active_sources(reg):
+            # A source may name the folder its bytes are in rather than use the dated layout
+            # (acquire.from_blob). Reporting that one as EMPTY would send someone to re-upload a
+            # file that is already in the store.
+            where = (s.get("blob_path") or "").strip()
+            if where:
+                n = len([o for o in arch.list_prefix(where if where.endswith("/") else where + "/")
+                         if not o["pathname"].endswith("/")])
+                held = where if n else "EMPTY — blob_path names no files"
+                print(f"  {s['id']:<22} {held:<24} {n} file(s)")
+                continue
             dates = arch.dates_for(s["id"])
             print(f"  {s['id']:<22} {(dates[0] if dates else 'EMPTY — upload a file'):<24} {len(dates)} version(s)")
         return 0
