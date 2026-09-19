@@ -26,6 +26,7 @@ OUT = RECORDS / "RUNLOG.csv"
 COLUMNS = ["run", "started", "minutes", "ai", "model", "prompt", "sources", "n_sources",
            "input_tokens", "output_tokens", "batches_called", "batches_cached", "classify_minutes",
            "candidates", "ic", "uncertain", "raw_clusters", "published", "located", "t0_leads",
+           "frame_total", "counted", "coverage", "mean_abs_bias", "bias_outliers",
            "recall", "recall_located", "recall_sealed", "control_rows", "ceiling",
            "ingested_but_lost", "never_ingested", "gates", "halted_at"]
 
@@ -47,6 +48,7 @@ def row_for(path: Path) -> dict:
     rel = d.get("release") or {}
     cls = layers.get("3_classify") or {}
     rc = ((layers.get("7_measure") or {}).get("recall")) or {}
+    cb = ((layers.get("7_measure") or {}).get("coverage_bias")) or {}
     acq = layers.get("1_acquire") or {}
     # Layer 1 records `pulled` as absolute paths to the normalised CSV it wrote per source
     # (".../ic-csv/epa_frs.csv"), so the source id is the file stem. Reading the registry instead
@@ -77,6 +79,18 @@ def row_for(path: Path) -> dict:
         "published": rel.get("published_count", ""),
         "located": rel.get("located_count", ""),
         "t0_leads": rel.get("t0_leads", ""),
+        # The industry-size test, and since 2026-09-18 the only one: Census CBP establishment
+        # counts for the core NAICS codes, by state, whose denominator nobody in this project
+        # controls. `coverage` is against a total the config treats as a FLOOR, so above 1.0 is
+        # not an error — the CBP codes do not cover every kind of IC plant. `mean_abs_bias` is the
+        # shape test and the one to watch: how far this database's state MIX sits from the
+        # frame's, averaged over the states big enough to judge.
+        "frame_total": cb.get("frame_total", ""),
+        "counted": cb.get("counted_facilities", ""),
+        "coverage": (f"{cb['counted_facilities'] / cb['frame_total']:.3f}"
+                     if cb.get("frame_total") else ""),
+        "mean_abs_bias": pct(cb.get("mean_abs_bias")),
+        "bias_outliers": len(cb["out_of_band"]) if isinstance(cb.get("out_of_band"), dict) else "",
         "recall": pct(rc.get("recall")),
         "recall_located": pct(rc.get("recall_located")),
         "recall_sealed": pct(((rc.get("sealed") or {}).get("recall"))),
