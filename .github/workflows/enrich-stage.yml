@@ -42,6 +42,28 @@ jobs:
           merge-multiple: true
           path: enrich
 
+      - name: Resolve dashboard reporting database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then
+            echo "PIPELINE_REPORT_DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL}" >> "$GITHUB_ENV"
+          else
+            python .github/scripts/neon_connection_string.py
+          fi
+
+      - name: Remember the reporting connection
+        run: |
+          if [ -z "$PIPELINE_REPORT_DATABASE_URL" ]; then
+            echo "PIPELINE_REPORT_DATABASE_URL=${DATABASE_URL_UNPOOLED:-$DATABASE_URL}" >> "$GITHUB_ENV"
+          fi
+          echo "PIPELINE_TARGET=${{ inputs.branch_id || 'main' }}" >> "$GITHUB_ENV"
+          # Avoid a direct URL for main taking precedence over the selected branch below.
+          echo "DATABASE_URL_UNPOOLED=" >> "$GITHUB_ENV"
+
       # Which database a stage writes to, resolved in the order that needs the fewest things to be
       # working. An empty branch_id means the run targets the release database, and the release
       # database has a connection string of its own — the same DATABASE_URL secret layers 1-8 use.
@@ -163,13 +185,23 @@ jobs:
           fi
           echo "credentials present for stage ${{ inputs.stage }}"
 
+      - name: Record stage start
+        run: python -m pipeline.run_report before refinement --stage "${{ inputs.stage }}" --out enrich
+
       - name: Run stage ${{ inputs.stage }}
+        id: stage
         # Each credential accepts the canonical name or this repo's IC_DB_ naming, as run.yml does:
         # an unset secret reads as an empty string, so `||` falls through to the next spelling.
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
           GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.GEOCODIO_API || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
         run: python -m pipeline.enrich.run "${{ inputs.stage }}" --out enrich ${{ inputs.args }}
+
+      - name: Report stage results
+        if: always()
+        env:
+          RUN_STATE: ${{ steps.stage.outcome }}
+        run: python -m pipeline.run_report after refinement --stage "${{ inputs.stage }}" --state "$RUN_STATE" --out enrich
 
       - name: Publish what this stage wrote
         if: always()

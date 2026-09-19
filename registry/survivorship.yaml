@@ -2,6 +2,7 @@
 # release tag. The golden table is a pure function of (assertions, id_registry, these rules).
 #
 # For each field: an ordered list of source preferences (first match wins), then a default.
+# `adl_employee_feedback` is confirmed employee feedback and has first priority.
 # `operator` is a human correction recorded as an assertion — it outranks every source.
 # `site_visit` matches any assertion whose source carries site-visit attestation (OSHA).
 #
@@ -15,52 +16,52 @@
 #            loses to the very coordinate stage 10 exists to replace.
 #   address  `class:enrichment` sits LAST. A web-cited address is worth having where no registry
 #            publishes one, and is worth less than any registry that does.
-version: 2
-default_order: [operator, site_visit, "class:A", "class:D", "class:B", "class:C"]
+version: 3
+default_order: [adl_employee_feedback, operator, site_visit, "class:A", "class:D", "class:B", "class:C"]
 fields:
-  name:            {order: [operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
-  legal_name:      {order: [operator, lookup], tie: most_recent}
-  address:         {order: [operator, site_visit, "class:D", "class:A", "class:B", "class:C", "class:enrichment"], tie: most_recent}
-  city:            {order: [operator, site_visit, "class:D", "class:A", "class:B", "class:C"], tie: most_recent}
-  state:           {order: [operator, "class:A", "class:D", "class:B", "class:C"], tie: most_recent}
-  zip:             {order: [operator, site_visit, "class:D", "class:A", "class:B"], tie: most_recent}
-  lat_lon:         {order: [operator, "basis:rooftop", "class:B"], tie: most_recent}
-  naics:           {order: [operator, "class:B"], tie: most_recent}
-  status:          {order: [operator, "basis:dated_expiry", "basis:explicit_status_field", "basis:certified_as_of_date", "basis:on_current_list"], tie: most_recent}
-  expiry_date:     {order: [operator, "basis:dated_expiry"], tie: most_recent}
+  name:            {order: [adl_employee_feedback, operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
+  legal_name:      {order: [adl_employee_feedback, operator, lookup], tie: most_recent}
+  address:         {order: [adl_employee_feedback, operator, site_visit, "class:D", "class:A", "class:B", "class:C", "class:enrichment"], tie: most_recent}
+  city:            {order: [adl_employee_feedback, operator, site_visit, "class:D", "class:A", "class:B", "class:C"], tie: most_recent}
+  state:           {order: [adl_employee_feedback, operator, "class:A", "class:D", "class:B", "class:C"], tie: most_recent}
+  zip:             {order: [adl_employee_feedback, operator, site_visit, "class:D", "class:A", "class:B"], tie: most_recent}
+  lat_lon:         {order: [adl_employee_feedback, operator, "basis:rooftop", "class:B"], tie: most_recent}
+  naics:           {order: [adl_employee_feedback, operator, "class:B"], tie: most_recent}
+  status:          {order: [adl_employee_feedback, operator, "basis:dated_expiry", "basis:explicit_status_field", "basis:certified_as_of_date", "basis:on_current_list"], tie: most_recent}
+  expiry_date:     {order: [adl_employee_feedback, operator, "basis:dated_expiry"], tie: most_recent}
   # product_type is asserted by the Layer 3 classifier, never by a source roster, so the old
   # class-based order could never match and the field stayed empty. A human correction still
   # outranks the model.
-  product_type:    {order: [operator, classifier], tie: most_recent}
+  product_type:    {order: [adl_employee_feedback, operator, classifier], tie: most_recent}
   # Added 2026-09-17. A registry (class A) states a website as printed; the enrichment pass (class
   # D) cites the company's own site. Square footage and open/closed status come almost only from
   # the enrichment pass today, so class D leads; a registry's explicit status field outranks it
   # for operating_status because a revoked registration is a stronger claim than a listing.
-  website:          {order: [operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
-  sq_ft:            {order: [operator, "class:D", "class:A", "class:B"], tie: most_recent}
-  operating_status: {order: [operator, "basis:explicit_status_field", "class:D", "class:A"], tie: most_recent}
+  website:          {order: [adl_employee_feedback, operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
+  sq_ft:            {order: [adl_employee_feedback, operator, "class:D", "class:A", "class:B"], tie: most_recent}
+  operating_status: {order: [adl_employee_feedback, operator, "basis:explicit_status_field", "class:D", "class:A"], tie: most_recent}
   # Added 2026-09-18. A state registry prints the number the manufacturer filed with it, which is
   # the one that gets answered; an association directory prints whatever the member last updated,
   # and a member roster is the likelier place for a sales line. Registry (A) first, roster (B/C)
   # after, enrichment last because a number found by search is the weakest claim of the four.
-  phone:            {order: [operator, "class:A", "class:B", "class:C", "class:D"], tie: most_recent}
+  phone:            {order: [adl_employee_feedback, operator, "class:A", "class:B", "class:C", "class:D"], tie: most_recent}
   # ADL's own plant lists (class D) are the only source of any of these, so the order is a
   # formality — but operator corrections still outrank them, as everywhere else.
-  email:               {order: [operator, "class:A", "class:B", "class:C", "class:D"], tie: most_recent}
-  adl_validated:       {order: [operator, "class:D"], tie: most_recent}
-  primary_capability:  {order: [operator, "class:D"], tie: most_recent}
-  secondary_capability: {order: [operator, "class:D"], tie: most_recent}
-  material:            {order: [operator, "class:D"], tie: most_recent}
-  sector:              {order: [operator, "class:D"], tie: most_recent}
-  throughput:          {order: [operator, "class:D"], tie: most_recent}
-  throughput_unit:     {order: [operator, "class:D"], tie: most_recent}
-  utilisation_pct:     {order: [operator, "class:D"], tie: most_recent}
-  vacant_capacity:     {order: [operator, "class:D"], tie: most_recent}
-  annual_revenue_usd:  {order: [operator, "class:D"], tie: most_recent}
-  automation_level:    {order: [operator, "class:D"], tie: most_recent}
-  states_serviced:     {order: [operator, "class:D"], tie: most_recent}
-  country_based:       {order: [operator, "class:D"], tie: most_recent}
-  value_basis:         {order: [operator, "class:D"], tie: most_recent}
+  email:               {order: [adl_employee_feedback, operator, "class:A", "class:B", "class:C", "class:D"], tie: most_recent}
+  adl_validated:       {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  primary_capability:  {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  secondary_capability: {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  material:            {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  sector:              {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  throughput:          {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  throughput_unit:     {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  utilisation_pct:     {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  vacant_capacity:     {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  annual_revenue_usd:  {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  automation_level:    {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  states_serviced:     {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  country_based:       {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
+  value_basis:         {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
   # Measured, not stated — and deliberately NOT merged into the two fields above.
   #
   # sq_ft is what a source SAYS the plant is; building_sqft is what its Overture footprint
@@ -69,5 +70,8 @@ fields:
   # throw away the only case that carries information: the one where the claim and the measurement
   # disagree. A consumer wanting one number should read sq_ft and fall back to building_sqft; a
   # consumer auditing the roster wants both side by side.
-  building_sqft:   {order: [operator, "basis:footprint"], tie: most_recent}
-  existence_flag:  {order: [operator, "basis:advisory"], tie: most_recent}
+  building_sqft:   {order: [adl_employee_feedback, operator, "basis:footprint"], tie: most_recent}
+  existence_flag:  {order: [adl_employee_feedback, operator, "basis:advisory"], tie: most_recent}
+
+  # Free-text employee observations that do not fit a structured warehouse field.
+  employee_notes: {order: [adl_employee_feedback, operator], tie: most_recent}

@@ -162,6 +162,7 @@ def main(argv=None) -> int:
                                f"gitignored and absent on a fresh checkout: run layers 1-8 instead.")
 
     # ---- Layer 3 (class B only)
+    hb.beat("3_classify")
     needs = {s["id"] for s in sources if s.get("needs_classify")}
     seeds = _load_seeds(ROOT / "control" / "seeds.csv")
     labels, cls_meta = {}, None

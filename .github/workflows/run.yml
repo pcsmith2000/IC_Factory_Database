@@ -2,11 +2,19 @@
 # Heavy steps (EPA bulk, Playwright sweeps, classifier batches) can be handed to a Cloud Run
 # Job — see docs/where-it-runs.md — this workflow is the trigger and the record either way.
 name: pipeline-run
+run-name: "Ingestion · ${{ inputs.dashboard_request || github.run_number }}"
+
+concurrency:
+  group: ic-warehouse-pipeline
+  cancel-in-progress: false
 on:
   schedule:
     - cron: "0 12 1 1,4,7,10 *"     # 12:00 UTC on the 1st of Jan/Apr/Jul/Oct
   workflow_dispatch:
     inputs:
+      dashboard_request:
+        description: "Dashboard request ID (optional)"
+        default: ""
       layers:
         # 2-8 reads ic-csv/, which is gitignored — on a CI checkout it is empty, so the run has no
         # input and halts at Layer 2. 2-8 is a local-only convenience; in CI use 1-8.
@@ -61,7 +69,11 @@ jobs:
           if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
           python .github/scripts/neon_connection_string.py
 
+      - name: Capture run baseline
+        run: python -m pipeline.run_report before ingestion
+
       - name: Run pipeline
+        id: pipeline
         # Each credential accepts either the canonical name or this repo's IC_DB_ / short naming.
         # A secret that is not set reads as an empty string, so `||` falls through to the next name.
         env:
@@ -82,6 +94,12 @@ jobs:
           python -m pipeline.run \
             --layers "${{ github.event.inputs.layers || '1-8' }}" \
             ${{ github.event.inputs.rerun == 'true' && '--rerun' || '' }}
+
+      - name: Report run results
+        if: always()
+        env:
+          RUN_STATE: ${{ steps.pipeline.outcome }}
+        run: python -m pipeline.run_report after ingestion --state "$RUN_STATE"
 
       - name: Upload build (facilities, dedupe pairs, review queue, run record)
         if: always()

@@ -1,0 +1,43 @@
+name: migrate-employee-feedback
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/migrate-employee-feedback.yml
+      - .github/scripts/migrate_employee_feedback.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: employee-feedback-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e '.[postgres]'
+      - name: Resolve the release database connection
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ] || [ -n "$DATABASE_URL_UNPOOLED" ]; then
+            echo "DATABASE_URL=${DATABASE_URL:-$DATABASE_URL_UNPOOLED}" >> "$GITHUB_ENV"
+            echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"
+          else
+            python .github/scripts/neon_connection_string.py
+          fi
+      - name: Apply migration and verify existing data is preserved
+        run: python .github/scripts/migrate_employee_feedback.py
