@@ -65,3 +65,39 @@ def test_an_osha_inspection_record_counts_as_a_maker(tmp_path):
     rows = _rows(tmp_path, _row("Plant Under Inspection", "inspection_record",
                                 scope="industry_lead_requires_verification"))
     assert len(rows) == 1
+
+
+# ---- the additional collection: a different vocabulary, and a collector who had not triaged it
+
+def test_a_label_nobody_listed_is_still_read_when_it_names_making():
+    """The additional collection has 25 entity_type values, in phrases. An exact list of them
+    fails SILENTLY — a value nobody thought of is dropped without a word, which is how 1,133
+    LADBS fabricator licences would have vanished."""
+    for et in ("valid_manufacturer_license", "active_prefab_registration", "certified_plant",
+               "approved_fabrication_site", "listed_manufacturing_facility",
+               "certified_truss_fabricator", "Builder, Dealer/Distributor, Design Professional, "
+               "Manufacturing"):
+        assert _evidence_csv.is_maker({"entity_type": et}), et
+
+
+def test_the_refusals_the_first_collection_made_still_hold():
+    for et in ("erector", "builder", "supplier", "designer", "accredited_facility",
+               "Associate", "provider_profile"):
+        assert not _evidence_csv.is_maker({"entity_type": et}), et
+
+
+def test_a_buildsteel_branch_is_not_a_plant():
+    """The collector's own note: "Do not treat branch as manufacturing plant without supporting
+    profile evidence" — and 892 of the 1,218 branches are gypsum and building-materials supply
+    yards (AD Gypsum Supply, L&W Supply, Gypsum Management)."""
+    assert not _evidence_csv.is_maker({"entity_type": "provider_branch_location"})
+
+
+def test_ac473_is_admitted_on_its_programme_because_a_label_should_not_outrank_a_certificate():
+    """IAS lists AC473 facilities with the same word the first collection uses for AC472 post-frame
+    BUILDERS. AC473 is "Manufacturers of Cold-Formed Steel Components" — a plant by definition."""
+    assert _evidence_csv.is_maker({
+        "entity_type": "accredited_facility",
+        "certification_program": "Manufacturers of Cold-Formed Steel Components (AC473)"})
+    assert not _evidence_csv.is_maker({"entity_type": "accredited_facility",
+                                       "certification_program": "IAS AC472 post-frame"})

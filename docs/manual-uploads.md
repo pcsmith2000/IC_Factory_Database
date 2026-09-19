@@ -26,6 +26,25 @@ parser actually accepts.
 Check what the store holds at any time with:
 
     python -m pipeline.sources.refresh --list
+    python -m pipeline.archive ls ic-sources/       # or any prefix: size, upload time, key
+
+## When it was already uploaded somewhere else
+
+A collection often arrives as a folder named after the collection — `additional_directories_
+2026-09-18/` — rather than after any source id, because whoever made it was not thinking in source
+ids. Two ways out, and neither needs the file re-uploaded from a laptop:
+
+    # tell the registry where the bytes actually are (preferred: the registry stays the one
+    # place that answers "where does this source's data come from")
+    blob_path: ic-sources/additional_directories_2026-09-18/
+
+    # or copy them into the convention, keeping the arrival where it was put
+    python -m pipeline.archive adopt --from ic-sources/additional_directories_2026-09-18/ \
+        --source-id ic_directories_more --date 2026-09-18 --dry-run
+
+Both of those, and `ls`, run on a runner through `.github/workflows/blob-admin.yml` when you would
+rather the store's token stayed in the repository's secrets. Note GitHub only offers a dispatch
+for workflows that exist on the DEFAULT branch.
 
 ---
 

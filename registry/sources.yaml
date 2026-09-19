@@ -326,6 +326,31 @@ sources:
   - 'APA rows are MILL registrations, several numbers can mean one site, and plant streets are deliberately blank rather than copied from headquarters. IAS covers AC472 only, not AC478 assemblers. PCI covers the public map response and is not proven to cover facilities absent from it.'
   - 'Verified on arrival against the collection''s own file_manifest.json: all 8 SHA-256 hashes match.'
   status: active
+- id: ic_directories_more
+  name: State registries and certification programmes — 26 rosters (2026-09-18 additional collection)
+  class: B
+  method: upload
+  acquire: blob-only
+  # The upload landed in a folder named after the COLLECTION, not after any source id, and
+  # acquire.from_blob() otherwise only resolves ic-sources/<source_id>/<date>/. blob_path says
+  # where this source's bytes actually are, so the registry stays the one place that answers it.
+  blob_path: ic-sources/additional_directories_2026-09-18/
+  needs_classify: true
+  classify_all: true               # its ic_scope is UNTRIAGED — see the traps
+  carries:
+  - plant_address
+  - phone
+  - website
+  status_basis: on_current_list
+  url: blob://ic-sources/additional_directories_2026-09-18/
+  traps:
+  - 'The folder holds the 27 per-source files AND the combined one, and the combined file IS the other 27 — 5,343 rows across 26 programmes. Reading both would count every row twice, so the reader takes only the *_all_*.csv when one is present.'
+  - 'Unlike the first collection this one is NOT triaged: 4,124 of 5,343 rows read needs_review, needs_role_review, fabrication_scope_review or needs_product_review. The collector shipped them deliberately unreviewed, which is a request for the classifier rather than a reason to drop them unread — hence classify_all. What IS refused is the collector''s own out-of-scope vocabulary: vendor_ecosystem (345), outside_core_scope_ready_mix, project_specific_not_factory_evidence (an approval for one job, at a jobsite address), electrical_features_only and infrastructure_or_other.'
+  - 'BuildSteel is deliberately left out — 1,218 branch rows and 98 provider profiles. The collector''s note on them is "Directory includes many distribution branches and contractors. Do not treat branch as manufacturing plant without supporting profile evidence", and the file proves it: 366 branches are AD Gypsum Supply, 264 L&W Supply and 262 Gypsum Management — 892 building-materials distribution yards. Nothing in the file distinguishes a ClarkDietrich roll-forming plant from a gypsum yard, and neither could the classifier from a branch address alone. It waits for the role triage the collector asked for.'
+  - '3,221 US rows kept: LADBS 1,021, NPCA producers 637, PFS TECO clients 297, TX TDLR IHB 221, OR prefab 168, NC modular 142, MT 119, AZ 116, PA DCED 114, MD 92, UT 58+38, Intertek CFS 44, SDI 42, WoodWorks 26, IAS AC473 25, SIPA 21, SJI 20, SFIA 2. 2,451 carry a street, 1,948 a phone, 906 a website, 637 coordinates. QAI (189) and CPCQA (73) are Canadian programmes and survive as 10 and 8 US rows.'
+  - 'address_type is the collection''s honest label for what each address IS, and the reader obeys it: city_only and city_only_export publish NO street at all (758 + 168 rows), while directory_branch_not_confirmed_factory, ..._not_verified_as_factory, jobsite_or_business_address and principal_place_of_business_not_confirmed_factory keep their street with the caveat riding into notes. 1,096 LADBS rows are directory_street_no_city — a street with no city, which makes no street_key and tiers as a lead.'
+  - 'IAS lists AC473 facilities as `accredited_facility`, the same word the first collection uses for AC472 post-frame BUILDERS. AC473 is "Manufacturers of Cold-Formed Steel Components", so those 25 rows are admitted by an exception matched on the programme code, which cannot reach the first collection.'
+  status: active
 - id: osha_inspections
   name: OSHA manufacturing inspections 2021-2026, IC NAICS only
   class: B

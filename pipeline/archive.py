@@ -149,6 +149,28 @@ class VercelBlobArchive:
                 paths.append(got)
         return sorted(paths)
 
+    def fetch_prefix(self, prefix: str, dest_dir: Path) -> list[Path]:
+        """Download one arbitrary folder into dest_dir and return the SOURCE files.
+
+        fetch_folder() is the pipeline's own layout, `<prefix>/<source>/<date>/`, which a pull
+        wrote. This one reads a folder somebody NAMED — a collection dropped into the store
+        through the Vercel dashboard, in a folder called after the collection rather than after
+        any source id. A registry entry's `blob_path` points here (see acquire.from_blob).
+
+        Same rule about bookkeeping: manifest.json and the .meta.json sidecars come down but are
+        not handed to a parser.
+        """
+        pre = prefix if prefix.endswith("/") else prefix + "/"
+        paths = []
+        for b in self.list_prefix(pre):
+            rel = b["pathname"][len(pre):]
+            if not rel:
+                continue
+            got = self.download(b["url"], dest_dir / rel)
+            if rel != "manifest.json" and not rel.endswith(".meta.json"):
+                paths.append(got)
+        return sorted(paths)
+
     def archive_dir(self, source_id: str, day_dir: Path) -> dict:
         """Upload every file under <day_dir> (one source, one date); write and upload manifest.json."""
         files = []

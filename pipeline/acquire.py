@@ -82,6 +82,18 @@ def pull_source(source: dict, cfg: dict, out_dir: Path, archive_dir: Path) -> Pa
         """Parse the newest copy held in the archive instead of going to the web."""
         if arch is None:
             raise SourceFailed(f"{sid}: {why}, and no archive is configured (BLOB_READ_WRITE_TOKEN unset)")
+        # A registry entry may name the folder its bytes are actually in. Uploads arrive through
+        # the Vercel dashboard into a folder called after the COLLECTION — "additional_directories
+        # _2026-09-18" — and resolving a source only through dates_for(sid) makes those files
+        # unreachable however correct they are. blob_path says where to look instead, and the
+        # registry stays the one place that answers "where does this source's data come from".
+        where = (source.get("blob_path") or "").strip()
+        if where:
+            files = arch.fetch_prefix(where, archive_dir / sid / date.today().isoformat())
+            if not files:
+                raise SourceFailed(f"{sid}: {why}, and its registry blob_path {where!r} holds no "
+                                   f"files — check the folder name against the store")
+            return mod.parse(files, source), f"parsed from the uploaded folder {where} ({why})"
         dates = arch.dates_for(sid)
         if not dates:
             raise SourceFailed(f"{sid}: {why}, and the archive holds no copy under "
