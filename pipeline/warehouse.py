@@ -29,7 +29,7 @@ from pathlib import Path
 GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_lon", "naics",
                  "status", "expiry_date", "product_type",
                  "website", "sq_ft", "operating_status",      # source-stated; added 2026-09-17
-                 "phone",                                     # source-stated; added 2026-09-18
+                 "phone", "email",                            # source-stated; added 2026-09-18
                  # ADL's own plant lists, 2026-09-18. adl_validated is what the front end's
                  # "ADL validated" toggle filters the table and the map on.
                  "adl_validated", "primary_capability", "secondary_capability", "material",

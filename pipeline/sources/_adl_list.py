@@ -78,6 +78,7 @@ def read(paths: list[Path], source: dict, *, drop_names: set[str] = frozenset())
                 source_identifier=f"{name}|{_txt(r.get('address'))}|{st}",
                 notes=_txt(r.get("classification_notes"))[:400],
                 phone=_txt(r.get("phone")), website=_txt(r.get("website")),
+                email=_txt(r.get("email")),
                 sq_ft=_num(r.get("factory_size_sf")),
                 adl_validated="1",
                 primary_capability=_txt(r.get("primary_capability")),

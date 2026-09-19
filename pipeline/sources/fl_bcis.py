@@ -86,6 +86,17 @@ def _reject_error_page(path: Path) -> None:
 _REC = re.compile(r'id="grdReport__ctl(\d+)_hlnkOrgName"[^>]*>(.*?)</a>', re.I | re.S)
 _FIELD = r'id="grdReport__ctl{n}_{f}"[^>]*>(.*?)</span>'
 _ORGNUM = re.compile(r"FBC\s*Organization\s*Number\s*</b>\s*([A-Za-z0-9\-]+)", re.I)
+# The grid's Administrator cell is three things in one: the registered contact's name, their
+# phone, and a mailto. 935 of the 959 organisations carry a phone there and 800 an email, and
+# this source published neither until 2026-09-19 — it was read as "names only" because it
+# publishes no plant ADDRESS, which is a different absence.
+#
+# It is a registered contact, not a plant switchboard, and the note on every row says so: the
+# person who filed the registration with Florida. That is a real business contact for the
+# organisation and the state publishes it deliberately, but it should not be read as the number
+# on the factory door.
+_ADMIN_PHONE = re.compile(r"(?:\((\d{3})\)\s*|\b(\d{3})[.\-\s])(\d{3})[.\-\s]?(\d{4})\b")
+_ADMIN_EMAIL = re.compile(r'mailto:([^"?\s>]+)', re.I)
 _ORGTYPE = re.compile(r"Org\s*Type\s*</b>\s*([^<]+)", re.I)
 _PAGES = re.compile(r'id="pagTopPager_lblCurrentPage"[^>]*>(\d+)</span>\s*&nbsp;/\s*<span[^>]*id="pagTopPager_lblTotalPages"[^>]*>(\d+)</span>', re.I | re.S)
 
@@ -121,7 +132,14 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
         num = _ORGNUM.search(block)
         typ = _ORGTYPE.search(block)
         expiry = fld("lblValidToDate")
+        admin = fld("lblAdministrator")
+        admin_raw = (re.search(_FIELD.format(n=n, f="lblAdministrator"), block, re.I | re.S) or [None, ""])
+        admin_raw = admin_raw[1] if not hasattr(admin_raw, "group") else admin_raw.group(1)
+        ph = _ADMIN_PHONE.search(admin or "")
+        em = _ADMIN_EMAIL.search(admin_raw or "")
         notes = "names-only source: no plant address published"
+        if ph or em:
+            notes += "; phone/email are the REGISTERED ADMINISTRATOR's, not a plant switchboard"
         if typ:
             notes += f"; org type: {_untag(typ.group(1))}"
         if page_note:
@@ -129,6 +147,8 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
         out.append(contract_row(source, i, name=name, address="", city="", state="", zip_code="",
                                 source_url=MENU, source_document=path.name,
                                 source_identifier=num.group(1) if num else "",
+                                phone="".join(g for g in ph.groups() if g) if ph else "",
+                                email=em.group(1) if em else "",
                                 status=fld("lblOrgStatus"), expiry_date=_iso(expiry),
                                 # The registry calls this source on_current_list, but the grid
                                 # carries a real valid-to date and a status of its own, and most

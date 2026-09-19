@@ -59,7 +59,7 @@ def read(paths: list[Path], source: dict, *, drop_if_evidence: str = "", note: s
                     # present in the enrichment CSV where the lookup found them.
                     website=(r.get("website") or ""), sq_ft=(r.get("sq_ft") or ""),
                     operating_status=(r.get("operating_status") or ""),
-                    phone=(r.get("phone") or ""),
+                    phone=(r.get("phone") or ""), email=(r.get("email") or ""),
                     # Coordinates only when the transcriber supplied both. They are ranked by the
                     # source's own status_basis like any other assertion, so a roster geocode of a
                     # mailing address cannot outrank the rooftop geocode stage 10 exists to produce

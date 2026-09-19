@@ -46,6 +46,7 @@ fields:
   phone:            {order: [operator, "class:A", "class:B", "class:C", "class:D"], tie: most_recent}
   # ADL's own plant lists (class D) are the only source of any of these, so the order is a
   # formality — but operator corrections still outrank them, as everywhere else.
+  email:               {order: [operator, "class:A", "class:B", "class:C", "class:D"], tie: most_recent}
   adl_validated:       {order: [operator, "class:D"], tie: most_recent}
   primary_capability:  {order: [operator, "class:D"], tie: most_recent}
   secondary_capability: {order: [operator, "class:D"], tie: most_recent}
