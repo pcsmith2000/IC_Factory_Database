@@ -9,7 +9,7 @@ missing metrics are never displayed as zero cost or zero results.
 
 1. Merge the corresponding `IC_Factory_Database` pipeline dashboard branch first. It adds
    the optional `dashboard_request` workflow input, serialization, and reporting hooks.
-2. In Vercel's **ic-adl-viz** project, add server-only `PIPELINE_GITHUB_TOKEN` to the environments
+2. In Vercel's **ic-adl-viz** project, add server-only `ADL_VIZ_Pipeline_Controls` to the environments
    that should allow triggering runs. Use a fine-grained GitHub token limited to
    `pcsmith2000/IC_Factory_Database`, with **Actions: Read and write** and standard metadata read.
    Do not use a `NEXT_PUBLIC_` variable. Redeploy after adding it. The ChatGPT GitHub connection
