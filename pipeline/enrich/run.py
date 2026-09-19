@@ -52,6 +52,8 @@ def _summary(title: str, rows: list[tuple[str, object]]) -> str:
 def _emit(out: Path, stage: str, metrics: dict, table: list[tuple[str, object]]) -> None:
     out.mkdir(parents=True, exist_ok=True)
     (out / f"{stage}.json").write_text(json.dumps(metrics, indent=1, default=str))
+    from ..run_report import emit
+    emit(stage, "failure" if metrics.get("halted") else "success", metrics)
     md = _summary(f"Stage: {stage}", table)
     print(md)
     if p := os.environ.get("GITHUB_STEP_SUMMARY"):
@@ -154,6 +156,8 @@ def main(argv=None) -> int:
             still upload — but there was nothing on disk to upload, because the files were written
             after the loop. Everything a long run had found was lost with it.
             """
+            from ..run_report import emit
+            emit("locate", "running", rep)
             (args.out / "locate.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
             (args.out / "locate.json").write_text(json.dumps(
                 {k: v for k, v in rep.items() if k != "assertions"}, indent=1, default=str))

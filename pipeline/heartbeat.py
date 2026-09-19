@@ -79,6 +79,13 @@ class Heartbeat:
         self.beat(force=True, **fields)
 
     def _write(self) -> None:
+        # Independent of Blob: the dashboard reads the same warehouse as ADL VIZ.
+        try:
+            from .run_report import emit
+            emit("progress", self.state.get("status", "running"), self.state)
+        except Exception:
+            pass
+        self._last = time.time()
         if self.archive is None:
             return
         try:
