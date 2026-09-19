@@ -1,0 +1,201 @@
+{
+ "pipeline_version": "1.0.0",
+ "started": "2026-09-19T01:11:26.506297+00:00",
+ "env_overrides": {
+  "IC_AI": "off"
+ },
+ "state_overrides": {},
+ "registry_version": "14b052f",
+ "registry_file_sha": "12f71c7188b63e0e1a769df5fa90f61e1b1490a2ab8cea8afa6973d17bc25197",
+ "control_sha": "1c9a2dba3ff1b98c9c62ea1eadb8ed870c0288d81153431bf9e4d303159fb346",
+ "layers": {
+  "1_acquire": {
+   "pulled": [
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/pa_dced.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/tx_tdlr.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mi_lara.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/or_bcd.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/fl_bcis.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/ny_dos.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/in_dhs.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/nc_osfm.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/ca_hcd.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/epa_frs.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/iibc.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mhi_plants.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/corporate_locations.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/bldr_locations.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/adl_4ward.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/adl_july.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/ic_directories.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/ic_directories_more.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/osha_inspections.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/sbca_cm.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mbi_members.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/sipa.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/superior_walls.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/woodworks_mass_timber.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mbma.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/lead_addresses.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/ga_dca.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/mo_psc.csv",
+    "/home/runner/work/IC_Factory_Database/IC_Factory_Database/ic-csv/forest_products_locator.csv"
+   ],
+   "failed": {},
+   "skipped": {}
+  },
+  "2_validate": {
+   "sources": {
+    "adl_4ward": {
+     "rows": 96,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "adl_july": {
+     "rows": 146,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "bldr_locations": {
+     "rows": 90,
+     "with_street_key": 89,
+     "no_fixed_plant": 0
+    },
+    "ca_hcd": {
+     "rows": 172,
+     "with_street_key": 168,
+     "no_fixed_plant": 0
+    },
+    "corporate_locations": {
+     "rows": 172,
+     "with_street_key": 172,
+     "no_fixed_plant": 0
+    },
+    "epa_frs": {
+     "rows": 99883,
+     "with_street_key": 80582,
+     "no_fixed_plant": 0
+    },
+    "fl_bcis": {
+     "rows": 959,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "forest_products_locator": {
+     "rows": 135,
+     "with_street_key": 127,
+     "no_fixed_plant": 0
+    },
+    "ga_dca": {
+     "rows": 99,
+     "with_street_key": 99,
+     "no_fixed_plant": 0
+    },
+    "ic_directories": {
+     "rows": 1533,
+     "with_street_key": 1408,
+     "no_fixed_plant": 0
+    },
+    "ic_directories_more": {
+     "rows": 3221,
+     "with_street_key": 2351,
+     "no_fixed_plant": 0
+    },
+    "iibc": {
+     "rows": 277,
+     "with_street_key": 276,
+     "no_fixed_plant": 0
+    },
+    "in_dhs": {
+     "rows": 409,
+     "with_street_key": 364,
+     "no_fixed_plant": 0
+    },
+    "lead_addresses": {
+     "rows": 29,
+     "with_street_key": 29,
+     "no_fixed_plant": 0
+    },
+    "mbi_members": {
+     "rows": 128,
+     "with_street_key": 119,
+     "no_fixed_plant": 0
+    },
+    "mbma": {
+     "rows": 40,
+     "with_street_key": 38,
+     "no_fixed_plant": 0
+    },
+    "mhi_plants": {
+     "rows": 150,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "mi_lara": {
+     "rows": 172,
+     "with_street_key": 172,
+     "no_fixed_plant": 0
+    },
+    "mo_psc": {
+     "rows": 206,
+     "with_street_key": 188,
+     "no_fixed_plant": 0
+    },
+    "nc_osfm": {
+     "rows": 308,
+     "with_street_key": 229,
+     "no_fixed_plant": 0
+    },
+    "ny_dos": {
+     "rows": 49,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "or_bcd": {
+     "rows": 164,
+     "with_street_key": 143,
+     "no_fixed_plant": 0
+    },
+    "osha_inspections": {
+     "rows": 4430,
+     "with_street_key": 4353,
+     "no_fixed_plant": 0
+    },
+    "pa_dced": {
+     "rows": 115,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    },
+    "sbca_cm": {
+     "rows": 869,
+     "with_street_key": 853,
+     "no_fixed_plant": 0
+    },
+    "sipa": {
+     "rows": 14,
+     "with_street_key": 12,
+     "no_fixed_plant": 0
+    },
+    "superior_walls": {
+     "rows": 12,
+     "with_street_key": 12,
+     "no_fixed_plant": 0
+    },
+    "tx_tdlr": {
+     "rows": 334,
+     "with_street_key": 324,
+     "no_fixed_plant": 0
+    },
+    "woodworks_mass_timber": {
+     "rows": 17,
+     "with_street_key": 0,
+     "no_fixed_plant": 0
+    }
+   },
+   "halted": [],
+   "problems": {}
+  }
+ },
+ "gates": [],
+ "halted_at": null
+}
