@@ -21,10 +21,14 @@
 # release, which rebuilds golden from its own assertions. Accepted while the two are separate
 # actions (docs/enrichment.md).
 name: enrich
+run-name: "Refinement (${{ inputs.target || 'branch' }}) · ${{ inputs.dashboard_request || github.run_number }}"
 
 on:
   workflow_dispatch:
     inputs:
+      dashboard_request:
+        description: "Dashboard request ID (optional)"
+        default: ""
       stages:
         description: "which stages to run, comma separated"
         default: "plan,locate,geocode,footprint,existence,load,promote"
@@ -61,7 +65,7 @@ on:
     types: [completed]
 
 concurrency:
-  group: enrich
+  group: ic-warehouse-pipeline
   cancel-in-progress: false
 
 permissions:
