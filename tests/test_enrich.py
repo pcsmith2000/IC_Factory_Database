@@ -1266,3 +1266,20 @@ def test_a_geocode_run_with_nothing_to_do_reports_the_same_shape_as_one_that_wor
         assert k in empty, f"the nothing-to-do exit is missing {k!r}, which run.py reads"
     assert empty["requested"] - empty["stored"] == 0
     assert f"${empty['billable_if_allowance_spent_usd']:.3f}" == "$0.000"
+
+
+def test_a_connection_string_with_an_elided_password_is_refused_by_name():
+    """The URI is sent as an HTTP header, and headers are latin-1. A connection string copied out
+    of a UI that hides the password arrives with a literal '…' in it: it looks set, it passes every
+    "is it empty" test, and it failed run 35416196940 in all seven stages as "UnicodeEncodeError:
+    'latin-1' codec can't encode character '\\u2026' in position 26" — position 26 being the
+    character straight after postgresql://neondb_owner:."""
+    import pytest
+    from pipeline.enrich import _db
+    with pytest.raises(RuntimeError, match="position 26"):
+        _db.connect("postgresql://neondb_owner:…@ep-x.aws.neon.tech/neondb")
+
+
+def test_an_ordinary_connection_string_still_connects():
+    from pipeline.enrich import _db
+    assert _db.connect("postgresql://neondb_owner:pw@ep-x.aws.neon.tech/neondb").host == "ep-x.aws.neon.tech"

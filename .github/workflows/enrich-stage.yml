@@ -60,20 +60,45 @@ jobs:
           NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
           BRANCH_ID: ${{ inputs.branch_id }}
           RELEASE_DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          RELEASE_DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
         run: |
           python - <<'EOF' >> "$GITHUB_ENV"
           import os, sys
           bid = os.environ.get("BRANCH_ID", "").strip()
-          configured = os.environ.get("RELEASE_DATABASE_URL", "").strip()
-          if not bid and configured:
-              print("DATABASE_URL=" + configured)
-              print("ENRICH_TARGET=main (the release database, from the DATABASE_URL secret)",
-                    file=sys.stderr)
-              raise SystemExit(0)
-          if not bid and not configured:
-              sys.exit("no branch was made for this run and no DATABASE_URL secret is set — "
-                       "this stage has no database to write to. Set DATABASE_URL (or "
-                       "IC_DB_DATABASE_URL) to the release database's connection string.")
+
+          def usable(name):
+              """The first candidate that is actually a connection string, saying why not otherwise.
+
+              A secret copied out of a UI that elides the password arrives with a literal '…' in
+              it. It looks set, it passes every -n test, and it fails 120 lines deep in http.client
+              as "UnicodeEncodeError: 'latin-1' codec can't encode character '\u2026' in position
+              26" — position 26 being the character right after postgresql://neondb_owner:. That
+              is how run 35416196940 died in every stage. A credential that cannot be sent is not
+              a credential, so it is skipped by name and the next one gets its turn.
+              """
+              v = os.environ.get(name, "").strip()
+              if not v:
+                  return ""
+              try:
+                  v.encode("latin-1")
+              except UnicodeEncodeError:
+                  print(f"::warning::the {name} secret is not a usable connection string — it "
+                        f"holds a non-ASCII character where a password belongs, which is what a "
+                        f"URL copied from a UI that hides the password looks like. Skipping it.")
+                  return ""
+              return v
+
+          if not bid:
+              for name in ("RELEASE_DATABASE_URL_UNPOOLED", "RELEASE_DATABASE_URL"):
+                  if (uri := usable(name)):
+                      print("DATABASE_URL=" + uri)
+                      print("ENRICH_TARGET=main (the release database, from "
+                            + name.replace("RELEASE_", "") + ")", file=sys.stderr)
+                      raise SystemExit(0)
+              sys.exit("no branch was made for this run and no usable release connection string "
+                       "was found — set DATABASE_URL_UNPOOLED or DATABASE_URL (or the IC_DB_ "
+                       "spellings) to the release database's connection string. If one of them IS "
+                       "set, read the warning above: it is set to something that cannot be sent.")
           sys.path.insert(0, ".github/scripts")
           from neon_branch import call, project_id
           uri = call(f"/projects/{project_id()}/connection_uri"

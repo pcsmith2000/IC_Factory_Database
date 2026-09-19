@@ -128,6 +128,20 @@ def connect(url: str | None = None):
     url = url or os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
     if not url:
         raise RuntimeError("no DATABASE_URL / DATABASE_URL_UNPOOLED for the enrichment database")
+    # The URI is sent as an HTTP header, and headers are latin-1. A connection string copied out
+    # of a UI that hides the password arrives with a literal '…' in it — it looks set, it passes
+    # every "is it empty" test, and it fails 120 frames down in http.client as "UnicodeEncodeError:
+    # 'latin-1' codec can't encode character '\u2026' in position 26". Position 26 is the character
+    # straight after postgresql://neondb_owner:, which is to say the password. Saying that here
+    # costs one line; run 35416196940 spent seven jobs learning it from a traceback.
+    try:
+        url.encode("latin-1")
+    except UnicodeEncodeError as e:
+        raise RuntimeError(
+            f"the connection string is not usable: it holds a non-ASCII character at position "
+            f"{e.start} ({url[e.start:e.end]!r}), and it is sent as an HTTP header. A URL copied "
+            f"from a UI that hides the password looks exactly like this — re-copy it with the "
+            f"password shown.") from e
     return NeonHttp(url)
 
 
