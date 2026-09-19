@@ -1,0 +1,59 @@
+# Looking in the archive, and re-filing what someone dropped into it.
+#
+# `archive.mode: blob-only` makes the Blob store an INPUT: Layer 1 reads it and never scrapes. But
+# files arrive in it by hand, through the Vercel dashboard, into whatever folder the person making
+# them chose — and acquire.from_blob() can only see `ic-sources/<source_id>/<date>/`. A CSV in the
+# wrong folder is invisible to the run however correct it is.
+#
+# Both of those jobs need the store's read-write token, which lives here as a repository secret and
+# should stay there. This workflow is how they get done without it being copied anywhere else.
+name: blob-admin
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "ls = print what is under a prefix. adopt = copy it into <source>/<date>/"
+        type: choice
+        options: [ls, adopt]
+        default: ls
+      path:
+        description: "ls: the prefix (blank = whole store). adopt: the uploaded file or folder"
+        default: ""
+      source_id:
+        description: "adopt only: the registry source id to file it under"
+        default: ""
+      date:
+        description: "adopt only: the date folder, e.g. 2026-09-18"
+        default: ""
+      dry_run:
+        description: "adopt only: name what would be copied, transfer nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e .
+      - name: ${{ github.event.inputs.command }}
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN || secrets.IC_DB_PRI_SOURCE_READ_WRITE_TOKEN }}
+          BLOB_STORE_ID: ${{ secrets.BLOB_STORE_ID || secrets.IC_DB_PRI_SOURCE_STORE_ID }}
+          PYTHONUNBUFFERED: "1"
+        run: |
+          if [ "${{ github.event.inputs.command }}" = "ls" ]; then
+            python -m pipeline.archive ls "${{ github.event.inputs.path }}"
+          else
+            python -m pipeline.archive adopt \
+              --from "${{ github.event.inputs.path }}" \
+              --source-id "${{ github.event.inputs.source_id }}" \
+              --date "${{ github.event.inputs.date }}" \
+              ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+          fi

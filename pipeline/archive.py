@@ -311,6 +311,72 @@ def _copy(a: "VercelBlobArchive", dest_token: str, prefixes: list[str], dry_run:
     return 0 if (ok and not failed) else 1
 
 
+def _ls(a: "VercelBlobArchive", prefix: str) -> int:
+    """Print every object under a prefix. The store is an INPUT, so knowing what is in it matters.
+
+    Files arrive in the store by hand — someone drops a CSV in through the Vercel dashboard — and
+    the folder they land in is rarely the `<prefix>/<source>/<date>/` layout Layer 1 reads. This
+    is how you find out where they actually are without a token ever leaving the runner.
+    """
+    objs = sorted(a.list_prefix(prefix), key=lambda o: o["pathname"])
+    for o in objs:
+        print(f"{o['size']:>12}  {o.get('uploadedAt', '')[:19]:19}  {o['pathname']}")
+    print(f"\n{len(objs)} object(s), {sum(o['size'] for o in objs) / 1e6:.1f} MB under {prefix!r}")
+    return 0
+
+
+def _adopt(a: "VercelBlobArchive", src: str, source_id: str, date_str: str, dry_run: bool) -> int:
+    """Re-file objects uploaded by hand into the `<prefix>/<source_id>/<date>/` layout Layer 1 reads.
+
+    acquire.from_blob() resolves a source to `arch.dates_for(sid)` and then `fetch_folder(sid,
+    date)`; nothing else in the store is reachable. So a CSV uploaded to a folder named after the
+    collection rather than the source is invisible to the run, however correct its contents.
+
+    It COPIES and does not delete. The upload stays where it was put, which keeps the operation
+    reversible and keeps the arrival provenance — the object the human actually created — intact
+    next to the pipeline's copy of it.
+    """
+    objs = [o for o in a.list_prefix(src) if not o["pathname"].endswith("/")]
+    if not objs:
+        print(f"nothing under {src!r}", file=sys.stderr)
+        return 1
+    dest_pre = f"{a.prefix}/{source_id}/{date_str}/"
+    have = {o["pathname"]: o["size"] for o in a.list_prefix(dest_pre)}
+    tmp = Path(tempfile.mkdtemp(prefix="blobadopt-"))
+    done = skipped = failed = 0
+    try:
+        for o in objs:
+            name = o["pathname"].rsplit("/", 1)[-1]
+            key = dest_pre + name
+            if have.get(key) == o["size"]:
+                print(f"  = {key}")
+                skipped += 1
+                continue
+            print(f"  {'+ (dry run) ' if dry_run else '+ '}{key}  ({o['size'] / 1e6:.1f} MB)")
+            if dry_run:
+                continue
+            local = tmp / name
+            try:
+                a.download(o["url"], local)
+                a.put(local, key)
+                done += 1
+            except ArchiveError as e:
+                failed += 1
+                print(f"    FAILED {key}: {e}", file=sys.stderr)
+            finally:
+                local.unlink(missing_ok=True)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    print(f"{done} adopted, {skipped} already there, {failed} failed")
+    if dry_run:
+        return 0
+    landed = a.list_prefix(dest_pre)                 # what the store says, not what the loop believes
+    print(f"{dest_pre} now holds {len(landed)} object(s):")
+    for o in sorted(landed, key=lambda x: x["pathname"]):
+        print(f"  {o['size']:>12}  {o['pathname']}")
+    return 0 if (not failed and len(landed) >= len(objs)) else 1
+
+
 def main(argv=None) -> int:
     import argparse
     from .registry import load_yaml
@@ -327,6 +393,13 @@ def main(argv=None) -> int:
     cp.add_argument("--prefix", action="append", dest="prefixes",
                     help="repeatable; default ic-sources/, ic-runs/, ic-control/")
     cp.add_argument("--dry-run", action="store_true", help="count what would move, transfer nothing")
+    lsp = sub.add_parser("ls", help="print every object under a prefix (size, upload time, pathname)")
+    lsp.add_argument("prefix", nargs="?", default="", help="default: the whole store")
+    ad = sub.add_parser("adopt", help="copy hand-uploaded objects into the <source>/<date>/ layout Layer 1 reads")
+    ad.add_argument("--from", dest="src", required=True, help="the pathname or folder as uploaded")
+    ad.add_argument("--source-id", required=True, dest="source_id")
+    ad.add_argument("--date", required=True, help="the date folder to write, e.g. 2026-09-18")
+    ad.add_argument("--dry-run", action="store_true", help="name what would be copied, transfer nothing")
     args = ap.parse_args(argv)
 
     cfg = load_yaml(root / "registry" / "config.yaml")
@@ -337,6 +410,10 @@ def main(argv=None) -> int:
         return _verify(a)
     if args.cmd == "put":
         return _put(a, args.source_id, args.file, args.date)
+    if args.cmd == "ls":
+        return _ls(a, args.prefix)
+    if args.cmd == "adopt":
+        return _adopt(a, args.src, args.source_id, args.date, args.dry_run)
     if args.cmd == "copy":
         dest_token = os.environ.get("BLOB_DEST_TOKEN", "").strip()
         if not dest_token:
