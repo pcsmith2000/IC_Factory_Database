@@ -42,24 +42,44 @@ jobs:
           merge-multiple: true
           path: enrich
 
-      # An empty branch_id means the run targets the release database: Neon's connection_uri
-      # returns the default branch when no branch is named. Which database a stage wrote to is the
-      # first thing anyone reading a run wants to know, so it is printed — by name, never by URI.
+      # Which database a stage writes to, resolved in the order that needs the fewest things to be
+      # working. An empty branch_id means the run targets the release database, and the release
+      # database has a connection string of its own — the same DATABASE_URL secret layers 1-8 use.
+      # Asking Neon's API to hand that same string back put an API key and a project id between
+      # the run and a credential already in hand: every stage of run 35416033692 failed on
+      # "NEON_API_KEY is not set" while DATABASE_URL sat there working, the same way Layer 8 once
+      # died with a good pooled URL it never tried.
+      #
+      # The API is still how a BRANCH is reached, because a branch's URI cannot be known in
+      # advance. So: a branch is asked for by name; the release database is used as configured;
+      # and only if neither is available does this fail — naming both things it looked for.
+      # The name is printed, never the URI.
       - name: Point at this run's database
         env:
           NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
           BRANCH_ID: ${{ inputs.branch_id }}
+          RELEASE_DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
         run: |
           python - <<'EOF' >> "$GITHUB_ENV"
           import os, sys
+          bid = os.environ.get("BRANCH_ID", "").strip()
+          configured = os.environ.get("RELEASE_DATABASE_URL", "").strip()
+          if not bid and configured:
+              print("DATABASE_URL=" + configured)
+              print("ENRICH_TARGET=main (the release database, from the DATABASE_URL secret)",
+                    file=sys.stderr)
+              raise SystemExit(0)
+          if not bid and not configured:
+              sys.exit("no branch was made for this run and no DATABASE_URL secret is set — "
+                       "this stage has no database to write to. Set DATABASE_URL (or "
+                       "IC_DB_DATABASE_URL) to the release database's connection string.")
           sys.path.insert(0, ".github/scripts")
           from neon_branch import call, project_id
-          bid = os.environ.get("BRANCH_ID", "").strip()
-          q = (f"branch_id={bid}&" if bid else "") + "database_name=neondb&role_name=neondb_owner"
-          uri = call(f"/projects/{project_id()}/connection_uri?{q}")["uri"]
-          print(f"DATABASE_URL={uri}")
-          print(f"ENRICH_TARGET={bid or 'main (the release database)'}", file=sys.stderr)
+          uri = call(f"/projects/{project_id()}/connection_uri"
+                     f"?branch_id={bid}&database_name=neondb&role_name=neondb_owner")["uri"]
+          print("DATABASE_URL=" + uri)
+          print("ENRICH_TARGET=" + bid, file=sys.stderr)
           EOF
           echo "### Stage ${{ inputs.stage }} — database: ${BRANCH_ID:-main (the release database)}" >> "$GITHUB_STEP_SUMMARY"
 
