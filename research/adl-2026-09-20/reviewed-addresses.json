@@ -1045,5 +1045,33 @@
     "facility_evidence_url": "https://unitedstructures.net/",
     "source_run": 35542280759,
     "address_previously_missing": false
+  },
+  {
+    "facility_id": "IC-96173",
+    "name": "True House",
+    "address": "10411 Alta Drive",
+    "city": "Jacksonville",
+    "state": "FL",
+    "zip": "32226",
+    "reviewed": true,
+    "evidence_url": "https://truehouse.com/contact-us/",
+    "review_note": "Official True House contact page explicitly distinguishes Jacksonville Truss Plant at 10411 Alta Drive from the starting address, which is BeLit Headquarters. This is a proposed factory-address correction requiring database review, not an overwrite.",
+    "requires_database_resolution": true,
+    "source_run": 35544556280,
+    "address_previously_missing": false
+  },
+  {
+    "facility_id": "IC-95216",
+    "name": "True House",
+    "address": "105 Denver Road",
+    "city": "Crescent City",
+    "state": "FL",
+    "zip": "32112",
+    "reviewed": true,
+    "evidence_url": "https://truehouse.com/contact-us/",
+    "review_note": "Official True House contact page explicitly identifies Crescent City Truss Plant at 105 Denver Road. Starting city Crecent City is a spelling error; retain the proposed correction for database review.",
+    "requires_database_resolution": true,
+    "source_run": 35544556280,
+    "address_previously_missing": true
   }
 ]
