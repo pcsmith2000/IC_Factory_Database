@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 from .run import norm, domain
 
@@ -10,9 +11,23 @@ def read_all(root, name):
     return [json.loads(p.read_text()) for p in Path(root).rglob(name)]
 
 
+def normalized_detail(field, value):
+    if field=='website': return domain(value)
+    if field=='phone':
+        digits=re.sub(r'\D','',str(value or ''))
+        return digits[1:] if len(digits)==11 and digits.startswith('1') else digits
+    if field=='zip':
+        value=str(value or '').strip()
+        if re.fullmatch(r'\d{5}(?:-\d{4})?',value):return value[:5]
+    if field=='address':
+        tokens=re.findall(r'[a-z0-9]+',str(value or '').lower())
+        aliases={'street':'st','road':'rd','avenue':'ave','boulevard':'blvd','drive':'dr','lane':'ln','court':'ct','highway':'hwy','parkway':'pkwy','north':'n','south':'s','east':'e','west':'w','suite':'ste'}
+        return ''.join(aliases.get(t,t) for t in tokens)
+    return norm(value)
+
+
 def detail_key(fid, p):
-    value=domain(p['value']) if p['field']=='website' else norm(p['value'])
-    return fid,p['field'],value
+    return fid,p['field'],normalized_detail(p['field'],p['value'])
 
 
 def supported_detail(p):
@@ -58,7 +73,7 @@ def report(root, current, out):
                 if not supported_detail(p):continue
                 key=detail_key(r['facility_id'],p)
                 old=baseline[r['facility_id']].get(p['field'])
-                normalized=domain(old) if p['field']=='website' else norm(old)
+                normalized=normalized_detail(p['field'],old)
                 if key in seen or key[2]==normalized:continue
                 new[key]={'facility_id':r['facility_id'],**p}
                 if p['decision']=='candidate' and p['relationship']=='fill':candidates[key]=new[key]

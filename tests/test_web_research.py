@@ -147,3 +147,11 @@ def test_rooftop_preview_retains_only_rooftop_and_deduplicates(tmp_path,monkeypa
     assert len(calls)==1
     rows[0]['reviewed']=False
     with pytest.raises(ValueError):rooftops.run(rows,tmp_path/'third')
+
+
+def test_campaign_does_not_count_contact_formatting_as_new():
+    from pipeline.web_research.campaign import normalized_detail
+    assert normalized_detail('phone','+1 (818) 555-1234')==normalized_detail('phone','8185551234')
+    assert normalized_detail('address','123 North First Street')==normalized_detail('address','123 N First St.')
+    assert normalized_detail('zip','85001-1234')==normalized_detail('zip','85001')
+    assert normalized_detail('address','123 First St Suite 2')!=normalized_detail('address','123 First St Suite 3')
