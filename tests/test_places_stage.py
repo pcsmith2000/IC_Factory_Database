@@ -305,3 +305,13 @@ def test_the_city_key_is_tried_before_the_postcode():
 def test_a_zip_plus_four_is_the_same_postcode():
     assert places.zip5("97205-1234") == places.zip5("97205") == "97205"
     assert places.zip5("") == "" and places.zip5("ABC") == ""
+
+
+def test_the_run_record_counts_places_not_the_pair_of_indexes():
+    """index_places returns (by_city, by_zip), and `len(idx)` on that is 2. Run 62 recorded
+    "places_indexed: 2" next to 461 matches — a number that makes a whole run record
+    untrustworthy, and the sort of thing nobody re-reads once it has been believed once."""
+    rep = places.run([fac()], [place("Acme Truss", "2802 142nd Ave E", 47.2313, -122.2440),
+                               place("Other Co", "100 Mill Rd", 47.3, -122.3)])
+    assert rep["places_read"] == 2
+    assert rep["address_keys_city"] == 2 and "places_indexed" not in rep

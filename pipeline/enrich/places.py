@@ -217,6 +217,7 @@ def run(facilities: list[dict], place_rows: list[dict],
     facilities may receive a lat_lon; everything else is matched for its contact details only.
     """
     idx = index_places(place_rows)
+    by_city, by_zip = idx
     assertions, matched, reasons = [], [], collections.Counter()
     bucket_counts = collections.Counter()
     for fac in facilities:
@@ -234,7 +235,11 @@ def run(facilities: list[dict], place_rows: list[dict],
             matched.append(fac["facility_id"])
         else:
             reasons["matched, but it has a coordinate and the name does not match"] += 1
-    return {"eligible": len(facilities), "places_indexed": len(idx),
+    # len(idx) here was 2 — index_places returns (by_city, by_zip) and the metric was counting the
+    # tuple. Run 62 recorded "places_indexed: 2" beside 461 matches, which is the kind of number
+    # that makes a whole run record untrustworthy.
+    return {"eligible": len(facilities), "places_read": len(place_rows),
+            "address_keys_city": len(by_city), "address_keys_zip": len(by_zip),
             "matched": len(matched), "assertions": assertions,
             "by_field": dict(collections.Counter(a["field"] for a in assertions)),
             "candidate_shape": dict(bucket_counts), "refused": dict(reasons),
