@@ -215,3 +215,26 @@ def test_a_facility_geocode_already_failed_on_is_exactly_who_this_stage_is_for()
     assert "need_ids" in block and "geocode_tried" not in block
     # and it must not simply reuse the list geocode built
     assert "need_ids = {r[\"facility_id\"] for r in need_coord}" not in block
+
+
+def test_the_city_filter_uses_the_same_key_the_matcher_does():
+    """The read filters on locality and `choose` keys on locality; if the two ever spell it
+    differently the filter silently drops rows that would have matched. Run 59 died at 35:18
+    reading 3.8M places for six states when the matcher could only look at the cities we hold
+    facilities in, so the filter is worth having — and worth pinning."""
+    import inspect
+    from pipeline.enrich import run as enrich_run
+    src = inspect.getsource(enrich_run.main)
+    block = src[src.index('if args.stage == "places"'):src.index('if args.stage == "footprint"')]
+    assert 'cities = {(x.get("city") or "").strip().upper() for x in sel}' in block
+    assert "localities=cities" in block
+    # and choose() must key on the same upper-cased city
+    assert '(fac.get("city") or "").upper()' in inspect.getsource(places.choose)
+
+
+def test_fetch_without_a_locality_set_still_reads_the_whole_box():
+    """Passing no set must not silently read nothing — an empty IN () is a query that matches
+    nothing at all, which would look like 'Overture has no places here'."""
+    import inspect
+    src = inspect.getsource(places.fetch)
+    assert "if localities:" in src and "if quoted:" in src

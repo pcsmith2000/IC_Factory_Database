@@ -241,8 +241,21 @@ def state_boxes(rows: list[dict], pad_deg: float = 1.0) -> dict[str, tuple]:
             for st, v in pts.items()}
 
 
-def fetch(states: list[str], boxes: dict[str, tuple], release: str = RELEASE) -> list[dict]:
-    """Every named, addressed Overture place inside the boxes of the given states."""
+def fetch(states: list[str], boxes: dict[str, tuple], release: str = RELEASE,
+          localities: set[str] | None = None) -> list[dict]:
+    """Every addressed Overture place inside the boxes of the given states, in the cities we need.
+
+    The bbox is what pushes down to the parquet row groups, so it decides which BYTES are read.
+    The locality filter decides how many rows come back, and that turned out to be the binding
+    cost: six states returned 3.8M places, of which the matcher can only ever look at the few
+    thousand cities our facilities are actually in. Run 59 spent 35:18 on that and was killed by
+    the stage timeout with nothing written.
+
+    Filtering on the city loses nothing, because `choose` already keys on (region, locality, house
+    number) and compares localities exactly — a place in a city we hold no facility in could never
+    have matched. The two must stay in step, which is why the caller passes the same set the
+    matcher will use rather than this function deriving its own.
+    """
     import duckdb
     con = duckdb.connect()
     con.execute("INSTALL spatial; LOAD spatial; INSTALL httpfs; LOAD httpfs;")
@@ -252,12 +265,17 @@ def fetch(states: list[str], boxes: dict[str, tuple], release: str = RELEASE) ->
         for s in states if (b := boxes.get(s)))
     if not where:
         return []
+    city = ""
+    if localities:
+        quoted = ", ".join("'" + c.replace("'", "''") + "'" for c in sorted(localities) if c)
+        if quoted:
+            city = f" AND upper(addresses[1].locality) IN ({quoted})"
     rows = con.execute(f"""
         SELECT id, names.primary nm, addresses[1].freeform addr,
                upper(addresses[1].locality) loc, upper(addresses[1].region) reg,
                websites[1] website, phones[1] phone, ST_Y(geometry) lat, ST_X(geometry) lon
         FROM read_parquet('{PLACES.format(release=release)}')
-        WHERE ({where}) AND addresses[1].freeform IS NOT NULL
+        WHERE ({where}) AND addresses[1].freeform IS NOT NULL{city}
     """).fetchall()
     cols = ("id", "nm", "addr", "loc", "reg", "website", "phone", "lat", "lon")
     return [dict(zip(cols, r)) for r in rows]

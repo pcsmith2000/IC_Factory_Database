@@ -264,7 +264,10 @@ def main(argv=None) -> int:
                   [("eligible", len(todo)), ("states this run", " ".join(chosen)),
                    ("would match", len(sel))])
             return 0
-        rep = places.run(sel, places.fetch(chosen, boxes), need_coord=need_ids)
+        # The same locality set the matcher keys on, so the filter cannot drop a row that
+        # could have matched.
+        cities = {(x.get("city") or "").strip().upper() for x in sel}
+        rep = places.run(sel, places.fetch(chosen, boxes, localities=cities), need_coord=need_ids)
         rep.update(states_this_run=chosen, states_deferred=deferred_states,
                    states_without_a_box=no_box,
                    deferred=sum(by_state[s] for s in deferred_states),
