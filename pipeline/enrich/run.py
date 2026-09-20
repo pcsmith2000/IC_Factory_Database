@@ -234,14 +234,21 @@ def main(argv=None) -> int:
 
     if args.stage == "places":
         from . import places
-        # The same eligibility as geocode — an address and no rooftop coordinate — because this
-        # stage exists for exactly the facilities geocode could not place precisely enough. It
-        # runs AFTER geocode so that a rooftop answer, when there is one, is already taken and
-        # this never competes with it.
-        # Every facility with an address, not only the ones missing a coordinate. The coordinate is
-        # the narrower prize (892 want one); the website and phone are the broader one — 5,261 have
-        # an address and 984 have a website. Matching costs the same read either way.
-        need_ids = {r["facility_id"] for r in need_coord}
+        # Eligible to be MATCHED: every facility with an address, not only the ones missing a
+        # coordinate. The coordinate is the narrower prize; the website and the phone are the
+        # broader one — 5,261 facilities have an address and 984 have a website. Matching costs
+        # the same S3 read either way. The stage runs AFTER geocode so a rooftop answer, where
+        # there is one, is already taken and this never competes with it.
+        #
+        # Eligible for a COORDINATE: NOT geocode's `need_coord`. That list excludes any facility
+        # geocode has already TRIED, because looking the same address up twice spends a lookup to
+        # get the same answer back.
+        # Stage 13 wants the opposite population: a facility geocode tried and could only place to
+        # street_center is precisely the one an Overture place can still supply a point for. Run 58
+        # inherited geocode's rule and asked for 13 coordinates when 894 facilities in those six
+        # states had an address and none.
+        need_ids = {r["facility_id"] for r in rows
+                    if (r.get("address") or "").strip() and not rooftop(r)}
         todo = [r for r in rows if (r.get("address") or "").strip()
                 and (r.get("city") or "").strip() and (r.get("state") or "").strip()]
         boxes = places.state_boxes(rows)

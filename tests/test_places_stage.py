@@ -201,3 +201,17 @@ def test_the_contact_evidence_names_the_place_and_the_score_that_admitted_it():
     got, _, cands = places.choose(fac(), idx)
     ev = [a for a in places.assertions_for(fac(), got, cands) if a["field"] == "website"][0]["evidence"]
     assert "place named 'Acme Truss'" in ev and "name score" in ev
+
+
+def test_a_facility_geocode_already_failed_on_is_exactly_who_this_stage_is_for():
+    """Run 58 asked for 13 coordinates while 894 facilities in the states it read had an address
+    and none. It had inherited geocode's eligibility, which excludes anything geocode has already
+    TRIED — the right rule for not spending a second Geocodio lookup, and the exact inverse of the
+    population stage 13 exists to serve. A street_center answer is a tried address that still has
+    no coordinate."""
+    from pipeline.enrich import run as enrich_run
+    src = __import__("inspect").getsource(enrich_run.main)
+    block = src[src.index('if args.stage == "places"'):src.index('if args.stage == "footprint"')]
+    assert "need_ids" in block and "geocode_tried" not in block
+    # and it must not simply reuse the list geocode built
+    assert "need_ids = {r[\"facility_id\"] for r in need_coord}" not in block
