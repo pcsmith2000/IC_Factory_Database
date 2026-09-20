@@ -20,6 +20,7 @@ def normalized_detail(field, value):
         value=str(value or '').strip()
         if re.fullmatch(r'\d{5}(?:-\d{4})?',value):return value[:5]
     if field=='address':
+        value=re.sub(r',\s*[^,]+,\s*[A-Za-z]{2}\s+\d{5}(?:-\d{4})?\s*$', '',str(value or ''))
         value=re.sub(r'^(north|south|east|west),\s*(?=\d)','',str(value or '').lower())
         tokens=re.findall(r'[a-z0-9]+',str(value or '').lower())
         aliases={'street':'st','road':'rd','avenue':'ave','boulevard':'blvd','drive':'dr','lane':'ln','court':'ct','highway':'hwy','parkway':'pkwy','trail':'trl','north':'n','south':'s','east':'e','west':'w','suite':'ste'}

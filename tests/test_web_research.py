@@ -214,3 +214,9 @@ def test_evidence_cache_keeps_original_age_and_retries_failed_pages(tmp_path):
     pages=recent_pages(tmp_path,now=datetime(2026,9,20,13,tzinfo=timezone.utc))
     assert set(pages)=={'https://fresh.example'}
     assert pages['https://fresh.example']['fetched_at']=='2026-09-20T12:00:00+00:00'
+
+
+def test_novelty_ignores_repeated_locality_in_street_field():
+    from pipeline.web_research.campaign import normalized_detail
+    assert normalized_detail('address','351 Rangoon Street, Lynchburg, VA 24502')==normalized_detail('address','351 Rangoon St')
+    assert normalized_detail('address','1530 Riverside Dr, Suite B')!=normalized_detail('address','1530 Riverside Dr, Suite C')
