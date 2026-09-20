@@ -169,3 +169,15 @@ def test_campaign_private_registry_is_not_authoritative():
     assert not supported_detail(next(checked_proposals({'proposals':[base]})))
     base['source_url']='https://state.gov/registry'
     assert supported_detail(next(checked_proposals({'proposals':[base]})))
+
+
+def test_public_contact_email_decoding_preserves_exact_addresses():
+    from bs4 import BeautifulSoup
+    from pipeline.web_research.run import decode_public_email_links
+    email='office@example.com';key=42
+    encoded=bytes([key]+[ord(c)^key for c in email]).hex()
+    soup=BeautifulSoup(f'<span data-cfemail="{encoded}">[email protected]</span><a href="mailto:plant%40example.com?subject=Hello">Email us</a><span data-cfemail="bad">Bad</span>','html.parser')
+    decode_public_email_links(soup)
+    assert email in soup.get_text()
+    assert 'plant@example.com' in soup.get_text()
+    assert 'subject=Hello' not in soup.get_text()

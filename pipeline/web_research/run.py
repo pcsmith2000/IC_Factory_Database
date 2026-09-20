@@ -70,6 +70,25 @@ def decode_contact_spans(soup):
             decoded=unquote(''.join(alphabet[ord(c)-48] for c in encoded))
             span.append(BeautifulSoup(decoded,'html.parser'))
 
+def decode_public_email_links(soup):
+    """Expose publicly encoded contact addresses as text; never infer or execute code."""
+    from urllib.parse import unquote
+    email_pattern=r'[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+'
+    for node in soup.select('[data-cfemail]'):
+        try:
+            encoded=bytes.fromhex(node.get('data-cfemail',''))
+            if not 2<=len(encoded)<=256:continue
+            email=bytes(b^encoded[0] for b in encoded[1:]).decode('utf-8')
+            if re.fullmatch(email_pattern,email):node.clear();node.append(email)
+        except (ValueError,UnicodeError):continue
+    for node in soup.find_all('a',href=True):
+        href=node['href']
+        if not href.lower().startswith('mailto:'):continue
+        email=unquote(href[7:].split('?',1)[0])
+        if re.fullmatch(email_pattern,email) and email not in node.get_text():
+            node.append(' '+email)
+
+
 def fetch(url):
     safe_url(url)
     with build_opener(Redirects()).open(Request(url, headers={'User-Agent':'Mozilla/5.0 (compatible; ICFactoryResearch/1.0)'}), timeout=20) as r:
@@ -81,6 +100,7 @@ def fetch(url):
         final=r.url
     soup=BeautifulSoup(raw, 'html.parser')
     decode_contact_spans(soup)
+    decode_public_email_links(soup)
     for e in soup(['script','style','noscript']): e.decompose()
     from urllib.parse import urljoin
     links=[urljoin(final,a.get('href','')) for a in soup.find_all('a',href=True) if any(w in (a.get_text(' ',strip=True)+' '+a['href']).lower() for w in ('contact','location'))]
