@@ -30,9 +30,19 @@ def detail_key(fid, p):
     return fid,p['field'],normalized_detail(p['field'],p['value'])
 
 
+def checked_proposals(result):
+    website=next((p['value'] for p in result['proposals'] if p['field']=='website'), '')
+    official=domain(website)
+    for p in result['proposals']:
+        host=domain(p.get('source_url',''))
+        trusted=bool(host) and ((p.get('source_kind')=='official' and host==official) or
+                                (p.get('source_kind')=='registry' and host.endswith('.gov')))
+        yield {**p,'source_trusted':trusted}
+
+
 def supported_detail(p):
     # Review may contain useful, supported conflicts; report those separately from accepted fills.
-    return (p.get('quote_verified') and p.get('identity_anchor_found') and
+    return (p.get('source_trusted',True) and p.get('quote_verified') and p.get('identity_anchor_found') and
             p.get('source_kind') in ('official','registry') and
             (p.get('scope')=='facility' or p['field'] in ('website','phone','email')))
 
@@ -49,7 +59,7 @@ def prepare(root, out, batch, round_number):
     seen={}
     for block in prior:
         for r in block:
-            seen.setdefault(r['facility_id'],[]).extend(p for p in r['proposals'] if supported_detail(p))
+            seen.setdefault(r['facility_id'],[]).extend(p for p in checked_proposals(r) if supported_detail(p))
     selected=sorted(rows.values(),key=lambda r:r['facility_id'])[batch*100:(batch+1)*100]
     if not selected: raise ValueError('Empty batch')
     resume_manifests=read_all(Path(root)/'resume','campaign.json')
@@ -69,13 +79,13 @@ def prepare(root, out, batch, round_number):
 
 def report(root, current, out):
     prior=read_all(Path(root)/'prior','results.json')
-    seen={detail_key(r['facility_id'],p) for block in prior for r in block for p in r['proposals'] if supported_detail(p)}
+    seen={detail_key(r['facility_id'],p) for block in prior for r in block for p in checked_proposals(r) if supported_detail(p)}
     baseline={r['facility_id']:r for block in read_all(Path(root)/'baseline','input.json') for r in block}
     new={}; candidates={}
     blocks=read_all(current,'results.json')
     for block in blocks:
         for r in block:
-            for p in r['proposals']:
+            for p in checked_proposals(r):
                 if not supported_detail(p):continue
                 key=detail_key(r['facility_id'],p)
                 old=baseline[r['facility_id']].get(p['field'])

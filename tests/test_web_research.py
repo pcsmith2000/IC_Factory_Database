@@ -118,7 +118,7 @@ def test_campaign_counts_unique_new_supported_values(tmp_path):
     (baseline/'input.json').write_text(json.dumps([{'facility_id':'IC-1','phone':'111'}]))
     prior=tmp_path/'prior';prior.mkdir()
     def p(value,verified=True):
-        return dict(field='phone',value=value,scope='facility',source_kind='official',quote_verified=verified,identity_anchor_found=True,decision='candidate',relationship='fill')
+        return dict(field='phone',value=value,source_url='https://registry.gov/contact',scope='facility',source_kind='registry',quote_verified=verified,identity_anchor_found=True,decision='candidate',relationship='fill')
     (prior/'results.json').write_text(json.dumps([{'facility_id':'IC-1','proposals':[p('222')]}]))
     current=tmp_path/'current';current.mkdir()
     (current/'results.json').write_text(json.dumps([{'facility_id':'IC-1','proposals':[p('111'),p('222'),p('333'),p('333'),p('444',False)]}]))
@@ -161,3 +161,11 @@ def test_redacted_search_link_does_not_abort_facility():
     from pipeline.web_research.run import domain
     assert domain('https://[link removed]')==''
     assert domain('https://www.example.com/contact')=='example.com'
+
+
+def test_campaign_private_registry_is_not_authoritative():
+    from pipeline.web_research.campaign import checked_proposals, supported_detail
+    base=dict(field='address',value='123 Main',scope='facility',quote_verified=True,identity_anchor_found=True,source_kind='registry',source_url='https://private-registry.com/contact')
+    assert not supported_detail(next(checked_proposals({'proposals':[base]})))
+    base['source_url']='https://state.gov/registry'
+    assert supported_detail(next(checked_proposals({'proposals':[base]})))
