@@ -24,12 +24,13 @@ Observability. Every stage writes <out>/<stage>.json with its counts and its rej
 prints a table to stdout and to $GITHUB_STEP_SUMMARY. A stage that does nothing says why.
 """
 from __future__ import annotations
-import argparse, json, os, sys
+import argparse, collections, json, os, sys
 from pathlib import Path
 
 from . import _db
 
-STAGES = ("plan", "locate", "geocode", "footprint", "existence", "load", "promote", "cache")
+STAGES = ("plan", "locate", "geocode", "places", "footprint", "existence", "load", "promote",
+          "cache")
 DEFAULT_AI_LIMIT = 200
 DEFAULT_GEOCODE_LIMIT = 2000        # the free tier is 2500/day and is shared with anyone else using it
 # Footprint cost is per distinct Overture file, not per facility: ten plants in one county read one
@@ -42,6 +43,10 @@ DEFAULT_GEOCODE_LIMIT = 2000        # the free tier is 2500/day and is shared wi
 # become the real bound and the deferral path, which is what lets the next run continue cleanly,
 # would never run. 20 leaves headroom for the slowest files and for stage startup.
 DEFAULT_FOOTPRINT_LIMIT = 20
+# Places cost is per STATE box read from S3, the same shape as footprint's per-file cost: the
+# facilities in a state are answered by one read however many there are. Six states is roughly
+# ten minutes against the 35 minute stage timeout, and the rest defer to the next run.
+DEFAULT_PLACES_STATES = 6
 
 
 def _summary(title: str, rows: list[tuple[str, object]]) -> str:
@@ -63,7 +68,7 @@ def _emit(out: Path, stage: str, metrics: dict, table: list[tuple[str, object]])
 
 def _load_assertions(out: Path) -> list[dict]:
     got = []
-    for stage in ("locate", "geocode", "footprint", "existence"):
+    for stage in ("locate", "geocode", "places", "footprint", "existence"):
         f = out / f"{stage}.assertions.json"
         if f.exists():
             got.extend(json.loads(f.read_text()))
@@ -81,6 +86,9 @@ def main(argv=None) -> int:
                     help="hard ceiling on Geocodio lookups per run (default 2000, free tier 2500/day)")
     ap.add_argument("--regeocode", action="store_true",
                     help="look up addresses again that a previous run could not place")
+    ap.add_argument("--places-limit", type=int, default=DEFAULT_PLACES_STATES,
+                    help="hard ceiling on STATES whose Overture places a run may read (default 6); "
+                         "cost is per state box read, not per facility")
     ap.add_argument("--footprint-limit", type=int, default=DEFAULT_FOOTPRINT_LIMIT,
                     help="hard ceiling on distinct Overture files a run may read (default 40)")
     ap.add_argument("--model", default="", help="model id for the AI stage (default: see locate.DEFAULT_MODEL)")
@@ -222,6 +230,46 @@ def main(argv=None) -> int:
                   f"Add a payment method at https://dash.geocod.io/billing to lift the "
                   f"{geocode.FREE_TIER_PER_DAY}/day ceiling.")
         _emit(args.out, "geocode", {k: v for k, v in rep.items() if k != "assertions"}, table)
+        return 0
+
+    if args.stage == "places":
+        from . import places
+        # The same eligibility as geocode — an address and no rooftop coordinate — because this
+        # stage exists for exactly the facilities geocode could not place precisely enough. It
+        # runs AFTER geocode so that a rooftop answer, when there is one, is already taken and
+        # this never competes with it.
+        todo = [r for r in need_coord if (r.get("city") or "").strip() and (r.get("state") or "").strip()]
+        boxes = places.state_boxes(rows)
+        by_state = collections.Counter((r.get("state") or "").upper() for r in todo)
+        # Busiest states first: a run's ceiling should buy the most facilities it can.
+        ranked = [s for s, _ in by_state.most_common() if s in boxes]
+        chosen, deferred_states = ranked[:args.places_limit], ranked[args.places_limit:]
+        no_box = sorted({s for s in by_state if s not in boxes})
+        sel = [r for r in todo if (r.get("state") or "").upper() in chosen]
+        if args.dry_run:
+            _emit(args.out, "places",
+                  {"eligible": len(todo), "states_this_run": chosen, "planned": len(sel)},
+                  [("eligible", len(todo)), ("states this run", " ".join(chosen)),
+                   ("would match", len(sel))])
+            return 0
+        rep = places.run(sel, places.fetch(chosen, boxes))
+        rep.update(states_this_run=chosen, states_deferred=deferred_states,
+                   states_without_a_box=no_box,
+                   deferred=sum(by_state[s] for s in deferred_states),
+                   boxes={s: [round(v, 3) for v in boxes[s]] for s in chosen})
+        (args.out).mkdir(parents=True, exist_ok=True)
+        (args.out / "places.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
+        table = [("eligible (address, no rooftop coordinate)", len(todo)),
+                 ("states this run", " ".join(chosen) or "none"),
+                 ("facilities attempted", rep["eligible"]),
+                 ("matched to an Overture place", rep["matched"]),
+                 ("assertions by field", json.dumps(rep["by_field"])),
+                 ("how the address resolved", json.dumps(rep["candidate_shape"])),
+                 ("refused", json.dumps(rep["refused"])),
+                 ("deferred to the next run", rep["deferred"])]
+        if no_box:
+            table.append(("states with no coordinate to derive a box from", " ".join(no_box)))
+        _emit(args.out, "places", {k: v for k, v in rep.items() if k != "assertions"}, table)
         return 0
 
     if args.stage == "footprint":

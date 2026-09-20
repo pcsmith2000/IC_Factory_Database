@@ -27,6 +27,48 @@ Each stage is a separate workflow job with `needs:` on the one before it, and a 
 under `pipeline/enrich/`. Every stage is idempotent: it selects the facilities missing its output
 field, and writing the same release twice changes nothing.
 
+## Stage 13 — Overture places (`places`)
+
+For the facilities that have a street address and no coordinate. Geocodio answered for most of
+them and the answer was graded `street_center` or `range_interpolation` rather than `rooftop`, so
+gate E2 correctly refused to publish it. They are not unfindable; they are unfindable by geocoding.
+
+The stage joins them to Overture's `places` theme **on the address** — house number plus the
+distinctive words of the street, within the same city and state. Where a place carries the same
+address, its point is an independent second statement of where the facility is.
+
+Measured against 241 Oregon and Washington facilities whose coordinate came from a verified
+rooftop geocode:
+
+| rule | matched | median error | p90 | >1km |
+| --- | --- | --- | --- | --- |
+| fuzzy name >= 0.90 | 49% | 168m | — | — |
+| name >= 0.90 AND street agrees | 27% | 60m | 302m | 0% |
+| **street agrees, name ignored** | **55%** | **63m** | **302m** | 3.8% |
+
+The name requirement halved the yield and bought nothing — it was a proxy for the street check
+behind it. The 3.8% tail is one situation, several places sharing an address but sitting far
+apart, so that case is refused unless the facility's own name picks one out:
+
+| candidates at the address | n | median | <=200m | >1km |
+| --- | --- | --- | --- | --- |
+| exactly one | 88 | 54m | 84.1% | 3.4% |
+| several, within 150m of each other | 32 | 82m | 84.4% | 0.0% |
+| several, more than 150m apart | 13 | 143m | 69.2% | 15.4% |
+
+**63m is not a rooftop fix.** These coordinates carry `basis: place_match`, which
+`registry/survivorship.yaml` ranks below `basis:rooftop`, so a real geocode always wins and this
+only fills a hole. Stage 11 still measures footprints from rooftop coordinates only — a 64m point
+would measure the building next door. Gate E7 requires every place match to cite the Overture
+place id and both addresses, so any of them can be re-checked.
+
+A website and a phone ride along as separate assertions where the place carries them, judged on
+their own merits by survivorship (a registry's phone still outranks a POI listing's). On the
+Oregon/Washington sample, 67 of 69 matches carried a website and 68 a phone.
+
+Cost is per **state box read from S3**, not per facility, so `--places-limit` bounds a run by
+states (default 6) and the rest defer to the next run — the same shape as stage 11's file ceiling.
+
 ## Everything written is an assertion
 
 No stage writes to `golden_facility`. Each appends to `fact_assertions` under its own source id:

@@ -31,7 +31,7 @@ on:
         default: ""
       stages:
         description: "which stages to run, comma separated"
-        default: "plan,locate,geocode,footprint,existence,load,promote"
+        default: "plan,locate,geocode,places,footprint,existence,load,promote"
       target:
         description: "which database to write to"
         type: choice
@@ -49,6 +49,9 @@ on:
       geocode_limit:
         description: "max Geocodio lookups this run (2500/day are free, the rest bills at $1/1000)"
         default: "2000"
+      places_limit:
+        description: "max STATES whose Overture places stage 13 may read (cost is per state, not per facility)"
+        default: "6"
       sample:
         description: "work on a seeded stratified subset of this size (blank = all)"
         default: ""
@@ -166,8 +169,26 @@ jobs:
         ${{ needs.branch.outputs.common_args }}
         --geocode-limit ${{ inputs.geocode_limit || 2000 }}
 
-  footprint:
+  # Stage 13 runs AFTER geocode and BEFORE footprint, and the order is the whole design: geocode
+  # gets first refusal on every address, so a real rooftop fix is always taken when there is one
+  # and this only ever fills what is left. footprint still reads rooftop coordinates only — a 64m
+  # place match would measure the building next door — so nothing downstream is loosened by it.
+  places:
     needs: [branch, geocode]
+    if: always() && needs.branch.result == 'success'
+    uses: ./.github/workflows/enrich-stage.yml
+    secrets: inherit
+    with:
+      stage: places
+      branch_id: ${{ needs.branch.outputs.branch_id }}
+      run_key: ${{ github.run_id }}
+      enabled: ${{ contains(inputs.stages, 'places') || github.event_name == 'workflow_run' }}
+      args: >-
+        ${{ needs.branch.outputs.common_args }}
+        --places-limit ${{ inputs.places_limit || 6 }}
+
+  footprint:
+    needs: [branch, places]
     if: always() && needs.branch.result == 'success'
     uses: ./.github/workflows/enrich-stage.yml
     secrets: inherit

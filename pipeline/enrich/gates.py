@@ -31,15 +31,42 @@ def e1_every_located_address_is_cited(assertions: list[dict]) -> GateResult:
                       f"{len(located)} located, {len(bad)} without a URL and a quote")
 
 
+# A coordinate may be published on either of these bases and no other. Two entries, not a blanket
+# allowance: the point of E2 is that a coordinate names how it was arrived at, and every new way
+# of arriving at one is a deliberate addition here with a measurement behind it.
+COORDINATE_BASES = {
+    "rooftop",       # Geocodio, accuracy_type=rooftop
+    "place_match",   # stage 13, an Overture place at the same street address (see places.py)
+}
+
+
 def e2_no_coordinate_from_a_non_rooftop_geocode(assertions: list[dict]) -> GateResult:
     """Measured on 30 geocodes checked against imagery: rooftop verified 80% of the time and its
     failures were the right site off by 25-110m; nearest_rooftop_match verified 30% and its
     failures were a different parcel entirely. A point on the wrong parcel is worse than none,
-    because stage 11 measures the building under it and the map renders it as known."""
+    because stage 11 measures the building under it and the map renders it as known.
+
+    `place_match` joined it on its own measurement, not by being waved through: against 241
+    facilities with a verified rooftop coordinate it had a median error of 63m and a p90 of 302m
+    (pipeline/enrich/places.py). That is worse than rooftop, which is why survivorship ranks it
+    below rooftop and why it is a separate basis rather than being called one.
+    """
     coords = [a for a in assertions if a.get("field") == "lat_lon"]
-    bad = [a for a in coords if a.get("basis") != "rooftop"]
+    bad = [a for a in coords if a.get("basis") not in COORDINATE_BASES]
     return GateResult("E2", not bad,
-                      f"{len(coords)} coordinates, {len(bad)} not from a rooftop geocode")
+                      f"{len(coords)} coordinates, {len(bad)} on a basis that is not "
+                      f"{' or '.join(sorted(COORDINATE_BASES))}")
+
+
+def e7_every_place_match_cites_the_address_that_agreed(assertions: list[dict]) -> GateResult:
+    """A place match is believable only because two independently-sourced addresses agreed. The
+    evidence has to carry the Overture place id AND both addresses, or the agreement cannot be
+    re-checked and the value is indistinguishable from a coordinate someone typed."""
+    pm = [a for a in assertions if a.get("basis") == "place_match"]
+    bad = [a for a in pm
+           if "overture:" not in (a.get("evidence") or "") or ":: matched " not in (a.get("evidence") or "")]
+    return GateResult("E7", not bad,
+                      f"{len(pm)} place matches, {len(bad)} without the Overture id and both addresses")
 
 
 def e3_every_footprint_names_its_building(assertions: list[dict]) -> GateResult:
@@ -105,7 +132,8 @@ def run_all(assertions: list[dict], before: list[dict] | None = None,
     results = [e1_every_located_address_is_cited(assertions),
                e2_no_coordinate_from_a_non_rooftop_geocode(assertions),
                e3_every_footprint_names_its_building(assertions),
-               e5_existence_is_advisory(assertions)]
+               e5_existence_is_advisory(assertions),
+               e7_every_place_match_cites_the_address_that_agreed(assertions)]
     if before is not None and after is not None:
         results.insert(3, e4_enrichment_never_removes_a_field(before, after))
     return results

@@ -49,6 +49,7 @@ SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "geocode:geocodio": {"name": "Enrichment 10 — Geocodio rooftop geocode", "class": "enrichment"},
     "overture:building": {"name": "Enrichment 11 — Overture building footprint", "class": "enrichment"},
     "enrich:existence": {"name": "Enrichment 12 — existence review flag", "class": "enrichment"},
+    "overture:place": {"name": "Enrichment 13 — Overture place at the same address", "class": "enrichment"},
 }
 
 
