@@ -20,6 +20,7 @@ def normalized_detail(field, value):
         value=str(value or '').strip()
         if re.fullmatch(r'\d{5}(?:-\d{4})?',value):return value[:5]
     if field=='address':
+        value=re.sub(r'^(north|south|east|west),\s*(?=\d)','',str(value or '').lower())
         tokens=re.findall(r'[a-z0-9]+',str(value or '').lower())
         aliases={'street':'st','road':'rd','avenue':'ave','boulevard':'blvd','drive':'dr','lane':'ln','court':'ct','highway':'hwy','parkway':'pkwy','north':'n','south':'s','east':'e','west':'w','suite':'ste'}
         return ''.join(aliases.get(t,t) for t in tokens)
@@ -79,7 +80,9 @@ def prepare(root, out, batch, round_number):
 
 def report(root, current, out):
     prior=read_all(Path(root)/'prior','results.json')
-    seen={detail_key(r['facility_id'],p) for block in prior for r in block for p in checked_proposals(r) if supported_detail(p)}
+    seen={detail_key(r['facility_id'],p) for block in prior for r in block for p in checked_proposals(r)
+          if p.get('source_trusted') and p.get('quote_verified') and p.get('identity_anchor_found')}
+    # A scope-label change is not new information: previously reviewed office values are already seen.
     baseline={r['facility_id']:r for block in read_all(Path(root)/'baseline','input.json') for r in block}
     new={}; candidates={}
     blocks=read_all(current,'results.json')

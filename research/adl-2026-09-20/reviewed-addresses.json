@@ -921,5 +921,31 @@
     "review_note": "Reviewed official facility/manufacturer evidence and address context. Prefabricated Steel Frame Buildings | B&T Manufacturing Skip to content (605) 716-7822 | 1600 Sedivy Ln, Rapid City, SD 57703 Home About Us Our Products ADUs-Campground Cabins H\u00b3 Wellness Hub Modular Bathroom Pods Steel Frame Construction Backyard Greenhouse Kits Workforce Housing CFS Home Kits Why B&T? Blog Menu Navigation Menu Navigation Men",
     "source_run": 35542280759,
     "address_previously_missing": true
+  },
+  {
+    "facility_id": "IC-95315",
+    "name": "BathSystems",
+    "address": "5301 Polk St 20",
+    "city": "HOUSTON",
+    "state": "TX",
+    "zip": "77023",
+    "reviewed": true,
+    "evidence_url": "https://bathsystemusa.com/contact-us/",
+    "review_note": "Official Bathsystem USA about page describes U.S. manufacturing under one roof, and contact page gives the Houston site in the original city/state.",
+    "source_run": 35543290961,
+    "address_previously_missing": true
+  },
+  {
+    "facility_id": "IC-95270",
+    "name": "Amtex Corp.",
+    "address": "832 E. Walnut St.",
+    "city": "Garland",
+    "state": "TX",
+    "zip": "75040",
+    "reviewed": true,
+    "evidence_url": "https://oas.dhs.in.gov/dfbs/code/main.do;jsessionid=byUuebxD_1VI_2OIzRUJeD0WSzWUKfMdCgXuRwccKc0ABy1NR-Db!-589601166?manufacturerNameId=4488&method=view",
+    "review_note": "Indiana DHS industrialized-building manufacturer registry identifies Amtex Corporation and explicitly repeats this Garland street address as Facilities Address; original city/state match.",
+    "source_run": 35543290961,
+    "address_previously_missing": true
   }
 ]
