@@ -34,7 +34,7 @@ def supported_detail(p):
     # Review may contain useful, supported conflicts; report those separately from accepted fills.
     return (p.get('quote_verified') and p.get('identity_anchor_found') and
             p.get('source_kind') in ('official','registry') and
-            (p.get('scope')=='facility' or p['field']=='website'))
+            (p.get('scope')=='facility' or p['field'] in ('website','phone','email')))
 
 
 def prepare(root, out, batch, round_number):
@@ -77,8 +77,13 @@ def report(root, current, out):
                 if key in seen or key[2]==normalized:continue
                 new[key]={'facility_id':r['facility_id'],**p}
                 if p['decision']=='candidate' and p['relationship']=='fill':candidates[key]=new[key]
+    completed_ids=[r['facility_id'] for block in blocks for r in block]
+    if len(completed_ids)!=len(set(completed_ids)):raise ValueError('Duplicate completed facilities; refuse inflated coverage')
+    if set(completed_ids)-set(baseline):raise ValueError('Results outside frozen cohort')
     summaries=read_all(current,'summary.json')
-    value={'new_supported_details':len(new),'new_candidate_fills':len(candidates),
+    value={'coverage_complete':set(completed_ids)==set(baseline) and not any(s['errors'] for s in summaries),
+           'unique_facilities_completed':len(set(completed_ids)),
+           'new_supported_details':len(new),'new_candidate_fills':len(candidates),
            'new_review_details':len(new)-len(candidates),'completed':sum(s['completed'] for s in summaries),
            'selected':sum(s['selected'] for s in summaries),'errors':[e for s in summaries for e in s['errors']],
            'cost_usd':round(sum(s['usage']['known_cost_subtotal_usd'] for s in summaries),6),
