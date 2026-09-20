@@ -9,6 +9,9 @@ on:
       prior_runs:
         description: 'ALL previous campaign run IDs, comma-separated; blank for first round'
         default: ''
+      resume_run:
+        description: 'Incomplete run from this same round; skip its completed facilities'
+        default: ''
 permissions:
   contents: read
   actions: read
@@ -28,6 +31,7 @@ jobs:
       RESEARCH_TIME_LIMIT_SECONDS: '5700'
       ROUND: ${{ inputs.round || '1' }}
       PRIOR_RUNS: ${{ inputs.prior_runs }}
+      RESUME_RUN: ${{ inputs.resume_run }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +48,10 @@ jobs:
           for rid in filter(None,os.environ['PRIOR_RUNS'].split(',')):
               if not re.fullmatch(r'\d+',rid):raise ValueError('Invalid run ID')
               subprocess.run(['gh','run','download',rid,'--dir',f'campaign-input/prior/{rid}'],check=True)
+          rid=os.environ['RESUME_RUN']
+          if rid:
+              if not re.fullmatch(r'\d+',rid):raise ValueError('Invalid resume run ID')
+              subprocess.run(['gh','run','download',rid,'--dir','campaign-input/resume'],check=True)
           PY
       - name: Select frozen batch
         run: python -m pipeline.web_research.campaign prepare --batch ${{ matrix.batch }} --round "$ROUND"

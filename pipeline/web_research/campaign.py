@@ -52,13 +52,19 @@ def prepare(root, out, batch, round_number):
             seen.setdefault(r['facility_id'],[]).extend(p for p in r['proposals'] if supported_detail(p))
     selected=sorted(rows.values(),key=lambda r:r['facility_id'])[batch*100:(batch+1)*100]
     if not selected: raise ValueError('Empty batch')
+    resume_manifests=read_all(Path(root)/'resume','campaign.json')
+    if os.environ.get('RESUME_RUN') and (not resume_manifests or any(m['round']!=round_number for m in resume_manifests)):
+        raise ValueError('Resume artifacts must belong to the same round')
+    completed={r['facility_id'] for block in read_all(Path(root)/'resume','results.json') for r in block}
+    original_size=len(selected)
+    selected=[r for r in selected if r['facility_id'] not in completed]
     for r in selected:
         # Preserve the baseline values. Prior values are search context, never accepted evidence.
         r['previously_reported_details']=[{'field':p['field'],'value':p['value']} for p in seen.get(r['facility_id'],[])]
         r['research_round']=round_number
     out.mkdir(parents=True,exist_ok=True)
     (out/'input.json').write_text(json.dumps(selected,indent=2))
-    (out/'campaign.json').write_text(json.dumps({'round':round_number,'batch':batch,'cohort':241,'batch_size':100,'selected':len(selected),'database_writes':0},indent=2))
+    (out/'campaign.json').write_text(json.dumps({'round':round_number,'batch':batch,'cohort':241,'batch_size':100,'selected':len(selected),'original_batch_size':original_size,'skipped_completed':original_size-len(selected),'resume_run':os.environ.get('RESUME_RUN',''),'database_writes':0},indent=2))
 
 
 def report(root, current, out):
@@ -81,11 +87,14 @@ def report(root, current, out):
     if len(completed_ids)!=len(set(completed_ids)):raise ValueError('Duplicate completed facilities; refuse inflated coverage')
     if set(completed_ids)-set(baseline):raise ValueError('Results outside frozen cohort')
     summaries=read_all(current,'summary.json')
-    value={'coverage_complete':set(completed_ids)==set(baseline) and not any(s['errors'] for s in summaries),
+    all_errors=[e for s in summaries for e in s['errors']]
+    unresolved_errors=[e for e in all_errors if e.get('facility_id') not in set(completed_ids)]
+    value={'coverage_complete':set(completed_ids)==set(baseline) and not unresolved_errors,
+           'recovered_errors':[e for e in all_errors if e.get('facility_id') in set(completed_ids)],
            'unique_facilities_completed':len(set(completed_ids)),
            'new_supported_details':len(new),'new_candidate_fills':len(candidates),
            'new_review_details':len(new)-len(candidates),'completed':sum(s['completed'] for s in summaries),
-           'selected':sum(s['selected'] for s in summaries),'errors':[e for s in summaries for e in s['errors']],
+           'selected':sum(s['selected'] for s in summaries),'errors':unresolved_errors,
            'cost_usd':round(sum(s['usage']['known_cost_subtotal_usd'] for s in summaries),6),
            'responses_missing_cost':sum(s['usage']['responses_missing_cost'] for s in summaries),
            'details':list(new.values()),'database_writes':0}
@@ -93,12 +102,15 @@ def report(root, current, out):
     (out/'round-report.json').write_text(json.dumps(value,indent=2))
     print(json.dumps({k:v for k,v in value.items() if k!='details'},indent=2))
 
-def execute(out, workers=4):
+def execute(out, workers=1):
     """Run independent rows concurrently inside one logical 100-row batch."""
     import subprocess
     import sys
     from concurrent.futures import ThreadPoolExecutor
     rows=json.loads((out/'input.json').read_text())
+    if not rows:
+        (out/'results.json').write_text('[]')
+        return
     workers=min(workers,len(rows))
     if not 1<=workers<=4:raise ValueError('Expected 1..4 workers')
     def worker(index):

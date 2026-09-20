@@ -95,7 +95,7 @@ def confirmed_search_count(raw):
 
 def usage_summary(out):
     total={'confirmed_tako_searches':0,'reported_cost_usd':0.0,'prompt_tokens':0,'completion_tokens':0,'responses_missing_cost':0}
-    for file in list(out.glob('IC-*/response.json'))+list(out.glob('IC-*/extraction.json')):
+    for file in list(out.glob('IC-*/response*.json'))+list(out.glob('IC-*/extraction.json')):
         raw=json.loads(file.read_text()); usage=raw.get('usage',{})
         total['confirmed_tako_searches']+=confirmed_search_count(raw)
         for k in ('prompt_tokens','completion_tokens'): total[k]+=usage.get(k,0)
@@ -109,7 +109,7 @@ def usage_summary(out):
 class SearchNotConfirmed(RuntimeError):
     pass
 
-def search(row, folder):
+def search(row, folder, confirmation_retry=False):
     identity=' '.join(str(row.get(k) or '') for k in ('name','address','city','state','phone','email'))
     focus = {1:'official plant physical street address manufacturing facility contact phone email', 2:'factory locations contact us street address postal code plant telephone', 3:'manufacturing plant facility address contact email company locations'}.get(row.get('research_round',1), 'official facility location contact address missing details')
     objective=f'{identity} {focus}; verify exact facility and location conflicts'
@@ -129,6 +129,11 @@ def search(row, folder):
             if exc.code not in (429,500,502,503,504) or attempt==2: raise
             time.sleep(2**attempt*3)
     (folder/'response.json').write_text(json.dumps(raw,indent=2))
+    if not confirmed_search_count(raw) and not confirmation_retry:
+        (folder/'response-rejected-1.json').write_text(json.dumps(raw,indent=2))
+        (folder/'response.json').unlink()
+        time.sleep(30)
+        return search(row,folder,confirmation_retry=True)
     if not confirmed_search_count(raw):
         raise SearchNotConfirmed('Gateway did not confirm any successful search calls')
     content=raw['choices'][0]['message']['content']

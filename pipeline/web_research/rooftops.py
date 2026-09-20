@@ -48,7 +48,7 @@ def run(rows, out, prior=None):
         for r in facilities:
             components=best.get('address_components') or {}
             number=re.match(r'\d+[a-zA-Z]?',r['address'])
-            address_matches=(norm(components.get('state'))==norm(r['state']) and
+            address_matches=(norm(components.get('state_province') or components.get('state'))==norm(r['state']) and
                              norm(components.get('city'))==norm(r['city']) and
                              number is not None and norm(components.get('number'))==norm(number.group()))
             rooftop=best.get('accuracy_type')=='rooftop' and address_matches
