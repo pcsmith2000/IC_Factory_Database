@@ -2,6 +2,12 @@ import pytest
 from pipeline.web_research.run import assess, safe_url
 from pipeline.web_research.select import query, settings
 
+@pytest.fixture(autouse=True)
+def isolated_selector_settings(monkeypatch):
+    # Workflow inputs must not alter test fixtures or parameter ordering.
+    for key in ('STATES','FACILITY_IDS','MISSING_FIELDS','SOURCE_IDS','TIERS','RELEASE_TAG','ROW_LIMIT','ROW_OFFSET','SAMPLE_SEED'):
+        monkeypatch.delenv(key,raising=False)
+
 def result(**fields):
     return {'status':'matched','fields':fields}
 
