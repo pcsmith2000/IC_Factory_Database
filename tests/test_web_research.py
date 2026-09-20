@@ -137,7 +137,7 @@ def test_rooftop_preview_retains_only_rooftop_and_deduplicates(tmp_path,monkeypa
     calls=[]
     def fake(queries,key):
         calls.append(queries)
-        return ([{'response':{'results':[{'accuracy_type':kind,'location':{'lat':1,'lng':2},'address_components':{'number':'123','city':'Test','state_province':'AZ'}}]}} for kind in ['rooftop','nearest_rooftop_match']],'')
+        return ([{'response':{'results':[{'accuracy_type':kind,'location':{'lat':1,'lng':2},'address_components':{'number':'123','formatted_street':'First St','city':'Test','state_province':'AZ'}}]}} for kind in ['rooftop','nearest_rooftop_match']],'')
     monkeypatch.setattr(rooftops,'_post',fake)
     rooftops.run(rows,tmp_path/'first')
     out=json.loads((tmp_path/'first'/'rooftop-results.json').read_text())
@@ -181,3 +181,11 @@ def test_public_contact_email_decoding_preserves_exact_addresses():
     assert email in soup.get_text()
     assert 'plant@example.com' in soup.get_text()
     assert 'subject=Hello' not in soup.get_text()
+
+
+def test_rooftop_requires_matching_street_not_only_house_number():
+    from pipeline.web_research.rooftops import street_matches
+    assert street_matches('123 North First Street Suite 2',{'formatted_street':'N First St','unit_number':'2'})
+    assert street_matches('5301 Polk St 20',{'formatted_street':'Polk St','unit_number':'20'})
+    assert not street_matches('123 First St',{'formatted_street':'Second St'})
+    assert not street_matches('831 New York 67 Bldg 46',{'formatted_street':'Church Ave','unit_number':'46'})

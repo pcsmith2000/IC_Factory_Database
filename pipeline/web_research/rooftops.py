@@ -6,6 +6,7 @@ import os
 import re
 from pathlib import Path
 from .run import norm
+from .campaign import normalized_detail
 from pipeline.enrich.geocode import _post, one_line
 
 
@@ -18,6 +19,16 @@ def validate(rows):
         if not all(r.get(k) for k in ('facility_id','address','city','state')):
             raise ValueError('Incomplete facility address')
         if 'pobox' in norm(r['address']):raise ValueError('Mailing address cannot locate a plant')
+
+
+def street_matches(address, components):
+    street=re.sub(r'^\d+[a-zA-Z]?\s*','',address).strip()
+    street=re.split(r'(?i)\b(?:suite|ste|unit|bldg|building)\b|#',street,maxsplit=1)[0].strip()
+    unit=str(components.get('unit_number') or '')
+    if unit:
+        street=re.sub(r'\s+'+re.escape(unit)+r'$','',street).strip()
+    returned=components.get('formatted_street')
+    return bool(returned) and normalized_detail('address',street)==normalized_detail('address',returned)
 
 
 def run(rows, out, prior=None):
@@ -50,7 +61,8 @@ def run(rows, out, prior=None):
             number=re.match(r'\d+[a-zA-Z]?',r['address'])
             address_matches=(norm(components.get('state_province') or components.get('state'))==norm(r['state']) and
                              norm(components.get('city'))==norm(r['city']) and
-                             number is not None and norm(components.get('number'))==norm(number.group()))
+                             number is not None and norm(components.get('number'))==norm(number.group()) and
+                             street_matches(r['address'],components))
             rooftop=best.get('accuracy_type')=='rooftop' and address_matches
             results.append({**r,'query':query,'accuracy_type':best.get('accuracy_type','no_result'),
                 'accuracy':best.get('accuracy'),'dataset':best.get('source'),'address_matches':address_matches,
