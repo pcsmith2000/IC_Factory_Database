@@ -1,5 +1,5 @@
 name: Tako AI Search pass (read-only)
-run-name: Tako research · ${{ inputs.mode || 'plan' }} · ${{ inputs.row_limit || '40' }} rows
+run-name: Tako research · ${{ inputs.mode || 'pilot' }} · ${{ inputs.row_limit || '10' }} rows
 on:
   workflow_dispatch:
     inputs:
@@ -49,7 +49,7 @@ jobs:
     timeout-minutes: 30
     env:
       RESEARCH_OUT: research-output
-      ROW_LIMIT: ${{ inputs.row_limit || '40' }}
+      ROW_LIMIT: ${{ inputs.row_limit || '10' }}
       ROW_OFFSET: ${{ inputs.row_offset || '0' }}
       SAMPLE_SEED: ${{ inputs.sample_seed || '20260920' }}
       STATES: ${{ inputs.states }}
@@ -58,7 +58,7 @@ jobs:
       SOURCE_IDS: ${{ inputs.source_ids }}
       TIERS: ${{ inputs.tiers }}
       RELEASE_TAG: ${{ inputs.release_tag }}
-      RESEARCH_MODE: ${{ inputs.mode || 'plan' }}
+      RESEARCH_MODE: ${{ inputs.mode || 'pilot' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
