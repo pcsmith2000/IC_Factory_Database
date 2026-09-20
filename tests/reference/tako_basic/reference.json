@@ -109,7 +109,14 @@
       "state": "MD",
       "city": "Millington",
       "source_url": "https://www.availinfra.com/locations/page/3/",
-      "notes": "Published plant phone differs from existing 4109287732; retain as conflict, not overwrite. Official 2024 brochure independently corroborates."
+      "notes": "Published plant phone differs from existing 4109287732; retain as conflict, not overwrite. Official 2024 brochure independently corroborates. Follow-up independent check before viewing pilot: nVent completed acquisition May 1, 2025. Current nvent.com is acceptable if facility tied to acquisition; availinfra.com is historical.",
+      "website_alternatives": [
+        "nvent.com"
+      ],
+      "additional_sources": [
+        "https://investors.nvent.com/press-releases/press-release-details/2025/nVent-Completes-Acquisition-of-the-Electrical-Products-Group-Business-of-Avail-Infrastructure-Solutions/default.aspx",
+        "https://www.osha.gov/ords/imis/establishment.inspection_detail?id=1838474.015"
+      ]
     },
     {
       "facility_id": "IC-87607",

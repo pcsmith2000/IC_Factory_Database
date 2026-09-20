@@ -64,6 +64,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: pip install -e '.[postgres,dev]'
+      - name: Test research protections
+        run: pytest tests/test_web_research.py -q
       - name: Select rows (database-enforced read-only)
         if: env.RESEARCH_MODE != 'pilot'
         env:
@@ -75,6 +77,9 @@ jobs:
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
         run: python -m pipeline.web_research.run --mode "$RESEARCH_MODE"
+      - name: Compare frozen pilot to independent reference
+        if: always() && env.RESEARCH_MODE == 'pilot'
+        run: python -m pipeline.web_research.evaluate
       - name: Retain research results and evidence
         if: always()
         uses: actions/upload-artifact@v4
