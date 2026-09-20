@@ -274,7 +274,9 @@ def main(argv=None) -> int:
         # The same locality set the matcher keys on, so the filter cannot drop a row that
         # could have matched.
         cities = {(x.get("city") or "").strip().upper() for x in sel}
-        rep = places.run(sel, places.fetch(chosen, boxes, localities=cities), need_coord=need_ids)
+        zips = {places.zip5(x.get("zip")) for x in sel}
+        rep = places.run(sel, places.fetch(chosen, boxes, localities=cities, postcodes=zips),
+                         need_coord=need_ids)
         rep.update(states_this_run=chosen, states_deferred=deferred_states,
                    states_already_read=sorted(done),
                    states_without_a_box=no_box,

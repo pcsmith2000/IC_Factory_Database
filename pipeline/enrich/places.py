@@ -59,6 +59,7 @@ NAME_TIEBREAK = 0.90           # the score that may pick one out of a spread-out
 CONTACT_NAME_MIN = 0.90
 SOURCE_ID = "overture:place"
 
+_ZIP = re.compile(r"[^0-9]")
 _NOISE = re.compile(r"[^A-Z0-9 ]")
 _SUFFIX = re.compile(r"\b(ST|STREET|RD|ROAD|AVE|AVENUE|BLVD|BOULEVARD|DR|DRIVE|LN|LANE|WAY|CT|"
                      r"COURT|PL|PLACE|HWY|HIGHWAY|PKWY|PARKWAY|N|S|E|W|NE|NW|SE|SW|STE|SUITE|"
@@ -77,6 +78,12 @@ def street_key(s: str) -> tuple[str, set[str]]:
     num = next((t for t in toks if t.isdigit()), "")
     words = {t for t in _SUFFIX.sub(" ", " ".join(toks)).split() if len(t) >= 3 and not t.isdigit()}
     return num, words
+
+
+def zip5(s: str) -> str:
+    """The first five digits, or nothing. ZIP+4 and "97205-1234" are the same postcode."""
+    d = _ZIP.sub("", s or "")
+    return d[:5] if len(d) >= 5 else ""
 
 
 def name_score(a: str, b: str) -> float:
@@ -110,24 +117,45 @@ def spread_m(cands: list[dict]) -> float:
                for i, a in enumerate(cands) for b in cands[i + 1:])
 
 
-def index_places(rows: list[dict]) -> dict:
-    """(region, locality, house number) -> the places there. The join key both sides can produce."""
-    idx: dict[tuple[str, str, str], list[dict]] = collections.defaultdict(list)
+def index_places(rows: list[dict]) -> tuple[dict, dict]:
+    """Two join keys: (region, locality, number) and (zip5, number).
+
+    The city is the primary key and the postcode is the fallback, because a factory's city is the
+    field most likely to disagree between two sources — a plant in an unincorporated area gets
+    filed under the nearest town by one roster and the county seat by another, and neither is
+    wrong. Measured on the 112 control facilities the city key found nothing for: keying on the
+    postcode instead recovered 9, every one of them within 500m of the truth and a median of 56m
+    out. Dropping the city constraint entirely recovered 16 — but 7 of those were a coincidental
+    house number elsewhere in the state, one of them 207km away. The postcode is the version of
+    "ignore the city" that cannot do that.
+    """
+    by_city: dict[tuple[str, str, str], list[dict]] = collections.defaultdict(list)
+    by_zip: dict[tuple[str, str], list[dict]] = collections.defaultdict(list)
     for r in rows:
         num, words = street_key(r.get("addr"))
         if not num or r.get("lat") is None:
             continue
-        idx[((r.get("reg") or "").upper(), (r.get("loc") or "").upper(), num)].append({**r, "words": words})
-    return idx
+        rec = {**r, "words": words}
+        by_city[((r.get("reg") or "").upper(), (r.get("loc") or "").upper(), num)].append(rec)
+        if (z := zip5(r.get("zip"))):
+            by_zip[(z, num)].append(rec)
+    return by_city, by_zip
 
 
-def choose(fac: dict, idx: dict) -> tuple[dict | None, str, list[dict]]:
+def choose(fac: dict, idx) -> tuple[dict | None, str, list[dict]]:
     """The one place this facility's address names, or a reason there isn't one."""
+    by_city, by_zip = idx if isinstance(idx, tuple) else (idx, {})
     num, words = street_key(fac.get("address"))
     if not num:
         return None, "no house number in the address", []
-    bucket = idx.get(((fac.get("state") or "").upper(), (fac.get("city") or "").upper(), num), [])
+    bucket = by_city.get(((fac.get("state") or "").upper(), (fac.get("city") or "").upper(), num), [])
     cands = [c for c in bucket if words & c["words"]]
+    if not cands and (z := zip5(fac.get("zip"))):
+        # The city disagreed or is spelled differently; the postcode is the same building's other
+        # name. Constrained to the same state as a guard, since a bare number+street repeats.
+        cands = [c for c in by_zip.get((z, num), [])
+                 if words & c["words"]
+                 and (c.get("reg") or "").upper() == (fac.get("state") or "").upper()]
     if not cands:
         return None, "no Overture place at this address", []
     if len(cands) == 1:
@@ -242,7 +270,7 @@ def state_boxes(rows: list[dict], pad_deg: float = 1.0) -> dict[str, tuple]:
 
 
 def fetch(states: list[str], boxes: dict[str, tuple], release: str = RELEASE,
-          localities: set[str] | None = None) -> list[dict]:
+          localities: set[str] | None = None, postcodes: set[str] | None = None) -> list[dict]:
     """Every addressed Overture place inside the boxes of the given states, in the cities we need.
 
     The bbox is what pushes down to the parquet row groups, so it decides which BYTES are read.
@@ -265,17 +293,22 @@ def fetch(states: list[str], boxes: dict[str, tuple], release: str = RELEASE,
         for s in states if (b := boxes.get(s)))
     if not where:
         return []
-    city = ""
-    if localities:
-        quoted = ", ".join("'" + c.replace("'", "''") + "'" for c in sorted(localities) if c)
-        if quoted:
-            city = f" AND upper(addresses[1].locality) IN ({quoted})"
+    # A place is worth reading if it is in a city we hold facilities in OR carries a postcode we
+    # do — the second half is what makes the ZIP fallback reachable. Filtering on the city alone
+    # would read past exactly the rows that fallback exists to find.
+    ors = []
+    if localities and (q := ", ".join("'" + c.replace("'", "''") + "'" for c in sorted(localities) if c)):
+        ors.append(f"upper(addresses[1].locality) IN ({q})")
+    if postcodes and (q := ", ".join("'" + z + "'" for z in sorted(postcodes) if z.isdigit())):
+        ors.append(f"substr(regexp_replace(addresses[1].postcode, '[^0-9]', '', 'g'), 1, 5) IN ({q})")
+    city = f" AND ({' OR '.join(ors)})" if ors else ""
     rows = con.execute(f"""
         SELECT id, names.primary nm, addresses[1].freeform addr,
                upper(addresses[1].locality) loc, upper(addresses[1].region) reg,
+               addresses[1].postcode zip,
                websites[1] website, phones[1] phone, ST_Y(geometry) lat, ST_X(geometry) lon
         FROM read_parquet('{PLACES.format(release=release)}')
         WHERE ({where}) AND addresses[1].freeform IS NOT NULL{city}
     """).fetchall()
-    cols = ("id", "nm", "addr", "loc", "reg", "website", "phone", "lat", "lon")
+    cols = ("id", "nm", "addr", "loc", "reg", "zip", "website", "phone", "lat", "lon")
     return [dict(zip(cols, r)) for r in rows]

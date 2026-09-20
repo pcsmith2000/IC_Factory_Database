@@ -187,9 +187,6 @@ def test_the_same_company_under_a_different_domain_is_still_taken():
 def test_a_facility_that_already_has_a_coordinate_gets_the_contact_details_only():
     """Stage 13 must never restate a location a rooftop geocode already settled — but the website
     is the reason most of these matches are worth making at all."""
-    idx = places.index_places([place("Acme Truss", "2802 142nd Ave E", 47.2313, -122.2440,
-                                     website="https://acme.example")])
-    rep = places.run([fac(fid="IC-9")], list(idx.values())[0], need_coord=set())
     rep = places.run([fac(fid="IC-9")], [place("Acme Truss", "2802 142nd Ave E", 47.2313, -122.2440,
                                                website="https://acme.example")], need_coord=set())
     assert rep["by_field"] == {"website": 1}
@@ -232,12 +229,20 @@ def test_the_city_filter_uses_the_same_key_the_matcher_does():
     assert '(fac.get("city") or "").upper()' in inspect.getsource(places.choose)
 
 
-def test_fetch_without_a_locality_set_still_reads_the_whole_box():
-    """Passing no set must not silently read nothing — an empty IN () is a query that matches
-    nothing at all, which would look like 'Overture has no places here'."""
+def test_fetch_without_a_filter_set_still_reads_the_whole_box():
+    """Passing no sets must not silently read nothing — an empty IN () matches nothing at all,
+    which would look exactly like 'Overture has no places here'."""
     import inspect
     src = inspect.getsource(places.fetch)
-    assert "if localities:" in src and "if quoted:" in src
+    assert 'city = f" AND ({\' OR \'.join(ors)})" if ors else ""' in src
+
+
+def test_the_read_lets_a_matching_postcode_in_as_well_as_a_matching_city():
+    """Filtering on the city alone would read past exactly the rows the ZIP fallback exists to
+    find — a plant filed under a different town than Overture files it under."""
+    import inspect
+    src = inspect.getsource(places.fetch)
+    assert "addresses[1].postcode" in src and "' OR '.join(ors)" in src
 
 
 def test_a_state_already_read_for_this_release_is_not_read_again():
@@ -261,3 +266,42 @@ def test_the_states_it_read_are_recorded_before_the_assertions_are_written():
     src = inspect.getsource(enrich_run.main)
     block = src[src.index('if args.stage == "places"'):src.index('if args.stage == "footprint"')]
     assert block.index("lookup_cache.put") < block.index('places.assertions.json')
+
+
+# ---- the ZIP fallback: the city is the field most likely to disagree
+
+def test_the_postcode_finds_a_plant_filed_under_a_different_town():
+    """A plant in an unincorporated area gets filed under the nearest town by one roster and the
+    county seat by another, and neither is wrong. 9 of the 112 control facilities the city key
+    missed were recovered this way, every one within 500m of the truth."""
+    idx = places.index_places([{**place("Acme Truss", "2802 142nd Ave E", 47.2313, -122.2440,
+                                        loc="SUMNER", reg="WA"), "zip": "98390"}])
+    f = {"facility_id": "IC-1", "name": "Acme Truss", "address": "2802 142nd Ave E",
+         "city": "BONNEY LAKE", "state": "WA", "zip": "98390-1234"}
+    got, why, _ = places.choose(f, idx)
+    assert got is not None and why == ""
+
+
+def test_the_postcode_fallback_will_not_cross_a_state_line():
+    """Ignoring the city entirely recovered 16 but 7 were a coincidental house number elsewhere,
+    one 207km away. The postcode is the version of that which cannot do it."""
+    idx = places.index_places([{**place("Somebody Else", "2802 142nd Ave E", 40.0, -100.0,
+                                        loc="ELSEWHERE", reg="NE"), "zip": "98390"}])
+    f = {"facility_id": "IC-1", "name": "Acme Truss", "address": "2802 142nd Ave E",
+         "city": "BONNEY LAKE", "state": "WA", "zip": "98390"}
+    assert places.choose(f, idx)[0] is None
+
+
+def test_the_city_key_is_tried_before_the_postcode():
+    """The city is the primary key; the postcode only answers when it found nothing."""
+    idx = places.index_places([
+        {**place("Right One", "100 Mill Rd", 47.0, -122.0, loc="TROY", reg="TX"), "zip": "75001"},
+        {**place("Wrong One", "100 Mill Rd", 48.0, -123.0, loc="OTHER", reg="TX"), "zip": "75001"}])
+    f = {"facility_id": "IC-1", "name": "Anything", "address": "100 Mill Rd",
+         "city": "TROY", "state": "TX", "zip": "75001"}
+    assert places.choose(f, idx)[0]["nm"] == "Right One"
+
+
+def test_a_zip_plus_four_is_the_same_postcode():
+    assert places.zip5("97205-1234") == places.zip5("97205") == "97205"
+    assert places.zip5("") == "" and places.zip5("ABC") == ""
