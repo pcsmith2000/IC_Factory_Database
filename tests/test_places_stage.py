@@ -150,3 +150,54 @@ def test_a_state_box_is_derived_from_coordinates_the_release_already_holds():
 
 def test_a_state_with_no_coordinates_yet_gets_no_box_rather_than_a_guess():
     assert "AK" not in places.state_boxes([{"state": "OR", "lat_lon": "45.5,-122.6"}])
+
+
+# ---- a coordinate is a property of the SITE, a website is a property of the COMPANY
+
+def test_a_coordinate_is_taken_from_any_tenant_of_the_building():
+    """Address match alone. Whoever else is listed there, the building is still where it is."""
+    idx = places.index_places([place("Mobile Modular-Eugene", "2802 142nd Ave E", 47.2313, -122.2440,
+                                     website="https://mobilemodular.example", phone="214-555-1212")])
+    got, _, cands = places.choose(fac(name="The Truss Company"), idx)
+    fields = {a["field"] for a in places.assertions_for(fac(name="The Truss Company"), got, cands)}
+    assert fields == {"lat_lon"}
+
+
+def test_a_website_is_not_taken_from_the_wrong_tenant():
+    """The measured failure: Mobile Modular's site published as The Truss Company's, because the
+    two share an address in Eugene. One row of 18, and the name gate cut exactly that one."""
+    idx = places.index_places([place("Mobile Modular-Eugene", "2802 142nd Ave E", 47.2313, -122.2440,
+                                     website="https://mobilemodular.example")])
+    got, _, cands = places.choose(fac(name="The Truss Company"), idx)
+    got_fields = [a for a in places.assertions_for(fac(name="The Truss Company"), got, cands)
+                  if a["field"] == "website"]
+    assert got_fields == []
+
+
+def test_the_same_company_under_a_different_domain_is_still_taken():
+    """bldr.com and bldrwashington.com are one company; so are thetrussco.com and medfordtruss.com.
+    Disagreeing with the roster is not the same as being wrong."""
+    idx = places.index_places([place("Builders FirstSource", "2802 142nd Ave E", 47.2313, -122.2440,
+                                     website="https://bldrwashington.example")])
+    f = fac(name="Builders FirstSource — Woodland")
+    got, _, cands = places.choose(f, idx)
+    assert any(a["field"] == "website" for a in places.assertions_for(f, got, cands))
+
+
+def test_a_facility_that_already_has_a_coordinate_gets_the_contact_details_only():
+    """Stage 13 must never restate a location a rooftop geocode already settled — but the website
+    is the reason most of these matches are worth making at all."""
+    idx = places.index_places([place("Acme Truss", "2802 142nd Ave E", 47.2313, -122.2440,
+                                     website="https://acme.example")])
+    rep = places.run([fac(fid="IC-9")], list(idx.values())[0], need_coord=set())
+    rep = places.run([fac(fid="IC-9")], [place("Acme Truss", "2802 142nd Ave E", 47.2313, -122.2440,
+                                               website="https://acme.example")], need_coord=set())
+    assert rep["by_field"] == {"website": 1}
+
+
+def test_the_contact_evidence_names_the_place_and_the_score_that_admitted_it():
+    idx = places.index_places([place("Acme Truss", "2802 142nd Ave E", 47.2313, -122.2440,
+                                     website="https://acme.example")])
+    got, _, cands = places.choose(fac(), idx)
+    ev = [a for a in places.assertions_for(fac(), got, cands) if a["field"] == "website"][0]["evidence"]
+    assert "place named 'Acme Truss'" in ev and "name score" in ev

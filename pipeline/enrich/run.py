@@ -238,7 +238,12 @@ def main(argv=None) -> int:
         # stage exists for exactly the facilities geocode could not place precisely enough. It
         # runs AFTER geocode so that a rooftop answer, when there is one, is already taken and
         # this never competes with it.
-        todo = [r for r in need_coord if (r.get("city") or "").strip() and (r.get("state") or "").strip()]
+        # Every facility with an address, not only the ones missing a coordinate. The coordinate is
+        # the narrower prize (892 want one); the website and phone are the broader one — 5,261 have
+        # an address and 984 have a website. Matching costs the same read either way.
+        need_ids = {r["facility_id"] for r in need_coord}
+        todo = [r for r in rows if (r.get("address") or "").strip()
+                and (r.get("city") or "").strip() and (r.get("state") or "").strip()]
         boxes = places.state_boxes(rows)
         by_state = collections.Counter((r.get("state") or "").upper() for r in todo)
         # Busiest states first: a run's ceiling should buy the most facilities it can.
@@ -252,14 +257,15 @@ def main(argv=None) -> int:
                   [("eligible", len(todo)), ("states this run", " ".join(chosen)),
                    ("would match", len(sel))])
             return 0
-        rep = places.run(sel, places.fetch(chosen, boxes))
+        rep = places.run(sel, places.fetch(chosen, boxes), need_coord=need_ids)
         rep.update(states_this_run=chosen, states_deferred=deferred_states,
                    states_without_a_box=no_box,
                    deferred=sum(by_state[s] for s in deferred_states),
                    boxes={s: [round(v, 3) for v in boxes[s]] for s in chosen})
         (args.out).mkdir(parents=True, exist_ok=True)
         (args.out / "places.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
-        table = [("eligible (address, no rooftop coordinate)", len(todo)),
+        table = [("eligible (has an address)", len(todo)),
+                 ("of those, wanting a coordinate", len([r for r in todo if r["facility_id"] in need_ids])),
                  ("states this run", " ".join(chosen) or "none"),
                  ("facilities attempted", rep["eligible"]),
                  ("matched to an Overture place", rep["matched"]),

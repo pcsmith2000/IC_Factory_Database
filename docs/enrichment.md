@@ -62,9 +62,41 @@ only fills a hole. Stage 11 still measures footprints from rooftop coordinates o
 would measure the building next door. Gate E7 requires every place match to cite the Overture
 place id and both addresses, so any of them can be re-checked.
 
-A website and a phone ride along as separate assertions where the place carries them, judged on
-their own merits by survivorship (a registry's phone still outranks a POI listing's). On the
-Oregon/Washington sample, 67 of 69 matches carried a website and 68 a phone.
+### Why the stage matches every addressed facility, not only the ones missing a coordinate
+
+The coordinate is the narrower prize: 892 facilities want one. The website is the broader one —
+5,261 facilities have an address and only 984 have a website. The reason is not that websites are
+hard to find:
+
+  * 21 of 29 sources publish no website at all. A state licence register records who filed a
+    registration, not their marketing site; EPA FRS, OSHA, FL BCIS, TX TDLR, IN DHS and NC OSFM
+    contribute thousands of rows and zero websites between them.
+  * The association rosters that DO publish one are mostly attached to rows the classifier then
+    discards, correctly. `ic_directories` normalises 1,084 websites and keeps 160 rows (10%),
+    because AISC certifies bridge shops and steel erectors; `ic_directories_more` keeps 25%.
+    `sbca_cm` keeps 100%, because it was already a roster of truss plants.
+  * Stage 9 reads company websites to find addresses and throws the URL away — it writes only an
+    `address` assertion. Of 131 located addresses citing a URL, only 40 have a domain matching the
+    company name, and two of those are wrong (`safetyrecord.org` for Safety Storage).
+
+Matching an addressed facility costs the same S3 read whether or not it needs a coordinate, so
+eligibility is every facility with an address. On the 386 Oregon and Washington facilities with
+one: 129 matched, yielding 69 coordinates, 91 websites (78 of them on facilities that had none,
+against the 31 those facilities have today) and 93 phones.
+
+### A coordinate is a property of the site; a website is a property of the company
+
+They therefore have different rules. A coordinate is taken on the address match alone — whoever
+else is listed at that address, the building is still where it is. A website or a phone is only
+taken when the place's NAME also matches the facility at 0.90 or better.
+
+That gate was measured, not assumed. On the 18 control facilities where a roster and an Overture
+place both gave a website, the two agreed 78% of the time — and of the four disagreements, three
+were the same company under a second domain (`bldr.com` and `bldrwashington.com`, `thetrussco.com`
+and `medfordtruss.com`). The fourth was Mobile Modular's website about to be published as The
+Truss Company's, because they share an address in Eugene. The name gate cuts exactly that row and
+keeps the other three. It roughly halves the contact yield, which is the right trade: a
+confidently wrong website is worse than a missing one, because a reader acts on it.
 
 Cost is per **state box read from S3**, not per facility, so `--places-limit` bounds a run by
 states (default 6) and the rest defer to the next run — the same shape as stage 11's file ceiling.

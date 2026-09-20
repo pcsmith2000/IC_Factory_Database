@@ -48,6 +48,15 @@ PLACES = ("s3://overturemaps-us-west-2/release/{release}"
           "/theme=places/type=place/*.parquet")
 AMBIGUOUS_SPREAD_M = 150.0     # beyond this, candidates at one address are not one site
 NAME_TIEBREAK = 0.90           # the score that may pick one out of a spread-out set
+# A COORDINATE is a property of the SITE: any tenant of the building locates it, so the address
+# match alone is enough. A WEBSITE or a PHONE is a property of the COMPANY, and the tenant has to
+# be the right one. Measured on the 18 control facilities where a roster and an Overture place
+# both gave a website: ungated, one of them was another company's site entirely — Mobile Modular's
+# at The Truss Company's address in Eugene. A name gate at 0.90 cut exactly that row and kept the
+# three where the two domains were the same company under different names (bldr.com and
+# bldrwashington.com, thetrussco.com and medfordtruss.com). It halves the contact yield, and a
+# confidently wrong website is worse than a missing one because a reader acts on it.
+CONTACT_NAME_MIN = 0.90
 SOURCE_ID = "overture:place"
 
 _NOISE = re.compile(r"[^A-Z0-9 ]")
@@ -134,31 +143,51 @@ def choose(fac: dict, idx: dict) -> tuple[dict | None, str, list[dict]]:
                   f"{spread_m(cands):.0f}m and the name matches none of them"), cands
 
 
-def assertions_for(fac: dict, place: dict, cands: list[dict]) -> list[dict]:
+def assertions_for(fac: dict, place: dict, cands: list[dict], *, want_coord: bool = True) -> list[dict]:
     """A coordinate, and the contact details that came with it — as separate assertions.
 
     Separate because survivorship judges each field on its own: a registry's phone should still
     outrank this one, while the coordinate may be the only one there is.
+
+    `want_coord` is false for a facility that already has a coordinate. It is still worth matching
+    — the website and the phone are the point for most of them — but stage 13 must never restate
+    a location that a rooftop geocode already settled.
     """
     from ._db import assertion
     ev = (f"overture:{RELEASE}:place:{place.get('id') or place.get('nm') or '?'} :: "
           f"{place.get('addr')} :: matched {fac.get('address')} "
           f"[{len(cands)} candidate(s), spread {spread_m(cands):.0f}m]")
-    out = [assertion(fac["facility_id"], "lat_lon", f"{place['lat']:.6f},{place['lon']:.6f}",
-                     source_id=SOURCE_ID, basis="place_match", confidence=0.75, evidence=ev)]
+    out = []
+    if want_coord:
+        out.append(assertion(fac["facility_id"], "lat_lon", f"{place['lat']:.6f},{place['lon']:.6f}",
+                             source_id=SOURCE_ID, basis="place_match", confidence=0.75, evidence=ev))
+    # The name gate, and only here. See CONTACT_NAME_MIN.
+    score = name_score(fac.get("name", ""), place.get("nm") or "")
+    if score < CONTACT_NAME_MIN:
+        return out
+    cev = f"{ev} :: place named {place.get('nm')!r}, name score {score:.2f}"
     if (place.get("website") or "").strip():
         out.append(assertion(fac["facility_id"], "website", place["website"].strip(),
-                             source_id=SOURCE_ID, basis="place_match", confidence=0.75, evidence=ev))
+                             source_id=SOURCE_ID, basis="place_match", confidence=0.75, evidence=cev))
     if (place.get("phone") or "").strip():
         from ..contract import phone_digits
         if (p := phone_digits(place["phone"])):
             out.append(assertion(fac["facility_id"], "phone", p, source_id=SOURCE_ID,
-                                 basis="place_match", confidence=0.75, evidence=ev))
+                                 basis="place_match", confidence=0.75, evidence=cev))
     return out
 
 
-def run(facilities: list[dict], place_rows: list[dict]) -> dict:
-    """facilities needing a coordinate x the places slice covering them -> assertions + counts."""
+def run(facilities: list[dict], place_rows: list[dict],
+        need_coord: set[str] | None = None) -> dict:
+    """Facilities with an address x the places slice covering them -> assertions + counts.
+
+    Eligibility is every facility that HAS an address, not only those missing a coordinate. The
+    coordinate is the narrower prize: 892 facilities want one. The website and the phone are the
+    broader one — 5,261 facilities have an address and only 984 have a website, because the
+    regulators that supply most addresses publish no contact details at all and the association
+    rosters that do are mostly attached to rows the classifier discards. `need_coord` says which
+    facilities may receive a lat_lon; everything else is matched for its contact details only.
+    """
     idx = index_places(place_rows)
     assertions, matched, reasons = [], [], collections.Counter()
     bucket_counts = collections.Counter()
@@ -170,8 +199,13 @@ def run(facilities: list[dict], place_rows: list[dict]) -> dict:
         bucket_counts["one candidate" if len(cands) == 1 else
                       ("several, one site" if spread_m(cands) <= AMBIGUOUS_SPREAD_M
                        else "several, name broke the tie")] += 1
-        assertions += assertions_for(fac, place, cands)
-        matched.append(fac["facility_id"])
+        want = need_coord is None or fac["facility_id"] in need_coord
+        got = assertions_for(fac, place, cands, want_coord=want)
+        if got:
+            assertions += got
+            matched.append(fac["facility_id"])
+        else:
+            reasons["matched, but it has a coordinate and the name does not match"] += 1
     return {"eligible": len(facilities), "places_indexed": len(idx),
             "matched": len(matched), "assertions": assertions,
             "by_field": dict(collections.Counter(a["field"] for a in assertions)),
