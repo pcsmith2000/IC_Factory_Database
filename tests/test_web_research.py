@@ -127,3 +127,23 @@ def test_campaign_counts_unique_new_supported_values(tmp_path):
     result=json.loads((tmp_path/'out'/'round-report.json').read_text())
     assert result['new_supported_details']==1
     assert result['details'][0]['value']=='333'
+
+
+def test_rooftop_preview_retains_only_rooftop_and_deduplicates(tmp_path,monkeypatch):
+    import json
+    from pipeline.web_research import rooftops
+    rows=[dict(facility_id='IC-1',address='123 First St',city='Test',state='AZ',reviewed=True,evidence_url='https://example.com',review_note='Official plant page'),dict(facility_id='IC-2',address='124 First St',city='Test',state='AZ',reviewed=True,evidence_url='https://example.com',review_note='Official plant page')]
+    monkeypatch.setenv('GEOCODIO_API_KEY','test')
+    calls=[]
+    def fake(queries,key):
+        calls.append(queries)
+        return ([{'response':{'results':[{'accuracy_type':kind,'location':{'lat':1,'lng':2}}]}} for kind in ['rooftop','nearest_rooftop_match']],'')
+    monkeypatch.setattr(rooftops,'_post',fake)
+    rooftops.run(rows,tmp_path/'first')
+    out=json.loads((tmp_path/'first'/'rooftop-results.json').read_text())
+    assert out[0]['coordinates']=={'lat':1,'lng':2}
+    assert out[1]['coordinates'] is None
+    rooftops.run(rows,tmp_path/'second',tmp_path/'first')
+    assert len(calls)==1
+    rows[0]['reviewed']=False
+    with pytest.raises(ValueError):rooftops.run(rows,tmp_path/'third')

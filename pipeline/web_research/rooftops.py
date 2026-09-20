@@ -1,0 +1,58 @@
+"""Geocode explicitly reviewed address records; outputs files only, never database writes."""
+from __future__ import annotations
+import argparse
+import json
+import os
+from pathlib import Path
+from .run import norm
+from pipeline.enrich.geocode import _post, one_line
+
+
+def validate(rows):
+    if not rows or len(rows)>241:raise ValueError('Expected 1..241 reviewed addresses')
+    if len({r['facility_id'] for r in rows})!=len(rows):raise ValueError('Duplicate facility')
+    for r in rows:
+        if not r.get('reviewed') or not r.get('evidence_url') or not r.get('review_note'):
+            raise ValueError('Each address requires explicit review with evidence and rationale')
+        if not all(r.get(k) for k in ('facility_id','address','city','state')):
+            raise ValueError('Incomplete facility address')
+        if 'pobox' in norm(r['address']):raise ValueError('Mailing address cannot locate a plant')
+
+
+def run(rows, out, prior=None):
+    validate(rows)
+    out.mkdir(parents=True,exist_ok=True)
+    cache={}
+    if prior:
+        for p in Path(prior).rglob('geocode-cache.json'):cache.update(json.loads(p.read_text()))
+    queries={}
+    for r in rows:queries.setdefault(one_line(r),[]).append(r)
+    fresh=[q for q in queries if q not in cache]
+    estimate={'addresses':len(rows),'unique_addresses':len(queries),'cached':len(queries)-len(fresh),
+              'new_lookups':len(fresh),'cost_if_free_allowance_spent_usd':round(len(fresh)*.001,3),
+              'pricing':'https://www.geocod.io/pricing','database_writes':0}
+    (out/'geocode-estimate.json').write_text(json.dumps(estimate,indent=2));print(json.dumps(estimate),flush=True)
+    for start in range(0,len(fresh),100):
+        batch=fresh[start:start+100]
+        results,stopped=_post(batch,os.environ['GEOCODIO_API_KEY'])
+        for query,result in zip(batch,results):cache[query]=result
+        (out/'geocode-cache.json').write_text(json.dumps(cache,indent=2))
+        if stopped or len(results)!=len(batch):raise RuntimeError('Incomplete geocoding; cached completed lookups for resume')
+    (out/'geocode-cache.json').write_text(json.dumps(cache,indent=2))
+    results=[]
+    for query,facilities in queries.items():
+        hits=(cache[query].get('response') or {}).get('results') or []
+        best=hits[0] if hits else {}
+        rooftop=best.get('accuracy_type')=='rooftop'
+        for r in facilities:
+            results.append({**r,'query':query,'accuracy_type':best.get('accuracy_type','no_result'),
+                'accuracy':best.get('accuracy'),'dataset':best.get('source'),
+                'coordinates':best.get('location') if rooftop else None,
+                'decision':'rooftop_candidate' if rooftop else 'review',
+                'database_writes':0})
+    (out/'rooftop-results.json').write_text(json.dumps(results,indent=2))
+    (out/'rooftop-summary.json').write_text(json.dumps({**estimate,'rooftop_candidates':sum(r['coordinates'] is not None for r in results),'unresolved':sum(r['coordinates'] is None for r in results)},indent=2))
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser();p.add_argument('--input',required=True);p.add_argument('--out',default='rooftop-output');p.add_argument('--prior');a=p.parse_args()
+    run(json.loads(Path(a.input).read_text()),Path(a.out),a.prior)
