@@ -71,7 +71,8 @@ def prepare(root, out, batch, round_number):
     selected=[r for r in selected if r['facility_id'] not in completed]
     for r in selected:
         # Preserve the baseline values. Prior values are search context, never accepted evidence.
-        r['previously_reported_details']=[{'field':p['field'],'value':p['value']} for p in seen.get(r['facility_id'],[])]
+        unique={detail_key(r['facility_id'],p):{'field':p['field'],'value':p['value'],'scope':p.get('scope')} for p in seen.get(r['facility_id'],[])}
+        r['previously_reported_details']=[unique[k] for k in sorted(unique)]
         r['research_round']=round_number
     out.mkdir(parents=True,exist_ok=True)
     (out/'input.json').write_text(json.dumps(selected,indent=2))
