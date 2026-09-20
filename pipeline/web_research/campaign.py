@@ -88,7 +88,35 @@ def report(root, current, out):
     (out/'round-report.json').write_text(json.dumps(value,indent=2))
     print(json.dumps({k:v for k,v in value.items() if k!='details'},indent=2))
 
+def execute(out, workers=4):
+    """Run independent rows concurrently inside one logical 100-row batch."""
+    import subprocess
+    import sys
+    from concurrent.futures import ThreadPoolExecutor
+    rows=json.loads((out/'input.json').read_text())
+    workers=min(workers,len(rows))
+    if not 1<=workers<=4:raise ValueError('Expected 1..4 workers')
+    def worker(index):
+        folder=out/f'worker-{index}'
+        folder.mkdir(parents=True,exist_ok=True)
+        (folder/'input.json').write_text(json.dumps(rows[index::workers],indent=2))
+        env=dict(os.environ,RESEARCH_OUT=str(folder))
+        # Workers must not append concurrently to GitHub's shared summary file.
+        env.pop('GITHUB_STEP_SUMMARY',None)
+        with (folder/'worker.log').open('w') as log:
+            result=subprocess.run([sys.executable,'-m','pipeline.web_research.run','--mode','research'],env=env,stdout=log,stderr=subprocess.STDOUT)
+        print(f'Worker {index} finished with status {result.returncode}',flush=True)
+        return result.returncode
+    from .costs import estimate
+    from .run import MODEL,EXTRACT_MODEL
+    estimate(len(rows),(MODEL,EXTRACT_MODEL),out)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        codes=list(pool.map(worker,range(workers)))
+    if any(codes):raise SystemExit('A research worker failed; preserve and inspect partial artifacts')
+
+
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('command',choices=['prepare','report']);p.add_argument('--root',default='campaign-input');p.add_argument('--out',default='research-output');p.add_argument('--current',default='research-output');p.add_argument('--batch',type=int,default=0);p.add_argument('--round',type=int,default=1);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('command',choices=['prepare','report','execute']);p.add_argument('--root',default='campaign-input');p.add_argument('--out',default='research-output');p.add_argument('--current',default='research-output');p.add_argument('--batch',type=int,default=0);p.add_argument('--round',type=int,default=1);a=p.parse_args()
     if a.command=='prepare':prepare(a.root,Path(a.out),a.batch,a.round)
+    elif a.command=='execute':execute(Path(a.out))
     else:report(a.root,a.current,Path(a.out))

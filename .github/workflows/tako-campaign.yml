@@ -50,7 +50,7 @@ jobs:
       - name: Research with cost estimate, without database credentials
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
-        run: python -m pipeline.web_research.run --mode research
+        run: python -m pipeline.web_research.campaign execute
       - name: Count new supported details
         if: always()
         run: python -m pipeline.web_research.campaign report
