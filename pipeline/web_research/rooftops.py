@@ -33,6 +33,7 @@ def run(rows, out, prior=None):
               'new_lookups':len(fresh),'cost_if_free_allowance_spent_usd':round(len(fresh)*.001,3),
               'pricing':'https://www.geocod.io/pricing','database_writes':0}
     (out/'geocode-estimate.json').write_text(json.dumps(estimate,indent=2));print(json.dumps(estimate),flush=True)
+    if fresh and not os.environ.get('GEOCODIO_API_KEY'):raise ValueError('Geocodio credential is unavailable; no API calls made')
     for start in range(0,len(fresh),100):
         batch=fresh[start:start+100]
         results,stopped=_post(batch,os.environ['GEOCODIO_API_KEY'])

@@ -155,3 +155,9 @@ def test_campaign_does_not_count_contact_formatting_as_new():
     assert normalized_detail('address','123 North First Street')==normalized_detail('address','123 N First St.')
     assert normalized_detail('zip','85001-1234')==normalized_detail('zip','85001')
     assert normalized_detail('address','123 First St Suite 2')!=normalized_detail('address','123 First St Suite 3')
+
+
+def test_redacted_search_link_does_not_abort_facility():
+    from pipeline.web_research.run import domain
+    assert domain('https://[link removed]')==''
+    assert domain('https://www.example.com/contact')=='example.com'

@@ -36,7 +36,10 @@ def norm(v):
 
 def domain(url):
     if url and '://' not in url: url='https://'+url
-    return (urlparse(url).hostname or '').lower().removeprefix('www.')
+    try:
+        return (urlparse(url).hostname or '').lower().removeprefix('www.')
+    except (ValueError, TypeError):
+        return ''
 
 def safe_url(url):
     p = urlparse(url)
