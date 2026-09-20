@@ -69,12 +69,17 @@ def prepare(root, out, batch, round_number):
     completed={r['facility_id'] for block in read_all(Path(root)/'resume','results.json') for r in block}
     original_size=len(selected)
     selected=[r for r in selected if r['facility_id'] not in completed]
+    review_file=Path('research/adl-2026-09-20/reviewed-addresses.json')
+    reviewed={r['facility_id']:r for r in json.loads(review_file.read_text()) if r.get('reviewed')} if review_file.exists() else {}
+    location_fields={'address','city','state','zip'}
     for r in selected:
         # Preserve the baseline values. Prior values are search context, never accepted evidence.
         unique={detail_key(r['facility_id'],p):{'field':p['field'],'value':p['value'],'scope':p.get('scope')} for p in seen.get(r['facility_id'],[])}
         r['previously_reported_details']=[unique[k] for k in sorted(unique)]
-        known_fields={p['field'] for p in seen.get(r['facility_id'],[]) if p.get('relationship')=='fill'}
-        r['research_focus_fields']=[f for f in ('name','address','city','state','zip','website','phone','email') if not r.get(f) and f not in known_fields]
+        known_fields={p['field'] for p in seen.get(r['facility_id'],[]) if p.get('relationship')=='fill' and p['field'] not in location_fields}
+        known_fields.update(f for f in location_fields if reviewed.get(r['facility_id'],{}).get(f))
+        conflicts={p['field'] for p in seen.get(r['facility_id'],[]) if p.get('relationship')=='conflict' and p['field']!='name' and normalized_detail(p['field'],p['value'])!=normalized_detail(p['field'],r.get(p['field'])) and not (p['field'] in location_fields and p['field'] in known_fields)}
+        r['research_focus_fields']=[f for f in ('name','address','city','state','zip','website','phone','email') if (not r.get(f) and f not in known_fields) or f in conflicts]
         r['research_round']=round_number
     out.mkdir(parents=True,exist_ok=True)
     (out/'input.json').write_text(json.dumps(selected,indent=2))
