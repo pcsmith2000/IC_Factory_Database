@@ -8,6 +8,8 @@ from .campaign import checked_proposals, detail_key, normalized_detail, supporte
 
 def consolidate(cohort, round_paths, out):
     baseline={r['facility_id']:r for r in cohort}
+    review_file=Path('research/adl-2026-09-20/review-overrides.json')
+    overrides={detail_key(r['facility_id'],r):r['reason'] for r in json.loads(review_file.read_text())} if review_file.exists() else {}
     values={}
     observations=0
     for round_number,root in round_paths:
@@ -28,11 +30,13 @@ def consolidate(cohort, round_paths, out):
                     evidence=dict(round=round_number,run_id=run_id,url=p['source_url'],quote=p.get('quote'),scope=p.get('scope'),decision=p['decision'])
                     if evidence not in entry['evidence']:entry['evidence'].append(evidence)
     cells=defaultdict(list)
-    for key,value in values.items():cells[key[:2]].append(value)
+    for key,value in values.items():
+        value['manual_review_reason']=overrides.get(key)
+        cells[key[:2]].append(value)
     for alternatives in cells.values():
         for value in alternatives:
             value['competing_values']=len(alternatives)>1
-            value['review_status']='noncompeting_candidate_fill' if value['has_candidate_fill'] and len(alternatives)==1 else 'review'
+            value['review_status']='noncompeting_candidate_fill' if value['has_candidate_fill'] and len(alternatives)==1 and not value['manual_review_reason'] else 'review'
     details=sorted(values.values(),key=lambda x:(x['facility_id'],x['field'],x['value']))
     summary=dict(frozen_facilities=len(baseline),supported_observations=observations,
                  distinct_proposed_values=len(details),affected_facilities=len({x['facility_id'] for x in details}),
