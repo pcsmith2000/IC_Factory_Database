@@ -86,3 +86,17 @@ def test_cost_estimate_separates_search_and_expires_promotion():
     assert current['tako']['estimated_usd']==0
     assert later['tako']['estimated_usd']==.21
     assert later['estimated_total_usd']==.36
+
+def test_null_field_object_means_unknown_not_failed_row():
+    out=assess({'facility_id':'IC-1'},result(phone={'value':None}),{})
+    assert out['proposals']==[]
+
+def test_public_encoded_contact_is_decoded_without_running_script():
+    from bs4 import BeautifulSoup
+    from pipeline.web_research.run import decode_contact_spans
+    text='Telephone: 908-561-3484'
+    alphabet=''.join(sorted(set(text)))
+    encoded=''.join(chr(alphabet.index(c)+48) for c in text)
+    soup=BeautifulSoup(f'<span id="contact"></span><script>var ml="{alphabet}",mi="{encoded}";document.getElementById("contact");throw new Error("do not execute")</script>','html.parser')
+    decode_contact_spans(soup)
+    assert soup.find(id='contact').get_text()==text

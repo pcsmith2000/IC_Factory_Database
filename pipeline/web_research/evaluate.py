@@ -49,6 +49,13 @@ if __name__=='__main__':
         for row in json.loads((out/'results.json').read_text()):
             fields={p['field']:p['value'] for p in row['proposals']}
             lines.append('| '+ ' | '.join(str(v or 'Unverified').replace('|','/') for v in [row['name'],fields.get('website'),fields.get('phone'),row['status']])+' |')
+        if (out/'summary.json').exists():
+            summary=json.loads((out/'summary.json').read_text())
+            actual=summary.get('usage',{}).get('reported_cost_usd')
+            lines+=['',f'Actual gateway-reported cost: ${actual:.6f}' if actual is not None else 'Actual cost unavailable.']
+        if (out/'cost-estimate.json').exists():
+            estimate=json.loads((out/'cost-estimate.json').read_text())
+            lines+=[f"Pre-run estimate: ${estimate['estimated_total_usd']:.4f}; model and search breakdown retained in artifact."]
         lines+=['', 'Review-only values are not approved assertions. See the artifact for evidence, scopes, and field-level decisions.']
         with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f: f.write('\n'.join(lines)+'\n')
     if not report['quality_pass']: raise SystemExit('Pilot quality gate failed; inspect evaluation.json')

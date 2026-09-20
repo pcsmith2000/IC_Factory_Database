@@ -52,6 +52,21 @@ class Redirects(HTTPRedirectHandler):
         safe_url(newurl)
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
+def decode_contact_spans(soup):
+    """Decode the public EEB contact-span format, without executing JavaScript."""
+    from urllib.parse import unquote
+    for script in soup.find_all('script'):
+        code=script.string or ''
+        values=re.search(r'var ml="([^"\\]*)",mi="([^"\\]*)"',code)
+        target=re.search(r'getElementById\("([^"\\]*)"\)',code)
+        if not values or not target: continue
+        alphabet,encoded=values.groups()
+        if len(encoded)>5000 or any(not 0<=ord(c)-48<len(alphabet) for c in encoded): continue
+        span=soup.find(id=target.group(1))
+        if span is not None:
+            decoded=unquote(''.join(alphabet[ord(c)-48] for c in encoded))
+            span.append(BeautifulSoup(decoded,'html.parser'))
+
 def fetch(url):
     safe_url(url)
     with build_opener(Redirects()).open(Request(url, headers={'User-Agent':'Mozilla/5.0 (compatible; ICFactoryResearch/1.0)'}), timeout=20) as r:
@@ -62,6 +77,7 @@ def fetch(url):
             raise ValueError('Page exceeds evidence size limit')
         final=r.url
     soup=BeautifulSoup(raw, 'html.parser')
+    decode_contact_spans(soup)
     for e in soup(['script','style','noscript']): e.decompose()
     from urllib.parse import urljoin
     links=[urljoin(final,a.get('href','')) for a in soup.find_all('a',href=True) if any(w in (a.get_text(' ',strip=True)+' '+a['href']).lower() for w in ('contact','location'))]
@@ -136,7 +152,7 @@ def assess(row, result, pages):
     review=result['status']!='matched' or location_conflict
     for field in FIELDS:
         candidate=result['fields'].get(field)
-        if candidate is None: continue
+        if candidate is None or (isinstance(candidate,dict) and candidate.get('value') is None): continue
         if not isinstance(candidate,dict) or not isinstance(candidate.get('value'),str):
             raise ValueError('Invalid field candidate')
         value=candidate['value'].strip()
