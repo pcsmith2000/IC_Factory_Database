@@ -1,9 +1,6 @@
 name: Tako ADL research campaign (read-only)
 run-name: Tako ADL campaign round ${{ inputs.round || '1' }} · batches of 100
 on:
-  push:
-    branches: [feat/tako-basic-research]
-    paths: [.github/workflows/tako-campaign.yml]
   workflow_dispatch:
     inputs:
       round:
