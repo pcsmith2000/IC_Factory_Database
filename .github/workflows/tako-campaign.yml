@@ -28,6 +28,7 @@ jobs:
     timeout-minutes: 110
     env:
       RESEARCH_OUT: research-output
+      RESEARCH_CACHE_ROOT: campaign-input/prior
       RESEARCH_TIME_LIMIT_SECONDS: '5700'
       ROUND: ${{ inputs.round || '1' }}
       PRIOR_RUNS: ${{ inputs.prior_runs }}

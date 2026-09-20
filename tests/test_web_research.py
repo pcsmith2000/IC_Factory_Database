@@ -202,3 +202,15 @@ def test_campaign_ledger_holds_competing_fills(tmp_path):
     assert result['distinct_proposed_values']==2
     assert result['cells_with_competing_proposals']==1
     assert result['noncompeting_candidate_fills']==0
+
+
+def test_evidence_cache_keeps_original_age_and_retries_failed_pages(tmp_path):
+    import json
+    from datetime import datetime, timezone
+    from pipeline.web_research.evidence_cache import recent_pages
+    p=tmp_path/'IC-1';p.mkdir()
+    (tmp_path/'run-manifest.json').write_text(json.dumps(dict(started_at='2026-09-20T12:00:00+00:00',run_id='1')))
+    (p/'evidence.json').write_text(json.dumps({'https://fresh.example':{'text':'Public plant address'},'https://old.example':{'text':'Old address','fetched_at':'2026-09-19T12:00:00+00:00'},'https://blocked.example':{'error':'HTTPError'}}))
+    pages=recent_pages(tmp_path,now=datetime(2026,9,20,13,tzinfo=timezone.utc))
+    assert set(pages)=={'https://fresh.example'}
+    assert pages['https://fresh.example']['fetched_at']=='2026-09-20T12:00:00+00:00'
