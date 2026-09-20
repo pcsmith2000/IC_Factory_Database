@@ -13,7 +13,12 @@
       "state": "MO",
       "city": "Shell Knob",
       "source_url": "https://maricorp.com/contact/",
-      "notes": "Published office at input address; toll-free and local number acceptable."
+      "notes": "Published office at input address; toll-free and local number acceptable.",
+      "validated_name": "MariCorp U.S., LLC",
+      "validated_address": "27882 State Hwy 39",
+      "validated_zip": "65747",
+      "validated_email": null,
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     },
     {
       "facility_id": "IC-90053",
@@ -25,7 +30,12 @@
       "state": "WA",
       "city": "Elma",
       "source_url": "https://www.murphyplywood.com/about/locations/",
-      "notes": "Must use Elma plant phone, not Eugene headquarters."
+      "notes": "Must use Elma plant phone, not Eugene headquarters.",
+      "validated_name": "Murphy Company",
+      "validated_address": "505 Elma McCleary Road",
+      "validated_zip": "98541",
+      "validated_email": null,
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     },
     {
       "facility_id": "IC-51342",
@@ -35,7 +45,12 @@
       "state": null,
       "city": null,
       "source_url": "https://oas.dhs.in.gov/dfbs/code/main.do?filter=byLetter&letter=H&method=filter",
-      "notes": "Registry identifies Hart Housing in Wakarusa; current contact for the specific historical Elkhart plant is unverified. Abstain or flag review; do not silently substitute Wakarusa."
+      "notes": "Registry identifies Hart Housing in Wakarusa; current contact for the specific historical Elkhart plant is unverified. Abstain or flag review; do not silently substitute Wakarusa.",
+      "validated_name": null,
+      "validated_address": null,
+      "validated_zip": null,
+      "validated_email": null,
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     },
     {
       "facility_id": "IC-95711",
@@ -47,7 +62,12 @@
       "state": "UT",
       "city": "Brigham City",
       "source_url": "https://vulcraft.com/contact/",
-      "notes": "Input VA conflicts with official Utah plant. All proposals require review."
+      "notes": "Input VA conflicts with official Utah plant. All proposals require review.",
+      "validated_name": "Vulcraft Utah",
+      "validated_address": "1875 UT-13",
+      "validated_zip": "84302",
+      "validated_email": null,
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     },
     {
       "facility_id": "IC-94656",
@@ -60,7 +80,12 @@
       "state": "SC",
       "city": "Lexington",
       "source_url": "https://hooverbuildings.com/hoover-trusses/",
-      "notes": "Truss office direct number preferred; shared Lexington office is valid with scope noted."
+      "notes": "Truss office direct number preferred; shared Lexington office is valid with scope noted.",
+      "validated_name": "Hoover Trusses",
+      "validated_address": "1120 Two Notch Rd",
+      "validated_zip": "29073",
+      "validated_email": null,
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     },
     {
       "facility_id": "IC-08519",
@@ -72,7 +97,12 @@
       "state": "AR",
       "city": "Springdale",
       "source_url": "https://fpec.com/contact/",
-      "notes": "Exact plant address confirmed; generic sales email sales@fpec.com."
+      "notes": "Exact plant address confirmed; generic sales email sales@fpec.com.",
+      "validated_name": "FPEC",
+      "validated_address": "2216 Ford Ave",
+      "validated_zip": "72764",
+      "validated_email": "sales@fpec.com",
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     },
     {
       "facility_id": "IC-95691",
@@ -85,7 +115,12 @@
       "state": "NJ",
       "city": "South Plainfield",
       "source_url": "https://cscsteelusa.com/contact/",
-      "notes": "Input NY conflicts with New Jersey plant. Do not confuse with CanAm Steel Buildings in Colorado."
+      "notes": "Input NY conflicts with New Jersey plant. Do not confuse with CanAm Steel Buildings in Colorado.",
+      "validated_name": "Canam Steel Corporation",
+      "validated_address": "14 Harmich Road",
+      "validated_zip": "07080",
+      "validated_email": null,
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     },
     {
       "facility_id": "IC-93286",
@@ -97,7 +132,12 @@
       "state": "FL",
       "city": "Tallahassee",
       "source_url": "https://www.southernstorage.org/contact/",
-      "notes": "Existing phone anchors entity; 3604 N Monroe St is main office, not verified factory location."
+      "notes": "Existing phone anchors entity; 3604 N Monroe St is main office, not verified factory location.",
+      "validated_name": "Southern Storage Solutions",
+      "validated_address": "3604 N Monroe St",
+      "validated_zip": "32303",
+      "validated_email": null,
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     },
     {
       "facility_id": "IC-93565",
@@ -118,7 +158,12 @@
         "https://investors.nvent.com/press-releases/press-release-details/2025/nVent-Completes-Acquisition-of-the-Electrical-Products-Group-Business-of-Avail-Infrastructure-Solutions/default.aspx",
         "https://www.osha.gov/ords/imis/establishment.inspection_detail?id=1838474.015",
         "https://www.michigan.gov/lara/-/media/Project/Websites/lara/bcc-media/Plan-Review/Approved_Manufacturers_Listings.pdf?hash=2C4702511136422D68E78ACCCF6146DB&rev=b69fc4f6e8834a7bb956d4ceae14406c"
-      ]
+      ],
+      "validated_name": "nVent Enclosure Systems LLC",
+      "validated_address": "3011 Millington Road",
+      "validated_zip": "21651",
+      "validated_email": null,
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     },
     {
       "facility_id": "IC-87607",
@@ -130,7 +175,12 @@
       "state": "UT",
       "city": "Tremonton",
       "source_url": "https://tmmfg.com/contactinfo.html",
-      "notes": "Exact shipping address; mailing PO Box must not replace it."
+      "notes": "Exact shipping address; mailing PO Box must not replace it.",
+      "validated_name": "T&M Manufacturing, Inc",
+      "validated_address": "1110 North 1000 West",
+      "validated_zip": "84337",
+      "validated_email": "info@tmmfg.com",
+      "validation_scope": "Published identity and contact information; null means not independently confirmed, not absent."
     }
   ]
 }

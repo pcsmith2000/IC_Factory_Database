@@ -12,7 +12,7 @@ def test_field_needs_evidence_and_entity_anchor():
     r={'city':'Elma','facility_id':'IC-1'}
     c=candidate('360-482-2521','Elma phone 360-482-2521')
     pages={c['source_url']:{'text':c['quote'],'final_url':c['source_url']}}
-    assert assess(r,result(phone=c),pages)['proposals'][0]['decision']=='candidate'
+    assert assess(r,result(phone=c,website=candidate('https://example.com','Elma phone 360-482-2521')),pages)['proposals'][0]['decision']=='candidate'
     assert assess(r,result(phone=c),{})['proposals'][0]['decision']=='review'
 
 def test_state_conflict_blocks_all_candidates():
@@ -58,3 +58,14 @@ def test_evaluation_keeps_denominator_for_missing_results():
     ref=json.loads(Path('tests/reference/tako_basic/reference.json').read_text())
     report=evaluate([],ref)
     assert report['passed']==0 and report['total']==39
+
+@pytest.mark.parametrize('calls',[None,{}, {'tako_search':0},{'parallel_search':2},{'tako_search':-1}])
+def test_requires_successful_tako_call(calls):
+    from pipeline.web_research.run import confirmed_search_count
+    raw={'choices':[{'message':{'provider_metadata':{'gateway':{'gatewayToolCalls':calls}}}}]}
+    assert confirmed_search_count(raw)==0
+
+def test_counts_successful_tako_calls():
+    from pipeline.web_research.run import confirmed_search_count
+    raw={'choices':[{'message':{'provider_metadata':{'gateway':{'gatewayToolCalls':{'tako_search':2}}}}}]}
+    assert confirmed_search_count(raw)==2
