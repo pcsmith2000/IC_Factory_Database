@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 from .run import norm
 from pipeline.enrich.geocode import _post, one_line
@@ -43,10 +44,16 @@ def run(rows, out, prior=None):
     for query,facilities in queries.items():
         hits=(cache[query].get('response') or {}).get('results') or []
         best=hits[0] if hits else {}
-        rooftop=best.get('accuracy_type')=='rooftop'
         for r in facilities:
+            components=best.get('address_components') or {}
+            number=re.match(r'\d+[a-zA-Z]?',r['address'])
+            address_matches=(norm(components.get('state'))==norm(r['state']) and
+                             norm(components.get('city'))==norm(r['city']) and
+                             number is not None and norm(components.get('number'))==norm(number.group()))
+            rooftop=best.get('accuracy_type')=='rooftop' and address_matches
             results.append({**r,'query':query,'accuracy_type':best.get('accuracy_type','no_result'),
-                'accuracy':best.get('accuracy'),'dataset':best.get('source'),
+                'accuracy':best.get('accuracy'),'dataset':best.get('source'),'address_matches':address_matches,
+                'returned_address':best.get('formatted_address'),
                 'coordinates':best.get('location') if rooftop else None,
                 'decision':'rooftop_candidate' if rooftop else 'review',
                 'database_writes':0})

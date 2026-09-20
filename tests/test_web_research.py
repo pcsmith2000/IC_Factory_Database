@@ -137,7 +137,7 @@ def test_rooftop_preview_retains_only_rooftop_and_deduplicates(tmp_path,monkeypa
     calls=[]
     def fake(queries,key):
         calls.append(queries)
-        return ([{'response':{'results':[{'accuracy_type':kind,'location':{'lat':1,'lng':2}}]}} for kind in ['rooftop','nearest_rooftop_match']],'')
+        return ([{'response':{'results':[{'accuracy_type':kind,'location':{'lat':1,'lng':2},'address_components':{'number':'123','city':'Test','state':'AZ'}}]}} for kind in ['rooftop','nearest_rooftop_match']],'')
     monkeypatch.setattr(rooftops,'_post',fake)
     rooftops.run(rows,tmp_path/'first')
     out=json.loads((tmp_path/'first'/'rooftop-results.json').read_text())

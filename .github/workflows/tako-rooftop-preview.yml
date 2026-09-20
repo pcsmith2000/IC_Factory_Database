@@ -1,0 +1,45 @@
+name: Tako reviewed-address rooftop preview
+run-name: Rooftop preview · reviewed ADL addresses · no database writes
+on:
+  push:
+    branches: [feat/tako-basic-research]
+    paths: [.github/workflows/tako-rooftop-preview.yml]
+  workflow_dispatch:
+    inputs:
+      prior_runs:
+        description: 'Earlier rooftop preview run IDs for cache reuse, comma-separated'
+        default: ''
+permissions:
+  contents: read
+  actions: read
+jobs:
+  rooftop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PRIOR_RUNS: ${{ inputs.prior_runs }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_web_research.py -q
+      - name: Reuse earlier lookup results
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          for rid in filter(None,os.environ['PRIOR_RUNS'].split(',')):
+              if not re.fullmatch(r'\d+',rid):raise ValueError('Invalid run ID')
+              subprocess.run(['gh','run','download',rid,'--dir',f'rooftop-prior/{rid}'],check=True)
+          PY
+      - name: Geocode reviewed addresses without database credentials
+        env:
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY }}
+        run: python -m pipeline.web_research.rooftops --input research/adl-2026-09-20/reviewed-addresses.json --prior rooftop-prior
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rooftop-preview-${{ github.run_id }}
+          path: rooftop-output/
+          retention-days: 30
