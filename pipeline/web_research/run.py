@@ -108,8 +108,12 @@ class SearchNotConfirmed(RuntimeError):
 
 def search(row, folder):
     identity=' '.join(str(row.get(k) or '') for k in ('name','address','city','state','phone','email'))
-    objective=f'{identity} official website contact address phone email; verify exact facility and location conflicts'
-    payload={'model':MODEL,'messages':[{'role':'user','content':PROMPT+json.dumps(row)}],
+    focus = {1:'official plant physical street address manufacturing facility contact phone email', 2:'factory locations contact us street address postal code plant telephone', 3:'manufacturing plant facility address contact email company locations'}.get(row.get('research_round',1), 'official facility location contact address missing details')
+    objective=f'{identity} {focus}; verify exact facility and location conflicts'
+    context = ''
+    if row.get('research_round'):
+        context = '\nPrior reported details are UNVERIFIED search context, not evidence. Seek missing fields and resolve facility-address ambiguity using official location/contact pages. Independently verify any repeated value. Prioritize physical manufacturing-site addresses over mailing addresses. Never invent a field to fill a gap.'
+    payload={'model':MODEL,'messages':[{'role':'user','content':PROMPT+json.dumps(row)+context}],
         'tools':[{'type':'vercel:tako_search','config':{'query':objective,'effort':'fast','sources':{'web':{'count':8,'include_contents':True}}}}],
         'tool_choice':'required','max_tokens':3000}
     req=Request('https://ai-gateway.vercel.sh/v1/chat/completions',data=json.dumps(payload).encode(),
@@ -196,7 +200,7 @@ def main():
     estimate(len(rows),(MODEL,EXTRACT_MODEL),out)
     results=[]; errors=[]; started=time.time()
     for row in rows:
-        if time.time()-started>1200:
+        if time.time()-started>int(os.environ.get('RESEARCH_TIME_LIMIT_SECONDS','1200')):
             errors.append({'error':'Run time budget reached; remaining rows not attempted'})
             summary=json.loads((out/'summary.json').read_text()); summary['errors']=errors
             (out/'summary.json').write_text(json.dumps(summary,indent=2)); break

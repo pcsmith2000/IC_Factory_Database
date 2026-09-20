@@ -109,3 +109,21 @@ def test_all_fields_removes_missing_filter_but_keeps_sources(monkeypatch):
     assert "NULLIF" not in sql
     assert "a.source_key=ANY(%s)" in sql
     assert params[0] == ["adl_4ward", "adl_july"]
+
+
+def test_campaign_counts_unique_new_supported_values(tmp_path):
+    import json
+    from pipeline.web_research.campaign import report
+    baseline=tmp_path/'baseline';baseline.mkdir()
+    (baseline/'input.json').write_text(json.dumps([{'facility_id':'IC-1','phone':'111'}]))
+    prior=tmp_path/'prior';prior.mkdir()
+    def p(value,verified=True):
+        return dict(field='phone',value=value,scope='facility',source_kind='official',quote_verified=verified,identity_anchor_found=True,decision='candidate',relationship='fill')
+    (prior/'results.json').write_text(json.dumps([{'facility_id':'IC-1','proposals':[p('222')]}]))
+    current=tmp_path/'current';current.mkdir()
+    (current/'results.json').write_text(json.dumps([{'facility_id':'IC-1','proposals':[p('111'),p('222'),p('333'),p('333'),p('444',False)]}]))
+    (current/'summary.json').write_text(json.dumps(dict(completed=1,selected=1,errors=[],usage=dict(known_cost_subtotal_usd=.01,responses_missing_cost=0))))
+    report(tmp_path,current,tmp_path/'out')
+    result=json.loads((tmp_path/'out'/'round-report.json').read_text())
+    assert result['new_supported_details']==1
+    assert result['details'][0]['value']=='333'
