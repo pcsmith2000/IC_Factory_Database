@@ -73,6 +73,8 @@ def prepare(root, out, batch, round_number):
         # Preserve the baseline values. Prior values are search context, never accepted evidence.
         unique={detail_key(r['facility_id'],p):{'field':p['field'],'value':p['value'],'scope':p.get('scope')} for p in seen.get(r['facility_id'],[])}
         r['previously_reported_details']=[unique[k] for k in sorted(unique)]
+        known_fields={p['field'] for p in seen.get(r['facility_id'],[]) if p.get('relationship')=='fill'}
+        r['research_focus_fields']=[f for f in ('name','address','city','state','zip','website','phone','email') if not r.get(f) and f not in known_fields]
         r['research_round']=round_number
     out.mkdir(parents=True,exist_ok=True)
     (out/'input.json').write_text(json.dumps(selected,indent=2))
