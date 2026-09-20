@@ -57,6 +57,14 @@ def footprint_key(lat: float, lon: float, release: str) -> str:
     return key("footprint", f"{float(lat):.6f},{float(lon):.6f}", release)
 
 
+def places_state_key(state: str, release: str) -> str:
+    """A whole STATE, not a facility: stage 13 answers every facility in a state from one S3 read,
+    so the state is the unit of work and the unit worth remembering. Without it a second run ranks
+    the states by eligible facilities — a number a run does not change — and reads the same six
+    again forever."""
+    return key("places_state", state.upper(), release)
+
+
 def locate_key(name: str, city: str, state: str) -> str:
     return key("locate", name, city, state)
 

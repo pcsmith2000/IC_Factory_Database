@@ -238,3 +238,26 @@ def test_fetch_without_a_locality_set_still_reads_the_whole_box():
     import inspect
     src = inspect.getsource(places.fetch)
     assert "if localities:" in src and "if quoted:" in src
+
+
+def test_a_state_already_read_for_this_release_is_not_read_again():
+    """The state ranking is by eligible facilities — a number a RUN does not change. Without a
+    memory of which states were read, run 61 picks the same six as run 60 and the other 36 never
+    get a turn. The key carries the Overture release, so a new release correctly re-reads."""
+    import inspect
+    from pipeline.enrich import run as enrich_run, cache
+    src = inspect.getsource(enrich_run.main)
+    block = src[src.index('if args.stage == "places"'):src.index('if args.stage == "footprint"')]
+    assert "places_state_key" in block and "s not in done" in block
+    assert cache.places_state_key("or", "2026-08-19.0") == cache.places_state_key("OR", "2026-08-19.0")
+    assert cache.places_state_key("OR", "2026-08-19.0") != cache.places_state_key("OR", "2027-01-01.0")
+
+
+def test_the_states_it_read_are_recorded_before_the_assertions_are_written():
+    """If the mark were written after a crash-prone step the state would be re-read; if it were
+    never written the batch never advances."""
+    import inspect
+    from pipeline.enrich import run as enrich_run
+    src = inspect.getsource(enrich_run.main)
+    block = src[src.index('if args.stage == "places"'):src.index('if args.stage == "footprint"')]
+    assert block.index("lookup_cache.put") < block.index('places.assertions.json')

@@ -254,7 +254,14 @@ def main(argv=None) -> int:
         boxes = places.state_boxes(rows)
         by_state = collections.Counter((r.get("state") or "").upper() for r in todo)
         # Busiest states first: a run's ceiling should buy the most facilities it can.
-        ranked = [s for s, _ in by_state.most_common() if s in boxes]
+        # States this Overture release has already been read for are not read again. The ranking is
+        # by eligible facilities, which a run does not change, so without this a second run picks
+        # the same six states forever and the other 36 never get their turn.
+        from . import cache as lookup_cache
+        lookup_cache.ensure(db)
+        done = {s for s in by_state
+                if lookup_cache.get(db, lookup_cache.places_state_key(s, places.RELEASE))}
+        ranked = [s for s, _ in by_state.most_common() if s in boxes and s not in done]
         chosen, deferred_states = ranked[:args.places_limit], ranked[args.places_limit:]
         no_box = sorted({s for s in by_state if s not in boxes})
         sel = [r for r in todo if (r.get("state") or "").upper() in chosen]
@@ -269,9 +276,14 @@ def main(argv=None) -> int:
         cities = {(x.get("city") or "").strip().upper() for x in sel}
         rep = places.run(sel, places.fetch(chosen, boxes, localities=cities), need_coord=need_ids)
         rep.update(states_this_run=chosen, states_deferred=deferred_states,
+                   states_already_read=sorted(done),
                    states_without_a_box=no_box,
                    deferred=sum(by_state[s] for s in deferred_states),
                    boxes={s: [round(v, 3) for v in boxes[s]] for s in chosen})
+        for st in chosen:                       # mark the state read, so the next run moves on
+            lookup_cache.put(db, lookup_cache.places_state_key(st, places.RELEASE), "places_state",
+                             st, {"facilities": by_state[st], "run": tag}, True,
+                             f"overture:{places.RELEASE}")
         (args.out).mkdir(parents=True, exist_ok=True)
         (args.out / "places.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
         table = [("eligible (has an address)", len(todo)),
