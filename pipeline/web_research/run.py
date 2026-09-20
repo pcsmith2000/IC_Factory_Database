@@ -91,13 +91,16 @@ def confirmed_search_count(raw):
     return count if isinstance(count,int) and count>0 else 0
 
 def usage_summary(out):
-    total={'confirmed_tako_searches':0,'reported_cost_usd':0.0,'prompt_tokens':0,'completion_tokens':0}
+    total={'confirmed_tako_searches':0,'reported_cost_usd':0.0,'prompt_tokens':0,'completion_tokens':0,'responses_missing_cost':0}
     for file in list(out.glob('IC-*/response.json'))+list(out.glob('IC-*/extraction.json')):
         raw=json.loads(file.read_text()); usage=raw.get('usage',{})
         total['confirmed_tako_searches']+=confirmed_search_count(raw)
         for k in ('prompt_tokens','completion_tokens'): total[k]+=usage.get(k,0)
-        total['reported_cost_usd']+=float(usage.get('cost') or 0)
+        if usage.get('cost') is None: total['responses_missing_cost']+=1
+        else: total['reported_cost_usd']+=float(usage['cost'])
     total['reported_cost_usd']=round(total['reported_cost_usd'],6)
+    total['known_cost_subtotal_usd']=total['reported_cost_usd']
+    if total['responses_missing_cost']: total['reported_cost_usd']=None
     return total
 
 class SearchNotConfirmed(RuntimeError):
@@ -229,6 +232,10 @@ def main():
         finally:
             (out/'results.json').write_text(json.dumps(results,indent=2))
             (out/'summary.json').write_text(json.dumps(dict(source='tako_ai_search',model=MODEL,extraction_model=EXTRACT_MODEL,mode=args.mode,selected=len(rows),completed=len(results),errors=errors,database_writes=0,usage=usage_summary(out),elapsed_seconds=round(time.time()-started)),indent=2))
+    actual=usage_summary(out).get('reported_cost_usd')
+    if os.environ.get('GITHUB_STEP_SUMMARY'):
+        with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+            f.write('\n## Actual research cost\n\n'+(f'Gateway reported ${actual:.6f}.' if actual is not None else 'Some responses omitted cost; see known subtotal in summary.json.')+'\n\nDatabase writes: 0.\n')
     if errors: raise SystemExit('Research incomplete; inspect summary.json')
 
 if __name__=='__main__': main()

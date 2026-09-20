@@ -1,0 +1,1321 @@
+{
+  "final_run": {
+    "run": 35538672256,
+    "url": "https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35538672256",
+    "model": "google/gemini-3.1-flash-lite",
+    "extraction_model": "google/gemini-3.1-flash-lite",
+    "completed": 10,
+    "coverage": {
+      "website": 7,
+      "phone": 6
+    },
+    "reference_checks": "30/39",
+    "quality_pass": true,
+    "usage": {
+      "confirmed_tako_searches": 10,
+      "reported_cost_usd": 0.063792,
+      "prompt_tokens": 177526,
+      "completion_tokens": 12940,
+      "responses_missing_cost": 0,
+      "known_cost_subtotal_usd": 0.063792
+    }
+  },
+  "pre_run_estimate": {
+    "rows": 10,
+    "estimated_total_usd": 0.15,
+    "expected_range_usd": [
+      0.075,
+      0.3
+    ],
+    "model_estimate_usd": 0.15,
+    "stages": [
+      {
+        "stage": "search",
+        "model": "google/gemini-3.1-flash-lite",
+        "input_tokens": 350000,
+        "output_tokens": 10000,
+        "input_per_million_usd": 0.25,
+        "output_per_million_usd": 1.5,
+        "estimated_usd": 0.1025
+      },
+      {
+        "stage": "extract",
+        "model": "google/gemini-3.1-flash-lite",
+        "input_tokens": 100000,
+        "output_tokens": 15000,
+        "input_per_million_usd": 0.25,
+        "output_per_million_usd": 1.5,
+        "estimated_usd": 0.0475
+      }
+    ],
+    "tako": {
+      "estimated_calls": 30,
+      "rate_per_call_usd": 0,
+      "estimated_usd": 0,
+      "standard_rate_per_call_usd": 0.007,
+      "promotion_ends": "2026-09-30"
+    },
+    "pricing_page": "https://vercel.com/ai-gateway/models?modality=text",
+    "catalog_url": "https://ai-gateway.vercel.sh/v1/models",
+    "tako_pricing_url": "https://vercel.com/docs/ai-gateway/models-and-providers/web-search#using-tako-search",
+    "promotion_url": "https://vercel.com/changelog/tako-search-is-free-on-ai-gateway-through-september-30th",
+    "estimated_at": "2026-09-20T21:26:04.875164+00:00",
+    "assumptions": "45,000 input / 2,500 output tokens and 3 Tako calls per row across both stages; uncached base rates. Expected range is not a cap. Retries, context size and internal search loops vary. Excludes GitHub runner costs. No native Google search is used."
+  },
+  "evaluation": {
+    "quality_pass": true,
+    "quality_gates": {
+      "all_ten_completed": true,
+      "all_identity_hazards_held": true,
+      "no_incorrect_or_unsupported_scored_candidates": true,
+      "at_least_six_correct_websites": true,
+      "at_least_six_correct_plant_phones": true
+    },
+    "coverage": {
+      "website": 7,
+      "phone": 6
+    },
+    "bad_candidates": [],
+    "passed": 30,
+    "total": 39,
+    "checks": [
+      {
+        "facility_id": "IC-63538",
+        "check": "website",
+        "actual": "https://maricorp.com",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-63538",
+        "check": "phone",
+        "actual": "877-858-3625",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-63538",
+        "check": "state",
+        "actual": "MO",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-63538",
+        "check": "city",
+        "actual": "Shell Knob",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-90053",
+        "check": "website",
+        "actual": null,
+        "pass": false,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-90053",
+        "check": "phone",
+        "actual": null,
+        "pass": false,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-90053",
+        "check": "state",
+        "actual": null,
+        "pass": false,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-90053",
+        "check": "city",
+        "actual": null,
+        "pass": false,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-51342",
+        "check": "conflict/review held",
+        "pass": true
+      },
+      {
+        "facility_id": "IC-95711",
+        "check": "conflict/review held",
+        "pass": true
+      },
+      {
+        "facility_id": "IC-95711",
+        "check": "website",
+        "actual": "https://vulcraft.com",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-95711",
+        "check": "phone",
+        "actual": "(435) 734-9433",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-95711",
+        "check": "state",
+        "actual": "UT",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-95711",
+        "check": "city",
+        "actual": "Brigham City",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-94656",
+        "check": "website",
+        "actual": null,
+        "pass": false,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-94656",
+        "check": "phone",
+        "actual": null,
+        "pass": false,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-94656",
+        "check": "state",
+        "actual": null,
+        "pass": false,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-94656",
+        "check": "city",
+        "actual": null,
+        "pass": false,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-08519",
+        "check": "website",
+        "actual": "https://fpec.com",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-08519",
+        "check": "phone",
+        "actual": "(479)-751-9392",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-08519",
+        "check": "state",
+        "actual": "AR",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-08519",
+        "check": "city",
+        "actual": "Springdale",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-95691",
+        "check": "conflict/review held",
+        "pass": true
+      },
+      {
+        "facility_id": "IC-95691",
+        "check": "website",
+        "actual": "https://cscsteelusa.com/",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-95691",
+        "check": "phone",
+        "actual": "908-561-3484",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-95691",
+        "check": "state",
+        "actual": "NJ",
+        "pass": true,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-95691",
+        "check": "city",
+        "actual": "South Plainfield",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-93286",
+        "check": "website",
+        "actual": "https://www.southernstorage.org/",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-93286",
+        "check": "phone",
+        "actual": "850-536-5843",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-93286",
+        "check": "state",
+        "actual": "FL",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-93286",
+        "check": "city",
+        "actual": "Tallahassee",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-93565",
+        "check": "website",
+        "actual": "https://nvent.com",
+        "pass": true,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-93565",
+        "check": "phone",
+        "actual": null,
+        "pass": false,
+        "evidence_verified": false
+      },
+      {
+        "facility_id": "IC-93565",
+        "check": "state",
+        "actual": "MD",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-93565",
+        "check": "city",
+        "actual": "Millington",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-87607",
+        "check": "website",
+        "actual": "https://www.tmmfg.com",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-87607",
+        "check": "phone",
+        "actual": "435-257-1400",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-87607",
+        "check": "state",
+        "actual": "UT",
+        "pass": true,
+        "evidence_verified": true
+      },
+      {
+        "facility_id": "IC-87607",
+        "check": "city",
+        "actual": "Tremonton",
+        "pass": true,
+        "evidence_verified": true
+      }
+    ],
+    "note": "Same ten-row development cohort, not a held-out accuracy estimate. Quotes and all additional fields require separate review."
+  },
+  "iterations": [
+    {
+      "run": 35537037253,
+      "url": "https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35537037253",
+      "model": "alibaba/qwen3.7-flash",
+      "extraction_model": "alibaba/qwen3.7-flash",
+      "completed": 8,
+      "coverage": {
+        "website": 2,
+        "phone": 1
+      },
+      "reference_checks": "15/39",
+      "quality_pass": false,
+      "usage": {
+        "confirmed_tako_searches": 0,
+        "reported_cost_usd": 0.001316,
+        "prompt_tokens": 20551,
+        "completion_tokens": 5383,
+        "responses_missing_cost": 0,
+        "known_cost_subtotal_usd": 0.001316
+      }
+    },
+    {
+      "run": 35537219876,
+      "url": "https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35537219876",
+      "model": "anthropic/claude-haiku-4.5",
+      "extraction_model": "anthropic/claude-haiku-4.5",
+      "completed": 10,
+      "coverage": {
+        "website": 9,
+        "phone": 8
+      },
+      "reference_checks": "38/39",
+      "quality_pass": true,
+      "usage": {
+        "confirmed_tako_searches": 27,
+        "reported_cost_usd": 0.407451,
+        "prompt_tokens": 354496,
+        "completion_tokens": 10591,
+        "responses_missing_cost": 0,
+        "known_cost_subtotal_usd": 0.407451
+      }
+    },
+    {
+      "run": 35537422564,
+      "url": "https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35537422564",
+      "model": "anthropic/claude-haiku-4.5",
+      "extraction_model": "anthropic/claude-haiku-4.5",
+      "completed": 10,
+      "coverage": {
+        "website": 7,
+        "phone": 6
+      },
+      "reference_checks": "32/39",
+      "quality_pass": true,
+      "usage": {
+        "confirmed_tako_searches": 29,
+        "reported_cost_usd": 0.519663,
+        "prompt_tokens": 436173,
+        "completion_tokens": 16698,
+        "responses_missing_cost": 0,
+        "known_cost_subtotal_usd": 0.519663
+      }
+    },
+    {
+      "run": 35537935730,
+      "url": "https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35537935730",
+      "model": "anthropic/claude-haiku-4.5",
+      "extraction_model": "anthropic/claude-sonnet-4.6",
+      "completed": 10,
+      "coverage": {
+        "website": 7,
+        "phone": 6
+      },
+      "reference_checks": "30/39",
+      "quality_pass": true,
+      "usage": {
+        "confirmed_tako_searches": 28,
+        "reported_cost_usd": 0.652002,
+        "prompt_tokens": 428312,
+        "completion_tokens": 17110,
+        "responses_missing_cost": 0,
+        "known_cost_subtotal_usd": 0.652002
+      }
+    },
+    {
+      "run": 35538247762,
+      "url": "https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35538247762",
+      "model": "google/gemini-2.5-flash-lite",
+      "extraction_model": "google/gemini-2.5-flash-lite",
+      "completed": 1,
+      "coverage": {
+        "website": 1,
+        "phone": 0
+      },
+      "reference_checks": "3/39",
+      "quality_pass": false,
+      "usage": {
+        "confirmed_tako_searches": 4,
+        "reported_cost_usd": 0.004747,
+        "prompt_tokens": 42790,
+        "completion_tokens": 1604,
+        "responses_missing_cost": 0,
+        "known_cost_subtotal_usd": 0.004747
+      }
+    },
+    {
+      "run": 35538429189,
+      "url": "https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35538429189",
+      "model": "google/gemini-3.1-flash-lite",
+      "extraction_model": "google/gemini-3.1-flash-lite",
+      "completed": 9,
+      "coverage": {
+        "website": 6,
+        "phone": 5
+      },
+      "reference_checks": "25/39",
+      "quality_pass": false,
+      "usage": {
+        "confirmed_tako_searches": 10,
+        "reported_cost_usd": 0.064625,
+        "prompt_tokens": 180102,
+        "completion_tokens": 13066,
+        "responses_missing_cost": 0,
+        "known_cost_subtotal_usd": 0.064625
+      }
+    },
+    {
+      "run": 35538672256,
+      "url": "https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35538672256",
+      "model": "google/gemini-3.1-flash-lite",
+      "extraction_model": "google/gemini-3.1-flash-lite",
+      "completed": 10,
+      "coverage": {
+        "website": 7,
+        "phone": 6
+      },
+      "reference_checks": "30/39",
+      "quality_pass": true,
+      "usage": {
+        "confirmed_tako_searches": 10,
+        "reported_cost_usd": 0.063792,
+        "prompt_tokens": 177526,
+        "completion_tokens": 12940,
+        "responses_missing_cost": 0,
+        "known_cost_subtotal_usd": 0.063792
+      }
+    }
+  ],
+  "results": [
+    {
+      "facility_id": "IC-63538",
+      "name": "MARICORP US, LLC",
+      "status": "matched",
+      "explanation": "The facility is matched based on the address 27882 State Hwy 39, Shell Knob, MO 65747, which is explicitly listed as the office location and site of the plant on the official Maricorp website.",
+      "proposals": [
+        {
+          "field": "name",
+          "existing": "MARICORP US, LLC",
+          "value": "MARICORP US, LLC",
+          "source_url": "https://maricorp.com/company/",
+          "quote": "MariCorp is one of the largest manufacturers and installers of floating boat docks",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": false,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "address",
+          "existing": "27882 STATE HIGHWAY 39",
+          "value": "27882 State Hwy 39",
+          "source_url": "https://maricorp.com/contact/",
+          "quote": "Office Location 27882 State Hwy 39 Shell Knob, MO 65747",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "city",
+          "existing": "SHELL KNOB",
+          "value": "Shell Knob",
+          "source_url": "https://maricorp.com/contact/",
+          "quote": "Shell Knob, MO 65747",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "state",
+          "existing": "MO",
+          "value": "MO",
+          "source_url": "https://maricorp.com/contact/",
+          "quote": "Shell Knob, MO 65747",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "zip",
+          "existing": "65747",
+          "value": "65747",
+          "source_url": "https://maricorp.com/contact/",
+          "quote": "Shell Knob, MO 65747",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "website",
+          "existing": null,
+          "value": "https://maricorp.com",
+          "source_url": "https://maricorp.com/company/",
+          "quote": "Maricorp is one of the largest manufacturers and installers of floating boat docks",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "phone",
+          "existing": null,
+          "value": "877-858-3625",
+          "source_url": "https://maricorp.com/contact/",
+          "quote": "Phone Number 877-858-DOCK 877-858-3625",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        }
+      ],
+      "database_writes": 0
+    },
+    {
+      "facility_id": "IC-90053",
+      "name": "WA317936037 - MURPHY COMPANY DBA MURPHY COMPANY OF OREGON",
+      "status": "review",
+      "explanation": "Search found candidates but no readable source pages; no verified fields.",
+      "proposals": [],
+      "database_writes": 0
+    },
+    {
+      "facility_id": "IC-51342",
+      "name": "HART HOUSING GROUP INC PLANT 1",
+      "status": "conflict",
+      "explanation": "The facility name and address provided in the input do not match the identified entity. The input lists 'HART HOUSING GROUP INC PLANT 1' at '57475 COUNTY ROAD 3 SOUTH, ELKHART, IN', whereas official records consistently locate 'Hart Housing Group Inc' at '1025 East Waterford Street, Wakarusa, IN'.",
+      "proposals": [
+        {
+          "field": "name",
+          "existing": "HART HOUSING GROUP INC PLANT 1",
+          "value": "Hart Housing Group Inc",
+          "source_url": "https://www.whereorg.com/hart-housing-group-inc-6136469",
+          "quote": "Hart Housing Group Inc",
+          "scope": "company",
+          "source_kind": "directory",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "address",
+          "existing": "57475 COUNTY ROAD 3 SOUTH",
+          "value": "1025 East Waterford Street",
+          "source_url": "https://www.realtyexperts.us/company-hart-housing-in-wakarusa-in-78192",
+          "quote": "1025 East Waterford Street",
+          "scope": "company",
+          "source_kind": "directory",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "city",
+          "existing": "ELKHART",
+          "value": "Wakarusa",
+          "source_url": "https://www.realtyexperts.us/company-hart-housing-in-wakarusa-in-78192",
+          "quote": "Wakarusa",
+          "scope": "company",
+          "source_kind": "directory",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "state",
+          "existing": "IN",
+          "value": "IN",
+          "source_url": "https://www.realtyexperts.us/company-hart-housing-in-wakarusa-in-78192",
+          "quote": "MAILING STATE: IN",
+          "scope": "company",
+          "source_kind": "directory",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "zip",
+          "existing": "46517-9798",
+          "value": "46573",
+          "source_url": "https://www.realtyexperts.us/company-hart-housing-in-wakarusa-in-78192",
+          "quote": "46573",
+          "scope": "company",
+          "source_kind": "directory",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": false,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "website",
+          "existing": null,
+          "value": "https://www.harthousing.com",
+          "source_url": "https://www.realtyexperts.us/company-hart-housing-in-wakarusa-in-78192",
+          "quote": "HOMEPAGE: www.harthousing.com",
+          "scope": "company",
+          "source_kind": "directory",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": false,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "phone",
+          "existing": null,
+          "value": "(574) 862-4461",
+          "source_url": "https://www.whereorg.com/hart-housing-group-inc-6136469",
+          "quote": "Phone: (574) 862-4461",
+          "scope": "company",
+          "source_kind": "directory",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        }
+      ],
+      "database_writes": 0
+    },
+    {
+      "facility_id": "IC-95711",
+      "name": "Vulcraft",
+      "status": "conflict",
+      "explanation": "The facility name 'Vulcraft' is located in Brigham City, UT, not VA as provided in the input. The facility is confirmed as 'Vulcraft Utah \u2014 Plant' located at 1875 UT-13, Brigham City, UT 84302.",
+      "proposals": [
+        {
+          "field": "name",
+          "existing": "Vulcraft",
+          "value": "Vulcraft Utah \u2014 Plant",
+          "source_url": "https://vulcraft.com/contact/",
+          "quote": "Vulcraft Utah \u2014 Plant",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "address",
+          "existing": null,
+          "value": "1875 UT-13",
+          "source_url": "https://vulcraft.com/contact/",
+          "quote": "1875 UT-13, Brigham City, UT 84302",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "city",
+          "existing": "Brigham City",
+          "value": "Brigham City",
+          "source_url": "https://vulcraft.com/contact/",
+          "quote": "1875 UT-13, Brigham City, UT 84302",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "state",
+          "existing": "VA",
+          "value": "UT",
+          "source_url": "https://vulcraft.com/contact/",
+          "quote": "1875 UT-13, Brigham City, UT 84302",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "zip",
+          "existing": null,
+          "value": "84302",
+          "source_url": "https://vulcraft.com/contact/",
+          "quote": "1875 UT-13, Brigham City, UT 84302",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "website",
+          "existing": null,
+          "value": "https://vulcraft.com",
+          "source_url": "https://vulcraft.com/",
+          "quote": "VULCRAFT",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": false
+        },
+        {
+          "field": "phone",
+          "existing": null,
+          "value": "(435) 734-9433",
+          "source_url": "https://vulcraft.com/contact/",
+          "quote": "(435) 734-9433",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        }
+      ],
+      "database_writes": 0
+    },
+    {
+      "facility_id": "IC-94656",
+      "name": "Hoover Trusses",
+      "status": "review",
+      "explanation": "Search found candidates but no readable source pages; no verified fields.",
+      "proposals": [],
+      "database_writes": 0
+    },
+    {
+      "facility_id": "IC-08519",
+      "name": "F.P.E.C CORPORATION OF ARKANSAS, INC",
+      "status": "conflict",
+      "explanation": "The facility address matches the input, but the company website identifies its headquarters as Fayetteville, Arkansas, while the facility address is in Springdale, Arkansas. The name in the provided text is 'FPEC FOOD PROCESSING EQUIPMENT COMPANY', which conflicts with the input name 'F.P.E.C CORPORATION OF ARKANSAS, INC'.",
+      "proposals": [
+        {
+          "field": "name",
+          "existing": "F.P.E.C CORPORATION OF ARKANSAS, INC",
+          "value": "FPEC FOOD PROCESSING EQUIPMENT COMPANY",
+          "source_url": "https://fpec.com",
+          "quote": "FPEC FOOD PROCESSING EQUIPMENT COMPANY",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "address",
+          "existing": "2216 FORD AVE.",
+          "value": "2216 Ford Ave.",
+          "source_url": "https://fpec.com/contact/",
+          "quote": "2216 Ford Ave. Springdale, Ar 72764",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "city",
+          "existing": "SPRINGDALE",
+          "value": "Springdale",
+          "source_url": "https://fpec.com/contact/",
+          "quote": "Springdale, Ar 72764",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "state",
+          "existing": "AR",
+          "value": "AR",
+          "source_url": "https://fpec.com/contact/",
+          "quote": "Springdale, Ar 72764",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "zip",
+          "existing": "72764",
+          "value": "72764",
+          "source_url": "https://fpec.com/contact/",
+          "quote": "Springdale, Ar 72764",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "website",
+          "existing": null,
+          "value": "https://fpec.com",
+          "source_url": "https://fpec.com",
+          "quote": "Reliable Food Manufacturing Equipment | FPEC Food Processing Systems",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "phone",
+          "existing": null,
+          "value": "(479)-751-9392",
+          "source_url": "https://fpec.com/contact/",
+          "quote": "Our Phone (479)-751-9392",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "email",
+          "existing": null,
+          "value": "Sales@fpec.com",
+          "source_url": "https://fpec.com/contact/",
+          "quote": "Sales@fpec.com",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        }
+      ],
+      "database_writes": 0
+    },
+    {
+      "facility_id": "IC-95691",
+      "name": "Canam Steel Corporation",
+      "status": "conflict",
+      "explanation": "The facility is matched to the South Plainfield plant. The input state 'NY' conflicts with the official state 'New Jersey (NJ)' found on the corporate website.",
+      "proposals": [
+        {
+          "field": "name",
+          "existing": "Canam Steel Corporation",
+          "value": "Canam Steel Corporation",
+          "source_url": "https://cscsteelusa.com/contact/",
+          "quote": "Canam Steel Corporation",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "address",
+          "existing": null,
+          "value": "14 Harmich Road",
+          "source_url": "https://cscsteelusa.com/contact/",
+          "quote": "14 Harmich Road South Plainfield, New Jersey 07080",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "city",
+          "existing": "South Plainfield",
+          "value": "South Plainfield",
+          "source_url": "https://cscsteelusa.com/contact/",
+          "quote": "South Plainfield, New Jersey 07080",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "state",
+          "existing": "NY",
+          "value": "NJ",
+          "source_url": "https://cscsteelusa.com/contact/",
+          "quote": "South Plainfield, New Jersey 07080",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": false,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "zip",
+          "existing": null,
+          "value": "07080",
+          "source_url": "https://cscsteelusa.com/contact/",
+          "quote": "South Plainfield, New Jersey 07080",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "website",
+          "existing": null,
+          "value": "https://cscsteelusa.com/",
+          "source_url": "https://cscsteelusa.com/contact/",
+          "quote": "CSC - Canam Steel Corporation",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "phone",
+          "existing": null,
+          "value": "908-561-3484",
+          "source_url": "https://cscsteelusa.com/contact/",
+          "quote": "New Jersey Mid- Atlantic Region 14 Harmich Road South Plainfield, New Jersey 07080 Telephone: 908-561-3484",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        }
+      ],
+      "database_writes": 0
+    },
+    {
+      "facility_id": "IC-93286",
+      "name": "Southern Storage Solutions, Inc.",
+      "status": "matched",
+      "explanation": "The facility is matched to the Tallahassee location provided on the official website. The address, phone number, and website are verified through the company's contact page.",
+      "proposals": [
+        {
+          "field": "name",
+          "existing": "Southern Storage Solutions, Inc.",
+          "value": "Southern Storage Solutions",
+          "source_url": "https://www.southernstorage.org/",
+          "quote": "SOUTHERN STORAGE SOLUTIONS",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "address",
+          "existing": null,
+          "value": "3604 N Monroe St",
+          "source_url": "https://www.southernstorage.org/",
+          "quote": "3604 N Monroe St Tallahassee, FL 32303",
+          "scope": "office",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "city",
+          "existing": null,
+          "value": "Tallahassee",
+          "source_url": "https://www.southernstorage.org/",
+          "quote": "3604 N Monroe St Tallahassee, FL 32303",
+          "scope": "office",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "state",
+          "existing": null,
+          "value": "FL",
+          "source_url": "https://www.southernstorage.org/",
+          "quote": "3604 N Monroe St Tallahassee, FL 32303",
+          "scope": "office",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "zip",
+          "existing": null,
+          "value": "32303",
+          "source_url": "https://www.southernstorage.org/",
+          "quote": "3604 N Monroe St Tallahassee, FL 32303",
+          "scope": "office",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "website",
+          "existing": null,
+          "value": "https://www.southernstorage.org/",
+          "source_url": "https://www.southernstorage.org/",
+          "quote": "Southern Storage Solutions",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "phone",
+          "existing": "8505365843",
+          "value": "850-536-5843",
+          "source_url": "https://www.southernstorage.org/",
+          "quote": "O: (850) 536-5843",
+          "scope": "office",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        }
+      ],
+      "database_writes": 0
+    },
+    {
+      "facility_id": "IC-93565",
+      "name": "AIS - Millington",
+      "status": "matched",
+      "explanation": "The facility is now operated by nVent, confirmed by local news coverage at the specified address. The former entity 'Avail' is no longer the operator. The provided phone number was not verified, but an official company website is available.",
+      "proposals": [
+        {
+          "field": "name",
+          "existing": "AIS - Millington",
+          "value": "nVent",
+          "source_url": "https://www.myeasternshoremd.com/kent_county_news/news/powering-growth-nvent-tour-highlights-industry-sector/article_31873807-9e93-4757-975f-08642ae48936.html",
+          "quote": "nVent has been producing enclosure systems serving major utilities in the U.S.",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "address",
+          "existing": "3011 MILLINGTON RD",
+          "value": "3011 Millington Road",
+          "source_url": "https://www.myeasternshoremd.com/kent_county_news/news/powering-growth-nvent-tour-highlights-industry-sector/article_31873807-9e93-4757-975f-08642ae48936.html",
+          "quote": "operates at 3011 Millington Road in Millington",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "city",
+          "existing": "MILLINGTON",
+          "value": "Millington",
+          "source_url": "https://www.myeasternshoremd.com/kent_county_news/news/powering-growth-nvent-tour-highlights-industry-sector/article_31873807-9e93-4757-975f-08642ae48936.html",
+          "quote": "operates at 3011 Millington Road in Millington",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "state",
+          "existing": "MD",
+          "value": "MD",
+          "source_url": "https://www.myeasternshoremd.com/kent_county_news/news/powering-growth-nvent-tour-highlights-industry-sector/article_31873807-9e93-4757-975f-08642ae48936.html",
+          "quote": "Nvent Millington Md",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "website",
+          "existing": null,
+          "value": "https://nvent.com",
+          "source_url": "https://www.myeasternshoremd.com/kent_county_news/news/powering-growth-nvent-tour-highlights-industry-sector/article_31873807-9e93-4757-975f-08642ae48936.html",
+          "quote": "Visit www.nvent.com/Careers",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": false,
+          "identity_anchor_found": true
+        }
+      ],
+      "database_writes": 0
+    },
+    {
+      "facility_id": "IC-87607",
+      "name": "T & M MANUFACTURING, INC.",
+      "status": "matched",
+      "explanation": "The facility is matched to T & M Manufacturing, Inc. based on the provided address, which is confirmed as the shipping and manufacturing address on the official company website.",
+      "proposals": [
+        {
+          "field": "name",
+          "existing": "T & M MANUFACTURING, INC.",
+          "value": "T&M Manufacturing, Inc.",
+          "source_url": "http://www.tmmfg.com",
+          "quote": "T&M Manufacturing, Inc",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "address",
+          "existing": "1110 N 1000 W",
+          "value": "1110 North 1000 West",
+          "source_url": "http://www.tmmfg.com/contactinfo.html",
+          "quote": "Shipping Address: 1110 North 1000 West, Tremonton, UT",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "conflict",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "city",
+          "existing": "TREMONTON",
+          "value": "Tremonton",
+          "source_url": "http://www.tmmfg.com/contactinfo.html",
+          "quote": "Tremonton, UT",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "state",
+          "existing": "UT",
+          "value": "UT",
+          "source_url": "http://www.tmmfg.com/contactinfo.html",
+          "quote": "Tremonton, UT",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "zip",
+          "existing": "84337",
+          "value": "84337",
+          "source_url": "http://www.tmmfg.com/contactinfo.html",
+          "quote": "84337",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "corroborates",
+          "decision": "review",
+          "quote_verified": false,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "website",
+          "existing": null,
+          "value": "https://www.tmmfg.com",
+          "source_url": "http://www.tmmfg.com",
+          "quote": "T&M Manufacturing, Inc",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "phone",
+          "existing": null,
+          "value": "435-257-1400",
+          "source_url": "http://www.tmmfg.com/contactinfo.html",
+          "quote": "Phone: 435-257-1400",
+          "scope": "facility",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "candidate",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        },
+        {
+          "field": "email",
+          "existing": null,
+          "value": "info@tmmfg.com",
+          "source_url": "http://www.tmmfg.com/contactinfo.html",
+          "quote": "E-mail Address: info@tmmfg.com",
+          "scope": "company",
+          "source_kind": "official",
+          "relationship": "fill",
+          "decision": "review",
+          "quote_verified": true,
+          "identity_anchor_found": true
+        }
+      ],
+      "database_writes": 0
+    }
+  ],
+  "database_writes": 0,
+  "scope": "Development pilot only; same cohort used for iteration, not a held-out accuracy estimate. Candidate is not write authorization."
+}
