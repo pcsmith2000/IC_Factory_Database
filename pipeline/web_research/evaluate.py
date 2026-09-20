@@ -9,7 +9,7 @@ def evaluate(results, reference):
     for ref in reference['rows']:
         row=by_id.get(ref['facility_id'])
         if not row:
-            checks.append({'facility_id':ref['facility_id'],'check':'completed','pass':False}); continue
+            row={'proposals':[], 'status':'error'}
         proposals={p['field']:p for p in row['proposals']}
         if ref['expected'] in ('conflict','review'):
             checks.append({'facility_id':ref['facility_id'],'check':'conflict/review held',
@@ -18,7 +18,7 @@ def evaluate(results, reference):
         for field,expected in [('website',ref['website_domain']),('phone',ref['phones']),('state',ref['state']),('city',ref['city'])]:
             p=proposals.get(field); v=p['value'] if p else None
             passed=bool(v) and (domain(v) in [expected]+ref.get('website_alternatives',[]) if field=='website' else norm(v)[-10:] in expected if field=='phone' else norm(v)==norm(expected))
-            checks.append({'facility_id':ref['facility_id'],'check':field,'actual':v,'pass':passed})
+            checks.append({'facility_id':ref['facility_id'],'check':field,'actual':v,'pass':passed,'evidence_verified':bool(p and p.get('quote_verified'))})
     return {'passed':sum(c['pass'] for c in checks),'total':len(checks),'checks':checks,
             'note':'Same ten-row development cohort, not a held-out accuracy estimate. Quotes and all additional fields require separate review.'}
 

@@ -104,18 +104,20 @@
       "expected": "matched",
       "website_domain": "availinfra.com",
       "phones": [
-        "4109287700"
+        "4109287700",
+        "4109287732"
       ],
       "state": "MD",
       "city": "Millington",
       "source_url": "https://www.availinfra.com/locations/page/3/",
-      "notes": "Published plant phone differs from existing 4109287732; retain as conflict, not overwrite. Official 2024 brochure independently corroborates. Follow-up independent check before viewing pilot: nVent completed acquisition May 1, 2025. Current nvent.com is acceptable if facility tied to acquisition; availinfra.com is historical.",
+      "notes": "Published plant phone differs from existing 4109287732; retain as conflict, not overwrite. Official 2024 brochure independently corroborates. Follow-up independent check before viewing pilot: nVent completed acquisition May 1, 2025. Current nvent.com is acceptable if facility tied to acquisition; availinfra.com is historical. Michigan 2026 manufacturer registry independently confirms the original 7732 number; both published contacts are acceptable, not evidence that the original is wrong.",
       "website_alternatives": [
         "nvent.com"
       ],
       "additional_sources": [
         "https://investors.nvent.com/press-releases/press-release-details/2025/nVent-Completes-Acquisition-of-the-Electrical-Products-Group-Business-of-Avail-Infrastructure-Solutions/default.aspx",
-        "https://www.osha.gov/ords/imis/establishment.inspection_detail?id=1838474.015"
+        "https://www.osha.gov/ords/imis/establishment.inspection_detail?id=1838474.015",
+        "https://www.michigan.gov/lara/-/media/Project/Websites/lara/bcc-media/Plan-Review/Approved_Manufacturers_Listings.pdf?hash=2C4702511136422D68E78ACCCF6146DB&rev=b69fc4f6e8834a7bb956d4ceae14406c"
       ]
     },
     {

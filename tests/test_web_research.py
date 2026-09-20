@@ -45,3 +45,16 @@ def test_filters_parameterized(monkeypatch):
 def test_unknown_field_rejected(monkeypatch):
     monkeypatch.setenv('MISSING_FIELDS','phone); DELETE')
     with pytest.raises(ValueError): settings()
+
+def test_corporate_contact_not_facility_candidate():
+    c=candidate('3604822521','Elma 3604822521',scope='company')
+    out=assess({'facility_id':'IC-1','city':'Elma'},result(phone=c),{c['source_url']:{'text':c['quote']}})
+    assert out['proposals'][0]['decision']=='review'
+
+def test_evaluation_keeps_denominator_for_missing_results():
+    from pipeline.web_research.evaluate import evaluate
+    import json
+    from pathlib import Path
+    ref=json.loads(Path('tests/reference/tako_basic/reference.json').read_text())
+    report=evaluate([],ref)
+    assert report['passed']==0 and report['total']==39

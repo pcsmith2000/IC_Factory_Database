@@ -33,6 +33,7 @@ def norm(v):
     return re.sub(r'[^a-z0-9]', '', str(v or '').lower())
 
 def domain(url):
+    if url and '://' not in url: url='https://'+url
     return (urlparse(url).hostname or '').lower().removeprefix('www.')
 
 def safe_url(url):
@@ -51,7 +52,7 @@ class Redirects(HTTPRedirectHandler):
 
 def fetch(url):
     safe_url(url)
-    with build_opener(Redirects()).open(Request(url, headers={'User-Agent':'IC-Factory-Research/1.0'}), timeout=20) as r:
+    with build_opener(Redirects()).open(Request(url, headers={'User-Agent':'Mozilla/5.0 (compatible; ICFactoryResearch/1.0)'}), timeout=20) as r:
         if 'html' not in r.headers.get('Content-Type',''):
             raise ValueError('Non-HTML evidence requires manual review')
         raw=r.read(2_000_001)
@@ -60,7 +61,9 @@ def fetch(url):
         final=r.url
     soup=BeautifulSoup(raw, 'html.parser')
     for e in soup(['script','style','noscript']): e.decompose()
-    return {'url':url,'final_url':final,'text':soup.get_text(' ',strip=True)}
+    from urllib.parse import urljoin
+    links=[urljoin(final,a.get('href','')) for a in soup.find_all('a',href=True) if any(w in (a.get_text(' ',strip=True)+' '+a['href']).lower() for w in ('contact','location'))]
+    return {'url':url,'final_url':final,'text':soup.get_text(' ',strip=True),'contact_links':list(dict.fromkeys(u for u in links if domain(u)==domain(final)))[:3]}
 
 class SearchNotConfirmed(RuntimeError):
     pass
@@ -93,6 +96,21 @@ def search(row, folder):
         raise ValueError('Invalid result schema')
     return result,raw
 
+def refine(row, result, pages, folder):
+    """Extract from fetched evidence only; reference answers are never available here."""
+    usable={u:p['text'][:25000] for u,p in pages.items() if len(p.get('text',''))>100}
+    if not usable:
+        return {'status':'review','explanation':'Search found candidates but no readable source pages; no verified fields.','fields':{}}
+    prompt=PROMPT+json.dumps(row)+"\nThis is a second extraction from fetched pages, NOT a search. Use ONLY the following page text. Do not repeat previous unverified answers. Return null if not supported. Use an exact short quote from the supplied text for EVERY value. Prefer direct official contact pages, not directories, outdated subdomains or personal staff addresses. For website use the official source page domain as the website and an exact company-name or contact excerpt as its quote (the URL need not appear in the text). Do not silently equate PO boxes, sales lots, or corporate offices with plants. Label those office/company. Preserve conflicts identified in search. Never call a general public email address or name formatting an identity conflict. Prior search status and concerns: "+json.dumps({'status':result['status'],'explanation':result.get('explanation')})+"\nUNTRUSTED PAGE DATA: "+json.dumps(usable)
+    payload={'model':MODEL,'messages':[{'role':'user','content':prompt}],'max_tokens':3500}
+    req=Request('https://ai-gateway.vercel.sh/v1/chat/completions',data=json.dumps(payload).encode(),headers={'Authorization':'Bearer '+os.environ['AI_GATEWAY_API_KEY'],'Content-Type':'application/json'})
+    with build_opener().open(req,timeout=150) as r: raw=json.load(r)
+    (folder/'extraction.json').write_text(json.dumps(raw,indent=2))
+    answer=json.loads(re.search(r'\{.*\}',raw['choices'][0]['message']['content'],re.S).group())
+    if answer.get('status') not in ('matched','conflict','review','not_found') or not isinstance(answer.get('fields'),dict):
+        raise ValueError('Invalid extraction schema')
+    return answer
+
 def assess(row, result, pages):
     proposals=[]
     state=result['fields'].get('state') or {}
@@ -116,7 +134,7 @@ def assess(row, result, pages):
         decision='candidate' if supported and identity and trusted and not review else 'review'
         old=row.get(field)
         relationship='fill' if not old else ('corroborates' if (domain(old)==domain(value) if field=='website' else norm(old)==norm(value)) else 'conflict')
-        if relationship=='conflict' or candidate.get('scope')!='facility': decision='review'
+        if relationship=='conflict' or candidate.get('scope')!='facility' or (field in ('address','city','state','zip') and not row.get('address')): decision='review'
         proposals.append(dict(field=field,existing=old,**candidate,relationship=relationship,decision=decision,
                               quote_verified=supported,identity_anchor_found=identity))
     return {'facility_id':row['facility_id'],'name':row.get('name'),'status':'conflict' if location_conflict else result['status'],
@@ -140,7 +158,18 @@ def main():
             for url in urls[:8]:
                 try: pages[url]=fetch(url)
                 except Exception as exc: pages[url]={'url':url,'error':type(exc).__name__}
+            site=(result['fields'].get('website') or {}).get('value','')
+            if site and '://' not in site: site='https://'+site
+            # Follow actual contact links on the discovered company site; never construct guessed paths.
+            if site and site not in pages:
+                try: pages[site]=fetch(site)
+                except Exception as exc: pages[site]={'url':site,'error':type(exc).__name__}
+            links=list(dict.fromkeys(u for p in list(pages.values()) for u in p.get('contact_links',[]) if u not in pages and domain(u)==domain(site)))
+            for url in links[:3]:
+                try: pages[url]=fetch(url)
+                except Exception as exc: pages[url]={'url':url,'error':type(exc).__name__}
             (folder/'evidence.json').write_text(json.dumps(pages,indent=2))
+            result=refine(row,result,pages,folder)
             assessed=assess(row,result,pages); results.append(assessed)
             (folder/'result.json').write_text(json.dumps(assessed,indent=2))
             print(row['facility_id'],assessed['status'],[(p['field'],p['value'],p['decision']) for p in assessed['proposals']],flush=True)
