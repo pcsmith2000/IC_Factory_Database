@@ -75,3 +75,14 @@ def test_counts_successful_tako_calls():
     from pipeline.web_research.run import confirmed_search_count
     raw={'choices':[{'message':{'provider_metadata':{'gateway':{'gatewayToolCalls':{'tako_search':2}}}}}]}
     assert confirmed_search_count(raw)==2
+
+def test_cost_estimate_separates_search_and_expires_promotion():
+    from datetime import date
+    from pipeline.web_research.costs import calculate
+    catalog={'data':[{'id':'cheap','pricing':{'input':'0.00000025','output':'0.0000015'}}]}
+    current=calculate(10,('cheap','cheap'),catalog,date(2026,9,20))
+    later=calculate(10,('cheap','cheap'),catalog,date(2026,10,1))
+    assert current['model_estimate_usd']==.15
+    assert current['tako']['estimated_usd']==0
+    assert later['tako']['estimated_usd']==.21
+    assert later['estimated_total_usd']==.36
