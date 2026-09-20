@@ -17,6 +17,8 @@ def settings():
                seed=int(os.environ.get('SAMPLE_SEED', '20260920')))
     if not 1 <= out['limit'] <= 200 or out['offset'] < 0:
         raise ValueError('row_limit must be 1..200; offset must be nonnegative')
+    if out['missing_fields'].lower() == 'all':
+        out['missing_fields'] = ''
     if set(split(out['missing_fields'])) - set(FIELDS):
         raise ValueError('unsupported missing field')
     if set(split(out['tiers'])) - {'T0', 'T1', 'T2', 'T3'}:

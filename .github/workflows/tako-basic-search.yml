@@ -18,7 +18,7 @@ on:
         description: 'Exact IC IDs, comma-separated; blank = all'
         default: ''
       missing_fields:
-        description: 'Missing ANY of: website,phone,email,address,name,city,state,zip; blank = all'
+        description: 'Missing ANY of: website,phone,email,address,name,city,state,zip; use all for no missing-field filter'
         default: 'website,phone'
       source_ids:
         description: 'Has current-release evidence from ANY of these source IDs; blank = all'

@@ -6,7 +6,7 @@ Manually run **Tako AI Search pass (read-only)** in GitHub Actions.
 - `research`: select rows and research their basic information with Tako.
 - `pilot`: research the frozen ten-row input, then compare with an independently researched reference.
 
-The selection controls are `states`, `facility_ids`, `missing_fields`, `source_ids`, `tiers`, `release_tag`, `row_limit` (1–200), `row_offset`, and `sample_seed`. Different filter types intersect; comma-separated values within a filter are alternatives. `missing_fields` means missing **any** listed field. Blank filters include all eligible rows. Sampling uses a stable hash of facility ID and seed, not database order. Offset pagination is only stable while the eligible database cohort is unchanged; use exact IDs or the frozen pilot for comparisons.
+The selection controls are `states`, `facility_ids`, `missing_fields`, `source_ids`, `tiers`, `release_tag`, `row_limit` (1–200), `row_offset`, and `sample_seed`. Different filter types intersect; comma-separated values within a filter are alternatives. `missing_fields` means missing **any** listed field. Blank filters include all eligible rows. Set `missing_fields=all` explicitly to include complete rows as well; GitHub may replace an empty dispatch input with its default. Sampling uses a stable hash of facility ID and seed, not database order. Offset pagination is only stable while the eligible database cohort is unchanged; use exact IDs or the frozen pilot for comparisons.
 
 The release filter selects only rows still present in the golden table; it does not reconstruct historical releases. Source filtering requires evidence for that row's current release.
 

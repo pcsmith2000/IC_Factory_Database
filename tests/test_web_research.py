@@ -100,3 +100,12 @@ def test_public_encoded_contact_is_decoded_without_running_script():
     soup=BeautifulSoup(f'<span id="contact"></span><script>var ml="{alphabet}",mi="{encoded}";document.getElementById("contact");throw new Error("do not execute")</script>','html.parser')
     decode_contact_spans(soup)
     assert soup.find(id='contact').get_text()==text
+
+
+def test_all_fields_removes_missing_filter_but_keeps_sources(monkeypatch):
+    monkeypatch.setenv("MISSING_FIELDS", "all")
+    monkeypatch.setenv("SOURCE_IDS", "adl_4ward,adl_july")
+    sql, params = query(settings())
+    assert "NULLIF" not in sql
+    assert "a.source_key=ANY(%s)" in sql
+    assert params[0] == ["adl_4ward", "adl_july"]
