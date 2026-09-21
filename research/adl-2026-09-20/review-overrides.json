@@ -5,5 +5,12 @@
     "value": "kevinwood@mainelytrusses.com",
     "reason": "The official location page identifies this as General Manager Kevin Wood's contact, not a general facility mailbox. Preserve as a named professional contact for review.",
     "source_url": "https://www.hancocklumber.com/locations/mainely-trusses/"
+  },
+  {
+    "facility_id": "IC-94380",
+    "field": "email",
+    "value": "michael.lewis@parr.com",
+    "reason": "The quoted official location page identifies Michael Lewis as the Truss Store Manager. Preserve this named professional contact for review rather than treating it as a general facility mailbox.",
+    "source_url": "https://parr.com/locations/cornelius-oregon-truss/"
   }
 ]
