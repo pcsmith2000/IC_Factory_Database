@@ -54,8 +54,9 @@ def assertions_from_rows(rows: list[dict], source_class: dict[str, str]) -> list
 
 
 def _rank(a: dict, order: list[str]) -> int:
-    # Tako search is below even an unlisted source; recency must never elevate it.
-    if a["source_id"] == "tako_ai_search":
+    # Reviewed web lookups (Tako search, a manual ASTRA lookup) are below even an unlisted source;
+    # recency must never elevate them. They fill a hole and never displace a roster or a geocode.
+    if a["source_id"] in ("tako_ai_search", "astra_manual_web_lookup"):
         return len(order) + 1
     for i, pref in enumerate(order):
         if pref == "site_visit" and a.get("site_visit") in (True, "True"): return i

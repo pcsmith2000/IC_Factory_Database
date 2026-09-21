@@ -21,6 +21,7 @@ def bundles(manifest):
 
 def run(mode: str, manifest_path: Path, out: Path):
     manifest = load_manifest(manifest_path)
+    source = manifest['source_id']
     grouped = bundles(manifest)
     if not grouped:
         raise ValueError('No complete approved facility address bundles')
@@ -46,11 +47,11 @@ def run(mode: str, manifest_path: Path, out: Path):
                 for field, item in fields.items():
                     saved = db.execute("""SELECT a.value,r.source_url,r.source_document,a.assertion_id
                                           FROM fact_assertions a JOIN ref_source_row r ON r.row_hash=a.row_hash
-                                          WHERE a.facility_key=%s AND a.release_tag=%s AND a.source_key='tako_ai_search'
+                                          WHERE a.facility_key=%s AND a.release_tag=%s AND a.source_key=%s
                                             AND a.field_key=%s AND a.value=%s""",
-                                       (fid, row['release_tag'], field, item['value'])).fetchone()
+                                       (fid, row['release_tag'], source, field, item['value'])).fetchone()
                     if saved and saved['source_url'] == item['source_url']:
-                        evidence.append({'source_key': 'tako_ai_search', 'field': field,
+                        evidence.append({'source_key': source, 'field': field,
                                          'value': item['value'], 'source_url': saved['source_url'],
                                          'source_document': saved['source_document'],
                                          'assertion_id': saved['assertion_id']})
@@ -60,7 +61,7 @@ def run(mode: str, manifest_path: Path, out: Path):
                 skipped.append({'facility_id': fid, 'reason': reason})
                 continue
             recovered = {field: item['value'] for field, item in fields.items()}
-            recovered['_source'] = 'tako_ai_search'
+            recovered['_source'] = source
             recovered['_research_runs'] = manifest['campaign_runs']
             if mode == 'apply':
                 recovered['_evidence'] = evidence

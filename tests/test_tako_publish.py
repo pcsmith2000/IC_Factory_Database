@@ -2,7 +2,7 @@ import copy
 from pathlib import Path
 import pytest
 from pipeline.golden import build_golden, _rank
-from pipeline.web_research.publish import load_manifest, select_import, to_assertion, SOURCE, digest
+from pipeline.web_research.publish import load_manifest, select_import, to_assertion, SOURCE, SOURCES, digest
 from pipeline.registry import load_yaml
 
 
@@ -91,3 +91,20 @@ def test_correction_authorization_does_not_cover_unrelated_change():
     g=[{'facility_key':'IC-1','release_tag':'current','city':'Dallas'}]
     accepted,skipped=select_import(m,g,[])
     assert not accepted and skipped
+
+
+def test_manual_web_lookup_manifest_is_its_own_source_and_still_below_every_rank(tmp_path):
+    m={'source_id':'astra_manual_web_lookup','source_name':'ASTRA manual web lookup','approval':'manual_web_lookup_v1',
+       'campaign_runs':['session_x'],'assertions':[{'facility_id':'IC-1','field':'address','value':'10 Main St','approved':True,
+        'source_url':'https://example.org/contact','quote':'10 Main St','scope':'facility',
+        'review_note':'Official contact page names the plant','retrieved_date':'2026-09-21'}]}
+    path=tmp_path/'approved-assertions.json';path.write_text(__import__('json').dumps(m))
+    assert load_manifest(path)['source_id']=='astra_manual_web_lookup'
+    a=to_assertion(m['assertions'][0],m)
+    assert a['source_id']==a['source_class']=='astra_manual_web_lookup'
+    assert a['basis']==SOURCES['astra_manual_web_lookup']['basis']
+    rules=load_yaml(Path('registry/survivorship.yaml'))
+    for field, spec in rules['fields'].items():
+        assert _rank({**a,'field':field},spec['order'])>len(spec['order'])
+    bad=dict(m,source_id='someone_else');(tmp_path/'bad.json').write_text(__import__('json').dumps(bad))
+    with pytest.raises(ValueError):load_manifest(tmp_path/'bad.json')

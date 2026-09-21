@@ -8,8 +8,11 @@ on:
     inputs:
       mode:
         type: choice
-        options: [plan, research, assertions_plan, assertions_apply]
+        options: [plan, research, assertions_plan, manifest_plan, assertions_apply]
         default: plan
+      manifest_path:
+        description: 'manifest_plan only: a committed reviewed manifest (research/<campaign>/approved-assertions.json)'
+        default: ''
       pass_id:
         description: 'Stable pass identifier'
         default: 'tako-address-1'
@@ -179,7 +182,7 @@ jobs:
           path: budget-output/
           retention-days: 90
   assertions:
-    if: inputs.mode == 'assertions_plan' || inputs.mode == 'assertions_apply'
+    if: inputs.mode == 'assertions_plan' || inputs.mode == 'manifest_plan' || inputs.mode == 'assertions_apply'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -188,6 +191,7 @@ jobs:
       RESEARCH_RUN: ${{ inputs.research_run }}
       PLAN_RUN: ${{ inputs.plan_run }}
       PLAN_SHA256: ${{ inputs.plan_sha256 }}
+      MANIFEST_PATH: ${{ inputs.manifest_path }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -195,6 +199,7 @@ jobs:
       - run: pip install -e '.[postgres,dev]'
       - run: pytest tests/test_tako_coordinate_recovery.py tests/test_tako_coordinate_manifest.py tests/test_tako_publish.py tests/test_web_research.py -q
       - name: Download exact research or assertion plan artifact
+        if: inputs.mode != 'manifest_plan'
         run: |
           python - <<'PY'
           import os,re,subprocess
@@ -220,6 +225,25 @@ jobs:
           out=Path('assertion-output')
           manifest,_=build(Path('research'),out,os.environ['RESEARCH_RUN'])
           if not manifest['assertions']:raise RuntimeError('No strict address assertions passed; no plan created')
+          publish('plan',out,manifest_path=out/'approved-assertions.json')
+          sync('plan',out/'approved-assertions.json',out)
+          PY
+      - name: Plan assertions from a committed reviewed manifest (manual web lookups)
+        if: inputs.mode == 'manifest_plan'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: |
+          python - <<'PY'
+          import os,re,shutil
+          from pathlib import Path
+          from pipeline.recovery.tako_address import run as sync
+          from pipeline.web_research.publish import run as publish
+          src=os.environ['MANIFEST_PATH']
+          if not re.fullmatch(r'research/[A-Za-z0-9._-]+/approved-assertions\.json',src) or not Path(src).is_file():
+              raise ValueError('manifest_path must be a committed research/<campaign>/approved-assertions.json')
+          out=Path('assertion-output');out.mkdir(exist_ok=True)
+          shutil.copy(src,out/'approved-assertions.json')   # the apply step reads the manifest from this artifact
           publish('plan',out,manifest_path=out/'approved-assertions.json')
           sync('plan',out/'approved-assertions.json',out)
           PY
