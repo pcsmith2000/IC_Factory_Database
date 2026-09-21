@@ -290,7 +290,7 @@ def test_a_contract_error_says_what_came_back(monkeypatch):
 
 def test_a_limited_run_is_a_sample_not_a_prefix(tmp_path):
     """facility_ids cluster by the source that issued them. The first 25 of 218 scored 0.44 on the
-    floor against 0.372 for the whole set — a cheap run has to be comparable to a full one."""
+    floor against 0.417 for the whole set — a cheap run has to be comparable to a full one."""
     (tmp_path / "normalised").mkdir()
     (tmp_path / "assertions.csv").write_text("facility_id,row_hash\n", encoding="utf-8")
     rows = "\n".join(f"IC-{i:04d},Wood Volumetric Modular" for i in range(100))
