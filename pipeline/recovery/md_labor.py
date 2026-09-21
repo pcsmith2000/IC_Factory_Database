@@ -102,7 +102,7 @@ def recover(db,campaign,pass_id,limit,workflow):
                          AND EXISTS (SELECT 1 FROM fact_assertions e
                            JOIN ref_source_row er ON er.row_hash=e.row_hash
                            WHERE e.facility_key=c.facility_id AND e.release_tag=g.release_tag
-                             AND lower(COALESCE(er.source_url,'')) LIKE 'https://labor.maryland.gov/%%')
+                             AND lower(COALESCE(er.source_url,'')) LIKE '%%labor.maryland.gov/%%')
                          AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts x
                            WHERE x.campaign_id=c.campaign_id AND x.facility_id=c.facility_id
                              AND x.pass_id=%s AND x.stage='md_labor')
