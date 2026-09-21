@@ -2,8 +2,8 @@
 
 Campaign: `missing-rooftops-2026-09-21`  
 Frozen cohort: 1,668 rows  
-Current result: 433 rooftop assertions recovered; 1,235 unresolved  
-Recorded API cost: $2.512982 of the $9.50 campaign ceiling
+Current result: 444 rooftop assertions recovered; 1,224 unresolved  
+Recorded API cost: $2.526982 of the $9.50 campaign ceiling
 
 Times are GitHub Actions elapsed runtime. Repeated implementation-triggered plan/test runs are
 excluded; dry-run validation passes that directly informed a write are included.
@@ -52,7 +52,7 @@ one batch rather than counting each control action as a separate research pass.
 |Pass #|Pipeline or Action Used|Time|Cost|
 |---:|---|---:|---:|
 |30|Authoritative-follow-up pilot through assertion publication and rooftop geocoding: 10 researched, 2 address bundles published, 2 rooftops recovered|Research 3m 19s; end-to-end timing pending reconciliation|$0.149211|
-|31|Production Tako batch: [140 researched](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35638378694), 30 strict address bundles / 120 cited lowest-precedence assertions [published](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35642494465); rooftop plan [queued](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35642680509)|Research 34m 29s; assertion plan/apply 1m 10s|$1.566086 actual|
+|31|Production Tako batch: [140 researched](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35638378694), 30 strict address bundles / 120 cited lowest-precedence assertions [published](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35642494465), 11 rooftops [verified](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35646823678)|Research 34m 29s; assertion and rooftop stages 2m 19s|$1.580086 actual|
 
 Pass 30 includes the historical detailed steps 30–32 above and the subsequent
 [assertion apply](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35637698399)
