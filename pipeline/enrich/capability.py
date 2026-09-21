@@ -512,6 +512,12 @@ def _main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--predict", type=int, default=0,
                     help="classify N UNLABELLED facilities instead of scoring the labelled set")
+    ap.add_argument("--assertions-out", type=Path, default=None,
+                    help="write capability.assertions.json here for the load stage to collect")
+    ap.add_argument("--min-confidence", type=float, default=0.0,
+                    help="withhold answers below this. 0.0 publishes everything, each carrying "
+                         "its own confidence, which is the honest default: an absent capability "
+                         "and an uncertain one are different facts and should not look alike.")
     a = ap.parse_args(argv)
 
     tx = load()
@@ -527,6 +533,21 @@ def _main(argv: list[str] | None = None) -> int:
         report = {"taxonomy_version": tx.version, "prompt_hash": prompt_hash(tx),
                   "model": a.model, "seconds": round(time.time() - t0, 1),
                   "usage": usage, **stats, "predict": _predict_report(tx, rows, answers)}
+        if a.assertions_out:
+            # The same artifact handoff every other stage uses: write the file, and the load
+            # stage collects it, runs the gates over it — E9 among them — and appends. Nothing
+            # here touches the database, so a pass can be inspected before it is published.
+            kept = [(r, o) for r in rows
+                    if (o := answers.get(r["facility_id"])) and o["confidence"] >= a.min_confidence]
+            asserts = [x for r, o in kept
+                       for x in assertions_for(r["facility_id"], o["leaf"], tx, o["confidence"],
+                                               o["reason"], evidence(r))]
+            a.assertions_out.parent.mkdir(parents=True, exist_ok=True)
+            a.assertions_out.write_text(json.dumps(asserts, default=str))
+            report["published"] = {"facilities": len(kept), "assertions": len(asserts),
+                                   "withheld_below_confidence": len(answers) - len(kept),
+                                   "min_confidence": a.min_confidence,
+                                   "file": str(a.assertions_out)}
         text = json.dumps(report, indent=2)
         print(text)
         pr = report["predict"]

@@ -387,3 +387,16 @@ def test_the_modular_rule_cuts_both_ways():
     p = cap.prompt_for(cap.load())
     assert "outranks it" in p
     assert "HUD Modular IS the answer the code implies" in p
+
+
+def test_an_assertion_carries_the_taxonomy_version_and_its_evidence():
+    """Golden rule: attributable and observable. A published capability must say which taxonomy it
+    was decided under and what the model was looking at when it decided."""
+    tx = cap.load()
+    got = cap.assertions_for("IC-1", "Mass Timber (CLT)", tx, 0.9, "APA lists CLT",
+                             "apa: product_types: CLT")
+    assert {a["field"] for a in got} == {"capability_group", "capability_leaf"}
+    for a in got:
+        assert f"taxonomy v{tx.version}" in a["evidence"]
+        assert "product_types: CLT" in a["evidence"]
+        assert a["source_id"] == cap.SOURCE_ID

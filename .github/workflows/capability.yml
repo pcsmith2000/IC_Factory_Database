@@ -39,6 +39,9 @@ on:
       predict:
         description: "classify N UNLABELLED facilities instead of scoring the labelled set. 0 = eval."
         default: "0"
+      min_confidence:
+        description: "withhold predictions below this. 0 publishes all, each carrying its confidence."
+        default: "0"
 
 permissions:
   contents: read
@@ -79,6 +82,8 @@ jobs:
             --predict "${{ inputs.predict }}" \
             --model "${{ inputs.model }}" \
             --batch "${{ inputs.batch }}" \
+            --min-confidence "${{ inputs.min_confidence }}" \
+            --assertions-out enrich/capability.assertions.json \
             ${{ inputs.floor_only && '--floor-only' || '' }} \
             --out capability-eval.json
 
@@ -125,8 +130,13 @@ jobs:
                   f"{c['truth']} → {c['predicted']} ({c['n']})" for c in g["top_confusions"][:5]))
           EOF
 
+      # The assertions ride in the same artifact, under enrich/, so an enrich run's `load` stage
+      # collects them exactly as it collects every other stage's — gates first, database after.
+      # This workflow never writes to the warehouse itself: a pass can be read before it lands.
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: capability-eval-${{ github.run_id }}
-          path: capability-eval.json
+          path: |
+            capability-eval.json
+            enrich/capability.assertions.json
