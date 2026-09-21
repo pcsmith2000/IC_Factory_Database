@@ -400,3 +400,32 @@ def test_an_assertion_carries_the_taxonomy_version_and_its_evidence():
         assert f"taxonomy v{tx.version}" in a["evidence"]
         assert "product_types: CLT" in a["evidence"]
         assert a["source_id"] == cap.SOURCE_ID
+
+
+def test_the_predict_cli_writes_an_artifact_the_gates_accept(tmp_path, monkeypatch, capsys):
+    """End to end without a model: a predict pass must produce a file the load stage can collect
+    and E9 can pass. A stage whose artifact only works in production is untested."""
+    from pipeline.enrich import gates
+    (tmp_path / "normalised").mkdir()
+    (tmp_path / "normalised" / "s.csv").write_text(
+        "source_id,notes,website,sq_ft,naics_verbatim,row_hash\n"
+        "sipa,SIPA member types: Manufacturing,,,321992,h1\n", encoding="utf-8")
+    (tmp_path / "assertions.csv").write_text("facility_id,row_hash\nIC-2,h1\n", encoding="utf-8")
+    (tmp_path / "golden.csv").write_text(
+        "facility_id,name,primary_capability\nIC-1,Labelled,Wood Volumetric Modular\n"
+        "IC-2,Unlabelled,\n", encoding="utf-8")
+    monkeypatch.setattr(cap, "classify", lambda tx, facs, *a, **k: {
+        i: {"leaf": "SIP / ICF (Other Composite Panel)", "confidence": 0.4 + 0.5 * i,
+            "reason": "sipa member"} for i in range(len(facs))})
+
+    out = tmp_path / "enrich" / "capability.assertions.json"
+    assert cap._main(["--build", str(tmp_path), "--predict", "5",
+                      "--assertions-out", str(out)]) == 0
+    asserts = json.loads(out.read_text())
+    assert {a["field"] for a in asserts} == {"capability_group", "capability_leaf"}
+    assert gates.e9_every_capability_is_a_member_of_the_taxonomy(asserts).passed
+
+    # and the floor withholds rather than guessing
+    assert cap._main(["--build", str(tmp_path), "--predict", "5", "--min-confidence", "0.9",
+                      "--assertions-out", str(out)]) == 0
+    assert json.loads(out.read_text()) == []
