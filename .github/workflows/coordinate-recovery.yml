@@ -8,7 +8,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [plan, cached, historical_cached, fl_bcis, geocode]
+        options: [plan, cached, historical_cached, fl_bcis, md_labor, geocode]
         default: plan
       pass_id:
         description: 'Pass identifier; repeats resume unfinished rows'
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: pip install -e '.[postgres,dev]'
-      - run: pytest tests/test_coordinate_recovery.py -q
+      - run: pytest tests/test_coordinate_recovery.py tests/test_fl_bcis_recovery.py tests/test_md_labor_recovery.py -q
       - name: Frozen-cohort recovery with private provenance and budget tracking
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
