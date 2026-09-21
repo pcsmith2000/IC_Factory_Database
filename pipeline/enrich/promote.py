@@ -64,9 +64,12 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
 
     asserts = _db.fetch_assertions(db, release_tag)
     unfiltered_rows, _ = build([dict(a) for a in asserts], rules)
-    # Gate E11: an assertion carried from another release is kept only when that release named
-    # the same plant under this id as the current release does. See pipeline/enrich/identity.py.
-    asserts, carried_withheld, unjudged = identity.split_carried(asserts, release_tag)
+    # Gate E11: cross-release carry-over is by IDENTITY, not by id. An assertion from an earlier
+    # release is read under the current facility that has the (name, city, state) its own release
+    # gave its id — the plant it was about — and withheld when no current facility has it.
+    # See pipeline/enrich/identity.py.
+    asserts, carried_withheld, carry_counts = identity.carry_by_identity(asserts, release_tag)
+    unjudged = sum(1 for w in carried_withheld if w.get('reason') == 'no_identity_in_that_release')
     rows, conflicts = build(asserts, rules)
     # Gate E10: a coordinate carried onto a facility must lie in that facility's state. Assertions
     # travel across releases by facility id, and when ids were issued by diverging registries the
@@ -103,6 +106,8 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
            "carried_withheld_by_field": _count_by(carried_withheld, 'field'),
            "carried_withheld_by_source": _count_by(carried_withheld, 'source'),
            "carried_unjudged_no_name_in_release": unjudged,
+           "carried_withheld_by_reason": _count_by(carried_withheld, 'reason'),
+           **carry_counts,
            "carried_withheld": carried_withheld,
            "coordinates_withheld_out_of_state": len(quarantined),
            "coordinates_withheld_by_source": _count_by(quarantined, 'source'),

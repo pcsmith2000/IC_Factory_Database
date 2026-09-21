@@ -63,3 +63,28 @@ def test_e11_withholds_assertions_carried_from_a_release_that_named_another_plan
     assert unjudged == 1
     assert ('IC-1', 'address') in {(k['facility_id'], k['field']) for k in kept}
     assert ('IC-2', 'lat_lon') in {(k['facility_id'], k['field']) for k in kept}
+
+
+def test_carry_over_is_by_identity_not_by_id():
+    from pipeline.enrich.identity import carry_by_identity
+    cur = 'rel.now'; old = 'rel.then'
+    def row(fid, field, value, tag, src='x'): return {'facility_id': fid, 'field': field, 'value': value, 'release_tag': tag, 'source_id': src}
+    a = [row('IC-95293', 'name', 'Ladabuild', cur), row('IC-95293', 'city', 'GRAND JUNCTION', cur), row('IC-95293', 'state', 'CO', cur),
+         row('IC-95295', 'name', 'Blueprint Robotics - Baltimore', cur), row('IC-95295', 'city', 'Baltimore', cur), row('IC-95295', 'state', 'MD', cur),
+         # in the old release IC-95293 WAS Blueprint Robotics Baltimore, and its address and rooftop were written under that id
+         row('IC-95293', 'name', 'Blueprint Robotics - Baltimore', old), row('IC-95293', 'city', 'BALTIMORE', old), row('IC-95293', 'state', 'MD', old),
+         row('IC-95293', 'address', '1500 Broening Hwy', old, 'tako_ai_search'), row('IC-95293', 'lat_lon', '39.27,-76.54', old, 'geocode:geocodio'),
+         # a plant that kept its id
+         row('IC-1', 'name', 'Same Plant', cur), row('IC-1', 'city', 'X', cur), row('IC-1', 'state', 'TX', cur),
+         row('IC-1', 'name', 'SAME PLANT', old), row('IC-1', 'city', 'x', old), row('IC-1', 'state', 'tx', old), row('IC-1', 'address', '1 Main St', old, 'enrich:locate'),
+         # a plant the current release no longer contains
+         row('IC-9', 'name', 'Gone Plant', old), row('IC-9', 'city', 'Y', old), row('IC-9', 'state', 'OK', old), row('IC-9', 'lat_lon', '2,2', old, 'geocode:geocodio')]
+    kept, withheld, counts = carry_by_identity(a, cur)
+    by = {(k['facility_id'], k['field'], k['value']) for k in kept}
+    assert ('IC-95295', 'address', '1500 Broening Hwy') in by and ('IC-95295', 'lat_lon', '39.27,-76.54') in by
+    assert not any(k['facility_id'] == 'IC-95293' and k['field'] in ('address', 'lat_lon') for k in kept)
+    assert ('IC-1', 'address', '1 Main St') in by
+    assert {(w['facility_id'], w['field']) for w in withheld if w['field'] == 'lat_lon'} == {('IC-9', 'lat_lon')}
+    assert counts['carried_rekeyed_by_identity'] == 5 and counts['carried_same_id_same_plant'] == 4
+    moved = [k for k in kept if k.get('carried_from_facility_id') == 'IC-95293']
+    assert all(k['facility_id'] == 'IC-95295' for k in moved) and len(moved) == 5

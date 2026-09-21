@@ -178,9 +178,9 @@ def e11_carried_assertions_name_the_same_plant(withheld: list[dict], unjudged: i
     holds no assertion known to belong to a different plant; the count says how many it withheld."""
     facilities = len({w['facility_id'] for w in withheld})
     return GateResult("E11", True,
-                      (f"{len(withheld)} carried assertions on {facilities} facilities named a different plant and were withheld"
-                       if withheld else "every carried assertion names the plant the current release names")
-                      + (f"; {unjudged} carried from a release with no name to judge by" if unjudged else ""))
+                      (f"{len(withheld)} carried assertions on {facilities} ids had no current facility with their plant's identity and were withheld"
+                       if withheld else "every carried assertion was read under the facility that holds its plant's identity")
+                      + (f"; {unjudged} carried from a release that asserted no identity" if unjudged else ""))
 
 
 def run_promote(before: dict[str, int], after: dict[str, int],
