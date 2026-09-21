@@ -1,0 +1,113 @@
+# ADL's capability taxonomy: what a facility MAKES, as against whether it belongs here at all.
+#
+# Layer 3 answers the second question and its vocabulary stays where it is — eight coarse values,
+# a frozen prompt, a 60-seed gate, and a hash inside the release tag. This file is the first
+# question, read by enrichment stage 15, and it is a file rather than a constant so a leaf can be
+# added, renamed or re-grouped without touching code or moving that hash.
+#
+# TWO LEVELS, MEASURED DIFFERENTLY. ADL's 218 labelled plants are the only ground truth there is.
+# By group they support a real evaluation — Other 108, Modular 50, Panel 43, Mass Timber 10.
+# By leaf they mostly do not: four leaves have no labelled example at all and seven have fewer
+# than ten. So `group` carries a measured accuracy and `leaf` is reported per class with its n.
+# A leaf with three examples cannot be averaged into a headline number honestly.
+#
+# `aliases`  spellings seen in the wild, matched case- and punctuation-insensitively. ADL's own
+#            files write "Wood Structural Components (trusses etc)" where this list writes
+#            "(Trusses, etc.)", and both must resolve to one leaf or the eval scores a typo.
+# `signals`  words that, in a source's product or certification text, point at this leaf. They are
+#            evidence for the model and for an audit, NOT a rule engine: the classifier weighs
+#            them against the whole record. Where a source states the product outright — APA's
+#            `product_types: CLT` — the signal IS the answer and the model should say so.
+# `legacy`   the Layer 3 product_type values that land in this group, so the two vocabularies can
+#            be reconciled and the older one is not silently dropped.
+
+version: 1
+source: ADL capability taxonomy, supplied 2026-09-21
+
+groups:
+  - name: Modular
+    legacy: [volumetric, hud_code]
+    leaves:
+      - name: Wood Volumetric Modular
+        aliases: [wood volumetric, wood modular, timber volumetric modular]
+        signals: [volumetric, modular, wood frame, stick built modular]
+      - name: Steel Volumetric Modular
+        aliases: [steel volumetric, steel modular]
+        signals: [steel volumetric, steel modular, container, shipping container]
+      - name: HUD Modular
+        aliases: [hud code, hud-code, manufactured housing, mobile home]
+        signals: [hud, manufactured home, mobile home, hud code]
+      - name: Relocatable Modular
+        aliases: [relocatable, temporary modular, mobile modular]
+        signals: [relocatable, temporary buildings, mobile offices, modular space, lease fleet]
+
+  - name: Panel
+    legacy: [panel, precast]
+    leaves:
+      - name: Open Wood Panel
+        aliases: [open wall panel, open panel, wood wall panel]
+        signals: [wall panel, open panel, framing panel]
+      - name: Closed Wood Panel
+        aliases: [closed wall panel, closed panel]
+        signals: [closed panel, insulated wall panel, finished panel]
+      - name: Open LGS Panel
+        aliases: [open light gauge steel panel, open cfs panel]
+        signals: [light gauge steel panel, cold formed steel panel, cfs panel]
+      - name: Closed LGS Panel
+        aliases: [closed light gauge steel panel, closed cfs panel]
+        signals: [closed lgs, insulated steel panel]
+      - name: Precast Concrete Panel
+        aliases: [precast concrete panel, precast, precast concrete]
+        signals: [precast, prestressed, hollowcore, double tee, architectural precast, concrete panel]
+      - name: SIP / ICF (Other Composite Panel)
+        aliases: [sip, icf, structural insulated panel, insulated concrete form, other composite panel]
+        signals: [sip, structural insulated panel, icf, insulated concrete form, composite panel]
+      - name: Exterior Envelope Panels
+        aliases: [envelope panel, facade panel, curtain wall, exterior envelope]
+        signals: [curtain wall, facade, envelope, cladding, rainscreen, window wall]
+
+  - name: Mass Timber
+    legacy: [mass_timber]
+    leaves:
+      - name: Mass Timber (CLT)
+        aliases: [clt, cross laminated timber, mass timber, glulam, dlt, nlt]
+        signals: [clt, cross laminated, glulam, glue laminated, mass timber, dowel laminated, nail laminated]
+
+  - name: Pods
+    legacy: []
+    leaves:
+      - name: Bathroom Pods
+        aliases: [bathroom pod, pod]
+        signals: [bathroom pod, prefabricated bathroom, pod]
+      - name: Specialty Volumetric MEP (Skids, Racks)
+        aliases: [mep skid, skid, rack, specialty volumetric mep, "specialty volumetric mep (skids, skids, racks)"]
+        signals: [skid, mep rack, headwall, mechanical room, plant room, utility module]
+
+  - name: 3D Printing
+    legacy: []
+    leaves:
+      - name: 3D Printing
+        aliases: [3d printed, additive construction, printed concrete]
+        signals: [3d print, additive manufacturing, printed structure]
+
+  - name: Other
+    # Components rather than enclosures. The largest group in the labelled set by some way, which
+    # is what an industry mostly made of truss plants looks like.
+    legacy: [truss_component, other]
+    leaves:
+      - name: Wood Structural Components (Trusses, etc.)
+        aliases: ["wood structural components (trusses etc)", wood structural components, truss, trusses]
+        signals: [truss, roof truss, floor truss, i-joist, joist, rim board, scl, lvl, engineered wood, plywood, osb]
+      - name: Hybrid Structural Components
+        aliases: [hybrid structural, hybrid components]
+        signals: [hybrid, steel and wood, composite structural]
+      - name: Light Gauge Steel Structural Components
+        aliases: [lgs structural components, light gauge steel, cold formed steel components, cfs]
+        signals: [light gauge steel, cold formed steel, steel framing, steel stud, cfs, joist]
+
+# Layer 3's `metal_building` — 958 facilities, 25% of everything it classified — has no leaf.
+# A pre-engineered metal building is an enclosure and not a component, so it fits none of the
+# three Other leaves, and it is not volumetric, panelised, mass timber, a pod or printed. It is
+# left unmapped ON PURPOSE rather than forced into Light Gauge Steel Structural Components: that
+# would silently reclassify a quarter of the database on a guess. Awaiting a definitional call.
+unmapped_legacy: [metal_building]
