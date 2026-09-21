@@ -143,15 +143,20 @@ def execute(mode,pass_id,row_limit):
         keys=[cache.geocode_key(q) for q in queries]
         saved=db.execute("SELECT * FROM cache_lookup WHERE cache_key=ANY(%s) AND provider='geocodio'",(keys,)).fetchall()
         cached={r['cache_key']:r for r in saved}
+    scanned=len(selected)
+    if mode=='cached':
+        kept=[(r,q,k) for r,q,k in zip(selected,queries,keys) if k in cached]
+        selected=[x[0] for x in kept];queries=[x[1] for x in kept];keys=[x[2] for x in kept]
     fresh=len({cache.geocode_key(q) for q in queries}-set(cached))
     summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
                  eligible_remaining=eligible_count,selected=len(selected),blocked=blocked,
+                 scanned_for_cached=scanned if mode=='cached' else None,
                  cached_unique_queries=len(set(keys)&set(cached)),estimated_new_lookups=fresh,
                  estimated_api_upper_bound_usd=round(fresh*.001,3),budget_ceiling_usd=float(campaign['api_ceiling']),
                  budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
     print(json.dumps(summary),flush=True)
     outcomes=Counter();inserted=0;calls=0
-    if mode=='geocode':
+    if mode in ('geocode','cached'):
         if fresh and not os.environ.get('GEOCODIO_API_KEY'):raise RuntimeError('Geocodio key absent; no calls made')
         for r,q,k in zip(selected,queries,keys):
             is_cached=k in cached
@@ -189,6 +194,7 @@ def execute(mode,pass_id,row_limit):
     if outcomes.get('error'):raise RuntimeError('Some rows failed; private attempt records retained for diagnosis')
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
-    if not 1<=a.limit<=100:raise ValueError('Batches are limited to100 rows')
+    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
+    maximum=2000 if a.mode=='cached' else 100
+    if not 1<=a.limit<=maximum:raise ValueError(f'{a.mode} batches are limited to {maximum} rows')
     execute(a.mode,a.pass_id,a.limit)

@@ -8,13 +8,13 @@ on:
     inputs:
       mode:
         type: choice
-        options: [plan, geocode]
+        options: [plan, cached, geocode]
         default: plan
       pass_id:
         description: 'Pass identifier; repeats resume unfinished rows'
         default: '1'
       row_limit:
-        description: 'Maximum100 frozen-cohort rows per batch'
+        description: 'Maximum rows (100 plan/geocode; 2000 cached-only)'
         default: '100'
 permissions:
   contents: read
