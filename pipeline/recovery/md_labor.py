@@ -21,6 +21,7 @@ from pipeline.sources._common import http_get,pdf_lines
 
 URL='https://labor.maryland.gov/labor/build/buildactivemanu.pdf'
 SOURCE='md_labor_active_manufacturers'
+US_STATES=set('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split())
 
 
 def norm(value):
@@ -66,6 +67,17 @@ def unique_addresses(rows: list[dict]) -> dict[str,dict]:
     grouped={}
     for row in rows:grouped.setdefault(norm(row['name']),{})[norm(row['address'])]=row
     return {name:next(iter(items.values())) for name,items in grouped.items() if name and len(items)==1}
+
+
+def crossmatch_candidates(rows,matches,golden_counts,limit):
+    out=[]
+    for row in rows:
+        b=row['baseline'];key=norm(b.get('name'))
+        if (key in matches and golden_counts[key]==1 and str(b.get('city') or '').strip()
+                and str(b.get('state') or '').upper() in US_STATES
+                and not re.match(r'^\d+[A-Za-z]?\s',str(b.get('address') or '').strip())):
+            out.append(row)
+    return out[:limit]
 
 
 def _append_address(db,fid,release,address,workflow):
@@ -128,5 +140,48 @@ def recover(db,campaign,pass_id,limit,workflow):
         outcomes[outcome]+=1
     return {'official_pdf_rows':len(official),'unique_official_name_addresses':len(matches),
             'selected':len(rows),'addresses_recovered':recovered,
+            'address_assertions_inserted':assertions,'outcomes':dict(outcomes),
+            'new_api_calls':0,'external_service':'official Maryland Department of Labor public registry'}
+
+
+def recover_crossmatch(db,campaign,pass_id,limit,workflow):
+    """Supply a missing street when both datasets contain one unique plant name.
+
+    Locality always comes from the frozen cited row.  To avoid attaching a
+    company-level address to the wrong branch, the name must occur exactly once
+    across the whole golden table as well as once in the official Maryland PDF.
+    """
+    from psycopg.types.json import Jsonb
+    with tempfile.TemporaryDirectory(prefix='md-labor-crossmatch-') as temp:
+        pdf=http_get(URL,Path(temp),'buildactivemanu.pdf',timeout=60,retries=2)
+        official=parse_pdf(pdf)
+    matches=unique_addresses(official)
+    golden_counts=Counter(norm(r['name']) for r in db.execute('SELECT name FROM golden_facility').fetchall())
+    raw=db.execute("""SELECT c.facility_id,c.baseline,g.release_tag
+                      FROM coordinate_recovery_rows c
+                      JOIN golden_facility g ON g.facility_key=c.facility_id
+                      WHERE c.campaign_id=%s AND c.status='unresolved' AND c.recovered_address IS NULL
+                        AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts x
+                          WHERE x.campaign_id=c.campaign_id AND x.facility_id=c.facility_id
+                            AND x.pass_id=%s AND x.stage='md_labor_crossmatch')
+                      ORDER BY c.facility_id""",(campaign,pass_id)).fetchall()
+    rows=crossmatch_candidates(raw,matches,golden_counts,limit);outcomes=Counter();assertions=0
+    for row in rows:
+        key=norm(row['baseline'].get('name'));address=matches[key]['address']
+        db.execute("""INSERT INTO coordinate_recovery_attempts
+                   (campaign_id,facility_id,pass_id,stage,query_key,request,result,outcome,reserved_usd,run_url,completed_at)
+                   VALUES(%s,%s,%s,'md_labor_crossmatch',%s,%s,%s,'recovered_unique_name_plant_street',0,%s,now())
+                   ON CONFLICT(campaign_id,facility_id,pass_id,stage) DO NOTHING""",
+                   (campaign,row['facility_id'],pass_id,key,Jsonb({'source_url':URL}),
+                    Jsonb({'address':address}),workflow))
+        assertions+=_append_address(db,row['facility_id'],row['release_tag'],address,workflow)
+        evidence={'source_key':SOURCE,'source_url':URL,'source_document':'buildactivemanu.pdf',
+                  'match_method':'unique_exact_normalized_name_across_golden','workflow':workflow,
+                  'fields':{'address':address}}
+        db.execute('UPDATE coordinate_recovery_rows SET recovered_address=%s,evidence=evidence || %s WHERE campaign_id=%s AND facility_id=%s',
+                   (Jsonb({'address':address}),Jsonb([evidence]),campaign,row['facility_id']))
+        outcomes['recovered_unique_name_plant_street']+=1
+    return {'official_pdf_rows':len(official),'unique_official_name_addresses':len(matches),
+            'candidate_rows_scanned':len(raw),'selected':len(rows),'addresses_recovered':len(rows),
             'address_assertions_inserted':assertions,'outcomes':dict(outcomes),
             'new_api_calls':0,'external_service':'official Maryland Department of Labor public registry'}

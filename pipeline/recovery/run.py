@@ -253,11 +253,13 @@ def execute(mode,pass_id,row_limit):
     from psycopg.types.json import Jsonb
     with connect() as db:
         campaign=freeze(db)
-        if mode in ('fl_bcis','md_labor'):
+        if mode in ('fl_bcis','md_labor','md_labor_crossmatch'):
             if mode=='fl_bcis':
                 from pipeline.recovery.fl_bcis import recover
-            else:
+            elif mode=='md_labor':
                 from pipeline.recovery.md_labor import recover
+            else:
+                from pipeline.recovery.md_labor import recover_crossmatch as recover
             summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
                          budget_ceiling_usd=float(campaign['api_ceiling']),
                          budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
@@ -333,7 +335,7 @@ def execute(mode,pass_id,row_limit):
     if outcomes.get('error'):raise RuntimeError('Some rows failed; private attempt records retained for diagnosis')
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','historical_cached','fl_bcis','md_labor','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','historical_cached','fl_bcis','md_labor','md_labor_crossmatch','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
     maximum=2000 if a.mode in ('cached','historical_cached') else 100
     if not 1<=a.limit<=maximum:raise ValueError(f'{a.mode} batches are limited to {maximum} rows')
     execute(a.mode,a.pass_id,a.limit)

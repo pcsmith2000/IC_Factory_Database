@@ -1,4 +1,5 @@
-from pipeline.recovery.md_labor import parse_lines,unique_addresses
+from collections import Counter
+from pipeline.recovery.md_labor import crossmatch_candidates,parse_lines,unique_addresses
 
 
 def test_visual_pdf_table_extracts_only_physical_streets():
@@ -20,3 +21,13 @@ def test_ambiguous_names_are_not_matched():
     rows=[{'name':'A','address':'1 Main St'},{'name':'A','address':'2 Main St'},
           {'name':'B','address':'3 Plant Rd'},{'name':'B','address':'3 Plant Rd'}]
     assert unique_addresses(rows)=={'b':{'name':'B','address':'3 Plant Rd'}}
+
+
+def test_crossmatch_requires_unique_name_locality_and_missing_street():
+    matches={'acme':{'name':'Acme','address':'1 Plant Rd'},'multi':{'name':'Multi','address':'2 Mill Rd'}}
+    rows=[
+        {'id':1,'baseline':{'name':'Acme','address':'','city':'Erie','state':'PA'}},
+        {'id':2,'baseline':{'name':'Multi','address':'','city':'York','state':'PA'}},
+        {'id':3,'baseline':{'name':'Acme','address':'9 Existing St','city':'Erie','state':'PA'}},
+        {'id':4,'baseline':{'name':'Acme','address':'','city':'','state':'PA'}}]
+    assert crossmatch_candidates(rows,matches,Counter(acme=1,multi=2),10)==[rows[0]]
