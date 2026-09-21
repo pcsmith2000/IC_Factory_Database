@@ -26,8 +26,9 @@
 # `legacy`       the Layer 3 product_type values that land in this group, so the two vocabularies
 #                can be reconciled and the older one is not silently dropped.
 
-version: 2
-source: ADL capability taxonomy with definitions, supplied 2026-09-21
+version: 3
+source: ADL capability taxonomy with definitions, supplied 2026-09-21;
+        Pre-Engineered Metal Building added on ADL's scope ruling, 2026-09-21
 
 groups:
   - name: Modular
@@ -158,9 +159,12 @@ groups:
         signals: [3d print, additive manufacturing, printed structure, additive construction]
 
   - name: Other
-    # Components rather than enclosures. The largest group in the labelled set by some way, which
-    # is what an industry mostly made of truss plants looks like.
-    legacy: [truss_component, other]
+    # Mostly components rather than enclosures — the largest group in the labelled set by some
+    # way, which is what an industry mostly made of truss plants looks like. Pre-Engineered Metal
+    # Building is the exception and sits here because it is a residual, not because it is a
+    # component: it is a whole enclosure, and a seventh group for one leaf ADL never labelled
+    # would distort the shape of a taxonomy that is otherwise theirs.
+    legacy: [truss_component, other, metal_building]
     leaves:
       - name: Wood Structural Components (Trusses, etc.)
         description: >-
@@ -181,6 +185,22 @@ groups:
                   cfs components, cold-formed steel framing, cold formed steel components,
                   steel trusses, light gauge steel, cfs]
         signals: [light gauge steel, cold formed steel, steel framing, steel stud, cfs, steel joist]
+      - name: Pre-Engineered Metal Building
+        description: >-
+          Factory-fabricated metal building systems shipped as a kit of primary frames, secondary
+          framing and metal panels, erected on site into a complete enclosure. Can also be called
+          PEMB, metal building systems, steel buildings, pre-engineered steel buildings.
+        # ADL supplied no labelled example, so this leaf reports "too few to measure" by
+        # construction and cannot be scored. It is here because ADL ruled PEMB in scope on
+        # 2026-09-21, not because the eval asked for it.
+        aliases: [pemb, pre engineered metal building, pre-engineered steel building,
+                  metal building system, metal building systems, steel buildings, metal buildings]
+        # "building systems" is deliberately NOT a signal. It is what a PEMB manufacturer calls
+        # itself and also what a modular builder calls itself; as a signal it took three Wood
+        # Volumetric Modular plants off the floor. Layer 3's prompt makes the same point about
+        # trading words.
+        signals: [metal building, pre engineered, preengineered, steel building,
+                  metal building systems, rigid frame, purlin, girt]
       - name: Hybrid Structural Components
         description: >-
           Factory-fabricated structural components combining multiple framing materials or systems
@@ -189,19 +209,17 @@ groups:
                   hybrid assemblies, hybrid structural]
         signals: [hybrid, steel and wood, composite structural, mixed material]
 
-# Layer 3's `metal_building` has no leaf, and the sample says that is correct rather than a gap:
-# of 572 such facilities in the r-N release, 452 carry NAICS 332311 (prefabricated metal building
-# and component manufacturing) and 86 carry 332312 (fabricated structural metal). The names are
-# Garco Building Systems, BlueScope Prefab, Central States Manufacturing, Erect-A-Tube — flat-pack
-# frame-and-panel kits erected on site. Exactly two of the 572 names suggest a module at all.
+# Layer 3's `metal_building` is now a leaf of its own, on ADL's ruling of 2026-09-21 that a
+# pre-engineered metal building plant IS an IC factory. It is not folded into Light Gauge Steel
+# Structural Components and it is not volumetric, and the sample is why: of 572 such facilities,
+# 452 carry NAICS 332311 and 86 carry 332312, named Garco Building Systems, BlueScope Prefab,
+# Central States Manufacturing, Erect-A-Tube. Exactly two of the 572 names suggest a module.
+# A PEMB ships flat — hot-rolled primary frames, cold-formed purlins and girts, metal panels —
+# and is erected on site, so it fails ADL's own test for Steel Volumetric Modular ("three-
+# dimensional factory-built modules ... shipped to site for assembly").
 #
-# So a pre-engineered metal building is NOT volumetric under ADL's own definition ("three-
-# dimensional factory-built modules ... shipped to site for assembly"), it is not light-gauge (the
-# primary frame is hot-rolled structural steel), and it is not hybrid (it is one material). Parts
-# of the bucket DO belong to existing leaves and stage 15 will move them on the evidence, not on
-# this code: steel-stud plants such as SCAFCO to Light Gauge Steel Structural Components, and
-# metal roof/wall panel plants such as Central States to Exterior Envelope Panels.
-#
-# What is left is the whole-building PEMB plant, and whether that is an IC factory at all is a
-# scope question for ADL, not a classification question. Left unmapped until they answer.
-unmapped_legacy: [metal_building]
+# The legacy bucket is NOT a mapping to this leaf. `legacy` reconciles vocabularies at the GROUP
+# level; parts of the bucket belong to other leaves entirely and stage 15 moves them on the
+# evidence — steel-stud plants such as SCAFCO (332322) to Light Gauge Steel Structural
+# Components, metal roof and wall panel plants such as Central States to Exterior Envelope Panels.
+unmapped_legacy: []

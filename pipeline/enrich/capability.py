@@ -60,14 +60,23 @@ class Taxonomy:
                     self.by_alias[norm(a)] = nm
         self.unmapped_legacy = list(doc.get("unmapped_legacy") or [])
 
-    def resolve(self, text: str) -> str | None:
-        """A written capability -> one of our leaves, or None. Used for ADL's labels and for the
-        model's answer, so a spelling difference never becomes a disagreement."""
+    def resolve(self, text: str, exact: bool = False) -> str | None:
+        """A written capability -> one of our leaves, or None.
+
+        Two callers, two standards. ADL's LABELS are prose written by people over several years —
+        "Wood Structural Components (trusses etc)", "MgO Panel" — and a spelling difference there
+        must never be scored as a disagreement, so a contained alias is enough. The MODEL'S ANSWER
+        is held to `exact`: it was told to copy a leaf name from the prompt, and containment would
+        quietly accept an invented one. "Steel Buildings Division" contains "steel buildings" and
+        would otherwise land in Pre-Engineered Metal Building on the strength of a substring.
+        """
         n = norm(text)
         if not n:
             return None
         if n in self.by_alias:
             return self.by_alias[n]
+        if exact:
+            return None
         # a contained alias, longest first, so "closed wood panel" beats "wood"
         for alias in sorted(self.by_alias, key=len, reverse=True):
             if len(alias) >= 6 and alias in n:
@@ -91,13 +100,12 @@ def evidence(fac: dict) -> str:
             bits.append(f"{label}: {v}")
     notes = (fac.get("notes") or "").strip()
     if notes:
-        # the product and certification text, which is the part that actually names a product
-        keep = [p.strip() for p in notes.split("|")
-                if re.match(r"\s*(product_types|certification_program|certification_categories"
-                            r"|evidence_text|source)\s*:", p)]
-        if keep:
-            bits.append(" | ".join(keep)[:600])
-    return " ; ".join(bits)[:900]
+        # Already merged and already stripped of run accounting by evidence_index. Which SOURCE
+        # said it is part of the evidence and stays attached: a row that is in SIPA's member list
+        # is a structural-insulated-panel plant on that fact alone, and MBMA's roster is the
+        # nearest thing to a PEMB census that exists.
+        bits.append(notes[:700])
+    return " ; ".join(bits)[:1100]
 
 
 def signal_guess(tx: Taxonomy, fac: dict) -> tuple[str | None, str]:
@@ -182,3 +190,265 @@ def evaluate(tx: Taxonomy, labelled: list[dict], predict) -> dict:
         "top_confusions": [{"truth": t, "predicted": p, "n": n}
                            for (t, p), n in confusion.most_common(10)],
     }
+
+
+# ---------------------------------------------------------------- evidence, from contract rows
+# The product text this stage exists for is in the CONTRACT rows, not in golden. `notes` carries
+# "product_types: CLT", "certification_program: PFS TECO client listing: modular" and the like for
+# 19,000-odd rows, and golden has no notes column — the warehouse keeps a row's identity in
+# ref_source_row and drops its notes. So the evidence is assembled from build/normalised/*.csv by
+# the row_hash that every assertion already cites, which is also what keeps it attributable: the
+# hash in the citation is the row a reader can go and read.
+# A note segment that opens with a number, or that says what was skipped, is the source's own
+# run accounting — "135 kept of 5454 cards across 13 state page(s)" — written once onto the first
+# row of the source. It says nothing about the plant on that row, so it is dropped. Everything
+# else is kept verbatim: "BFS branch type MF (manufacturing); site kind on page: Truss" and
+# "Missouri PSC registered manufacturer, HUD-code manufactured homes" ARE the product evidence,
+# and an earlier version of this filter threw both away looking for a `product_types:` key that
+# these sources never write.
+RUN_ACCOUNTING = re.compile(r"^\s*\d|\bskipped\b", re.I)
+
+
+def evidence_index(build: Path) -> dict[str, dict]:
+    """facility_id -> the merged contract evidence for it.
+
+    20% of facilities merge more than one source, so a facility often holds several sources'
+    product text at once where each row held one. That is the whole reason this stage reads the
+    merged record instead of re-asking Layer 3's question per row.
+    """
+    import csv
+    by_hash: dict[str, dict] = {}
+    for f in sorted((build / "normalised").glob("*.csv")):
+        with f.open(newline="", encoding="utf-8") as fh:
+            for r in csv.DictReader(fh):
+                h = (r.get("row_hash") or "").strip()
+                if h:
+                    by_hash[h] = r
+    out: dict[str, dict] = {}
+    seen: dict[str, set] = {}
+    with (build / "assertions.csv").open(newline="", encoding="utf-8") as fh:
+        for a in csv.DictReader(fh):
+            fid, h = a.get("facility_id"), (a.get("row_hash") or "").strip()
+            row = by_hash.get(h)
+            if not fid or row is None or h in seen.setdefault(fid, set()):
+                continue
+            seen[fid].add(h)
+            acc = out.setdefault(fid, {"notes": [], "website": "", "sq_ft": "",
+                                       "naics": "", "sources": []})
+            note = (row.get("notes") or "").strip()
+            keep = [p.strip() for p in note.split("|")
+                    if p.strip() and not RUN_ACCOUNTING.search(p.strip())]
+            if keep:
+                acc["notes"].append(f"{row.get('source_id','')}: " + " | ".join(keep))
+            for k, col in (("website", "website"), ("sq_ft", "sq_ft"), ("naics", "naics_verbatim")):
+                if not acc[k] and (row.get(col) or "").strip():
+                    acc[k] = row[col].strip()
+            if row.get("source_id"):
+                acc["sources"].append(row["source_id"])
+    for fid, acc in out.items():
+        acc["notes"] = " | ".join(acc["notes"])[:900]
+        acc["sources"] = ",".join(sorted(set(acc["sources"])))
+    return out
+
+
+# ---------------------------------------------------------------- the model
+# Layer 3's prompt is frozen and its hash is in every release tag. This one is BUILT FROM THE
+# TAXONOMY at call time and hashed separately, so adding a leaf changes this stage's prompt and
+# nothing else — which is the whole reason the taxonomy is a file.
+MODEL = "inception/mercury-2.5"
+TEMPERATURE = 0.0
+BATCH = 25
+MAX_ATTEMPTS = 3
+
+
+class BatchError(RuntimeError):
+    """The batch came back unusable. The rows are re-asked; the run is not abandoned."""
+
+
+def prompt_for(tx: Taxonomy) -> str:
+    """The system prompt, assembled from the taxonomy. Every leaf appears with ADL's definition,
+    because the hard calls in this taxonomy are definitional — Open vs Closed is about whether a
+    face is enclosed, panel vs module is about whether it arrives three-dimensional — and a list
+    of names alone makes the model guess at exactly those boundaries."""
+    lines = ["You classify US industrialized-construction factories by WHAT THEY MAKE.",
+             "",
+             "The question is not whether the plant belongs in the database — it already does.",
+             "The question is which single capability below best describes its output.",
+             ""]
+    for g in tx.groups:
+        lines.append(f"## {g}")
+        for leaf in tx.leaves:
+            if tx.group_of[leaf] == g:
+                lines.append(f"- **{leaf}** — {tx.describe[leaf]}")
+        lines.append("")
+    lines += [
+        "RULES",
+        "1. Answer with a leaf name copied EXACTLY as written above. Nothing else is a valid answer.",
+        "2. Choose on the evidence given. The source a facility came from is evidence: a plant on "
+        "SIPA's member list makes structural insulated panels, one on MBMA's roster makes "
+        "pre-engineered metal buildings, one on a HUD-code state register makes HUD Modular.",
+        "3. A trading word — Supply, Products, Industries, Building Systems — describes how a "
+        "company sells, not what it makes. Never decide on one alone.",
+        "4. Volumetric means the plant ships three-dimensional modules. A kit of frames and panels "
+        "erected on site is NOT volumetric, however large the building.",
+        "5. Where the evidence genuinely does not say, answer with the leaf the NAICS code implies "
+        "and give yourself a low confidence. Say so in the reason. A confident wrong answer costs "
+        "more than an honest uncertain one.",
+    ]
+    return "\n".join(lines)
+
+
+def prompt_hash(tx: Taxonomy) -> str:
+    import hashlib
+    return hashlib.sha256(prompt_for(tx).encode()).hexdigest()[:8]
+
+
+def _call_once(tx: Taxonomy, facs: list[dict], model: str, temperature: float,
+               repair: bool, usage_out: dict | None) -> dict[int, dict]:
+    """One model call. Returns {index into facs: answer}, validated against the taxonomy.
+
+    An answer outside the taxonomy is DROPPED, not mapped to a nearest leaf. A stage whose gate
+    is "the value is a member of the taxonomy" cannot also quietly coerce values into it.
+    """
+    import json
+    from .. import ai_client_and_model
+    client, model_id, _ = ai_client_and_model(model)
+    payload = [{"i": i, "name": f.get("name", ""), "evidence": evidence(f)}
+               for i, f in enumerate(facs)]
+    user = ("Classify each facility. Return a JSON array of {i, leaf, confidence, reason} with "
+            "leaf copied exactly from the list, confidence 0-1, reason <= 15 words.\n"
+            "Return strict JSON. Every key and every string value must be wrapped in double "
+            "quotes. Do not use a double quote inside a value.\n\n" + json.dumps(payload))
+    if repair:
+        user = ("Your previous answer was not valid JSON. Return ONLY the array.\n\n" + user)
+    msg = client.messages.create(model=model_id, max_tokens=min(32000, 80 * len(facs) + 1000),
+                                 extra_body={"temperature": temperature},
+                                 system=prompt_for(tx),
+                                 messages=[{"role": "user", "content": user}])
+    if usage_out is not None and getattr(msg, "usage", None):
+        usage_out["input_tokens"] = usage_out.get("input_tokens", 0) + msg.usage.input_tokens
+        usage_out["output_tokens"] = usage_out.get("output_tokens", 0) + msg.usage.output_tokens
+    text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
+    start, end = text.find("["), text.rfind("]")
+    if start < 0 or end < start:
+        raise BatchError("no JSON array in the answer")
+    try:
+        got = json.loads(text[start:end + 1])
+    except json.JSONDecodeError as e:
+        raise BatchError(f"invalid JSON: {e}") from None
+    out = {}
+    for o in got if isinstance(got, list) else []:
+        try:
+            i = int(o["i"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        leaf = tx.resolve(str(o.get("leaf", "")), exact=True)
+        if leaf is None or not 0 <= i < len(facs):
+            continue
+        try:
+            conf = max(0.0, min(1.0, float(o.get("confidence", 0.5))))
+        except (TypeError, ValueError):
+            conf = 0.5
+        out[i] = {"leaf": leaf, "confidence": conf,
+                  "reason": str(o.get("reason", ""))[:160]}
+    return out
+
+
+def classify(tx: Taxonomy, facs: list[dict], model: str = MODEL,
+             temperature: float = TEMPERATURE, usage_out: dict | None = None,
+             stats: dict | None = None) -> dict[int, dict]:
+    """One batch, classified. Rows the model garbles are re-asked; a run is not abandoned for them.
+
+    Retries raise the temperature, because asking the same question at temperature 0 returns the
+    same broken answer — an identical retry is not a retry. Rows still unanswered after the last
+    attempt are RETURNED MISSING rather than filled from signal_guess: the floor is a yardstick
+    for the model, and silently substituting it would make the model's score include it.
+    """
+    answers: dict[int, dict] = {}
+    pending = list(range(len(facs)))
+    for attempt in range(MAX_ATTEMPTS):
+        if stats is not None and attempt:
+            stats["reasks"] = stats.get("reasks", 0) + 1
+        try:
+            got = _call_once(tx, [facs[i] for i in pending], model,
+                             temperature + 0.2 * attempt, bool(attempt), usage_out)
+        except BatchError:
+            if stats is not None:
+                stats["contract_errors"] = stats.get("contract_errors", 0) + 1
+            continue
+        for local, o in got.items():
+            answers[pending[local]] = o
+        pending = [i for i in range(len(facs)) if i not in answers]
+        if not pending:
+            break
+    if pending and stats is not None:
+        stats["unanswered"] = stats.get("unanswered", 0) + len(pending)
+    return answers
+
+
+# ---------------------------------------------------------------- eval entry point
+def labelled_from(build: Path, limit: int = 0) -> list[dict]:
+    """ADL's labelled facilities, with the contract evidence joined on.
+
+    Everything comes out of one build directory — golden.csv for the labels, normalised/*.csv and
+    assertions.csv for the evidence — so an eval is reproducible from a single artifact and does
+    not depend on the warehouse being reachable or unchanged.
+    """
+    import csv
+    idx = evidence_index(build)
+    out = []
+    with (build / "golden.csv").open(newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            if not (r.get("primary_capability") or "").strip():
+                continue
+            ev = idx.get(r.get("facility_id", ""), {})
+            out.append({**r, **{k: v for k, v in ev.items() if k in ("notes", "website", "sq_ft")}})
+    out.sort(key=lambda r: r["facility_id"])            # deterministic before any limit
+    return out[:limit] if limit else out
+
+
+def _main(argv: list[str] | None = None) -> int:
+    import argparse, json, time
+    ap = argparse.ArgumentParser(description="stage 15 — capability classification and its eval")
+    ap.add_argument("--build", default="build", type=Path)
+    ap.add_argument("--limit", type=int, default=0, help="first N labelled facilities, 0 = all")
+    ap.add_argument("--model", default=MODEL)
+    ap.add_argument("--batch", type=int, default=BATCH)
+    ap.add_argument("--floor-only", action="store_true", help="no model call, no spend")
+    ap.add_argument("--out", type=Path, default=None)
+    a = ap.parse_args(argv)
+
+    tx = load()
+    rows = labelled_from(a.build, a.limit)
+    report = {"taxonomy_version": tx.version, "leaves": len(tx.leaves),
+              "prompt_hash": prompt_hash(tx), "model": a.model,
+              "labelled": len(rows),
+              "with_product_text": sum(1 for r in rows if (r.get("notes") or "").strip()),
+              "floor": evaluate(tx, rows, lambda f: signal_guess(tx, f))}
+    if not a.floor_only:
+        answers: dict[str, dict] = {}
+        usage: dict = {}
+        stats: dict = {}
+        t0 = time.time()
+        for i in range(0, len(rows), a.batch):
+            chunk = rows[i:i + a.batch]
+            for local, o in classify(tx, chunk, a.model, usage_out=usage, stats=stats).items():
+                answers[chunk[local]["facility_id"]] = o
+        report["model_run"] = {
+            "answered": len(answers), "asked": len(rows), "seconds": round(time.time() - t0, 1),
+            "usage": usage, **stats,
+            # Unanswered rows are scored as wrong, not skipped. A model that answers half the
+            # batch confidently is not better than one that answers all of it.
+            "result": evaluate(tx, rows, lambda f: (
+                (answers.get(f["facility_id"], {}).get("leaf"),
+                 answers.get(f["facility_id"], {}).get("reason", "")))),
+        }
+    text = json.dumps(report, indent=2)
+    print(text)
+    if a.out:
+        a.out.write_text(text)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())

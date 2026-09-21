@@ -1,0 +1,113 @@
+# Stage 15 — what a facility MAKES, over ADL's capability taxonomy. Its own Action, deliberately.
+#
+# It is not part of the enrich.yml chain because it is the only stage whose input is a LAYERS 1-8
+# BUILD rather than the warehouse: the product text it classifies on — "BFS branch type MF
+# (manufacturing); site kind on page: Truss", "MBMA building systems member" — lives in the
+# contract rows, and the warehouse keeps a row's identity in ref_source_row without its notes.
+# So this reads the build artifact a pipeline-run produced, by run id, and nothing else.
+#
+# It also has a different failure mode from the other stages. Stage 13 either finds a coordinate
+# or does not; this one always returns an answer, and the only way to know whether the answer is
+# any good is to score it against ADL's labels. Every invocation therefore reports the model AND
+# the deterministic floor on the same rows. A number with nothing to beat is not a measurement.
+name: capability
+run-name: "Capability · ${{ inputs.model }} · ${{ inputs.limit }} rows"
+
+concurrency:
+  group: ic-capability
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: "pipeline-run id whose build- artifact holds golden.csv + normalised/"
+        required: true
+      limit:
+        description: "labelled facilities to score. 0 = all 218. Start small — this spends tokens."
+        default: "25"
+      model:
+        description: "gateway model id"
+        default: "inception/mercury-2.5"
+      batch:
+        description: "facilities per model call"
+        default: "25"
+      floor_only:
+        description: "deterministic floor only — no model call, no spend"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read                      # to read another run's artifact
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    # The eval is bounded by --limit, so a job running this long is stuck rather than busy.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e .
+
+      - name: Collect the build this eval scores
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ inputs.build_run_id }}
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .
+
+      - name: What is being scored
+        run: |
+          test -f build/golden.csv || { echo "::error::no build/golden.csv in that artifact"; exit 1; }
+          echo "golden rows      : $(( $(wc -l < build/golden.csv) - 1 ))"
+          echo "normalised files : $(ls build/normalised/*.csv 2>/dev/null | wc -l)"
+
+      - name: Classify and score
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+        run: |
+          python -m pipeline.enrich.capability \
+            --build build \
+            --limit "${{ inputs.limit }}" \
+            --model "${{ inputs.model }}" \
+            --batch "${{ inputs.batch }}" \
+            ${{ inputs.floor_only && '--floor-only' || '' }} \
+            --out capability-eval.json
+
+      - name: Headline
+        if: always()
+        run: |
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+          p = pathlib.Path("capability-eval.json")
+          if not p.exists():
+              print("### Capability eval\n\nNo report was written — the run failed before scoring.")
+              raise SystemExit(0)
+          r = json.loads(p.read_text())
+          print(f"### Capability eval — taxonomy v{r['taxonomy_version']}, "
+                f"{r['leaves']} leaves, prompt `{r['prompt_hash']}`\n")
+          print(f"{r['labelled']} labelled facilities, {r['with_product_text']} carrying product text\n")
+          print("| | group | leaf |")
+          print("|---|---|---|")
+          f = r["floor"]
+          print(f"| deterministic floor | {f['group_accuracy']} | {f['leaf_accuracy_overall']} |")
+          m = r.get("model_run")
+          if m:
+              g = m["result"]
+              print(f"| {r['model']} | {g['group_accuracy']} | {g['leaf_accuracy_overall']} |")
+              print(f"\nanswered {m['answered']}/{m['asked']} in {m['seconds']}s; "
+                    f"usage {m.get('usage')}; re-asks {m.get('reasks', 0)}; "
+                    f"unanswered {m.get('unanswered', 0)}\n")
+              print("Top confusions: " + ", ".join(
+                  f"{c['truth']} → {c['predicted']} ({c['n']})" for c in g["top_confusions"][:5]))
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: capability-eval-${{ github.run_id }}
+          path: capability-eval.json

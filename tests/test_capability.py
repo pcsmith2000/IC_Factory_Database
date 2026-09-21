@@ -32,16 +32,26 @@ def test_something_outside_the_taxonomy_resolves_to_nothing():
 
 
 def test_every_leaf_has_exactly_one_group():
-    assert len(TX.leaves) == 18 and len(TX.groups) == 6
+    assert len(TX.leaves) == 19 and len(TX.groups) == 6
     assert all(TX.group_of[l] in TX.groups for l in TX.leaves)
 
 
-def test_metal_building_is_left_unmapped_on_purpose():
-    """958 facilities, 25% of everything Layer 3 classified. A pre-engineered metal building is an
-    enclosure, not a component, so it fits none of the Other leaves — and forcing it into Light
-    Gauge Steel would silently reclassify a quarter of the database on a guess."""
-    assert "metal_building" in TX.unmapped_legacy
-    assert "metal_building" not in TX.legacy
+def test_metal_building_is_a_leaf_of_its_own():
+    """ADL ruled pre-engineered metal buildings in scope on 2026-09-21. The leaf is NOT Light Gauge
+    Steel — the primary frame is hot-rolled — and it is not volumetric: a PEMB ships flat and is
+    erected on site, which fails ADL's own test of "three-dimensional factory-built modules"."""
+    assert TX.unmapped_legacy == []
+    assert TX.resolve("PEMB") == "Pre-Engineered Metal Building"
+    assert TX.group_of["Pre-Engineered Metal Building"] == "Other"
+    # `legacy` reconciles vocabularies at the GROUP level and is not a mapping to this leaf:
+    # steel-stud and metal-panel plants sit in the same Layer 3 bucket and belong elsewhere.
+    assert TX.legacy["metal_building"] == "Other"
+
+
+def test_a_trading_word_is_not_a_signal():
+    """"Building systems" is what a PEMB manufacturer calls itself and also what a modular builder
+    calls itself. As a signal it took three Wood Volumetric Modular plants off the floor."""
+    assert "building systems" not in TX.signals["Pre-Engineered Metal Building"]
 
 
 # ---- what the model is shown
@@ -59,9 +69,11 @@ def test_evidence_is_only_ever_what_a_source_said():
     assert "layer3_type: truss_component" in ev and "website: x.example" in ev
 
 
-def test_notes_that_say_nothing_about_a_product_are_left_out():
-    ev = cap.evidence({"name": "X", "notes": "address_type: city_only | inspection_date: 2024"})
-    assert "city_only" not in ev
+def test_which_source_spoke_is_part_of_the_evidence():
+    """A plant on SIPA's member list makes structural insulated panels on that fact alone. The
+    model is told which source said what, not just what was said."""
+    ev = cap.evidence({"name": "X", "notes": "sipa: SIPA member types: Manufacturing"})
+    assert "sipa" in ev and "Manufacturing" in ev
 
 
 # ---- the evaluation is the point, and it must refuse to flatter itself
@@ -141,3 +153,91 @@ def test_the_floor_does_not_move_when_the_file_is_reordered():
     first = cap.signal_guess(tx, fac)
     tx.signals = dict(reversed(list(tx.signals.items())))
     assert cap.signal_guess(tx, fac) == first
+
+
+# ---- the evidence is the point of the stage, so what it keeps and drops is tested
+def test_run_accounting_is_dropped_and_product_text_is_kept(tmp_path):
+    """"135 kept of 5454 cards across 13 state page(s)" is the source's own bookkeeping, written
+    once onto its first row. It says nothing about that plant. "site kind on page: Truss" does."""
+    (tmp_path / "normalised").mkdir()
+    (tmp_path / "normalised" / "s.csv").write_text(
+        "source_id,notes,website,sq_ft,naics_verbatim,row_hash\n"
+        "bldr,BFS branch type MF (manufacturing); site kind on page: Truss|135 kept of 5454 cards,"
+        ",,321214,h1\n", encoding="utf-8")
+    (tmp_path / "assertions.csv").write_text(
+        "facility_id,row_hash\nIC-1,h1\n", encoding="utf-8")
+    ev = cap.evidence_index(tmp_path)["IC-1"]
+    assert "site kind on page: Truss" in ev["notes"]
+    assert "5454" not in ev["notes"]
+    assert ev["notes"].startswith("bldr:")          # which source said it stays attached
+
+
+def test_a_facility_merges_every_source_that_spoke(tmp_path):
+    """20% of facilities merge more than one source. Reading the merged record instead of one row
+    at a time is the reason this stage is not just Layer 3 asked again."""
+    (tmp_path / "normalised").mkdir()
+    (tmp_path / "normalised" / "s.csv").write_text(
+        "source_id,notes,website,sq_ft,naics_verbatim,row_hash\n"
+        "sipa,SIPA member types: Manufacturing,,,321992,h1\n"
+        "mbi,MBI membership type: Manufacturer/Direct,,,321992,h2\n", encoding="utf-8")
+    (tmp_path / "assertions.csv").write_text(
+        "facility_id,row_hash\nIC-1,h1\nIC-1,h1\nIC-1,h2\n", encoding="utf-8")
+    notes = cap.evidence_index(tmp_path)["IC-1"]["notes"]
+    assert "SIPA" in notes and "MBI" in notes
+    assert notes.count("SIPA member types") == 1    # the repeated row_hash is counted once
+
+
+# ---- the prompt is built from the taxonomy, so adding a leaf must reach the model
+def test_the_prompt_carries_every_leaf_with_its_definition():
+    tx = cap.load()
+    p = cap.prompt_for(tx)
+    for leaf in tx.leaves:
+        assert leaf in p, leaf
+        assert tx.describe[leaf][:40] in p, leaf
+
+
+def test_the_prompt_hash_moves_when_the_taxonomy_does():
+    """Layer 3's prompt hash is in the release tag and must not move. This one is separate
+    precisely so a new leaf changes this stage and nothing else."""
+    tx = cap.load()
+    before = cap.prompt_hash(tx)
+    tx.leaves = [l for l in tx.leaves if l != "3D Printing"]
+    assert cap.prompt_hash(tx) != before
+
+
+# ---- what the model is allowed to say
+def test_an_answer_outside_the_taxonomy_is_dropped_not_mapped(monkeypatch):
+    """The gate on this stage is "the value is a member of the taxonomy". A stage that also
+    coerces an invented leaf into the nearest real one has no gate."""
+    import json, pipeline
+
+    class Msg:
+        usage = None
+        content = [type("B", (), {"type": "text", "text": json.dumps([
+            {"i": 0, "leaf": "Wood Volumetric Modular", "confidence": 0.9, "reason": "wood"},
+            {"i": 1, "leaf": "Steel Buildings Division", "confidence": 0.9, "reason": "invented"},
+        ])})()]
+
+    client = type("C", (), {"messages": type("M", (), {"create": staticmethod(lambda **k: Msg())})()})()
+    monkeypatch.setattr(pipeline, "ai_client_and_model", lambda m: (client, m, "fake"))
+    tx = cap.load()
+    got = cap._call_once(tx, [{"name": "A"}, {"name": "B"}], "m", 0.0, False, None)
+    assert set(got) == {0}
+
+
+def test_an_unanswered_row_is_never_filled_from_the_floor():
+    """signal_guess is the yardstick the model is measured against. Substituting it for a row the
+    model failed to answer would fold the yardstick into the score."""
+    import inspect
+    src = inspect.getsource(cap.classify)
+    assert "signal_guess" not in src.split('"""')[2]
+
+
+def test_adls_prose_labels_still_resolve_loosely():
+    """The strict path is for the model only. ADL's labels are prose written by people over
+    several years and must keep resolving on a contained alias."""
+    prose = "Wood Structural Components (trusses, joists and stairs)"
+    assert TX.resolve(prose) == "Wood Structural Components (Trusses, etc.)"
+    assert TX.resolve(prose, exact=True) is None
+    # a spelling that IS listed resolves either way — the alias table is the contract
+    assert TX.resolve("MgO Panel", exact=True) == "SIP / ICF (Other Composite Panel)"
