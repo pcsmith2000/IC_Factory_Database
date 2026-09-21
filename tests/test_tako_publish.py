@@ -25,7 +25,7 @@ def test_tako_is_below_every_rank_even_unlisted_and_more_recent():
         assert build_golden([a],rules)[0][0][field]=='search'
 
 
-def test_only_current_empty_uncontested_fields_can_be_imported():
+def test_only_current_nonconflicting_fields_can_be_imported():
     m=manifest();g=[{'facility_key':'IC-1','release_tag':'current','phone':None}]
     accepted,skipped=select_import(m,g,[])
     assert len(accepted)==1 and not skipped
@@ -33,11 +33,12 @@ def test_only_current_empty_uncontested_fields_can_be_imported():
     assert accepted[0]['source_class']==SOURCE
     assert not select_import(m,[],[])[0]
     assert not select_import(m,[{**g[0],'phone':'existing'}],[])[0]
+    assert select_import(m,[{**g[0],'phone':'+1 (555) 123-4567'}],[])[0]==accepted
     existing=[{'facility_key':'IC-1','field_key':'phone','source_key':'operator','value':'other'}]
     assert not select_import(m,g,existing)[0]
     existing[0].update(source_key=SOURCE,value='other')
     assert not select_import(m,g,existing)[0]
-    existing[0]['value']='5551234567'
+    existing[0].update(value='5551234567',source_key='other-source')
     assert select_import(m,g,existing)[0]==accepted  # idempotent retries
 
 

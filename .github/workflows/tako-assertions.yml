@@ -1,9 +1,6 @@
 name: Tako approved assertions
 run-name: Tako approved assertions · ${{ inputs.mode }}
 on:
-  push:
-    branches: [feat/tako-basic-research]
-    paths: [.github/workflows/tako-assertions.yml]
   workflow_dispatch:
     inputs:
       mode:

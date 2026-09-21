@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 from pipeline.enrich._db import assertion, _rows_for
 from pipeline.web_research.select import FIELDS
+from pipeline.web_research.campaign import normalized_detail
 
 SOURCE = 'tako_ai_search'
 MANIFEST = Path('research/adl-2026-09-20/approved-assertions.json')
@@ -61,14 +62,14 @@ def select_import(manifest, golden, existing):
         reason = None
         if not g:
             reason = 'Facility no longer in current golden table'
-        elif str(g.get(field) or '').strip():
-            reason = 'Current golden field is already populated'
+        elif str(g.get(field) or '').strip() and normalized_detail(field, g[field]) != normalized_detail(field, r['value']):
+            reason = 'Current golden field contains a different value; hold for review'
         elif any(str(a.get('value') or '').strip() and
-                 (a['source_key'] != SOURCE or a['value'] != r['value'])
+                 normalized_detail(field, a['value']) != normalized_detail(field, r['value'])
                  for a in by_cell.get((fid, field), [])):
             reason = 'Another assertion already supplies this field; hold for review'
         if reason:
-            skipped.append(dict(facility_id=fid, field=field, reason=reason))
+            skipped.append(dict(facility_id=fid, field=field, proposed=r['value'], reason=reason, current=g.get(field) if g else None, existing=by_cell.get((fid,field), [])))
         else:
             accepted.append(dict(to_assertion(r, manifest), release_tag=g['release_tag']))
     return accepted, skipped
