@@ -43,7 +43,8 @@ class Taxonomy:
     def __init__(self, doc: dict):
         self.version = doc.get("version")
         self.groups = [g["name"] for g in doc["groups"]]
-        self.leaves, self.group_of, self.by_alias, self.signals, self.legacy = [], {}, {}, {}, {}
+        self.leaves, self.group_of, self.by_alias = [], {}, {}
+        self.signals, self.legacy, self.describe = {}, {}, {}
         for g in doc["groups"]:
             for code in g.get("legacy") or []:
                 self.legacy[code] = g["name"]
@@ -52,6 +53,9 @@ class Taxonomy:
                 self.leaves.append(nm)
                 self.group_of[nm] = g["name"]
                 self.signals[nm] = [norm(s) for s in (leaf.get("signals") or [])]
+                # ADL's definition, shown to the model verbatim. "Open" vs "Closed" and "panel"
+                # vs "module" are decided by a sentence, not by a leaf name.
+                self.describe[nm] = " ".join((leaf.get("description") or "").split())
                 for a in [nm] + list(leaf.get("aliases") or []):
                     self.by_alias[norm(a)] = nm
         self.unmapped_legacy = list(doc.get("unmapped_legacy") or [])
@@ -103,12 +107,19 @@ def signal_guess(tx: Taxonomy, fac: dict) -> tuple[str | None, str]:
     number is its own accuracy cannot tell "the model is good" from "the task is easy".
     """
     hay = norm(f"{fac.get('name','')} {evidence(fac)}")
-    best, hits = None, 0
+    scored = []
     for leaf, sigs in tx.signals.items():
-        n = sum(1 for s in sigs if s and s in hay)
-        if n > hits:
-            best, hits = leaf, n
-    return best, f"{hits} signal(s)"
+        found = [s for s in sigs if s and s in hay]
+        if found:
+            # Ties are broken by the LONGEST signal matched, then by leaf name — never by the
+            # order of the YAML. Two hits on "wall panel"/"open panel" should not beat one hit on
+            # "structural insulated panel" because a leaf happens to be listed first, and moving
+            # a group in the file should not move the number this floor reports.
+            scored.append((len(found), max(len(s) for s in found), leaf, found))
+    if not scored:
+        return None, "0 signal(s)"
+    n, _, leaf, found = max(scored, key=lambda t: (t[0], t[1], t[2]))
+    return leaf, f"{n} signal(s): {', '.join(sorted(found)[:4])}"
 
 
 def assertions_for(facility_id: str, leaf: str, tx: Taxonomy, confidence: float,

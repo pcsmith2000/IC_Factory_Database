@@ -116,3 +116,28 @@ def test_the_assertions_name_the_taxonomy_version_and_the_evidence():
     assert {x["field"] for x in a} == {"capability_group", "capability_leaf"}
     assert [x["value"] for x in a if x["field"] == "capability_group"] == ["Mass Timber"]
     assert all(f"taxonomy v{TX.version}" in x["evidence"] for x in a)
+
+
+def test_every_leaf_carries_adls_definition():
+    """The model is shown definitions, not just names. "Open" vs "Closed" and "panel" vs "module"
+    are decided by a sentence; a leaf with no sentence is a leaf the classifier has to guess."""
+    tx = cap.load()
+    assert [l for l in tx.leaves if not tx.describe[l]] == []
+
+
+def test_adls_own_short_spellings_resolve():
+    """ADL's supply file writes the short forms. A spelling difference must never be scored as a
+    disagreement — `Steel Structural Components` is 12 rows of the raw list."""
+    tx = cap.load()
+    assert tx.resolve("Steel Structural Components") == "Light Gauge Steel Structural Components"
+    assert tx.resolve("MgO Panel") == "SIP / ICF (Other Composite Panel)"
+
+
+def test_the_floor_does_not_move_when_the_file_is_reordered():
+    """signal_guess is a floor, so it must measure the data and not the YAML. Ties break on the
+    longest signal matched and then the leaf name — never on which group was typed first."""
+    tx = cap.load()
+    fac = {"name": "Example Panels", "notes": "product_types: structural insulated panel | wall panel"}
+    first = cap.signal_guess(tx, fac)
+    tx.signals = dict(reversed(list(tx.signals.items())))
+    assert cap.signal_guess(tx, fac) == first

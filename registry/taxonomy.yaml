@@ -11,84 +11,151 @@
 # than ten. So `group` carries a measured accuracy and `leaf` is reported per class with its n.
 # A leaf with three examples cannot be averaged into a headline number honestly.
 #
-# `aliases`  spellings seen in the wild, matched case- and punctuation-insensitively. ADL's own
-#            files write "Wood Structural Components (trusses etc)" where this list writes
-#            "(Trusses, etc.)", and both must resolve to one leaf or the eval scores a typo.
-# `signals`  words that, in a source's product or certification text, point at this leaf. They are
-#            evidence for the model and for an audit, NOT a rule engine: the classifier weighs
-#            them against the whole record. Where a source states the product outright — APA's
-#            `product_types: CLT` — the signal IS the answer and the model should say so.
-# `legacy`   the Layer 3 product_type values that land in this group, so the two vocabularies can
-#            be reconciled and the older one is not silently dropped.
+# `description`  ADL's own definition, verbatim as supplied 2026-09-21. This is what the model is
+#                shown — the classifier reads definitions, not just labels, because "Open" vs
+#                "Closed" and "panel" vs "module" are decided by a sentence, not by a name.
+# `aliases`      spellings seen in the wild, matched case- and punctuation-insensitively, longest
+#                first. ADL's files write "Wood Structural Components (trusses etc)" where this
+#                list writes "(Trusses, etc.)", and both must resolve to one leaf or the eval
+#                scores a typo as a disagreement. The "can also be called" phrases from ADL's
+#                definitions are folded in here, which is what fixes `MgO Panel`.
+# `signals`      words that, in a source's product or certification text, point at this leaf. They
+#                are evidence for the model and for an audit, NOT a rule engine: the classifier
+#                weighs them against the whole record. Where a source states the product outright
+#                — APA's `product_types: CLT` — the signal IS the answer and the model says so.
+# `legacy`       the Layer 3 product_type values that land in this group, so the two vocabularies
+#                can be reconciled and the older one is not silently dropped.
 
-version: 1
-source: ADL capability taxonomy, supplied 2026-09-21
+version: 2
+source: ADL capability taxonomy with definitions, supplied 2026-09-21
 
 groups:
   - name: Modular
     legacy: [volumetric, hud_code]
     leaves:
-      - name: Wood Volumetric Modular
-        aliases: [wood volumetric, wood modular, timber volumetric modular]
-        signals: [volumetric, modular, wood frame, stick built modular]
-      - name: Steel Volumetric Modular
-        aliases: [steel volumetric, steel modular]
-        signals: [steel volumetric, steel modular, container, shipping container]
       - name: HUD Modular
-        aliases: [hud code, hud-code, manufactured housing, mobile home]
-        signals: [hud, manufactured home, mobile home, hud code]
+        description: >-
+          Factory-built dwelling units constructed to the federal HUD Manufactured Home
+          Construction and Safety Standards and transported substantially complete.
+        aliases: [hud code, hud-code, hud-code modular, manufactured housing, manufactured home,
+                  mobile home, mobile/manufactured homes]
+        signals: [hud, manufactured home, mobile home, hud code, hud label]
+      - name: Wood Volumetric Modular
+        description: >-
+          Three-dimensional factory-built modules using primarily wood structural framing,
+          shipped to site for assembly into a permanent building.
+        aliases: [wood modular, wood volumetric, wood-frame modules, 3d wood modules,
+                  timber volumetric modular]
+        signals: [volumetric, modular, wood frame, stick built modular, wood modules]
+      - name: Steel Volumetric Modular
+        description: >-
+          Three-dimensional factory-built modules using light-gauge, structural, or hybrid steel
+          framing, shipped to site for assembly into a permanent building.
+        aliases: [steel modular, steel volumetric, 3d steel modules, steel-framed modular]
+        signals: [steel volumetric, steel modular, container, shipping container, steel modules]
       - name: Relocatable Modular
-        aliases: [relocatable, temporary modular, mobile modular]
-        signals: [relocatable, temporary buildings, mobile offices, modular space, lease fleet]
-
-  - name: Panel
-    legacy: [panel, precast]
-    leaves:
-      - name: Open Wood Panel
-        aliases: [open wall panel, open panel, wood wall panel]
-        signals: [wall panel, open panel, framing panel]
-      - name: Closed Wood Panel
-        aliases: [closed wall panel, closed panel]
-        signals: [closed panel, insulated wall panel, finished panel]
-      - name: Open LGS Panel
-        aliases: [open light gauge steel panel, open cfs panel]
-        signals: [light gauge steel panel, cold formed steel panel, cfs panel]
-      - name: Closed LGS Panel
-        aliases: [closed light gauge steel panel, closed cfs panel]
-        signals: [closed lgs, insulated steel panel]
-      - name: Precast Concrete Panel
-        aliases: [precast concrete panel, precast, precast concrete]
-        signals: [precast, prestressed, hollowcore, double tee, architectural precast, concrete panel]
-      - name: SIP / ICF (Other Composite Panel)
-        aliases: [sip, icf, structural insulated panel, insulated concrete form, other composite panel]
-        signals: [sip, structural insulated panel, icf, insulated concrete form, composite panel]
-      - name: Exterior Envelope Panels
-        aliases: [envelope panel, facade panel, curtain wall, exterior envelope]
-        signals: [curtain wall, facade, envelope, cladding, rainscreen, window wall]
-
-  - name: Mass Timber
-    legacy: [mass_timber]
-    leaves:
-      - name: Mass Timber (CLT)
-        aliases: [clt, cross laminated timber, mass timber, glulam, dlt, nlt]
-        signals: [clt, cross laminated, glulam, glue laminated, mass timber, dowel laminated, nail laminated]
+        description: >-
+          Factory-built modular buildings designed to be moved, reused, or reconfigured after
+          initial installation.
+        aliases: [relocatable, relocatable buildings, temporary modular, portable modular,
+                  mobile modular, mobile modular buildings]
+        signals: [relocatable, temporary buildings, mobile offices, modular space, lease fleet,
+                  portable classroom]
 
   - name: Pods
     legacy: []
     leaves:
       - name: Bathroom Pods
-        aliases: [bathroom pod, pod]
-        signals: [bathroom pod, prefabricated bathroom, pod]
+        description: >-
+          Factory-completed bathroom units containing finishes, fixtures, and often integrated
+          plumbing/MEP, installed as a single volumetric component.
+        aliases: [bathroom pod, bathroom modules, toilet pods, restroom pods, bath pods]
+        signals: [bathroom pod, prefabricated bathroom, pod, restroom pod]
       - name: Specialty Volumetric MEP (Skids, Racks)
-        aliases: [mep skid, skid, rack, specialty volumetric mep, "specialty volumetric mep (skids, skids, racks)"]
+        description: >-
+          Prefabricated volumetric or framed assemblies that consolidate mechanical, electrical,
+          plumbing, process, or utility systems for rapid installation.
+        aliases: [mep skid, mep skids, utility skids, mep racks, corridor racks, service modules,
+                  specialty volumetric mep, "specialty volumetric mep (skids, skids, racks)"]
         signals: [skid, mep rack, headwall, mechanical room, plant room, utility module]
+
+  - name: Panel
+    legacy: [panel, precast]
+    leaves:
+      - name: Open Wood Panel
+        description: >-
+          Wood-framed wall, floor, or roof panels manufactured off site with framing exposed for
+          later enclosure or systems installation.
+        aliases: [open timber panel, open wood-frame panel, 2d open wood panel, framed wall panel,
+                  open wall panel, open panel, wood wall panel]
+        signals: [wall panel, open panel, framing panel, panelized wall]
+      - name: Closed Wood Panel
+        description: >-
+          Wood-framed wall, floor, or roof panels manufactured with one or both faces enclosed and
+          potentially including insulation, membranes, windows, or services.
+        aliases: [closed timber panel, closed wood-frame panel, finished wall panel,
+                  2d solid wood panel, closed wall panel, closed panel]
+        signals: [closed panel, insulated wall panel, finished panel, sheathed panel]
+      - name: Open LGS Panel
+        description: >-
+          Light-gauge steel-framed panels manufactured off site with framing substantially exposed
+          for later enclosure or systems installation.
+        aliases: [open steel panel, open cfs panel, light-gauge steel wall frame,
+                  2d open steel panel, open light gauge steel panel]
+        signals: [light gauge steel panel, cold formed steel panel, cfs panel, steel wall frame]
+      - name: Closed LGS Panel
+        description: >-
+          Light-gauge steel-framed panels manufactured with sheathing or enclosure layers and
+          potentially insulation, membranes, windows, or services.
+        aliases: [closed steel panel, closed cfs panel, finished lgs panel, 2d solid steel panel,
+                  closed light gauge steel panel]
+        signals: [closed lgs, insulated steel panel, sheathed steel panel]
+      - name: Exterior Envelope Panels
+        description: >-
+          Prefabricated non-volumetric exterior wall or facade assemblies focused on the building
+          enclosure and weather barrier, often including cladding, insulation, glazing, or backup
+          framing.
+        aliases: [facade panels, exterior wall panels, curtain-wall panels, building-envelope
+                  panels, envelope panel, curtain wall, exterior envelope]
+        signals: [curtain wall, facade, envelope, cladding, rainscreen, window wall, metal wall panel]
+      - name: Precast Concrete Panel
+        description: >-
+          Concrete building elements cast in a controlled plant and transported to site as
+          structural or enclosure panels.
+        aliases: [precast panels, precast wall panels, architectural precast, structural precast,
+                  precast concrete, precast]
+        signals: [precast, prestressed, hollowcore, double tee, architectural precast, concrete panel]
+      - name: SIP / ICF (Other Composite Panel)
+        description: >-
+          Composite panel or form systems that do not fit conventional wood or steel framing
+          categories, including structural insulated panels and insulated concrete forms.
+        aliases: [sip, sips, structural insulated panel, structural insulated panels, icf,
+                  insulated concrete form, insulated concrete forms, mgo panel, mgo panels,
+                  composite panel, composite panels, other composite panel]
+        signals: [sip, structural insulated panel, icf, insulated concrete form, composite panel, mgo]
+
+  - name: Mass Timber
+    legacy: [mass_timber]
+    leaves:
+      - name: Mass Timber (CLT)
+        description: >-
+          Large engineered-wood structural elements used for floors, walls, roofs, or frames,
+          especially cross-laminated timber.
+        aliases: [clt, cross laminated timber, cross-laminated timber, mass timber,
+                  mass-timber panels, engineered timber, glulam, dlt, nlt]
+        signals: [clt, cross laminated, glulam, glue laminated, mass timber, dowel laminated,
+                  nail laminated]
 
   - name: 3D Printing
     legacy: []
     leaves:
       - name: 3D Printing
-        aliases: [3d printed, additive construction, printed concrete]
-        signals: [3d print, additive manufacturing, printed structure]
+        description: >-
+          Additive manufacturing of building components or wall systems by depositing material
+          layer by layer from a digital model.
+        aliases: [3d printed, additive construction, construction-scale printing,
+                  concrete 3d printing, robotic printing, printed concrete]
+        signals: [3d print, additive manufacturing, printed structure, additive construction]
 
   - name: Other
     # Components rather than enclosures. The largest group in the labelled set by some way, which
@@ -96,18 +163,45 @@ groups:
     legacy: [truss_component, other]
     leaves:
       - name: Wood Structural Components (Trusses, etc.)
-        aliases: ["wood structural components (trusses etc)", wood structural components, truss, trusses]
-        signals: [truss, roof truss, floor truss, i-joist, joist, rim board, scl, lvl, engineered wood, plywood, osb]
-      - name: Hybrid Structural Components
-        aliases: [hybrid structural, hybrid components]
-        signals: [hybrid, steel and wood, composite structural]
+        description: >-
+          Factory-fabricated wood structural elements that are components rather than complete
+          panels or modules, such as roof/floor trusses, joists, cassettes, and stairs.
+        aliases: ["wood structural components (trusses etc)", wood structural components,
+                  wood components, roof trusses, floor trusses, floor cassettes,
+                  engineered wood components, truss, trusses]
+        signals: [truss, roof truss, floor truss, i-joist, joist, rim board, scl, lvl,
+                  engineered wood, plywood, osb]
       - name: Light Gauge Steel Structural Components
-        aliases: [lgs structural components, light gauge steel, cold formed steel components, cfs]
-        signals: [light gauge steel, cold formed steel, steel framing, steel stud, cfs, joist]
+        description: >-
+          Factory-fabricated light-gauge or cold-formed steel structural elements that are
+          components rather than complete panels or modules.
+        # ADL's own files write the short form "Steel Structural Components" (12 rows in the raw
+        # supply) — it resolves here, not to a leaf that does not exist.
+        aliases: [steel structural components, lgs components, lgs structural components,
+                  cfs components, cold-formed steel framing, cold formed steel components,
+                  steel trusses, light gauge steel, cfs]
+        signals: [light gauge steel, cold formed steel, steel framing, steel stud, cfs, steel joist]
+      - name: Hybrid Structural Components
+        description: >-
+          Factory-fabricated structural components combining multiple framing materials or systems
+          where no single material category is dominant.
+        aliases: [hybrid components, mixed-material components, composite structural components,
+                  hybrid assemblies, hybrid structural]
+        signals: [hybrid, steel and wood, composite structural, mixed material]
 
-# Layer 3's `metal_building` — 958 facilities, 25% of everything it classified — has no leaf.
-# A pre-engineered metal building is an enclosure and not a component, so it fits none of the
-# three Other leaves, and it is not volumetric, panelised, mass timber, a pod or printed. It is
-# left unmapped ON PURPOSE rather than forced into Light Gauge Steel Structural Components: that
-# would silently reclassify a quarter of the database on a guess. Awaiting a definitional call.
+# Layer 3's `metal_building` has no leaf, and the sample says that is correct rather than a gap:
+# of 572 such facilities in the r-N release, 452 carry NAICS 332311 (prefabricated metal building
+# and component manufacturing) and 86 carry 332312 (fabricated structural metal). The names are
+# Garco Building Systems, BlueScope Prefab, Central States Manufacturing, Erect-A-Tube — flat-pack
+# frame-and-panel kits erected on site. Exactly two of the 572 names suggest a module at all.
+#
+# So a pre-engineered metal building is NOT volumetric under ADL's own definition ("three-
+# dimensional factory-built modules ... shipped to site for assembly"), it is not light-gauge (the
+# primary frame is hot-rolled structural steel), and it is not hybrid (it is one material). Parts
+# of the bucket DO belong to existing leaves and stage 15 will move them on the evidence, not on
+# this code: steel-stud plants such as SCAFCO to Light Gauge Steel Structural Components, and
+# metal roof/wall panel plants such as Central States to Exterior Envelope Panels.
+#
+# What is left is the whole-building PEMB plant, and whether that is an IC factory at all is a
+# scope question for ADL, not a classification question. Left unmapped until they answer.
 unmapped_legacy: [metal_building]
