@@ -1,4 +1,4 @@
-# Tako AI Search pass — read-only pilot
+# Tako AI Search research and reviewed assertions
 
 Manually run **Tako AI Search pass (read-only)** in GitHub Actions.
 
@@ -10,7 +10,7 @@ The selection controls are `states`, `facility_ids`, `missing_fields`, `source_i
 
 The release filter selects only rows still present in the golden table; it does not reconstruct historical releases. Source filtering requires evidence for that row's current release.
 
-The database selection uses a server-enforced read-only transaction. Database secrets are available only during selection; the researcher receives only the gateway key. Nothing loads assertions, updates golden, registers sources, or writes enrichment caches. There is deliberately no write-enabled mode.
+The database selection uses a server-enforced read-only transaction. Database secrets are available only during selection; the researcher receives only the gateway key. These research modes do not load assertions, update golden, register sources, or write enrichment caches. A separate approved-assertion action is described below.
 
 Download the run artifact for input, selection manifest, model responses, fetched evidence, per-field proposals, and summary. `candidate` means the literal value was found on a fetched source page with a location/contact anchor, not human approval or a guarantee of identity. Unfetchable evidence, directory sources, company/office phone and address contacts, and conflicts remain `review`. The model's source classification still requires review. Existing values are preserved in the report beside proposed values.
 
@@ -36,3 +36,29 @@ A four-worker trial increased unconfirmed search responses. Subsequent rounds us
 Campaign evidence caching reuses successful public-page snapshots for at most four hours, retaining their original retrieval time and source run. Failed/unreadable pages are not cached, and new search URLs are fetched normally. Every row still requires a newly confirmed Tako search. This reduces repeat downloads without treating old search claims as new evidence.
 
 `pipeline.web_research.ledger` consolidates distinct primary-source proposals across rounds. Multiple values for the same facility field remain review. Its cumulative inventory is separate from the per-round novelty metric and does not authorize database writes.
+
+
+## Approved assertion import
+
+`Tako approved assertions` is a separate manual action. It consumes the explicitly reviewed
+`research/adl-2026-09-20/approved-assertions.json`, not raw model candidates. `plan` runs a
+read-only live check; `apply` requires that plan's run ID and exact SHA256. Current facility
+name/city/state must still match the reviewed snapshot. Applicable competing values remain
+held; agreeing assertions from another source may be retained as corroborating evidence.
+Historical registry assertions outside the current release are excluded from the comparison.
+
+The importer transaction writes `dim_source`, `ref_source_row`, and `fact_assertions` only.
+The source ID and separate source class are `tako_ai_search`; its display name is **Tako AI Search**.
+Source URL, quote when available, review note, evidence scope, and campaign runs are retained.
+Stable assertion IDs make retries idempotent. Any changed preview, failed read-back, or golden
+value change aborts the transaction. The workflow does not invoke promotion or run research.
+
+`golden._rank` places this source below even unlisted sources, regardless of recency, class,
+or basis. The corresponding source registration and enrichment carry-forward rule are part
+of this PR and must be deployed before relying on later promotion/release rebuild behavior.
+Research and rooftop actions remain read-only.
+
+User-authorized import run **35547749508** committed and verified **179 assertions for 88
+facilities**: 54 websites, 45 phones, 3 emails, 33 addresses and 44 ZIP codes. The receipt is
+`research/adl-2026-09-20/assertion-import-receipt.json`. No rooftop coordinates or unresolved
+conflicts were imported, and golden values were unchanged. Broad research remains paused.
