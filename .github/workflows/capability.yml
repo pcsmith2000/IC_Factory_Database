@@ -50,8 +50,11 @@ permissions:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
-    # The eval is bounded by --limit, so a job running this long is stuck rather than busy.
-    timeout-minutes: 30
+    # An eval is bounded by --limit and takes a minute; a full predict pass is 6,208 facilities,
+    # which is ~156 model calls at batch 40 and about 20 minutes. The old 30-minute ceiling was
+    # sized for the eval and would have killed the first full pass with ~1 minute to spare —
+    # a timeout that fires on the successful case is a timeout set to the wrong thing.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
