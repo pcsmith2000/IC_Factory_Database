@@ -1,7 +1,7 @@
 from copy import deepcopy
 from pipeline.recovery.run import eligible,validate_rooftop
 from pipeline.recovery.overture_rooftop import strict_address_match,strict_choose,control_gate
-from pipeline.recovery.internal_crossmatch import choose as choose_internal,distinctive
+from pipeline.recovery.internal_crossmatch import choose as choose_internal,choose_contact,distinctive
 
 ROW={'address':'10 Main Street','city':'Boston','state':'MA','zip':'02101'}
 HIT={'accuracy_type':'rooftop','accuracy':1,'address_components':{'number':'10','formatted_street':'Main St','city':'Boston','state_province':'MA','postal_code':'02101'},'location':{'lat':42.1,'lng':-71.1}}
@@ -65,3 +65,16 @@ def test_internal_crossmatch_requires_exact_distinctive_site_and_one_coordinate(
     assert choose_internal([target],[donor,conflicting])[0]==[]
     assert choose_internal([{**target,'city':'Cambridge'}],[donor])[0]==[]
     assert distinctive('Acme Components') and not distinctive('ABC')
+
+
+def test_internal_contact_crossmatch_requires_contact_locality_and_name_compatibility():
+    target={'facility_id':'IC-T','name':'Acme Components West','city':'Boston','state':'MA',
+            'website':'https://www.acme.example/contact'}
+    donor={'facility_id':'IC-D','name':'Acme Components Boston LLC','city':'BOSTON','state':'ma',
+           'website':'https://acme.example','value':'42.1,-71.1','assertion_id':'a1'}
+    picked,refused=choose_contact([target],[donor])
+    assert len(picked)==1 and not refused
+    assert choose_contact([{**target,'city':'Cambridge'}],[donor])[0]==[]
+    assert choose_contact([{**target,'name':'Different Tenant'}],[donor])[0]==[]
+    conflict={**donor,'facility_id':'IC-D2','value':'42.2,-71.2'}
+    assert choose_contact([target],[donor,conflict])[0]==[]
