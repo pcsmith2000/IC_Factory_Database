@@ -1,7 +1,7 @@
 from copy import deepcopy
 from pipeline.recovery.run import eligible,validate_rooftop
 from pipeline.recovery.overture_rooftop import strict_address_match,strict_choose,control_gate
-from pipeline.recovery.internal_crossmatch import choose as choose_internal,choose_contact,choose_name_only,distinctive
+from pipeline.recovery.internal_crossmatch import choose as choose_internal,choose_contact,choose_name_only,choose_address,distinctive
 
 ROW={'address':'10 Main Street','city':'Boston','state':'MA','zip':'02101'}
 HIT={'accuracy_type':'rooftop','accuracy':1,'address_components':{'number':'10','formatted_street':'Main St','city':'Boston','state_province':'MA','postal_code':'02101'},'location':{'lat':42.1,'lng':-71.1}}
@@ -87,3 +87,14 @@ def test_internal_name_only_requires_one_donor_facility_nationally():
     second={**donor,'facility_id':'IC-D2','assertion_id':'a2'}
     assert choose_name_only([target],[donor,second])[0]==[]
     assert choose_name_only([{**target,'name':'ABC'}],[donor])[0]==[]
+
+
+def test_internal_address_match_requires_one_donor_facility_at_exact_site():
+    target={'facility_id':'IC-T','address':'10 Main Street','city':'Boston','state':'MA','zip':'02101'}
+    donor={'facility_id':'IC-D','address':'10 Main St','city':'BOSTON','state':'ma','zip':'02101-1234',
+           'value':'42.1,-71.1','assertion_id':'a1'}
+    assert len(choose_address([target],[donor])[0])==1
+    assert choose_address([{**target,'address':'11 Main St'}],[donor])[0]==[]
+    assert choose_address([{**target,'zip':'02102'}],[donor])[0]==[]
+    second={**donor,'facility_id':'IC-D2','assertion_id':'a2'}
+    assert choose_address([target],[donor,second])[0]==[]
