@@ -66,7 +66,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: pip install -e '.[postgres,dev]'
-      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_web_research.py -q
+      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_tako_budget.py tests/test_web_research.py -q
       - name: Freeze unresolved rows and estimate cost (database read-only)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
@@ -77,7 +77,41 @@ jobs:
           name: tako-coordinate-plan-${{ github.run_id }}
           path: tako-coordinate-plan/
           retention-days: 30
+  reserve:
+    if: inputs.mode == 'research'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PLAN_RUN: ${{ inputs.plan_run }}
+      PLAN_SHA256: ${{ inputs.plan_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_tako_budget.py tests/test_tako_coordinate_recovery.py -q
+      - name: Retrieve exact reviewed research plan
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          run=os.environ['PLAN_RUN']
+          if not re.fullmatch(r'\d+',run):raise ValueError('Exact plan workflow run ID required')
+          subprocess.run(['gh','run','download',run,'--name',f'tako-coordinate-plan-{run}','--dir','downloaded-plan'],check=True)
+          PY
+      - name: Reserve reviewed cap against shared campaign budget
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: python -c "import os; from pathlib import Path; from pipeline.recovery.tako_budget import reserve; reserve(Path('downloaded-plan'),os.environ['PLAN_SHA256'],os.environ['GITHUB_RUN_ID'],Path('budget-output'))"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tako-coordinate-budget-reservation-${{ github.run_id }}
+          path: budget-output/
+          retention-days: 90
   research:
+    needs: reserve
     if: inputs.mode == 'research'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -91,7 +125,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: pip install -e '.[postgres,dev]'
-      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_web_research.py -q
+      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_tako_budget.py tests/test_web_research.py -q
       - name: Retrieve the exact reviewed plan
         run: |
           python - <<'PY'
@@ -112,6 +146,31 @@ jobs:
           name: tako-coordinate-research-${{ github.run_id }}
           path: research-output/
           retention-days: 30
+  settle:
+    needs: [reserve, research]
+    if: always() && inputs.mode == 'research' && needs.reserve.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - name: Retrieve research cost artifact
+        run: gh run download "$GITHUB_RUN_ID" --name "tako-coordinate-research-$GITHUB_RUN_ID" --dir research-output
+      - name: Settle actual cost against the shared campaign budget
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: python -c "import os; from pathlib import Path; from pipeline.recovery.tako_budget import settle; settle(Path('research-output'),os.environ['GITHUB_RUN_ID'],Path('budget-output'))"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tako-coordinate-budget-settlement-${{ github.run_id }}
+          path: budget-output/
+          retention-days: 90
   assertions:
     if: inputs.mode == 'assertions_plan' || inputs.mode == 'assertions_apply'
     runs-on: ubuntu-latest
