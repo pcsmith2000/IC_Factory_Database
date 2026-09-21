@@ -8,7 +8,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [plan, cached, geocode]
+        options: [plan, cached, historical_cached, geocode]
         default: plan
       pass_id:
         description: 'Pass identifier; repeats resume unfinished rows'

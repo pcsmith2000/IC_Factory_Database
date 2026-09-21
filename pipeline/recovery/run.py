@@ -134,10 +134,103 @@ def append_coordinate(db,r,hit):
     return inserted
 
 
+def historical_cached(db, pass_id):
+    """Recover a rooftop only when one cited historical source row supplies the
+    complete address and that exact address already has a cached rooftop result.
+
+    A facility can have several historical sites. Distinct rooftop coordinates are
+    treated as a conflict and left unresolved; this pass never guesses which site is
+    current and never calls an external service.
+    """
+    from psycopg.types.json import Jsonb
+    rows=db.execute("""SELECT c.facility_id,c.baseline,a.row_hash,a.release_tag,a.field_key,a.value,
+                              a.source_key,r.source_url,r.source_document,r.retrieved_date,
+                              r.source_identifier
+                       FROM coordinate_recovery_rows c
+                       JOIN fact_assertions a ON a.facility_key=c.facility_id
+                       LEFT JOIN ref_source_row r ON r.row_hash=a.row_hash
+                       WHERE c.campaign_id=%s AND c.status='unresolved'
+                         AND a.field_key=ANY(%s)
+                         AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts x
+                           WHERE x.campaign_id=c.campaign_id AND x.facility_id=c.facility_id
+                             AND x.pass_id=%s AND x.stage='historical_cached')
+                       ORDER BY r.retrieved_date DESC NULLS LAST,a.release_tag DESC""",
+                    (CAMPAIGN,['name','address','city','state','zip'],pass_id)).fetchall()
+    grouped={}
+    baselines={}
+    for row in rows:
+        fid=row['facility_id'];baselines[fid]=row['baseline']
+        key=(fid,row['row_hash'],row['release_tag'],row['source_key'])
+        evidence={}
+        for k in ('row_hash','release_tag','source_key','source_url','source_document','retrieved_date','source_identifier'):
+            value=row.get(k)
+            evidence[k]=value.isoformat() if hasattr(value,'isoformat') else value
+        item=grouped.setdefault(key,{'values':{},'evidence':evidence})
+        item['values'][row['field_key']]=row['value']
+    candidates=[]
+    rejected=Counter()
+    for (fid,*_),item in grouped.items():
+        values=item['values'];baseline=baselines[fid]
+        if not eligible(values):rejected['incomplete_historical_source_row']+=1;continue
+        if norm(values.get('name'))!=norm(baseline.get('name')):
+            rejected['historical_name_mismatch']+=1;continue
+        address={**baseline,**{k:values.get(k) or '' for k in ('address','city','state','zip')}}
+        query=one_line(address)
+        candidates.append((fid,address,item['evidence'],query,cache.geocode_key(query)))
+    keys=list(dict.fromkeys(c[4] for c in candidates))
+    saved=db.execute("SELECT * FROM cache_lookup WHERE cache_key=ANY(%s) AND provider='geocodio'",(keys,)).fetchall() if keys else []
+    cached={r['cache_key']:r for r in saved}
+    evaluated={}
+    for fid,address,evidence,query,key in candidates:
+        if key not in cached:continue
+        result=cached[key]['result'];result=json.loads(result) if isinstance(result,str) else result
+        hit,outcome=validate_rooftop(address,result)
+        evaluated.setdefault(fid,[]).append(dict(address=address,evidence=evidence,query=query,key=key,
+                                                  hit=hit,outcome=outcome))
+    inserted=0;outcomes=Counter()
+    for fid,items in evaluated.items():
+        rooftops={f"{i['hit']['location']['lat']},{i['hit']['location']['lng']}":i for i in items if i['hit']}
+        if len(rooftops)>1:
+            outcome='conflicting_historical_rooftops';chosen=None
+        elif len(rooftops)==1:
+            outcome='historical_rooftop_verified';chosen=next(iter(rooftops.values()))
+        else:
+            outcome='historical_cache_not_rooftop';chosen=None
+        with connect() as tx:
+            live=tx.execute("SELECT name,release_tag,lat_lon FROM golden_facility WHERE facility_key=%s FOR SHARE",(fid,)).fetchone()
+            baseline=baselines[fid]
+            if not live or live['release_tag']!=baseline['release_tag'] or norm(live['name'])!=norm(baseline['name']) or str(live.get('lat_lon') or '').strip():
+                outcome='live_row_changed';chosen=None
+            tx.execute("""INSERT INTO coordinate_recovery_attempts
+                       (campaign_id,facility_id,pass_id,stage,query_key,request,result,outcome,reserved_usd,run_url,completed_at)
+                       VALUES(%s,%s,%s,'historical_cached',%s,%s,%s,%s,0,%s,now())
+                       ON CONFLICT(campaign_id,facility_id,pass_id,stage) DO NOTHING""",
+                       (CAMPAIGN,fid,pass_id,hashlib.sha256('|'.join(sorted(i['key'] for i in items)).encode()).hexdigest()[:32],
+                        Jsonb({'queries':[i['query'] for i in items]}),
+                        Jsonb({'outcomes':[i['outcome'] for i in items],'distinct_rooftops':len(rooftops)}),outcome,run_url()))
+            if chosen:
+                record={'facility_id':fid,'baseline':chosen['address'],'evidence':[chosen['evidence']],
+                        'live_release':live['release_tag']}
+                inserted+=append_coordinate(tx,record,chosen['hit'])
+        outcomes[outcome]+=1
+    return dict(historical_source_rows=len(candidates),historical_cached_rows=len(evaluated),
+                historical_rejections=dict(rejected),outcomes=dict(outcomes),
+                coordinate_assertions_inserted=inserted,new_api_calls=0)
+
+
 def execute(mode,pass_id,row_limit):
     from psycopg.types.json import Jsonb
     with connect() as db:
         campaign=freeze(db)
+        if mode=='historical_cached':
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
+                         budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(historical_cached(db,pass_id))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
         selected,blocked,eligible_count=select_rows(db,pass_id,row_limit)
         queries=[one_line(r['baseline']) for r in selected]
         keys=[cache.geocode_key(q) for q in queries]
@@ -194,7 +287,7 @@ def execute(mode,pass_id,row_limit):
     if outcomes.get('error'):raise RuntimeError('Some rows failed; private attempt records retained for diagnosis')
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
-    maximum=2000 if a.mode=='cached' else 100
+    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','historical_cached','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
+    maximum=2000 if a.mode in ('cached','historical_cached') else 100
     if not 1<=a.limit<=maximum:raise ValueError(f'{a.mode} batches are limited to {maximum} rows')
     execute(a.mode,a.pass_id,a.limit)
