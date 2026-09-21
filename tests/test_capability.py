@@ -4,6 +4,8 @@ Layer 3 answers a different question — does this belong here at all — and it
 of the release tag. Keeping the two apart is why this stage exists separately: the taxonomy can
 change without invalidating the classify cache or moving every tag.
 """
+import json
+
 from pipeline.enrich import capability as cap
 
 TX = cap.load()
@@ -315,3 +317,30 @@ def test_hud_needs_positive_evidence_of_the_federal_standard():
     p = cap.prompt_for(cap.load())
     assert "321991" in p and "POSITIVE evidence" in p
     assert "layer3_type" in p        # named as the weakest evidence, not as an answer
+
+
+# ---- the production path: the facilities ADL never labelled
+def test_predict_never_touches_a_facility_adl_labelled(tmp_path):
+    """Survivorship ranks ADL's primary_capability above this stage, and the eval is scored
+    against labels the stage is forbidden to replace. Asking the model about them anyway would
+    spend tokens on an answer that can never be published."""
+    (tmp_path / "normalised").mkdir()
+    (tmp_path / "assertions.csv").write_text("facility_id,row_hash\n", encoding="utf-8")
+    (tmp_path / "golden.csv").write_text(
+        "facility_id,primary_capability\nIC-1,Wood Volumetric Modular\nIC-2,\nIC-3,   \n",
+        encoding="utf-8")
+    assert [r["facility_id"] for r in cap.unlabelled_from(tmp_path)] == ["IC-2", "IC-3"]
+    assert [r["facility_id"] for r in cap.labelled_from(tmp_path)] == ["IC-1"]
+
+
+def test_a_prediction_report_claims_no_accuracy():
+    """These facilities have no label, so there is nothing to score against. A report that
+    reached for an accuracy number here would be inventing a measurement."""
+    tx = cap.load()
+    rows = [{"facility_id": "IC-1", "name": "A", "notes": "sipa: SIPA member types: Manufacturing"}]
+    rep = cap._predict_report(tx, rows, {"IC-1": {"leaf": "SIP / ICF (Other Composite Panel)",
+                                                  "confidence": 0.9, "reason": "sipa member"}})
+    assert "accuracy" not in json.dumps(rep)
+    assert rep["by_group"] == {"Panel": 1}
+    assert "Bathroom Pods" in rep["leaves_never_used"]
+    assert rep["no_evidence_beyond_a_name"] == 0

@@ -447,6 +447,59 @@ def labelled_from(build: Path, limit: int = 0) -> list[dict]:
     return [out[int(i * step)] for i in range(limit)]
 
 
+def unlabelled_from(build: Path, limit: int = 0) -> list[dict]:
+    """The facilities this stage EXISTS for — the ones ADL never labelled.
+
+    Same evidence join as the labelled set, so what the eval measured is what production sees.
+    Sampled every kth row rather than taking a prefix, for the same reason: facility_ids cluster
+    by the source that issued them.
+    """
+    import csv
+    idx = evidence_index(build)
+    out = []
+    with (build / "golden.csv").open(newline="", encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            if (r.get("primary_capability") or "").strip():
+                continue                      # ADL already said; this stage must not overwrite it
+            ev = idx.get(r.get("facility_id", ""), {})
+            out.append({**r, **{k: v for k, v in ev.items() if k in ("notes", "website", "sq_ft")}})
+    out.sort(key=lambda r: r["facility_id"])
+    if not limit or limit >= len(out):
+        return out
+    step = len(out) / limit
+    return [out[int(i * step)] for i in range(limit)]
+
+
+def _predict_report(tx: Taxonomy, rows: list[dict], answers: dict[str, dict]) -> dict:
+    """What a production pass produced, with no accuracy claimed anywhere.
+
+    These facilities have no label, so there is NOTHING to score against and the report says so
+    rather than reaching for a number. What it can show is the shape of the answer: the leaf
+    distribution, how confident the model was, and how often it fell back on NAICS — which is the
+    honest way to tell "it classified them" from "it classified them well".
+    """
+    leaves = collections.Counter(o["leaf"] for o in answers.values())
+    groups = collections.Counter(tx.group_of[o["leaf"]] for o in answers.values())
+    conf = sorted(o["confidence"] for o in answers.values())
+    low = [o for o in answers.values() if o["confidence"] < 0.5]
+    return {
+        "asked": len(rows), "answered": len(answers),
+        "no_evidence_beyond_a_name": sum(1 for r in rows if not evidence(r).strip()),
+        "by_group": dict(groups.most_common()),
+        "by_leaf": dict(leaves.most_common()),
+        "confidence": {"median": conf[len(conf) // 2] if conf else None,
+                       "under_0.5": len(low),
+                       "min": conf[0] if conf else None, "max": conf[-1] if conf else None},
+        # A leaf nothing lands in is as much a finding as one everything lands in.
+        "leaves_never_used": sorted(set(tx.leaves) - set(leaves)),
+        "examples": [{"name": r.get("name", ""), "leaf": answers[r["facility_id"]]["leaf"],
+                      "confidence": answers[r["facility_id"]]["confidence"],
+                      "reason": answers[r["facility_id"]]["reason"]}
+                     for r in rows[:: max(1, len(rows) // 12)][:12]
+                     if r["facility_id"] in answers],
+    }
+
+
 def _main(argv: list[str] | None = None) -> int:
     import argparse, json, time
     ap = argparse.ArgumentParser(description="stage 15 — capability classification and its eval")
@@ -456,9 +509,33 @@ def _main(argv: list[str] | None = None) -> int:
     ap.add_argument("--batch", type=int, default=BATCH)
     ap.add_argument("--floor-only", action="store_true", help="no model call, no spend")
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--predict", type=int, default=0,
+                    help="classify N UNLABELLED facilities instead of scoring the labelled set")
     a = ap.parse_args(argv)
 
     tx = load()
+    if a.predict:
+        rows = unlabelled_from(a.build, a.predict)
+        answers: dict[str, dict] = {}
+        usage, stats = {}, {}
+        t0 = time.time()
+        for i in range(0, len(rows), a.batch):
+            chunk = rows[i:i + a.batch]
+            for local, o in classify(tx, chunk, a.model, usage_out=usage, stats=stats).items():
+                answers[chunk[local]["facility_id"]] = o
+        report = {"taxonomy_version": tx.version, "prompt_hash": prompt_hash(tx),
+                  "model": a.model, "seconds": round(time.time() - t0, 1),
+                  "usage": usage, **stats, "predict": _predict_report(tx, rows, answers)}
+        text = json.dumps(report, indent=2)
+        print(text)
+        pr = report["predict"]
+        print(f"HEADLINE predict answered={pr['answered']}/{pr['asked']} "
+              f"groups={pr['by_group']} median_confidence={pr['confidence']['median']} "
+              f"tokens={usage.get('input_tokens', 0)}in/{usage.get('output_tokens', 0)}out")
+        if a.out:
+            a.out.write_text(text)
+        return 0
+
     rows = labelled_from(a.build, a.limit)
     report = {"taxonomy_version": tx.version, "leaves": len(tx.leaves),
               "prompt_hash": prompt_hash(tx), "model": a.model,

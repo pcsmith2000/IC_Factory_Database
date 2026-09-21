@@ -36,6 +36,9 @@ on:
         description: "deterministic floor only — no model call, no spend"
         type: boolean
         default: false
+      predict:
+        description: "classify N UNLABELLED facilities instead of scoring the labelled set. 0 = eval."
+        default: "0"
 
 permissions:
   contents: read
@@ -73,6 +76,7 @@ jobs:
           python -m pipeline.enrich.capability \
             --build build \
             --limit "${{ inputs.limit }}" \
+            --predict "${{ inputs.predict }}" \
             --model "${{ inputs.model }}" \
             --batch "${{ inputs.batch }}" \
             ${{ inputs.floor_only && '--floor-only' || '' }} \
@@ -88,6 +92,21 @@ jobs:
               print("### Capability eval\n\nNo report was written — the run failed before scoring.")
               raise SystemExit(0)
           r = json.loads(p.read_text())
+          if "predict" in r:
+              # No labels, so no accuracy — the shape of the answer is all there is to report.
+              pr = r["predict"]
+              print(f"### Capability predict — taxonomy v{r['taxonomy_version']}, "
+                    f"prompt `{r['prompt_hash']}`, {r['model']}\n")
+              print(f"answered {pr['answered']}/{pr['asked']} in {r['seconds']}s; "
+                    f"usage {r.get('usage')}; {pr['no_evidence_beyond_a_name']} had nothing "
+                    f"beyond a name; median confidence {pr['confidence']['median']}, "
+                    f"{pr['confidence']['under_0.5']} under 0.5\n")
+              print("| leaf | n |\n|---|---|")
+              for k, v in pr["by_leaf"].items():
+                  print(f"| {k} | {v} |")
+              if pr["leaves_never_used"]:
+                  print("\nNever used: " + ", ".join(pr["leaves_never_used"]))
+              raise SystemExit(0)
           print(f"### Capability eval — taxonomy v{r['taxonomy_version']}, "
                 f"{r['leaves']} leaves, prompt `{r['prompt_hash']}`\n")
           print(f"{r['labelled']} labelled facilities, {r['with_product_text']} carrying product text\n")
