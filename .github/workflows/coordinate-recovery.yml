@@ -8,7 +8,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [plan, cached, historical_cached, geocode]
+        options: [plan, cached, historical_cached, fl_bcis, geocode]
         default: plan
       pass_id:
         description: 'Pass identifier; repeats resume unfinished rows'
@@ -36,6 +36,8 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
           DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
           GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.GEOCODIO_API || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN || secrets.IC_DB_PRI_SOURCE_READ_WRITE_TOKEN }}
+          BLOB_STORE_ID: ${{ secrets.BLOB_STORE_ID || secrets.IC_DB_PRI_SOURCE_STORE_ID }}
           MODE: ${{ inputs.mode || 'plan' }}
           PASS_ID: ${{ inputs.pass_id || '1' }}
           ROW_LIMIT: ${{ inputs.row_limit || '100' }}

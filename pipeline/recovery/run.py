@@ -33,7 +33,8 @@ SCHEMA=[
  query_key TEXT NOT NULL, request JSONB NOT NULL, result JSONB,
  outcome TEXT NOT NULL, reserved_usd NUMERIC NOT NULL, run_url TEXT NOT NULL,
  started_at TIMESTAMPTZ NOT NULL DEFAULT now(), completed_at TIMESTAMPTZ,
- PRIMARY KEY(campaign_id,facility_id,pass_id,stage))"""
+ PRIMARY KEY(campaign_id,facility_id,pass_id,stage))""",
+"ALTER TABLE coordinate_recovery_rows ADD COLUMN IF NOT EXISTS recovered_address JSONB"
 ]
 
 
@@ -97,11 +98,13 @@ def validate_rooftop(row,result):
 
 def select_rows(db, pass_id, row_limit):
     # Retry flags from other workflows are deliberately not a selection criterion.
-    rows=db.execute("SELECT r.facility_id,r.baseline,r.evidence,g.name AS live_name,g.city AS live_city,g.state AS live_state,g.release_tag AS live_release FROM coordinate_recovery_rows r JOIN golden_facility g ON g.facility_key=r.facility_id WHERE r.campaign_id=%s AND r.status='unresolved' AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts a WHERE a.campaign_id=r.campaign_id AND a.facility_id=r.facility_id AND a.pass_id=%s AND a.stage='geocode') ORDER BY r.facility_id",(CAMPAIGN,pass_id)).fetchall()
+    rows=db.execute("SELECT r.facility_id,r.baseline,r.recovered_address,r.evidence,g.name AS live_name,g.city AS live_city,g.state AS live_state,g.release_tag AS live_release FROM coordinate_recovery_rows r JOIN golden_facility g ON g.facility_key=r.facility_id WHERE r.campaign_id=%s AND r.status='unresolved' AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts a WHERE a.campaign_id=r.campaign_id AND a.facility_id=r.facility_id AND a.pass_id=%s AND a.stage='geocode') ORDER BY r.facility_id",(CAMPAIGN,pass_id)).fetchall()
     out=[]; reasons=Counter()
     for r in rows:
-        b=r['baseline']
-        if any(norm(b.get(k))!=norm(r.get('live_'+k)) for k in ('name','city','state')):reasons['changed_identity']+=1;continue
+        frozen=r['baseline']
+        if norm(frozen.get('name'))!=norm(r.get('live_name')) or any(frozen.get(k) and norm(frozen.get(k))!=norm(r.get('live_'+k)) for k in ('city','state')):
+            reasons['changed_identity']+=1;continue
+        b={**frozen,**(r.get('recovered_address') or {})};r['frozen']=frozen;r['baseline']=b
         if not eligible(b):reasons['needs_full_street_city_state']+=1;continue
         out.append(r)
     return out[:row_limit],dict(reasons),len(out)
@@ -222,6 +225,16 @@ def execute(mode,pass_id,row_limit):
     from psycopg.types.json import Jsonb
     with connect() as db:
         campaign=freeze(db)
+        if mode=='fl_bcis':
+            from pipeline.recovery.fl_bcis import recover
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
+                         budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(recover(db,CAMPAIGN,pass_id,row_limit,run_url()))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
         if mode=='historical_cached':
             summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
                          budget_ceiling_usd=float(campaign['api_ceiling']),
@@ -265,7 +278,8 @@ def execute(mode,pass_id,row_limit):
                 with connect() as db:
                     # Recheck identity immediately before attaching an assertion to the live release.
                     live=db.execute('SELECT name,city,state,release_tag FROM golden_facility WHERE facility_key=%s FOR SHARE',(r['facility_id'],)).fetchone()
-                    if not live or live['release_tag']!=r['live_release'] or any(norm(live.get(f))!=norm(r['baseline'].get(f)) for f in ('name','city','state')):raise RuntimeError('Facility identity/release changed during lookup')
+                    frozen=r.get('frozen') or r['baseline']
+                    if not live or live['release_tag']!=r['live_release'] or norm(live.get('name'))!=norm(frozen.get('name')) or any(frozen.get(f) and norm(live.get(f))!=norm(frozen.get(f)) for f in ('city','state')):raise RuntimeError('Facility identity/release changed during lookup')
                     if not is_cached:
                         db.execute('INSERT INTO cache_lookup(cache_key,kind,input,result,found,provider,fetched_at,hits) VALUES(%s,%s,%s,%s,%s,%s,%s,0) ON CONFLICT(cache_key) DO UPDATE SET result=EXCLUDED.result,found=EXCLUDED.found,provider=EXCLUDED.provider,fetched_at=EXCLUDED.fetched_at',
                                    (k,'geocode',q,json.dumps(result),int(bool((result.get('response') or {}).get('results'))),'geocodio',datetime.now(timezone.utc).isoformat()))
@@ -287,7 +301,7 @@ def execute(mode,pass_id,row_limit):
     if outcomes.get('error'):raise RuntimeError('Some rows failed; private attempt records retained for diagnosis')
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','historical_cached','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','historical_cached','fl_bcis','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
     maximum=2000 if a.mode in ('cached','historical_cached') else 100
     if not 1<=a.limit<=maximum:raise ValueError(f'{a.mode} batches are limited to {maximum} rows')
     execute(a.mode,a.pass_id,a.limit)
