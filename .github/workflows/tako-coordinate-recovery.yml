@@ -1,6 +1,9 @@
 name: Tako coordinate recovery research
 run-name: Tako coordinate recovery · ${{ inputs.mode || 'plan' }} · ${{ inputs.row_limit || '10' }} rows
 on:
+  push:
+    branches: [feat/coordinate-recovery]
+    paths: [.github/workflows/tako-coordinate-recovery.yml]
   workflow_dispatch:
     inputs:
       mode:
@@ -47,7 +50,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   plan:
-    if: inputs.mode == 'plan'
+    if: github.event_name == 'push' || inputs.mode == 'plan'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
