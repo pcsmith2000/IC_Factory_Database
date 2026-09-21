@@ -16,7 +16,7 @@ import re
 import tempfile
 
 from pipeline.enrich._db import assertion, _rows_for
-from pipeline.sources._common import http_get
+from pipeline.sources._common import http_get,pdf_lines
 
 
 URL='https://labor.maryland.gov/labor/build/buildactivemanu.pdf'
@@ -27,29 +27,36 @@ def norm(value):
     return re.sub(r'[^a-z0-9]','',str(value or '').lower())
 
 
-def parse_page(text: str) -> list[dict]:
-    """Read the three fixed-width columns from one extracted PDF page."""
-    lines=text.splitlines()
-    header=next((line for line in lines if 'Plant ID' in line and 'Contact Person' in line and 'Number_Street' in line),None)
-    if header is None:return []
-    contact=header.index('Contact Person');street=header.index('Number_Street')
-    out=[]
+def parse_lines(lines: list[list[dict]]) -> list[dict]:
+    """Read the three visual columns from pdfplumber word coordinates."""
+    columns={}
     for line in lines:
-        if not line.lstrip().startswith('P-'):continue
-        line=line.lstrip()
-        name=line[:contact].strip().removeprefix('P-').strip()
-        address=line[street:].strip() if len(line)>street else ''
+        words={w['text']:w for w in line}
+        if 'Contact' in words and 'Number_Street' in words:
+            columns[line[0]['page']]=(words['Contact']['x0'],words['Number_Street']['x0'])
+    out=[];pending={}
+    for line in lines:
+        if not line or line[0]['page'] not in columns:continue
+        page=line[0]['page'];contact,street=columns[page]
+        name_words=[w['text'] for w in line if w['x0']<contact]
+        address=' '.join(w['text'] for w in line if w['x0']>=street-1).strip()
+        begins=bool(name_words and name_words[0].startswith('P-'))
+        if begins:
+            name=' '.join(name_words).removeprefix('P-').strip();pending[page]=name
+        elif page in pending and address:
+            # One current row wraps the last word of its company name onto the
+            # next visual line; retain that fragment before reading its street.
+            name=(pending[page]+' '+' '.join(name_words)).strip()
+        else:
+            continue
         # PO boxes and blank plant rows are not physical rooftop inputs.
-        if not name or not re.match(r'^\d+[A-Za-z]?\s',address):continue
-        out.append({'name':name,'address':address})
+        if name and re.match(r'^\d+[A-Za-z]?\s',address):
+            out.append({'name':name,'address':address});pending.pop(page,None)
     return out
 
 
 def parse_pdf(path: Path) -> list[dict]:
-    from pypdf import PdfReader
-    rows=[]
-    for page in PdfReader(path).pages:
-        rows.extend(parse_page(page.extract_text(extraction_mode='layout') or ''))
+    rows=parse_lines(pdf_lines(path))
     if len(rows)<50:raise RuntimeError('Maryland manufacturer PDF layout changed or returned too few plant rows')
     return rows
 
