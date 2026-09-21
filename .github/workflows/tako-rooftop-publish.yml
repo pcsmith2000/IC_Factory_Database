@@ -1,0 +1,65 @@
+name: Publish reviewed cached rooftops
+run-name: Cached rooftop publication · ${{ inputs.mode || 'plan' }}
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [plan, apply]
+        default: plan
+      plan_run:
+        description: 'Exact reviewed preview run for apply'
+        default: ''
+      plan_sha256:
+        description: 'SHA256 printed by the preview'
+        default: ''
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ${{ inputs.mode == 'apply' && 'ic-warehouse-pipeline' || format('rooftop-preview-{0}', github.run_id) }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_tako_rooftop_publish.py tests/test_tako_publish.py tests/test_web_research.py -q
+      - name: Retrieve cached geocoding and optional reviewed preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ inputs.mode || 'plan' }}
+          PLAN_RUN: ${{ inputs.plan_run }}
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          subprocess.run(['gh','run','download','35545590293','--name','rooftop-preview-35545590293','--dir','cache'],check=True)
+          if os.environ['MODE']=='apply':
+              run=os.environ['PLAN_RUN']
+              if not re.fullmatch(r'\d+',run):raise ValueError('Exact preview run required')
+              subprocess.run(['gh','run','download',run,'--name',f'rooftop-publish-{run}','--dir','preview'],check=True)
+          PY
+      - name: Revalidate cache and preview or publish scoped results
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          MODE: ${{ inputs.mode || 'plan' }}
+          PLAN_SHA256: ${{ inputs.plan_sha256 }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from pipeline.web_research.publish_rooftops import run
+          mode=os.environ['MODE']
+          run(mode,Path('cache'),Path('rooftop-publish-output'),'preview/plan.json' if mode=='apply' else None,os.environ.get('PLAN_SHA256'))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rooftop-publish-${{ github.run_id }}
+          path: rooftop-publish-output/
+          retention-days: 90
