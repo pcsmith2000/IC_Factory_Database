@@ -20,6 +20,7 @@ from pipeline.reconcile import norm_name
 
 SOURCE = "internal:exact-site-rooftop-crossmatch"
 CONTACT_SOURCE = "internal:contact-site-rooftop-crossmatch"
+NAME_SOURCE = "internal:unique-name-rooftop-crossmatch"
 GENERIC_HOSTS = {"facebook.com", "www.facebook.com", "linkedin.com", "www.linkedin.com",
                  "instagram.com", "www.instagram.com", "x.com", "www.x.com"}
 
@@ -137,6 +138,38 @@ def choose_contact(targets: list[dict], donors: list[dict]) -> tuple[list[dict],
     return selected, refused
 
 
+def choose_name_only(targets: list[dict], donors: list[dict]) -> tuple[list[dict], Counter]:
+    """Use name alone only when it identifies exactly one rooftop facility nationally."""
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for donor in donors:
+        n = norm_name(donor.get("name") or "")
+        if distinctive(n) and coordinate(donor.get("value")):
+            grouped[n].append(donor)
+    selected, refused = [], Counter()
+    for target in targets:
+        n = norm_name(target.get("name") or "")
+        if not distinctive(n):
+            refused["target_name_not_distinctive"] += 1
+            continue
+        matches = [d for d in grouped.get(n, []) if d["facility_id"] != target["facility_id"]]
+        donor_facilities = {d["facility_id"] for d in matches}
+        if not matches:
+            refused["no_exact_name_rooftop_donor"] += 1
+            continue
+        if len(donor_facilities) != 1:
+            refused["name_has_multiple_rooftop_facilities"] += 1
+            continue
+        points = {tuple(round(x, 6) for x in coordinate(d["value"])) for d in matches}
+        if len(points) != 1:
+            refused["single_donor_has_conflicting_rooftops"] += 1
+            continue
+        donor = min(matches, key=lambda d: d.get("assertion_id") or "")
+        selected.append({"target": target, "donor": donor, "point": next(iter(points)),
+                         "donor_count": len(matches),
+                         "match_method": "distinctive exact normalized name + exactly one rooftop donor facility nationally"})
+    return selected, refused
+
+
 def _append(db, campaign: str, item: dict, workflow: str, *, source: str = SOURCE,
             source_name: str = "Internal exact-site verified-rooftop crossmatch") -> int:
     target, donor = item["target"], item["donor"]
@@ -216,5 +249,29 @@ def run_contact(db, campaign: str, workflow: str, write: bool = False, limit: in
                                 source_name="Internal contact-and-locality verified-rooftop crossmatch")
     return {"unresolved_rows_scanned": len(targets), "rooftop_donor_assertions": len(donors),
             "unambiguous_contact_site_matches": len(selected), "refused": dict(refused),
+            "write_requested": write, "coordinate_assertions_inserted": inserted,
+            "new_api_calls": 0, "api_cost_usd": 0.0, "external_data_sent": False}
+
+
+def run_name_only(db, campaign: str, workflow: str, write: bool = False, limit: int = 100) -> dict:
+    targets = db.execute("""SELECT c.facility_id,c.baseline->>'name' AS name,g.release_tag
+        FROM coordinate_recovery_rows c JOIN golden_facility g ON g.facility_key=c.facility_id
+        WHERE c.campaign_id=%s AND c.status='unresolved' ORDER BY c.facility_id""",
+        (campaign,)).fetchall()
+    donors = db.execute("""SELECT g.facility_key AS facility_id,g.name,
+            a.assertion_id,a.value,a.source_key,a.row_hash,r.source_url
+        FROM golden_facility g JOIN fact_assertions a ON a.facility_key=g.facility_key
+        LEFT JOIN ref_source_row r ON r.row_hash=a.row_hash
+        WHERE a.field_key='lat_lon' AND a.basis='rooftop'
+          AND NULLIF(btrim(a.value),'') IS NOT NULL""").fetchall()
+    selected, refused = choose_name_only([dict(r) for r in targets], [dict(r) for r in donors])
+    selected = selected[:limit]
+    inserted = 0
+    if write:
+        for item in selected:
+            inserted += _append(db, campaign, item, workflow, source=NAME_SOURCE,
+                                source_name="Internal nationally unique-name verified-rooftop crossmatch")
+    return {"unresolved_rows_scanned": len(targets), "rooftop_donor_assertions": len(donors),
+            "unambiguous_unique_name_matches": len(selected), "refused": dict(refused),
             "write_requested": write, "coordinate_assertions_inserted": inserted,
             "new_api_calls": 0, "api_cost_usd": 0.0, "external_data_sent": False}

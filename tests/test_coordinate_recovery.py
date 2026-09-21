@@ -1,7 +1,7 @@
 from copy import deepcopy
 from pipeline.recovery.run import eligible,validate_rooftop
 from pipeline.recovery.overture_rooftop import strict_address_match,strict_choose,control_gate
-from pipeline.recovery.internal_crossmatch import choose as choose_internal,choose_contact,distinctive
+from pipeline.recovery.internal_crossmatch import choose as choose_internal,choose_contact,choose_name_only,distinctive
 
 ROW={'address':'10 Main Street','city':'Boston','state':'MA','zip':'02101'}
 HIT={'accuracy_type':'rooftop','accuracy':1,'address_components':{'number':'10','formatted_street':'Main St','city':'Boston','state_province':'MA','postal_code':'02101'},'location':{'lat':42.1,'lng':-71.1}}
@@ -78,3 +78,12 @@ def test_internal_contact_crossmatch_requires_contact_locality_and_name_compatib
     assert choose_contact([{**target,'name':'Different Tenant'}],[donor])[0]==[]
     conflict={**donor,'facility_id':'IC-D2','value':'42.2,-71.2'}
     assert choose_contact([target],[donor,conflict])[0]==[]
+
+
+def test_internal_name_only_requires_one_donor_facility_nationally():
+    target={'facility_id':'IC-T','name':'Acme Components LLC'}
+    donor={'facility_id':'IC-D','name':'ACME COMPONENTS INC','value':'42.1,-71.1','assertion_id':'a1'}
+    assert len(choose_name_only([target],[donor])[0])==1
+    second={**donor,'facility_id':'IC-D2','assertion_id':'a2'}
+    assert choose_name_only([target],[donor,second])[0]==[]
+    assert choose_name_only([{**target,'name':'ABC'}],[donor])[0]==[]

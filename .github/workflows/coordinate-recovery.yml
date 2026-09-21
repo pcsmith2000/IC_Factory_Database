@@ -8,7 +8,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [plan, cached, historical_cached, fl_bcis, md_labor, md_labor_crossmatch, internal_crossmatch_plan, internal_crossmatch, internal_contact_plan, internal_contact, overture_pilot, overture_rooftop, geocode]
+        options: [plan, cached, historical_cached, fl_bcis, md_labor, md_labor_crossmatch, internal_crossmatch_plan, internal_crossmatch, internal_contact_plan, internal_contact, internal_name_plan, internal_name, overture_pilot, overture_rooftop, geocode]
         default: plan
       pass_id:
         description: 'Pass identifier; repeats resume unfinished rows'
