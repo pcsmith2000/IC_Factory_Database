@@ -44,3 +44,22 @@ def test_campaign_row_is_worked_under_a_verified_live_identity_only():
     assert identity_for(frozen, live, verified) == live
     stale = {'address': '3926 Fountain Valley Road', '_identity': {'name': 'Someone Else', 'city': 'Knoxville', 'state': 'TN'}}
     assert identity_for(frozen, live, stale) is None
+
+
+def test_e11_withholds_assertions_carried_from_a_release_that_named_another_plant():
+    from pipeline.enrich.identity import split_carried
+    cur = 'rel.now'; old = 'rel.then'
+    a = [{'facility_id': 'IC-95293', 'field': 'name', 'value': 'Ladabuild', 'release_tag': cur, 'source_id': 'adl_july'},
+         {'facility_id': 'IC-95293', 'field': 'name', 'value': 'Blueprint Robotics - Baltimore', 'release_tag': old, 'source_id': 'adl_july'},
+         {'facility_id': 'IC-95293', 'field': 'address', 'value': '1500 Broening Hwy', 'release_tag': old, 'source_id': 'tako_ai_search'},
+         {'facility_id': 'IC-95293', 'field': 'lat_lon', 'value': '39.27,-76.54', 'release_tag': old, 'source_id': 'geocode:geocodio'},
+         {'facility_id': 'IC-1', 'field': 'name', 'value': 'Same Plant', 'release_tag': cur, 'source_id': 'x'},
+         {'facility_id': 'IC-1', 'field': 'name', 'value': 'SAME PLANT', 'release_tag': old, 'source_id': 'x'},
+         {'facility_id': 'IC-1', 'field': 'address', 'value': '1 Main St', 'release_tag': old, 'source_id': 'enrich:locate'},
+         {'facility_id': 'IC-2', 'field': 'name', 'value': 'No Name Then', 'release_tag': cur, 'source_id': 'x'},
+         {'facility_id': 'IC-2', 'field': 'lat_lon', 'value': '1,1', 'release_tag': 'rel.enrich-only', 'source_id': 'geocode:geocodio'}]
+    kept, withheld, unjudged = split_carried(a, cur)
+    assert {(w['facility_id'], w['field']) for w in withheld} == {('IC-95293', 'name'), ('IC-95293', 'address'), ('IC-95293', 'lat_lon')}
+    assert unjudged == 1
+    assert ('IC-1', 'address') in {(k['facility_id'], k['field']) for k in kept}
+    assert ('IC-2', 'lat_lon') in {(k['facility_id'], k['field']) for k in kept}

@@ -20,7 +20,7 @@ from pathlib import Path
 from .. import golden as golden_mod
 from ..registry import load_yaml
 from ..warehouse import GOLDEN_FIELDS, SYNTHETIC_SOURCES
-from . import _db, geo
+from . import _db, geo, identity
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -63,6 +63,10 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
     cov_before = _db.golden_coverage(db, measurable)
 
     asserts = _db.fetch_assertions(db, release_tag)
+    unfiltered_rows, _ = build([dict(a) for a in asserts], rules)
+    # Gate E11: an assertion carried from another release is kept only when that release named
+    # the same plant under this id as the current release does. See pipeline/enrich/identity.py.
+    asserts, carried_withheld, unjudged = identity.split_carried(asserts, release_tag)
     rows, conflicts = build(asserts, rules)
     # Gate E10: a coordinate carried onto a facility must lie in that facility's state. Assertions
     # travel across releases by facility id, and when ids were issued by diverging registries the
@@ -80,10 +84,12 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
         rows, conflicts = build(asserts, rules)
     cov_after = coverage(rows, measurable)
     from . import gates
-    # E6 must tolerate exactly the coordinates E10 withheld: those facilities had a coordinate before
-    # and may have none now, and that is the point.
-    lost_to_e10 = len({b['facility_id'] for b in quarantined})
-    results = gates.run_promote(cov_before, cov_after, allowed_loss={'lat_lon': lost_to_e10})
+    # E6 must tolerate exactly what E10 and E11 withheld and nothing else: the difference between
+    # the rebuild with every assertion and the rebuild after the two gates, field by field.
+    cov_unfiltered = coverage(unfiltered_rows, measurable)
+    allowed_loss = {f: max(0, cov_unfiltered[f] - cov_after[f]) for f in measurable}
+    results = gates.run_promote(cov_before, cov_after, allowed_loss=allowed_loss)
+    results.append(gates.e11_carried_assertions_name_the_same_plant(carried_withheld, unjudged))
     results.append(gates.e10_no_coordinate_outside_its_state(quarantined))
 
     out = {"release_tag": release_tag, "assertions_read": len(asserts),
@@ -93,6 +99,11 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
            "gained": {f: cov_after[f] - cov_before.get(f, 0) for f in measurable
                       if cov_after[f] != cov_before.get(f, 0)},
            "gates": [str(r) for r in results], "written": 0,
+           "carried_withheld_other_plant": len(carried_withheld),
+           "carried_withheld_by_field": _count_by(carried_withheld, 'field'),
+           "carried_withheld_by_source": _count_by(carried_withheld, 'source'),
+           "carried_unjudged_no_name_in_release": unjudged,
+           "carried_withheld": carried_withheld,
            "coordinates_withheld_out_of_state": len(quarantined),
            "coordinates_withheld_by_source": _count_by(quarantined, 'source'),
            "coordinates_withheld": quarantined,

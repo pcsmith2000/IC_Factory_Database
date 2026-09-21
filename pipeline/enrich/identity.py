@@ -1,0 +1,53 @@
+"""Gate E11 — an assertion carried across releases must belong to the same plant.
+
+fact_assertions is append-only across releases, and promote carries enrichment (and reviewed
+web-lookup) assertions forward by facility id so paid work survives a new release. That is safe
+only while an id names one plant. Releases built on diverging id registries broke it: IC-95293 was
+Borntreger Truss (WI), then Blueprint Robotics Baltimore (MD), then Bankersteel South Plainfield
+(NJ), then Ladabuild (CO), and the address and rooftop researched for Blueprint Robotics were
+carried onto Ladabuild. The state-box gate (E10) catches the pin; this catches the address, the
+website and everything else, and it does so exactly rather than geographically.
+
+The rule: for a facility, the names asserted in the CURRENT release define the plant. A carried
+assertion written under another release is kept only when that release's names for the facility
+overlap the current ones. A release with no name assertion for the facility cannot be judged and
+is kept, counted separately.
+"""
+from __future__ import annotations
+import re
+
+
+def _norm(v) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(v or "").lower())
+
+
+def names_by_release(assertions: list[dict]) -> dict[tuple[str, str], set[str]]:
+    out: dict[tuple[str, str], set[str]] = {}
+    for a in assertions:
+        if a.get("field") == "name" and _norm(a.get("value")):
+            out.setdefault((a["facility_id"], a.get("release_tag") or ""), set()).add(_norm(a["value"]))
+    return out
+
+
+def split_carried(assertions: list[dict], release_tag: str) -> tuple[list[dict], list[dict], int]:
+    """(kept, withheld, unjudged). Withheld assertions name a different plant than the current
+    release does under the same id; unjudged ones come from a release that asserted no name."""
+    names = names_by_release(assertions)
+    kept, withheld, unjudged = [], [], 0
+    for a in assertions:
+        tag = a.get("release_tag") or ""
+        if tag == release_tag or not tag:
+            kept.append(a)
+            continue
+        current = names.get((a["facility_id"], release_tag), set())
+        then = names.get((a["facility_id"], tag), set())
+        if not then or not current:
+            unjudged += 1
+            kept.append(a)
+        elif current & then:
+            kept.append(a)
+        else:
+            withheld.append({"facility_id": a["facility_id"], "field": a.get("field"), "value": a.get("value"),
+                             "source": a.get("source_id"), "release_tag": tag,
+                             "named_then": sorted(then)[:3], "named_now": sorted(current)[:3]})
+    return kept, withheld, unjudged

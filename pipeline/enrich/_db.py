@@ -246,7 +246,7 @@ def append(db, assertions: list[dict], release_tag: str, chunk: int = 250) -> di
 # release drops them. That is accepted while the stages are separate actions (docs/enrichment.md);
 # this stage is what makes the run visible until then.
 SELECT_ASSERTIONS = """
-    SELECT facility_key AS facility_id, source_key AS source_id,
+    SELECT facility_key AS facility_id, source_key AS source_id, release_tag,
            COALESCE(source_class, '')  AS source_class,
            COALESCE(date_key, '')      AS retrieved_date,
            COALESCE(row_hash, '')      AS row_hash,
