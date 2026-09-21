@@ -60,48 +60,73 @@
    "facility_id": "IC-95318",
    "finding": "17645 Juniper Path (Suite 260), Lakeville MN (BBB)",
    "reason": "Suite address; corporate office rather than the SIP plant"
+  },
+  {
+   "facility_id": "IC-95218",
+   "finding": "119 Oakwood Dr, East Dublin, GA 31027 (official, steel truss plant opened 2025)",
+   "reason": "ADL row says Dublin; plant is in East Dublin"
+  },
+  {
+   "facility_id": "IC-95235",
+   "finding": "118 Trade Rd, Plattsburgh, NY 12901 (NY State wood-products directory)",
+   "reason": "ADL row says Plattsville (typo?)"
+  },
+  {
+   "facility_id": "IC-95249",
+   "finding": "240 Yardmaster Court, Stephenson, VA 22656 (84 Lumber press release, truss plant)",
+   "reason": "ADL row says Winchester; plant is in Stephenson (Frederick County)"
+  },
+  {
+   "facility_id": "IC-95255",
+   "finding": "2302 E. Paradise Rd., Tracy, CA 95304 (official; former Katerra 577,000 sf plant)",
+   "reason": "ADL row says state VA; plant is in California"
+  },
+  {
+   "facility_id": "IC-95256",
+   "finding": "5805 Santa Elena Dr., Arvin, CA 93203 (MBI manufacturer directory)",
+   "reason": "ADL row says Tejon Ranch; postal city is Arvin"
+  },
+  {
+   "facility_id": "IC-95277",
+   "finding": "1660 Rowe Ave, Worthington, MN (BBB)",
+   "reason": "ADL row says Auburn; Highland Manufacturing is in Worthington"
+  },
+  {
+   "facility_id": "IC-95280",
+   "finding": "4055 U.S. 401, Lillington, NC (manufacturer listing)",
+   "reason": "ADL row says Sanford; Champion NC plant is Lillington \u2014 likely a duplicate of IC-95285"
+  },
+  {
+   "facility_id": "IC-95264",
+   "finding": "3838 or 3737 Palm Harbor Dr NE, Millersburg OR (maps / snippets disagree)",
+   "reason": "House number ambiguous between sources"
+  },
+  {
+   "facility_id": "IC-95240",
+   "finding": "200 Elizabeth Drive Suite 2414, Pittsburgh PA (office)",
+   "reason": "Office suite; no plant address published"
+  },
+  {
+   "facility_id": "IC-95278",
+   "finding": "none",
+   "reason": "No Champion plant in Womelsdorf; MHI 2024 list shows Ephrata, Claysburg, Strattanville only"
+  },
+  {
+   "facility_id": "IC-95292",
+   "finding": "101 Canary Ln, Grand Junction CO is a 1941 single-family home per listings",
+   "reason": "Candidate doubtful; press says a 15,000 sf facility in Grand Junction, no street"
+  },
+  {
+   "facility_id": "IC-95325",
+   "finding": "none citable",
+   "reason": "Search says main manufacturing is New Iberia LA; Sarasota address appears only as a project"
   }
  ],
  "uncited_candidates": [
   {
-   "facility_id": "IC-95316",
-   "candidate": "2604 Sunset Dr, Grenada MS 38901",
-   "status": "search snippet only; generalpanel.com is parked"
-  },
-  {
-   "facility_id": "IC-95292",
-   "candidate": "101 Canary Lane, Grand Junction CO 81507",
-   "status": "search snippet only"
-  },
-  {
-   "facility_id": "IC-95294",
-   "candidate": "11 Goodwin Drive, Windsor CT",
-   "status": "search snippet only; 450,000 sf plant confirmed by press"
-  },
-  {
-   "facility_id": "IC-95302",
-   "candidate": "150 Southridge Pkwy, Bessemer City NC 28016",
-   "status": "search snippet only; plant confirmed on official site"
-  },
-  {
-   "facility_id": "IC-95323",
-   "candidate": "15 Arden Dr, Belgrade MT 59714",
-   "status": "search snippet only"
-  },
-  {
-   "facility_id": "IC-95325",
-   "candidate": "3045 Fruitville Commons Blvd, Sarasota FL 34240",
-   "status": "search snippet only; not Bradenton"
-  },
-  {
    "facility_id": "IC-95334",
    "candidate": "204 Bilmar Dr, Pittsburgh PA 15205",
    "status": "search snippet only; not Lewisburg"
-  },
-  {
-   "facility_id": "IC-95300",
-   "candidate": "1354 Hall Spencer Road, Rock Hill SC 29730",
-   "status": "search snippet only"
   }
  ],
  "assertions": [
@@ -1090,6 +1115,1400 @@
     "state": "TX"
    },
    "review_note": "Manufacturer (plant) listing; EPA TRI also lists a Champion facility in Lillington. Retail centre is elsewhere (115 Titan Roberts Rd). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95316",
+   "field": "address",
+   "value": "2604 Sunset Drive",
+   "source_url": "https://buildingclean.org/manufacturers/facility/9209",
+   "quote": "Perma R Products, Inc. ... 2604 Sunset Drive Grenada, MS 38901 United States ... expanded polystyrene (EPS)",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "SurePod West (subsidairy of DPR)",
+    "city": "PHOENIX",
+    "state": "AZ"
+   },
+   "review_note": "Building Clean facility listing under parent Perma R Products (General Panel is a Perma R unit); EPS/SIP plant. generalpanel.com is parked. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95316",
+   "field": "city",
+   "value": "PHOENIX",
+   "source_url": "https://buildingclean.org/manufacturers/facility/9209",
+   "quote": "Perma R Products, Inc. ... 2604 Sunset Drive Grenada, MS 38901 United States ... expanded polystyrene (EPS)",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "SurePod West (subsidairy of DPR)",
+    "city": "PHOENIX",
+    "state": "AZ"
+   },
+   "review_note": "Building Clean facility listing under parent Perma R Products (General Panel is a Perma R unit); EPS/SIP plant. generalpanel.com is parked. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95316",
+   "field": "state",
+   "value": "AZ",
+   "source_url": "https://buildingclean.org/manufacturers/facility/9209",
+   "quote": "Perma R Products, Inc. ... 2604 Sunset Drive Grenada, MS 38901 United States ... expanded polystyrene (EPS)",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "SurePod West (subsidairy of DPR)",
+    "city": "PHOENIX",
+    "state": "AZ"
+   },
+   "review_note": "Building Clean facility listing under parent Perma R Products (General Panel is a Perma R unit); EPS/SIP plant. generalpanel.com is parked. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95316",
+   "field": "zip",
+   "value": "38901",
+   "source_url": "https://buildingclean.org/manufacturers/facility/9209",
+   "quote": "Perma R Products, Inc. ... 2604 Sunset Drive Grenada, MS 38901 United States ... expanded polystyrene (EPS)",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "SurePod West (subsidairy of DPR)",
+    "city": "PHOENIX",
+    "state": "AZ"
+   },
+   "review_note": "Building Clean facility listing under parent Perma R Products (General Panel is a Perma R unit); EPS/SIP plant. generalpanel.com is parked. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95294",
+   "field": "address",
+   "value": "11 Goodwin Drive",
+   "source_url": "https://www.sbcacomponents.com/media/blueprint-building-clt-production-facility-near-baltimore",
+   "quote": "It will be constructed on a vacant lot at 11 Goodwin Drive, just to the north of a large Amazon warehouse, near Day Hill Road.",
+   "scope": "facility",
+   "page_type": "press",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Blueprint Robotics - Baltimore",
+    "city": "BALTIMORE",
+    "state": "MD"
+   },
+   "review_note": "SBCA press item on the 450,000 sf Windsor plant (announced 2023); page describes the site as to be built, so current operating status is for stage 12 to judge."
+  },
+  {
+   "facility_id": "IC-95294",
+   "field": "city",
+   "value": "BALTIMORE",
+   "source_url": "https://www.sbcacomponents.com/media/blueprint-building-clt-production-facility-near-baltimore",
+   "quote": "It will be constructed on a vacant lot at 11 Goodwin Drive, just to the north of a large Amazon warehouse, near Day Hill Road.",
+   "scope": "facility",
+   "page_type": "press",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Blueprint Robotics - Baltimore",
+    "city": "BALTIMORE",
+    "state": "MD"
+   },
+   "review_note": "SBCA press item on the 450,000 sf Windsor plant (announced 2023); page describes the site as to be built, so current operating status is for stage 12 to judge."
+  },
+  {
+   "facility_id": "IC-95294",
+   "field": "state",
+   "value": "MD",
+   "source_url": "https://www.sbcacomponents.com/media/blueprint-building-clt-production-facility-near-baltimore",
+   "quote": "It will be constructed on a vacant lot at 11 Goodwin Drive, just to the north of a large Amazon warehouse, near Day Hill Road.",
+   "scope": "facility",
+   "page_type": "press",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Blueprint Robotics - Baltimore",
+    "city": "BALTIMORE",
+    "state": "MD"
+   },
+   "review_note": "SBCA press item on the 450,000 sf Windsor plant (announced 2023); page describes the site as to be built, so current operating status is for stage 12 to judge."
+  },
+  {
+   "facility_id": "IC-95302",
+   "field": "address",
+   "value": "150 Southridge Parkway",
+   "source_url": "https://property.compstak.com/150-Southridge-Parkway-Bessemer-City/p/3599838",
+   "quote": "Southridge 85 150 Southridge Parkway , Bessemer City , NC ... Property Type: industrial ... Tenant Offsitek Lease Size: 90-100K SQFT",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Dvele Modular",
+    "city": "MESA",
+    "state": "AZ"
+   },
+   "review_note": "offsitek.com names 'our world-class automated facility in Bessemer City' without a street; CompStak lists Offsitek as the 90-100K sf industrial tenant here. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95302",
+   "field": "city",
+   "value": "MESA",
+   "source_url": "https://property.compstak.com/150-Southridge-Parkway-Bessemer-City/p/3599838",
+   "quote": "Southridge 85 150 Southridge Parkway , Bessemer City , NC ... Property Type: industrial ... Tenant Offsitek Lease Size: 90-100K SQFT",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Dvele Modular",
+    "city": "MESA",
+    "state": "AZ"
+   },
+   "review_note": "offsitek.com names 'our world-class automated facility in Bessemer City' without a street; CompStak lists Offsitek as the 90-100K sf industrial tenant here. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95302",
+   "field": "state",
+   "value": "AZ",
+   "source_url": "https://property.compstak.com/150-Southridge-Parkway-Bessemer-City/p/3599838",
+   "quote": "Southridge 85 150 Southridge Parkway , Bessemer City , NC ... Property Type: industrial ... Tenant Offsitek Lease Size: 90-100K SQFT",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Dvele Modular",
+    "city": "MESA",
+    "state": "AZ"
+   },
+   "review_note": "offsitek.com names 'our world-class automated facility in Bessemer City' without a street; CompStak lists Offsitek as the 90-100K sf industrial tenant here. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95323",
+   "field": "address",
+   "value": "15 Arden Drive",
+   "source_url": "https://www.premierbuildingsystems.com/contact",
+   "quote": "P.O. Box 838 / 15 Arden Drive Belgrade, MT 59714",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "GRAYHAWK LLC",
+    "city": "ELIZABETHTOWN",
+    "state": "KY"
+   },
+   "review_note": "Premier Building Systems (successor; bigskyrcontrol.com redirects) contact page; address not labelled a plant, Belgrade Chamber lists it under manufacturing."
+  },
+  {
+   "facility_id": "IC-95323",
+   "field": "city",
+   "value": "ELIZABETHTOWN",
+   "source_url": "https://www.premierbuildingsystems.com/contact",
+   "quote": "P.O. Box 838 / 15 Arden Drive Belgrade, MT 59714",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "GRAYHAWK LLC",
+    "city": "ELIZABETHTOWN",
+    "state": "KY"
+   },
+   "review_note": "Premier Building Systems (successor; bigskyrcontrol.com redirects) contact page; address not labelled a plant, Belgrade Chamber lists it under manufacturing."
+  },
+  {
+   "facility_id": "IC-95323",
+   "field": "state",
+   "value": "KY",
+   "source_url": "https://www.premierbuildingsystems.com/contact",
+   "quote": "P.O. Box 838 / 15 Arden Drive Belgrade, MT 59714",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "GRAYHAWK LLC",
+    "city": "ELIZABETHTOWN",
+    "state": "KY"
+   },
+   "review_note": "Premier Building Systems (successor; bigskyrcontrol.com redirects) contact page; address not labelled a plant, Belgrade Chamber lists it under manufacturing."
+  },
+  {
+   "facility_id": "IC-95323",
+   "field": "zip",
+   "value": "59714",
+   "source_url": "https://www.premierbuildingsystems.com/contact",
+   "quote": "P.O. Box 838 / 15 Arden Drive Belgrade, MT 59714",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "GRAYHAWK LLC",
+    "city": "ELIZABETHTOWN",
+    "state": "KY"
+   },
+   "review_note": "Premier Building Systems (successor; bigskyrcontrol.com redirects) contact page; address not labelled a plant, Belgrade Chamber lists it under manufacturing."
+  },
+  {
+   "facility_id": "IC-95300",
+   "field": "address",
+   "value": "1345 Hall Spencer Rd",
+   "source_url": "https://worksafetyindex.com/location/1199458",
+   "quote": "Banker Steel Rock Hill, LLC ... 1345 Hall Spencer Rd, Rock Hill, SC, 29730",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Bankersteel - Orlando",
+    "city": "ORLANDO",
+    "state": "FL"
+   },
+   "review_note": "OSHA-derived establishment record (~41 employees). bankersteel.com no longer lists Rock Hill; may be closed or divested \u2014 existence is stage 12's call. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95300",
+   "field": "city",
+   "value": "ORLANDO",
+   "source_url": "https://worksafetyindex.com/location/1199458",
+   "quote": "Banker Steel Rock Hill, LLC ... 1345 Hall Spencer Rd, Rock Hill, SC, 29730",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Bankersteel - Orlando",
+    "city": "ORLANDO",
+    "state": "FL"
+   },
+   "review_note": "OSHA-derived establishment record (~41 employees). bankersteel.com no longer lists Rock Hill; may be closed or divested \u2014 existence is stage 12's call. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95300",
+   "field": "state",
+   "value": "FL",
+   "source_url": "https://worksafetyindex.com/location/1199458",
+   "quote": "Banker Steel Rock Hill, LLC ... 1345 Hall Spencer Rd, Rock Hill, SC, 29730",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Bankersteel - Orlando",
+    "city": "ORLANDO",
+    "state": "FL"
+   },
+   "review_note": "OSHA-derived establishment record (~41 employees). bankersteel.com no longer lists Rock Hill; may be closed or divested \u2014 existence is stage 12's call. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95300",
+   "field": "zip",
+   "value": "29730",
+   "source_url": "https://worksafetyindex.com/location/1199458",
+   "quote": "Banker Steel Rock Hill, LLC ... 1345 Hall Spencer Rd, Rock Hill, SC, 29730",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Bankersteel - Orlando",
+    "city": "ORLANDO",
+    "state": "FL"
+   },
+   "review_note": "OSHA-derived establishment record (~41 employees). bankersteel.com no longer lists Rock Hill; may be closed or divested \u2014 existence is stage 12's call. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95210",
+   "field": "address",
+   "value": "29652 State Road 19",
+   "source_url": "https://www.bbb.org/us/fl/tavares/profile/trusses/angle-truss-co-0733-155714608",
+   "quote": "29652 State Road 19",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Angle Truss",
+    "city": "Tavares",
+    "state": "FL"
+   },
+   "review_note": "BBB listing for Angle Truss Co (trusses); angletruss.com returned 503. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95210",
+   "field": "city",
+   "value": "Tavares",
+   "source_url": "https://www.bbb.org/us/fl/tavares/profile/trusses/angle-truss-co-0733-155714608",
+   "quote": "29652 State Road 19",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Angle Truss",
+    "city": "Tavares",
+    "state": "FL"
+   },
+   "review_note": "BBB listing for Angle Truss Co (trusses); angletruss.com returned 503. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95210",
+   "field": "state",
+   "value": "FL",
+   "source_url": "https://www.bbb.org/us/fl/tavares/profile/trusses/angle-truss-co-0733-155714608",
+   "quote": "29652 State Road 19",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Angle Truss",
+    "city": "Tavares",
+    "state": "FL"
+   },
+   "review_note": "BBB listing for Angle Truss Co (trusses); angletruss.com returned 503. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95223",
+   "field": "address",
+   "value": "277 John Harper Ave",
+   "source_url": "https://ufpsitebuilt.com/our-locations/folkston-ga",
+   "quote": "277 John Harper Ave Folkston, GA 31537",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Universal Forest Products",
+    "city": "Folkston",
+    "state": "GA"
+   },
+   "review_note": "UFP Site Built truss/component plant page."
+  },
+  {
+   "facility_id": "IC-95223",
+   "field": "city",
+   "value": "Folkston",
+   "source_url": "https://ufpsitebuilt.com/our-locations/folkston-ga",
+   "quote": "277 John Harper Ave Folkston, GA 31537",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Universal Forest Products",
+    "city": "Folkston",
+    "state": "GA"
+   },
+   "review_note": "UFP Site Built truss/component plant page."
+  },
+  {
+   "facility_id": "IC-95223",
+   "field": "state",
+   "value": "GA",
+   "source_url": "https://ufpsitebuilt.com/our-locations/folkston-ga",
+   "quote": "277 John Harper Ave Folkston, GA 31537",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Universal Forest Products",
+    "city": "Folkston",
+    "state": "GA"
+   },
+   "review_note": "UFP Site Built truss/component plant page."
+  },
+  {
+   "facility_id": "IC-95223",
+   "field": "zip",
+   "value": "31537",
+   "source_url": "https://ufpsitebuilt.com/our-locations/folkston-ga",
+   "quote": "277 John Harper Ave Folkston, GA 31537",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Universal Forest Products",
+    "city": "Folkston",
+    "state": "GA"
+   },
+   "review_note": "UFP Site Built truss/component plant page."
+  },
+  {
+   "facility_id": "IC-95227",
+   "field": "address",
+   "value": "1200 E Patapsco Ave",
+   "source_url": "https://www.yellowpages.com/brooklyn-md/mip/stark-truss-baltimore-526197805",
+   "quote": "1200 E Patapsco Ave, Brooklyn, MD 21225",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Stark Truss",
+    "city": "Baltimore",
+    "state": "MD"
+   },
+   "review_note": "Directory gives the city as Brooklyn, a Baltimore neighbourhood in 21225; Stark Truss Baltimore LLC. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95227",
+   "field": "city",
+   "value": "Baltimore",
+   "source_url": "https://www.yellowpages.com/brooklyn-md/mip/stark-truss-baltimore-526197805",
+   "quote": "1200 E Patapsco Ave, Brooklyn, MD 21225",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Stark Truss",
+    "city": "Baltimore",
+    "state": "MD"
+   },
+   "review_note": "Directory gives the city as Brooklyn, a Baltimore neighbourhood in 21225; Stark Truss Baltimore LLC. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95227",
+   "field": "state",
+   "value": "MD",
+   "source_url": "https://www.yellowpages.com/brooklyn-md/mip/stark-truss-baltimore-526197805",
+   "quote": "1200 E Patapsco Ave, Brooklyn, MD 21225",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Stark Truss",
+    "city": "Baltimore",
+    "state": "MD"
+   },
+   "review_note": "Directory gives the city as Brooklyn, a Baltimore neighbourhood in 21225; Stark Truss Baltimore LLC. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95227",
+   "field": "zip",
+   "value": "21225",
+   "source_url": "https://www.yellowpages.com/brooklyn-md/mip/stark-truss-baltimore-526197805",
+   "quote": "1200 E Patapsco Ave, Brooklyn, MD 21225",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Stark Truss",
+    "city": "Baltimore",
+    "state": "MD"
+   },
+   "review_note": "Directory gives the city as Brooklyn, a Baltimore neighbourhood in 21225; Stark Truss Baltimore LLC. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95232",
+   "field": "address",
+   "value": "102 S Love Chapel Rd",
+   "source_url": "https://ufpsitebuilt.com/our-locations",
+   "quote": "102 S Love Chapel Rd, Stanfield, NC 28163",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Atlantic PreFab",
+    "city": "Wilton",
+    "state": "NH"
+   },
+   "review_note": "UFP Site Built locations page lists Stanfield as an active plant."
+  },
+  {
+   "facility_id": "IC-95232",
+   "field": "city",
+   "value": "Wilton",
+   "source_url": "https://ufpsitebuilt.com/our-locations",
+   "quote": "102 S Love Chapel Rd, Stanfield, NC 28163",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Atlantic PreFab",
+    "city": "Wilton",
+    "state": "NH"
+   },
+   "review_note": "UFP Site Built locations page lists Stanfield as an active plant."
+  },
+  {
+   "facility_id": "IC-95232",
+   "field": "state",
+   "value": "NH",
+   "source_url": "https://ufpsitebuilt.com/our-locations",
+   "quote": "102 S Love Chapel Rd, Stanfield, NC 28163",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Atlantic PreFab",
+    "city": "Wilton",
+    "state": "NH"
+   },
+   "review_note": "UFP Site Built locations page lists Stanfield as an active plant."
+  },
+  {
+   "facility_id": "IC-95232",
+   "field": "zip",
+   "value": "28163",
+   "source_url": "https://ufpsitebuilt.com/our-locations",
+   "quote": "102 S Love Chapel Rd, Stanfield, NC 28163",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Atlantic PreFab",
+    "city": "Wilton",
+    "state": "NH"
+   },
+   "review_note": "UFP Site Built locations page lists Stanfield as an active plant."
+  },
+  {
+   "facility_id": "IC-95243",
+   "field": "address",
+   "value": "2570 Florence Harllee Blvd.",
+   "source_url": "https://www.icgbuilds.com/directions/",
+   "quote": "2570 Florence Harllee Blvd. Florence, SC 29506",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Trussco Manufacturing",
+    "city": "North Kingstown",
+    "state": "RI"
+   },
+   "review_note": "Official directions page, labelled 'Florence, SC Manufacturing Location'."
+  },
+  {
+   "facility_id": "IC-95243",
+   "field": "city",
+   "value": "North Kingstown",
+   "source_url": "https://www.icgbuilds.com/directions/",
+   "quote": "2570 Florence Harllee Blvd. Florence, SC 29506",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Trussco Manufacturing",
+    "city": "North Kingstown",
+    "state": "RI"
+   },
+   "review_note": "Official directions page, labelled 'Florence, SC Manufacturing Location'."
+  },
+  {
+   "facility_id": "IC-95243",
+   "field": "state",
+   "value": "RI",
+   "source_url": "https://www.icgbuilds.com/directions/",
+   "quote": "2570 Florence Harllee Blvd. Florence, SC 29506",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Trussco Manufacturing",
+    "city": "North Kingstown",
+    "state": "RI"
+   },
+   "review_note": "Official directions page, labelled 'Florence, SC Manufacturing Location'."
+  },
+  {
+   "facility_id": "IC-95243",
+   "field": "zip",
+   "value": "29506",
+   "source_url": "https://www.icgbuilds.com/directions/",
+   "quote": "2570 Florence Harllee Blvd. Florence, SC 29506",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Trussco Manufacturing",
+    "city": "North Kingstown",
+    "state": "RI"
+   },
+   "review_note": "Official directions page, labelled 'Florence, SC Manufacturing Location'."
+  },
+  {
+   "facility_id": "IC-95253",
+   "field": "address",
+   "value": "3025 East Dominguez",
+   "source_url": "https://www.fullstackmodular.com/locations/",
+   "quote": "West Coast Factory 3025 East Dominguez Carson, CA 90810",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "The Truss Company",
+    "city": "Centralia",
+    "state": "WA"
+   },
+   "review_note": "Official locations page, labelled 'West Coast Factory'."
+  },
+  {
+   "facility_id": "IC-95253",
+   "field": "city",
+   "value": "Centralia",
+   "source_url": "https://www.fullstackmodular.com/locations/",
+   "quote": "West Coast Factory 3025 East Dominguez Carson, CA 90810",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "The Truss Company",
+    "city": "Centralia",
+    "state": "WA"
+   },
+   "review_note": "Official locations page, labelled 'West Coast Factory'."
+  },
+  {
+   "facility_id": "IC-95253",
+   "field": "state",
+   "value": "WA",
+   "source_url": "https://www.fullstackmodular.com/locations/",
+   "quote": "West Coast Factory 3025 East Dominguez Carson, CA 90810",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "The Truss Company",
+    "city": "Centralia",
+    "state": "WA"
+   },
+   "review_note": "Official locations page, labelled 'West Coast Factory'."
+  },
+  {
+   "facility_id": "IC-95253",
+   "field": "zip",
+   "value": "90810",
+   "source_url": "https://www.fullstackmodular.com/locations/",
+   "quote": "West Coast Factory 3025 East Dominguez Carson, CA 90810",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "The Truss Company",
+    "city": "Centralia",
+    "state": "WA"
+   },
+   "review_note": "Official locations page, labelled 'West Coast Factory'."
+  },
+  {
+   "facility_id": "IC-95259",
+   "field": "address",
+   "value": "337 Liberty St",
+   "source_url": "https://www.factorybuiltwisconsin.com/manufacturer/2012/cavco-dorchester/dorchester/",
+   "quote": "337 Liberty St, Dorchester, WI 54425",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Ritz Craft PA 1",
+    "city": "Mifflinburg",
+    "state": "PA"
+   },
+   "review_note": "Wisconsin Housing Alliance manufacturer listing (Cavco Dorchester, formerly MidCountry Homes). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95259",
+   "field": "city",
+   "value": "Mifflinburg",
+   "source_url": "https://www.factorybuiltwisconsin.com/manufacturer/2012/cavco-dorchester/dorchester/",
+   "quote": "337 Liberty St, Dorchester, WI 54425",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Ritz Craft PA 1",
+    "city": "Mifflinburg",
+    "state": "PA"
+   },
+   "review_note": "Wisconsin Housing Alliance manufacturer listing (Cavco Dorchester, formerly MidCountry Homes). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95259",
+   "field": "state",
+   "value": "PA",
+   "source_url": "https://www.factorybuiltwisconsin.com/manufacturer/2012/cavco-dorchester/dorchester/",
+   "quote": "337 Liberty St, Dorchester, WI 54425",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Ritz Craft PA 1",
+    "city": "Mifflinburg",
+    "state": "PA"
+   },
+   "review_note": "Wisconsin Housing Alliance manufacturer listing (Cavco Dorchester, formerly MidCountry Homes). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95259",
+   "field": "zip",
+   "value": "54425",
+   "source_url": "https://www.factorybuiltwisconsin.com/manufacturer/2012/cavco-dorchester/dorchester/",
+   "quote": "337 Liberty St, Dorchester, WI 54425",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Ritz Craft PA 1",
+    "city": "Mifflinburg",
+    "state": "PA"
+   },
+   "review_note": "Wisconsin Housing Alliance manufacturer listing (Cavco Dorchester, formerly MidCountry Homes). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95265",
+   "field": "address",
+   "value": "2502 W. Durango",
+   "source_url": "https://azbigmedia.com/real-estate/manufactured-homebuilder-cavco-industries-rebrands-valley-locations/",
+   "quote": "Cavco Durango located at 2502 W. Durango in Phoenix is now operating as Cavco-Phoenix",
+   "scope": "facility",
+   "page_type": "press",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - TRU Halls",
+    "city": "Knoxville",
+    "state": "TN"
+   },
+   "review_note": "AZ Big Media on Cavco's rebrand; names the Phoenix plant at 2502 W. Durango (Goodyear is a separate plant)."
+  },
+  {
+   "facility_id": "IC-95265",
+   "field": "city",
+   "value": "Knoxville",
+   "source_url": "https://azbigmedia.com/real-estate/manufactured-homebuilder-cavco-industries-rebrands-valley-locations/",
+   "quote": "Cavco Durango located at 2502 W. Durango in Phoenix is now operating as Cavco-Phoenix",
+   "scope": "facility",
+   "page_type": "press",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - TRU Halls",
+    "city": "Knoxville",
+    "state": "TN"
+   },
+   "review_note": "AZ Big Media on Cavco's rebrand; names the Phoenix plant at 2502 W. Durango (Goodyear is a separate plant)."
+  },
+  {
+   "facility_id": "IC-95265",
+   "field": "state",
+   "value": "TN",
+   "source_url": "https://azbigmedia.com/real-estate/manufactured-homebuilder-cavco-industries-rebrands-valley-locations/",
+   "quote": "Cavco Durango located at 2502 W. Durango in Phoenix is now operating as Cavco-Phoenix",
+   "scope": "facility",
+   "page_type": "press",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - TRU Halls",
+    "city": "Knoxville",
+    "state": "TN"
+   },
+   "review_note": "AZ Big Media on Cavco's rebrand; names the Phoenix plant at 2502 W. Durango (Goodyear is a separate plant)."
+  },
+  {
+   "facility_id": "IC-95266",
+   "field": "address",
+   "value": "1418 South 13th Street",
+   "source_url": "https://www.decaturchamber.org/members/championhomebuilders/767",
+   "quote": "1418 South 13th Street, Decatur IN 46733",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Cavco - Palm Harbor homes",
+    "city": "Millersburg",
+    "state": "OR"
+   },
+   "review_note": "Decatur Chamber member listing for Champion Home Builders; plant opened 2022. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95266",
+   "field": "city",
+   "value": "Millersburg",
+   "source_url": "https://www.decaturchamber.org/members/championhomebuilders/767",
+   "quote": "1418 South 13th Street, Decatur IN 46733",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Cavco - Palm Harbor homes",
+    "city": "Millersburg",
+    "state": "OR"
+   },
+   "review_note": "Decatur Chamber member listing for Champion Home Builders; plant opened 2022. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95266",
+   "field": "state",
+   "value": "OR",
+   "source_url": "https://www.decaturchamber.org/members/championhomebuilders/767",
+   "quote": "1418 South 13th Street, Decatur IN 46733",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Cavco - Palm Harbor homes",
+    "city": "Millersburg",
+    "state": "OR"
+   },
+   "review_note": "Decatur Chamber member listing for Champion Home Builders; plant opened 2022. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95266",
+   "field": "zip",
+   "value": "46733",
+   "source_url": "https://www.decaturchamber.org/members/championhomebuilders/767",
+   "quote": "1418 South 13th Street, Decatur IN 46733",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Cavco - Palm Harbor homes",
+    "city": "Millersburg",
+    "state": "OR"
+   },
+   "review_note": "Decatur Chamber member listing for Champion Home Builders; plant opened 2022. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95269",
+   "field": "address",
+   "value": "1919 Mueller Lane",
+   "source_url": "https://www.lasfm.org/media/xhxlffai/list_of_approved_registered_manufacturers_as_of_2-20-2025.pdf",
+   "quote": "WACO MODULAR MANUFACTURING, LLC 1919 MUELLER LANE, TROY, TX 76579 Industrialized Building (Manufacturer) LAIB-M00109 7/1/2025 Approved",
+   "scope": "facility",
+   "page_type": "government",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - Conway",
+    "city": "Conway",
+    "state": "AR"
+   },
+   "review_note": "Louisiana State Fire Marshal approved industrialized-building manufacturer list."
+  },
+  {
+   "facility_id": "IC-95269",
+   "field": "city",
+   "value": "Conway",
+   "source_url": "https://www.lasfm.org/media/xhxlffai/list_of_approved_registered_manufacturers_as_of_2-20-2025.pdf",
+   "quote": "WACO MODULAR MANUFACTURING, LLC 1919 MUELLER LANE, TROY, TX 76579 Industrialized Building (Manufacturer) LAIB-M00109 7/1/2025 Approved",
+   "scope": "facility",
+   "page_type": "government",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - Conway",
+    "city": "Conway",
+    "state": "AR"
+   },
+   "review_note": "Louisiana State Fire Marshal approved industrialized-building manufacturer list."
+  },
+  {
+   "facility_id": "IC-95269",
+   "field": "state",
+   "value": "AR",
+   "source_url": "https://www.lasfm.org/media/xhxlffai/list_of_approved_registered_manufacturers_as_of_2-20-2025.pdf",
+   "quote": "WACO MODULAR MANUFACTURING, LLC 1919 MUELLER LANE, TROY, TX 76579 Industrialized Building (Manufacturer) LAIB-M00109 7/1/2025 Approved",
+   "scope": "facility",
+   "page_type": "government",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - Conway",
+    "city": "Conway",
+    "state": "AR"
+   },
+   "review_note": "Louisiana State Fire Marshal approved industrialized-building manufacturer list."
+  },
+  {
+   "facility_id": "IC-95269",
+   "field": "zip",
+   "value": "76579",
+   "source_url": "https://www.lasfm.org/media/xhxlffai/list_of_approved_registered_manufacturers_as_of_2-20-2025.pdf",
+   "quote": "WACO MODULAR MANUFACTURING, LLC 1919 MUELLER LANE, TROY, TX 76579 Industrialized Building (Manufacturer) LAIB-M00109 7/1/2025 Approved",
+   "scope": "facility",
+   "page_type": "government",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - Conway",
+    "city": "Conway",
+    "state": "AR"
+   },
+   "review_note": "Louisiana State Fire Marshal approved industrialized-building manufacturer list."
+  },
+  {
+   "facility_id": "IC-95273",
+   "field": "address",
+   "value": "451 Southern Ave",
+   "source_url": "https://www.modularhomes.com/manufacturer/2912/new-era-building-systems/strattanville/",
+   "quote": "451 Southern Ave , Strattanville, PA 16258",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Mid-Rise Modular",
+    "city": "Southgate",
+    "state": "CA"
+   },
+   "review_note": "Manufacturer listing; MHI plant list shows Champion Modular #270 Strattanville. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95273",
+   "field": "city",
+   "value": "Southgate",
+   "source_url": "https://www.modularhomes.com/manufacturer/2912/new-era-building-systems/strattanville/",
+   "quote": "451 Southern Ave , Strattanville, PA 16258",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Mid-Rise Modular",
+    "city": "Southgate",
+    "state": "CA"
+   },
+   "review_note": "Manufacturer listing; MHI plant list shows Champion Modular #270 Strattanville. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95273",
+   "field": "state",
+   "value": "CA",
+   "source_url": "https://www.modularhomes.com/manufacturer/2912/new-era-building-systems/strattanville/",
+   "quote": "451 Southern Ave , Strattanville, PA 16258",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Mid-Rise Modular",
+    "city": "Southgate",
+    "state": "CA"
+   },
+   "review_note": "Manufacturer listing; MHI plant list shows Champion Modular #270 Strattanville. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95273",
+   "field": "zip",
+   "value": "16258",
+   "source_url": "https://www.modularhomes.com/manufacturer/2912/new-era-building-systems/strattanville/",
+   "quote": "451 Southern Ave , Strattanville, PA 16258",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Mid-Rise Modular",
+    "city": "Southgate",
+    "state": "CA"
+   },
+   "review_note": "Manufacturer listing; MHI plant list shows Champion Modular #270 Strattanville. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95279",
+   "field": "address",
+   "value": "1902 Century Drive",
+   "source_url": "https://cavcojobs.com/goshen/",
+   "quote": "1902 Century Drive Goshen, IN 46528",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - HIGHLAND MFG CHAMPION DIV #290",
+    "city": "AUBURN",
+    "state": "MN"
+   },
+   "review_note": "Cavco careers page for the Goshen plant."
+  },
+  {
+   "facility_id": "IC-95279",
+   "field": "city",
+   "value": "AUBURN",
+   "source_url": "https://cavcojobs.com/goshen/",
+   "quote": "1902 Century Drive Goshen, IN 46528",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - HIGHLAND MFG CHAMPION DIV #290",
+    "city": "AUBURN",
+    "state": "MN"
+   },
+   "review_note": "Cavco careers page for the Goshen plant."
+  },
+  {
+   "facility_id": "IC-95279",
+   "field": "state",
+   "value": "MN",
+   "source_url": "https://cavcojobs.com/goshen/",
+   "quote": "1902 Century Drive Goshen, IN 46528",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - HIGHLAND MFG CHAMPION DIV #290",
+    "city": "AUBURN",
+    "state": "MN"
+   },
+   "review_note": "Cavco careers page for the Goshen plant."
+  },
+  {
+   "facility_id": "IC-95279",
+   "field": "zip",
+   "value": "46528",
+   "source_url": "https://cavcojobs.com/goshen/",
+   "quote": "1902 Century Drive Goshen, IN 46528",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - HIGHLAND MFG CHAMPION DIV #290",
+    "city": "AUBURN",
+    "state": "MN"
+   },
+   "review_note": "Cavco careers page for the Goshen plant."
+  },
+  {
+   "facility_id": "IC-95281",
+   "field": "address",
+   "value": "1023 US HWY 61",
+   "source_url": "https://www.manufacturedhomes.com/manufacturer/2046/skyline-homes/lancaster/",
+   "quote": "1023 US HWY 61, Lancaster, WI 53813",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CAVCO INDUSTRIES - CAVCO INDUSTRIES - GOSHEN IN",
+    "city": "GOSHEN",
+    "state": "IN"
+   },
+   "review_note": "Manufacturer listing (Skyline Homes Lancaster Division). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95281",
+   "field": "city",
+   "value": "GOSHEN",
+   "source_url": "https://www.manufacturedhomes.com/manufacturer/2046/skyline-homes/lancaster/",
+   "quote": "1023 US HWY 61, Lancaster, WI 53813",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CAVCO INDUSTRIES - CAVCO INDUSTRIES - GOSHEN IN",
+    "city": "GOSHEN",
+    "state": "IN"
+   },
+   "review_note": "Manufacturer listing (Skyline Homes Lancaster Division). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95281",
+   "field": "state",
+   "value": "IN",
+   "source_url": "https://www.manufacturedhomes.com/manufacturer/2046/skyline-homes/lancaster/",
+   "quote": "1023 US HWY 61, Lancaster, WI 53813",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CAVCO INDUSTRIES - CAVCO INDUSTRIES - GOSHEN IN",
+    "city": "GOSHEN",
+    "state": "IN"
+   },
+   "review_note": "Manufacturer listing (Skyline Homes Lancaster Division). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95281",
+   "field": "zip",
+   "value": "53813",
+   "source_url": "https://www.manufacturedhomes.com/manufacturer/2046/skyline-homes/lancaster/",
+   "quote": "1023 US HWY 61, Lancaster, WI 53813",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CAVCO INDUSTRIES - CAVCO INDUSTRIES - GOSHEN IN",
+    "city": "GOSHEN",
+    "state": "IN"
+   },
+   "review_note": "Manufacturer listing (Skyline Homes Lancaster Division). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95282",
+   "field": "address",
+   "value": "5880 Crestline Rd",
+   "source_url": "https://www.laurinburgchamber.com/list/member/champion-home-builders-3431",
+   "quote": "5880 Crestline Rd",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOMES OF NORTH CAROLINA",
+    "city": "SANFORD",
+    "state": "NC"
+   },
+   "review_note": "Laurinburg Chamber lists Champion Home Builders under Manufacturing. Directory evidence; ZIP not quoted."
+  },
+  {
+   "facility_id": "IC-95282",
+   "field": "city",
+   "value": "SANFORD",
+   "source_url": "https://www.laurinburgchamber.com/list/member/champion-home-builders-3431",
+   "quote": "5880 Crestline Rd",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOMES OF NORTH CAROLINA",
+    "city": "SANFORD",
+    "state": "NC"
+   },
+   "review_note": "Laurinburg Chamber lists Champion Home Builders under Manufacturing. Directory evidence; ZIP not quoted."
+  },
+  {
+   "facility_id": "IC-95282",
+   "field": "state",
+   "value": "NC",
+   "source_url": "https://www.laurinburgchamber.com/list/member/champion-home-builders-3431",
+   "quote": "5880 Crestline Rd",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOMES OF NORTH CAROLINA",
+    "city": "SANFORD",
+    "state": "NC"
+   },
+   "review_note": "Laurinburg Chamber lists Champion Home Builders under Manufacturing. Directory evidence; ZIP not quoted."
+  },
+  {
+   "facility_id": "IC-95286",
+   "field": "address",
+   "value": "20898 Paint Blvd",
+   "source_url": "https://www.bbb.org/us/pa/shippenville/profile/modular-homes/commodore-homes-of-pa-0141-15000011",
+   "quote": "20898 Paint Blvd",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOME BUILDERS - LILLINGTON",
+    "city": "LILLINGTON",
+    "state": "NC"
+   },
+   "review_note": "BBB listing for Commodore Homes of PA (now Cavco Shippenville). Directory evidence; ZIP not quoted."
+  },
+  {
+   "facility_id": "IC-95286",
+   "field": "city",
+   "value": "LILLINGTON",
+   "source_url": "https://www.bbb.org/us/pa/shippenville/profile/modular-homes/commodore-homes-of-pa-0141-15000011",
+   "quote": "20898 Paint Blvd",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOME BUILDERS - LILLINGTON",
+    "city": "LILLINGTON",
+    "state": "NC"
+   },
+   "review_note": "BBB listing for Commodore Homes of PA (now Cavco Shippenville). Directory evidence; ZIP not quoted."
+  },
+  {
+   "facility_id": "IC-95286",
+   "field": "state",
+   "value": "NC",
+   "source_url": "https://www.bbb.org/us/pa/shippenville/profile/modular-homes/commodore-homes-of-pa-0141-15000011",
+   "quote": "20898 Paint Blvd",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOME BUILDERS - LILLINGTON",
+    "city": "LILLINGTON",
+    "state": "NC"
+   },
+   "review_note": "BBB listing for Commodore Homes of PA (now Cavco Shippenville). Directory evidence; ZIP not quoted."
+  },
+  {
+   "facility_id": "IC-95287",
+   "field": "address",
+   "value": "580 Mill St NW",
+   "source_url": "https://business.tuschamber.com/list/member/skyline-corporation-1922",
+   "quote": "580 Mill St NW Sugarcreek OH 44681-9561",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - COMMODORE HOMES OF PENNSYLVANIA",
+    "city": "SHIPPENVILLE",
+    "state": "PA"
+   },
+   "review_note": "Tuscarawas County Chamber listing (Skyline Corporation, manufactured homes). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95287",
+   "field": "city",
+   "value": "SHIPPENVILLE",
+   "source_url": "https://business.tuschamber.com/list/member/skyline-corporation-1922",
+   "quote": "580 Mill St NW Sugarcreek OH 44681-9561",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - COMMODORE HOMES OF PENNSYLVANIA",
+    "city": "SHIPPENVILLE",
+    "state": "PA"
+   },
+   "review_note": "Tuscarawas County Chamber listing (Skyline Corporation, manufactured homes). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95287",
+   "field": "state",
+   "value": "PA",
+   "source_url": "https://business.tuschamber.com/list/member/skyline-corporation-1922",
+   "quote": "580 Mill St NW Sugarcreek OH 44681-9561",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - COMMODORE HOMES OF PENNSYLVANIA",
+    "city": "SHIPPENVILLE",
+    "state": "PA"
+   },
+   "review_note": "Tuscarawas County Chamber listing (Skyline Corporation, manufactured homes). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95287",
+   "field": "zip",
+   "value": "44681",
+   "source_url": "https://business.tuschamber.com/list/member/skyline-corporation-1922",
+   "quote": "580 Mill St NW Sugarcreek OH 44681-9561",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - COMMODORE HOMES OF PENNSYLVANIA",
+    "city": "SHIPPENVILLE",
+    "state": "PA"
+   },
+   "review_note": "Tuscarawas County Chamber listing (Skyline Corporation, manufactured homes). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95268",
+   "field": "address",
+   "value": "1400 U.S. Hwy 287 S",
+   "source_url": "https://housinginnovation.co/factory/ramtech-building-systems/",
+   "quote": "Factory Address: 1400 U.S. Hwy 287 S, Mansfield, TX 76063",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Champion - Decatur",
+    "city": "Decatur",
+    "state": "IN"
+   },
+   "review_note": "Housing Innovation factory listing; ramtechmodular.com/contact gives the same address as corporate address (factory and HQ co-located). ADL row had no city; Mansfield TX supplied from the page."
+  },
+  {
+   "facility_id": "IC-95268",
+   "field": "city",
+   "value": "Decatur",
+   "source_url": "https://housinginnovation.co/factory/ramtech-building-systems/",
+   "quote": "Factory Address: 1400 U.S. Hwy 287 S, Mansfield, TX 76063",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Champion - Decatur",
+    "city": "Decatur",
+    "state": "IN"
+   },
+   "review_note": "Housing Innovation factory listing; ramtechmodular.com/contact gives the same address as corporate address (factory and HQ co-located). ADL row had no city; Mansfield TX supplied from the page."
+  },
+  {
+   "facility_id": "IC-95268",
+   "field": "state",
+   "value": "IN",
+   "source_url": "https://housinginnovation.co/factory/ramtech-building-systems/",
+   "quote": "Factory Address: 1400 U.S. Hwy 287 S, Mansfield, TX 76063",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Champion - Decatur",
+    "city": "Decatur",
+    "state": "IN"
+   },
+   "review_note": "Housing Innovation factory listing; ramtechmodular.com/contact gives the same address as corporate address (factory and HQ co-located). ADL row had no city; Mansfield TX supplied from the page."
+  },
+  {
+   "facility_id": "IC-95268",
+   "field": "zip",
+   "value": "76063",
+   "source_url": "https://housinginnovation.co/factory/ramtech-building-systems/",
+   "quote": "Factory Address: 1400 U.S. Hwy 287 S, Mansfield, TX 76063",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Champion - Decatur",
+    "city": "Decatur",
+    "state": "IN"
+   },
+   "review_note": "Housing Innovation factory listing; ramtechmodular.com/contact gives the same address as corporate address (factory and HQ co-located). ADL row had no city; Mansfield TX supplied from the page."
   }
  ]
 }
