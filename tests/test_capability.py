@@ -297,3 +297,21 @@ def test_a_limited_run_is_a_sample_not_a_prefix(tmp_path):
     picked = [r["facility_id"] for r in cap.labelled_from(tmp_path, 10)]
     assert len(picked) == 10
     assert picked[0] == "IC-0000" and picked[-1] == "IC-0090"     # spans the whole range
+
+
+def test_the_evidence_leads_with_what_a_source_said():
+    """Rochester Homes carries "registered manufacturer, modular" AND naics 321991. Reading the
+    code first, the model answered HUD Modular — it let a code beat a register that said otherwise
+    in words. The source text now comes first in the payload."""
+    ev = cap.evidence({"name": "Rochester Homes", "naics": "321991", "product_type": "hud_code",
+                       "notes": "mo_psc: Missouri PSC registered manufacturer, modular"})
+    assert ev.index("modular") < ev.index("321991")
+
+
+def test_hud_needs_positive_evidence_of_the_federal_standard():
+    """321991 is the manufactured-homes code and is assigned by convention to modular plants that
+    build nothing to the HUD standard. Four of seven Modular rows in run 35637626925 were called
+    HUD on that code alone."""
+    p = cap.prompt_for(cap.load())
+    assert "321991" in p and "POSITIVE evidence" in p
+    assert "layer3_type" in p        # named as the weakest evidence, not as an answer

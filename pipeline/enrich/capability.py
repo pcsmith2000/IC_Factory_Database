@@ -93,18 +93,17 @@ def evidence(fac: dict) -> str:
     """What the model is shown. Every part of it is something a source said, or Layer 3's own
     judgement — never a guess assembled here."""
     bits = []
+    # SOURCE TEXT FIRST. Leading with naics primed the model: Rochester Homes carries "Missouri
+    # PSC registered manufacturer, modular" and NAICS 321991, and the model answered HUD Modular
+    # — the code, read first, beat the register that said otherwise in words.
+    notes = (fac.get("notes") or "").strip()
+    if notes:
+        bits.append(notes[:700])
     for k, label in (("naics", "naics"), ("product_type", "layer3_type"),
                      ("website", "website"), ("sq_ft", "sq_ft")):
         v = (fac.get(k) or "").strip()
         if v:
             bits.append(f"{label}: {v}")
-    notes = (fac.get("notes") or "").strip()
-    if notes:
-        # Already merged and already stripped of run accounting by evidence_index. Which SOURCE
-        # said it is part of the evidence and stays attached: a row that is in SIPA's member list
-        # is a structural-insulated-panel plant on that fact alone, and MBMA's roster is the
-        # nearest thing to a PEMB census that exists.
-        bits.append(notes[:700])
     return " ; ".join(bits)[:1100]
 
 
@@ -295,7 +294,24 @@ def prompt_for(tx: Taxonomy) -> str:
         "company sells, not what it makes. Never decide on one alone.",
         "4. Volumetric means the plant ships three-dimensional modules. A kit of frames and panels "
         "erected on site is NOT volumetric, however large the building.",
-        "5. Where the evidence genuinely does not say, answer with the leaf the NAICS code implies "
+        "5. `layer3_type` is an earlier classifier's guess about ONE source row, made from its "
+        "name and NAICS code alone. It is the weakest evidence in the record and never outranks "
+        "a source that names the product.",
+        "6. NAICS 321991 is the manufactured-homes code and is assigned by convention to modular "
+        "plants that build nothing to the HUD standard. A register that says \"modular\" in words "
+        "— \"Modular Manufacturers registry\", \"Modular Unit Manufacturer\", \"registered "
+        "manufacturer, modular\" — outranks it. Answer HUD Modular only on POSITIVE evidence of "
+        "the federal standard: a HUD-code register, a manufactured-housing plant list, or the "
+        "words manufactured home, mobile home or HUD label.",
+        "7. Volumetric or panel is decided by whether the plant ships a three-dimensional unit or "
+        "a flat assembly, and a plant that does both is named by what it is registered to build. "
+        "Wood or steel is decided by the FRAMING MATERIAL, which a roster rarely states: where "
+        "nothing names the material, say so in the reason and take a low confidence rather than "
+        "defaulting to wood.",
+        "8. Exterior Envelope Panels is a facade or enclosure assembly — cladding, glazing, "
+        "rainscreen, curtain wall, metal wall panels. It is not a SIP and not a framed wall "
+        "panel, and the difference is whether the product is the WEATHER SKIN or the structure.",
+        "9. Where the evidence genuinely does not say, answer with the leaf the NAICS code implies "
         "and give yourself a low confidence. Say so in the reason. A confident wrong answer costs "
         "more than an honest uncertain one.",
     ]
@@ -469,6 +485,15 @@ def _main(argv: list[str] | None = None) -> int:
         }
     text = json.dumps(report, indent=2)
     print(text)
+    # A one-line headline last, so a run's result can be read off the end of a log without
+    # paging back through 19 leaves of JSON.
+    f, m = report["floor"], report.get("model_run")
+    print(f"HEADLINE floor group={f['group_accuracy']} leaf={f['leaf_accuracy_overall']}"
+          + (f" | {a.model} group={m['result']['group_accuracy']} "
+             f"leaf={m['result']['leaf_accuracy_overall']} "
+             f"answered={m['answered']}/{m['asked']} "
+             f"tokens={m['usage'].get('input_tokens', 0)}in/{m['usage'].get('output_tokens', 0)}out"
+             if m else ""))
     if a.out:
         a.out.write_text(text)
     return 0
