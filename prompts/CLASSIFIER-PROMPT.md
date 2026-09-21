@@ -4,6 +4,24 @@ This file is the system prompt for Layer 3. Its SHA-256 is recorded in every run
 in the release tag. Changing it is a versioned change that gate G5 must re-pass on the seeded
 set before the new version is used for a release.
 
+v2.0 — 2026-09-21. Structural steel fabricators are out of scope (ADL ruling). A shop that welds
+beams and columns to someone else's drawings is a trade, not a building system, and CIVES STEEL and
+CANAM STEEL CORP were reaching golden and then being classified Pre-Engineered Metal Building by
+enrichment stage 15 at 0.8 confidence — a confidently wrong label on a facility that should not be
+in the database at all (run 35639225887).
+
+The rule is written on the PRODUCT and not on the code, because the code is shared and dropping it
+wholesale would be a worse error than the one it fixes. Measured on the r-N release: 111 golden rows
+carry NAICS 332312, and 32 of them are real IC — NCI Building Systems at three addresses, Ceco,
+Schulte, Liberty, Jedco and Structall (metal building systems, all three named in this prompt
+already as PEMB manufacturers), Kingspan Insulated Panels, New Millennium Building Systems at six,
+Valley Joist, CMC Joist & Deck, SMI Joist, Sanford Span-Joist, and American Modular Systems at
+three. A NAICS-code exclusion would have deleted every one of them. The remaining ~79 are Fritz
+Structural Steel, MCB Steel, Vista Steel, Central Illinois Steel and their like.
+
+Expect ~79 rows to move from IC to NOT-IC and no row to move the other way. If an IC label with a
+building-system, joist, deck, panel or modular name moves, the rule has been misread.
+
 v1.9 — 2026-09-17. One code, one sentence: on 321214 a dealer's name is that dealer's truss plant.
 Measured on run 35269300278's cache (v1.8): 436 rows carry 321214, truss manufacturing, and 66 were
 labelled NOT-IC — 21 of them for a trading word ("Builders supply distributor not plant", "Truss
@@ -161,6 +179,21 @@ or crate plants are materials producers. Their output is an input to constructio
 real IC plants — not a building system. NOT-IC. Note that "panel" in *their* sense is a sheet of
 material, not a wall panel. Engineered structural members made for a building frame — trusses,
 glulam, LVL, CLT, I-joists, structural wall and floor panels — remain IC.
+
+**Structural steel fabrication.** A shop that cuts, drills, welds and ships structural steel to
+someone else's drawings — beams, columns, girders, bracing, stairs, railings, miscellaneous metals
+— is fabricating material for a building another firm designed and will erect. It is a trade, not
+a building system. NOT-IC.
+
+The code to watch is **332312, fabricated structural metal, and it is shared**. On it you will also
+find metal building system manufacturers (NCI, Ceco, Schulte, Liberty, Jedco, Structall), insulated
+metal panel plants (Kingspan), steel joist and deck plants (New Millennium, Valley Joist, CMC Joist
+& Deck, SMI Joist, Sanford Span-Joist) and steel modular plants (American Modular Systems). Every
+one of those is **IC** and the code does not decide it. Decide on the product the name states:
+*Building Systems*, *Joist*, *Deck*, *Panel*, *Components* and *Modular* name a system or a
+component; *Steel*, *Structural Steel*, *Iron Works*, *Steel Fabricators* and *Steel Inc* on their
+own name the trade. Where the name says only "steel", that is the finding — a fabricator — and not
+a hedge.
 
 **Concrete supply.** Ready-mix concrete, aggregate and block or brick sold as material is supply,
 not a building system. NOT-IC. Precast elements that form part of a building stay IC, as above.

@@ -139,6 +139,26 @@ def e6_rebuilt_golden_loses_nothing(before: dict[str, int], after: dict[str, int
                       + ("" if n1 >= n0 else " — fewer facilities than before"))
 
 
+def e9_every_capability_is_a_member_of_the_taxonomy(assertions: list[dict]) -> GateResult:
+    """Stage 15 answers in words a model chose, so the one thing that must never reach golden is
+    a capability that is not in registry/taxonomy.yaml. The parser already drops an answer it
+    cannot resolve exactly; this is the gate that says so out loud, because a stage that both
+    validates and coerces has no validation — and because the taxonomy is a FILE, so a leaf
+    renamed there must fail the run rather than silently orphan every value carrying the old name.
+    """
+    from . import capability
+    tx = capability.load()
+    rows = [a for a in assertions
+            if a.get("field") in ("capability_group", "capability_leaf")]
+    bad = [a for a in rows
+           if (a["value"] not in tx.leaves if a["field"] == "capability_leaf"
+               else a["value"] not in tx.groups)]
+    names = ", ".join(sorted({a["value"] for a in bad})[:5])
+    return GateResult("E9", not bad,
+                      f"{len(rows)} capability values, {len(bad)} outside taxonomy v{tx.version}"
+                      + (f" ({names})" if bad else ""))
+
+
 def run_promote(before: dict[str, int], after: dict[str, int]) -> list[GateResult]:
     return [e6_rebuilt_golden_loses_nothing(before, after)]
 
@@ -150,7 +170,8 @@ def run_all(assertions: list[dict], before: list[dict] | None = None,
                e3_every_footprint_names_its_building(assertions),
                e5_existence_is_advisory(assertions),
                e7_every_place_match_cites_the_address_that_agreed(assertions),
-               e8_every_anchored_coordinate_names_its_building(assertions)]
+               e8_every_anchored_coordinate_names_its_building(assertions),
+               e9_every_capability_is_a_member_of_the_taxonomy(assertions)]
     if before is not None and after is not None:
         results.insert(3, e4_enrichment_never_removes_a_field(before, after))
     return results

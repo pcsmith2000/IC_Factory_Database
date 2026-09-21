@@ -57,12 +57,49 @@ def footprint_key(lat: float, lon: float, release: str) -> str:
     return key("footprint", f"{float(lat):.6f},{float(lon):.6f}", release)
 
 
-def places_state_key(state: str, release: str) -> str:
+def places_state_key(state: str, release: str, release_tag: str = "") -> str:
     """A whole STATE, not a facility: stage 13 answers every facility in a state from one S3 read,
     so the state is the unit of work and the unit worth remembering. Without it a second run ranks
     the states by eligible facilities — a number a run does not change — and reads the same six
-    again forever."""
+    again forever.
+
+    The RELEASE TAG belongs in the key as much as the Overture release does. The marker means "the
+    assertions for this state are in the database", and promote reads assertions by tag — so after
+    layers 1-8 publish a new tag, a marker without one claims work that the new release cannot
+    see. On a from-zero rebuild every state would read as done and nothing would be written:
+    roughly 2,000 websites and 840 phones silently absent, with the stage reporting success.
+
+    The legacy two-part key is still computed by places_state_key_legacy, because markers written
+    before this existed are all from the current tag and re-reading 52 states to learn what the
+    ledger already knows would be a waste. adopt_places_state() re-stamps them once.
+    """
+    return key("places_state", state.upper(), release, release_tag or "untagged")
+
+
+def places_state_key_legacy(state: str, release: str) -> str:
+    """The pre-release-tag key. Read once, never written — see adopt_places_state()."""
     return key("places_state", state.upper(), release)
+
+
+def adopt_places_state(db, states, release: str, release_tag: str) -> int:
+    """Carry a legacy marker forward into the current tag, once, without re-reading the state.
+
+    Every legacy marker was written under the tag that is current now, so adopting it is correct
+    today and the ambiguity cannot recur — from here on every marker carries its tag. Doing this
+    rather than ignoring the legacy markers is what keeps a concurrently running pass from
+    re-reading the states it has already paid S3 for.
+    """
+    n = 0
+    for st in states:
+        if get(db, places_state_key(st, release, release_tag)):
+            continue
+        legacy = get(db, places_state_key_legacy(st, release))
+        if legacy:
+            put(db, places_state_key(st, release, release_tag), "places_state", st,
+                {**(legacy.get("result") or {}), "adopted_from": "pre-release-tag marker"},
+                True, f"overture:{release}")
+            n += 1
+    return n
 
 
 def locate_key(name: str, city: str, state: str) -> str:
