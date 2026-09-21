@@ -257,7 +257,7 @@ SELECT_ASSERTIONS = """
            field_key AS field, value
     FROM fact_assertions a
     WHERE a.release_tag = $1
-       OR (a.source_class IN ('enrichment', 'tako_ai_search')
+       OR (a.source_class IN ('enrichment', 'tako_ai_search', 'astra_manual_web_lookup')
            AND EXISTS (SELECT 1 FROM fact_assertions c
                         WHERE c.release_tag = $2 AND c.facility_key = a.facility_key))
     ORDER BY facility_key, field_key, assertion_id

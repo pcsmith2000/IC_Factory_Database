@@ -1,0 +1,46 @@
+"""Gate E10: a golden coordinate must lie in the facility's own state."""
+from pipeline.enrich import geo
+from pipeline.enrich.gates import e6_rebuilt_golden_loses_nothing, e10_no_coordinate_outside_its_state
+from pipeline.recovery.run import identity_for
+
+
+def test_inside_state_is_generous_at_the_border_and_strict_across_the_country():
+    assert geo.inside_state(38.98, -77.02, 'DC')
+    assert geo.inside_state(45.6, -122.7, 'OR')          # Portland / Vancouver: the Columbia is the line
+    assert geo.inside_state(45.6, -122.7, 'WA')          # a point near a state line passes both
+    assert geo.inside_state(40.58, -77.36, 'NJ') is False  # a Pennsylvania point is not New Jersey
+    assert geo.inside_state(40.58, -77.36, 'XX') is None
+    assert geo.inside_state(40.58, -77.36, None) is None
+
+
+def test_out_of_state_reports_only_judgeable_rows():
+    rows = [{'facility_id': 'IC-1', 'state': 'NJ', 'lat_lon': '40.58085,-77.364448', 'lat_lon__source': 'geocode:geocodio'},
+            {'facility_id': 'IC-2', 'state': 'PA', 'lat_lon': '40.58085,-77.364448', 'lat_lon__source': 'geocode:geocodio'},
+            {'facility_id': 'IC-3', 'state': None, 'lat_lon': '40.58085,-77.364448'},
+            {'facility_id': 'IC-4', 'state': 'NJ', 'lat_lon': 'nan,1'},
+            {'facility_id': 'IC-5', 'state': 'NJ', 'lat_lon': ''}]
+    bad = geo.out_of_state(rows)
+    assert [b['facility_id'] for b in bad] == ['IC-1']
+    assert bad[0]['source'] == 'geocode:geocodio'
+
+
+def test_e6_tolerates_exactly_the_coordinates_e10_withheld():
+    before = {'__rows': 10, 'lat_lon': 8, 'address': 9}
+    assert not e6_rebuilt_golden_loses_nothing(before, {'__rows': 10, 'lat_lon': 6, 'address': 9}).passed
+    assert e6_rebuilt_golden_loses_nothing(before, {'__rows': 10, 'lat_lon': 6, 'address': 9}, {'lat_lon': 2}).passed
+    assert not e6_rebuilt_golden_loses_nothing(before, {'__rows': 10, 'lat_lon': 5, 'address': 9}, {'lat_lon': 2}).passed
+    assert not e6_rebuilt_golden_loses_nothing(before, {'__rows': 10, 'lat_lon': 8, 'address': 8}, {'lat_lon': 2}).passed
+    assert e10_no_coordinate_outside_its_state([]).passed
+    assert 'withheld' in e10_no_coordinate_outside_its_state([{'facility_id': 'IC-1'}]).summary
+
+
+def test_campaign_row_is_worked_under_a_verified_live_identity_only():
+    frozen = {'name': 'Cavco - Durango', 'city': 'Phoenix', 'state': 'AZ'}
+    live = {'name': 'Clayton - TRU Halls', 'city': 'Knoxville', 'state': 'TN'}
+    assert identity_for(frozen, frozen, None) == frozen
+    assert identity_for(frozen, live, None) is None
+    assert identity_for(frozen, live, {'address': '1 Main St'}) is None
+    verified = {'address': '3926 Fountain Valley Road', '_identity': dict(live)}
+    assert identity_for(frozen, live, verified) == live
+    stale = {'address': '3926 Fountain Valley Road', '_identity': {'name': 'Someone Else', 'city': 'Knoxville', 'state': 'TN'}}
+    assert identity_for(frozen, live, stale) is None

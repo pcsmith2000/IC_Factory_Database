@@ -63,6 +63,9 @@ def run(mode: str, manifest_path: Path, out: Path):
             recovered = {field: item['value'] for field, item in fields.items()}
             recovered['_source'] = source
             recovered['_research_runs'] = manifest['campaign_runs']
+            # The live identity this address was verified against. The geocode pass accepts a row
+            # whose frozen identity has since changed only when this still matches the live row.
+            recovered['_identity'] = {'name': row['name'], 'city': row['city'], 'state': row['state']}
             if mode == 'apply':
                 recovered['_evidence'] = evidence
                 from psycopg.types.json import Jsonb

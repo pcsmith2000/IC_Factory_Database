@@ -20,7 +20,7 @@ from pathlib import Path
 from .. import golden as golden_mod
 from ..registry import load_yaml
 from ..warehouse import GOLDEN_FIELDS, SYNTHETIC_SOURCES
-from . import _db
+from . import _db, geo
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -44,6 +44,13 @@ def build(assertions: list[dict], rules: dict) -> tuple[list[dict], list[dict]]:
     return golden_mod.build_golden(assertions, rules)
 
 
+def _count_by(items: list[dict], key: str) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for i in items:
+        out[str(i.get(key))] = out.get(str(i.get(key)), 0) + 1
+    return dict(sorted(out.items(), key=lambda kv: -kv[1]))
+
+
 def run(db, release_tag: str, dry_run: bool = False) -> dict:
     rules = load_yaml(ROOT / "registry" / "survivorship.yaml")
     # Widening comes first: the before-coverage below counts every golden column, and a column this
@@ -57,9 +64,27 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
 
     asserts = _db.fetch_assertions(db, release_tag)
     rows, conflicts = build(asserts, rules)
+    # Gate E10: a coordinate carried onto a facility must lie in that facility's state. Assertions
+    # travel across releases by facility id, and when ids were issued by diverging registries the
+    # same number named different plants; the rooftop then lands on the wrong one. Such a
+    # coordinate is withheld from golden (the assertion itself is untouched) and survivorship is
+    # rerun so the next-ranked coordinate, if any, can win. Repeats until no winner is out of state.
+    quarantined = []
+    for _ in range(5):
+        bad = geo.out_of_state(rows)
+        if not bad:
+            break
+        quarantined.extend(bad)
+        withheld = {(b['facility_id'], b['lat_lon']) for b in bad}
+        asserts = [a for a in asserts if not (a['field'] == 'lat_lon' and (a['facility_id'], a['value']) in withheld)]
+        rows, conflicts = build(asserts, rules)
     cov_after = coverage(rows, measurable)
     from . import gates
-    results = gates.run_promote(cov_before, cov_after)
+    # E6 must tolerate exactly the coordinates E10 withheld: those facilities had a coordinate before
+    # and may have none now, and that is the point.
+    lost_to_e10 = len({b['facility_id'] for b in quarantined})
+    results = gates.run_promote(cov_before, cov_after, allowed_loss={'lat_lon': lost_to_e10})
+    results.append(gates.e10_no_coordinate_outside_its_state(quarantined))
 
     out = {"release_tag": release_tag, "assertions_read": len(asserts),
            "golden_rows": len(rows), "conflicts": len(conflicts),
@@ -68,6 +93,9 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
            "gained": {f: cov_after[f] - cov_before.get(f, 0) for f in measurable
                       if cov_after[f] != cov_before.get(f, 0)},
            "gates": [str(r) for r in results], "written": 0,
+           "coordinates_withheld_out_of_state": len(quarantined),
+           "coordinates_withheld_by_source": _count_by(quarantined, 'source'),
+           "coordinates_withheld": quarantined,
            "columns_added": added, "columns_missing": missing, "sources_registered": 0}
     if any(not r.passed for r in results):
         out["halted"] = True

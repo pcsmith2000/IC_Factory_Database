@@ -91,6 +91,22 @@ def recovered_source_matches(recovered, required_source):
     return not required_source or (recovered or {}).get('_source') == required_source
 
 
+def identity_for(frozen, live, recovered):
+    """The identity a row is worked under, or None when it must be skipped as changed_identity.
+
+    The frozen baseline is the rule. But the cohort was frozen from a release whose id registry
+    diverged from the one now published, so some ids name a different plant today. A recovered
+    address that was verified against the LIVE identity (tako_address stores it as _identity) is
+    worked under that identity instead — the address belongs to the plant golden now shows.
+    """
+    if norm(frozen.get('name'))==norm(live.get('name')) and not any(frozen.get(k) and norm(frozen.get(k))!=norm(live.get(k)) for k in ('city','state')):
+        return {'name':frozen.get('name'),'city':frozen.get('city') or live.get('city'),'state':frozen.get('state') or live.get('state')}
+    verified=(recovered or {}).get('_identity') or {}
+    if verified and norm(verified.get('name'))==norm(live.get('name')) and all(norm(verified.get(k))==norm(live.get(k)) for k in ('city','state')):
+        return {'name':live.get('name'),'city':live.get('city'),'state':live.get('state')}
+    return None
+
+
 def validate_rooftop(row,result):
     hits=(result.get('response') or {}).get('results') or []
     if not hits:return None,'no_result'
@@ -118,14 +134,18 @@ def select_rows(db, pass_id, row_limit):
     for r in rows:
         frozen=r['baseline']
         source=frozen.get('name__source') or 'unattributed'
-        if norm(frozen.get('name'))!=norm(r.get('live_name')) or any(frozen.get(k) and norm(frozen.get(k))!=norm(r.get('live_'+k)) for k in ('city','state')):
-            reasons['changed_identity']+=1;blocked_sources[source]+=1;continue
         recovered=r.get('recovered_address') or {}
+        live={'name':r.get('live_name'),'city':r.get('live_city'),'state':r.get('live_state')}
+        identity=identity_for(frozen,live,recovered)
+        if identity is None:
+            reasons['changed_identity']+=1;blocked_sources[source]+=1;continue
         if not recovered_source_matches(recovered,required_recovered_source):
             reasons['recovered_address_source_filter']+=1;continue
         recovered_fields={k:recovered.get(k) for k in ('address','city','state','zip') if recovered.get(k)}
         if recovered.get('_evidence'):
             r['evidence']=list(r.get('evidence') or [])+list(recovered['_evidence'])
+        # frozen keeps the campaign's record; the identity worked under is what the live row says
+        frozen={**frozen,**identity}
         b={**frozen,**recovered_fields};r['frozen']=frozen;r['baseline']=b
         fields=[]
         if not re.match(r'^\d+[a-zA-Z]?\s',str(b.get('address') or '').strip()):fields.append('street')

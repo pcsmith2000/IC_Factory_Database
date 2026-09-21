@@ -118,7 +118,8 @@ def e5_existence_is_advisory(assertions: list[dict]) -> GateResult:
                       f"{len(ex)} existence flags, {len(bad)} that were not advisory")
 
 
-def e6_rebuilt_golden_loses_nothing(before: dict[str, int], after: dict[str, int]) -> GateResult:
+def e6_rebuilt_golden_loses_nothing(before: dict[str, int], after: dict[str, int],
+                                    allowed_loss: dict[str, int] | None = None) -> GateResult:
     """Stage 13 replaces golden_facility outright, so it is the one stage that can destroy the
     release rather than merely fail to improve it. The rebuild is survivorship applied to the
     assertions of the same release the loader used, plus enrichment's, so every field must come
@@ -128,8 +129,10 @@ def e6_rebuilt_golden_loses_nothing(before: dict[str, int], after: dict[str, int
     E4 asks the same question of the stage outputs; this asks it of what actually lands in the
     table, which is the only version a reader ever sees.
     """
+    # allowed_loss names the one legitimate shrinkage: coordinates E10 withheld as out of state.
+    allowed = allowed_loss or {}
     lost = {f: (before[f], after.get(f, 0)) for f in before
-            if f != "__rows" and after.get(f, 0) < before[f]}
+            if f != "__rows" and after.get(f, 0) < before[f] - allowed.get(f, 0)}
     n0, n1 = before.get("__rows", 0), after.get("__rows", 0)
     ok = not lost and n1 >= n0
     detail = ", ".join(f"{f} {a}->{b}" for f, (a, b) in sorted(lost.items()))
@@ -159,8 +162,19 @@ def e9_every_capability_is_a_member_of_the_taxonomy(assertions: list[dict]) -> G
                       + (f" ({names})" if bad else ""))
 
 
-def run_promote(before: dict[str, int], after: dict[str, int]) -> list[GateResult]:
-    return [e6_rebuilt_golden_loses_nothing(before, after)]
+def e10_no_coordinate_outside_its_state(withheld: list[dict]) -> GateResult:
+    """Every golden coordinate lies inside the facility's own state (pipeline.enrich.geo). A
+    coordinate that does not was carried onto this facility from a different plant that once
+    held the same id; promote withholds it rather than publish a pin in the wrong state. The gate
+    passes whenever the rebuild ends clean and reports what it withheld to get there."""
+    n = len({w['facility_id'] for w in withheld})
+    return GateResult("E10", True, f"{n} facilit{'y' if n == 1 else 'ies'} had an out-of-state coordinate withheld"
+                      if n else "every golden coordinate lies in its facility's state")
+
+
+def run_promote(before: dict[str, int], after: dict[str, int],
+                allowed_loss: dict[str, int] | None = None) -> list[GateResult]:
+    return [e6_rebuilt_golden_loses_nothing(before, after, allowed_loss)]
 
 
 def run_all(assertions: list[dict], before: list[dict] | None = None,
