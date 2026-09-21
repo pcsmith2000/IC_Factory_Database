@@ -5,7 +5,7 @@ on:
     inputs:
       mode:
         type: choice
-        options: [plan, research]
+        options: [plan, research, assertions_plan, assertions_apply]
         default: plan
       pass_id:
         description: 'Stable pass identifier'
@@ -35,6 +35,9 @@ on:
         default: ''
       plan_sha256:
         description: 'Exact SHA256 printed by the plan; required for research'
+        default: ''
+      research_run:
+        description: 'Exact completed research run; required for assertion planning'
         default: ''
 permissions:
   contents: read
@@ -106,3 +109,69 @@ jobs:
           name: tako-coordinate-research-${{ github.run_id }}
           path: research-output/
           retention-days: 30
+  assertions:
+    if: inputs.mode == 'assertions_plan' || inputs.mode == 'assertions_apply'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MODE: ${{ inputs.mode }}
+      RESEARCH_RUN: ${{ inputs.research_run }}
+      PLAN_RUN: ${{ inputs.plan_run }}
+      PLAN_SHA256: ${{ inputs.plan_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_tako_coordinate_manifest.py tests/test_tako_publish.py tests/test_web_research.py -q
+      - name: Download exact research or assertion plan artifact
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          if os.environ['MODE']=='assertions_plan':
+              run=os.environ['RESEARCH_RUN'];name=f'tako-coordinate-research-{run}';dest='research'
+          else:
+              run=os.environ['PLAN_RUN'];name=f'tako-coordinate-assertions-{run}';dest='assertion-plan'
+          if not re.fullmatch(r'\d+',run):raise ValueError('Exact source run ID required')
+          subprocess.run(['gh','run','download',run,'--name',name,'--dir',dest],check=True)
+          PY
+      - name: Build strict manifest and plan assertions
+        if: inputs.mode == 'assertions_plan'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from pipeline.recovery.tako_manifest import build
+          from pipeline.recovery.tako_address import run as sync
+          from pipeline.web_research.publish import run as publish
+          out=Path('assertion-output')
+          manifest,_=build(Path('research'),out,os.environ['RESEARCH_RUN'])
+          if not manifest['assertions']:raise RuntimeError('No strict address assertions passed; no plan created')
+          publish('plan',out,manifest_path=out/'approved-assertions.json')
+          sync('plan',out/'approved-assertions.json',out)
+          PY
+      - name: Apply exact assertion plan and hand addresses to rooftop recovery
+        if: inputs.mode == 'assertions_apply'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from pipeline.recovery.tako_address import run as sync
+          from pipeline.web_research.publish import run as publish
+          source=Path('assertion-plan');out=Path('assertion-output')
+          publish('apply',out,source/'plan.json',os.environ['PLAN_SHA256'],source/'approved-assertions.json')
+          sync('apply',source/'approved-assertions.json',out)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tako-coordinate-assertions-${{ github.run_id }}
+          path: assertion-output/
+          retention-days: 90

@@ -108,7 +108,10 @@ def select_rows(db, pass_id, row_limit):
         if norm(frozen.get('name'))!=norm(r.get('live_name')) or any(frozen.get(k) and norm(frozen.get(k))!=norm(r.get('live_'+k)) for k in ('city','state')):
             reasons['changed_identity']+=1;blocked_sources[source]+=1;continue
         recovered=r.get('recovered_address') or {}
-        b={**frozen,**recovered};r['frozen']=frozen;r['baseline']=b
+        recovered_fields={k:recovered.get(k) for k in ('address','city','state','zip') if recovered.get(k)}
+        if recovered.get('_evidence'):
+            r['evidence']=list(r.get('evidence') or [])+list(recovered['_evidence'])
+        b={**frozen,**recovered_fields};r['frozen']=frozen;r['baseline']=b
         fields=[]
         if not re.match(r'^\d+[a-zA-Z]?\s',str(b.get('address') or '').strip()):fields.append('street')
         if not str(b.get('city') or '').strip():fields.append('city')

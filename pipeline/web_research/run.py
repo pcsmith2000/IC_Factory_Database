@@ -206,6 +206,12 @@ def assess(row, result, pages):
         supported=supported and (domain(value)==domain(page.get('final_url','')) if field=='website' else norm(value) in norm(quote))
         # A fetched quote verifies text only. It does not establish entity identity by itself.
         identity=bool(row.get('city') and norm(row['city']) in norm(text)) or bool(row.get('phone') and norm(row['phone']) in norm(text))
+        name_tokens=[t for t in re.findall(r'[a-z0-9]+',str(row.get('name') or '').lower())
+                     if t not in {'inc','llc','ltd','corp','corporation','company','co','the'}]
+        text_norm=norm(text)
+        name_anchor=bool(row.get('name')) and bool(name_tokens) and (norm(row['name']) in text_norm or
+                    sum(norm(t) in text_norm for t in name_tokens if len(t)>=3)>=min(2,len(name_tokens)) or
+                    (len(name_tokens)==1 and len(name_tokens[0])>=3 and norm(name_tokens[0]) in text_norm))
         official_domain=domain((result['fields'].get('website') or {}).get('value',''))
         trusted=(candidate.get('source_kind')=='official' and domain(url)==official_domain) or (candidate.get('source_kind')=='registry' and domain(url).endswith('.gov'))
         decision='candidate' if supported and identity and trusted and not review else 'review'
@@ -213,7 +219,8 @@ def assess(row, result, pages):
         relationship='fill' if not old else ('corroborates' if (domain(old)==domain(value) if field=='website' else norm(old)==norm(value)) else 'conflict')
         if relationship=='conflict' or (candidate.get('scope')!='facility' and field!='website') or (field in ('address','city','state','zip') and not row.get('address')): decision='review'
         proposals.append(dict(field=field,existing=old,**candidate,relationship=relationship,decision=decision,
-                              quote_verified=supported,identity_anchor_found=identity))
+                              quote_verified=supported,identity_anchor_found=identity,
+                              name_anchor_found=name_anchor,location_anchor_found=identity))
     return {'facility_id':row['facility_id'],'name':row.get('name'),'status':'conflict' if location_conflict else result['status'],
             'explanation':result.get('explanation'), 'proposals':proposals,'database_writes':0}
 

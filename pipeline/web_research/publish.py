@@ -88,8 +88,8 @@ def connection():
                           options='-c statement_timeout=60000 -c lock_timeout=15000')
 
 
-def run(mode, out, plan_path=None, expected_sha=None):
-    manifest = load_manifest()
+def run(mode, out, plan_path=None, expected_sha=None, manifest_path=MANIFEST):
+    manifest = load_manifest(Path(manifest_path))
     ids = sorted({r['facility_id'] for r in manifest['assertions']})
     prior = None
     if mode == 'apply':
@@ -161,6 +161,7 @@ def run(mode, out, plan_path=None, expected_sha=None):
     # Only produce a success receipt after the transaction commits.
     (out/'receipt.json').write_text(json.dumps(result, indent=2))
     print(json.dumps(result, indent=2))
+    return result
 
 
 if __name__ == '__main__':

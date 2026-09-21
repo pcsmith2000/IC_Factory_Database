@@ -15,11 +15,13 @@ def candidate(value, quote=None, scope='facility'):
     return dict(value=value,quote=quote or value,scope=scope,source_kind='official',source_url='https://example.com/contact')
 
 def test_field_needs_evidence_and_entity_anchor():
-    r={'city':'Elma','facility_id':'IC-1'}
-    c=candidate('360-482-2521','Elma phone 360-482-2521')
+    r={'name':'Acme Factory','city':'Elma','facility_id':'IC-1'}
+    c=candidate('360-482-2521','Acme Factory Elma phone 360-482-2521')
     pages={c['source_url']:{'text':c['quote'],'final_url':c['source_url']}}
     assert assess(r,result(phone=c,website=candidate('https://example.com','Elma phone 360-482-2521')),pages)['proposals'][0]['decision']=='candidate'
     assert assess(r,result(phone=c),{})['proposals'][0]['decision']=='review'
+    proposal=assess(r,result(phone=c,website=candidate('https://example.com','Elma phone 360-482-2521')),pages)['proposals'][0]
+    assert proposal['name_anchor_found'] and proposal['location_anchor_found']
 
 def test_state_conflict_blocks_all_candidates():
     r={'city':'Brigham City','state':'VA','facility_id':'IC-1'}
