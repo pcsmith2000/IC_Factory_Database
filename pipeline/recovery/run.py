@@ -9,6 +9,7 @@ import math
 import os
 from pathlib import Path
 import re
+from urllib.parse import urlparse
 
 from pipeline.enrich import cache
 from pipeline.enrich.geocode import one_line, _post
@@ -100,6 +101,7 @@ def select_rows(db, pass_id, row_limit):
     # Retry flags from other workflows are deliberately not a selection criterion.
     rows=db.execute("SELECT r.facility_id,r.baseline,r.recovered_address,r.evidence,g.name AS live_name,g.city AS live_city,g.state AS live_state,g.release_tag AS live_release FROM coordinate_recovery_rows r JOIN golden_facility g ON g.facility_key=r.facility_id WHERE r.campaign_id=%s AND r.status='unresolved' AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts a WHERE a.campaign_id=r.campaign_id AND a.facility_id=r.facility_id AND a.pass_id=%s AND a.stage='geocode') ORDER BY r.facility_id",(CAMPAIGN,pass_id)).fetchall()
     out=[]; reasons=Counter();eligible_sources=Counter();blocked_sources=Counter();address_origin=Counter();completeness=Counter()
+    completeness_by_source={};evidence_hosts={}
     for r in rows:
         frozen=r['baseline']
         source=frozen.get('name__source') or 'unattributed'
@@ -113,13 +115,25 @@ def select_rows(db, pass_id, row_limit):
         if str(b.get('state') or '').upper() not in US_STATES:fields.append('state')
         if fields:
             reasons['needs_full_street_city_state']+=1;blocked_sources[source]+=1
-            completeness['missing_'+'_'.join(fields)]+=1;continue
+            gap='missing_'+'_'.join(fields);completeness[gap]+=1
+            completeness_by_source.setdefault(source,Counter())[gap]+=1
+            hosts=set()
+            for ev in r.get('evidence') or []:
+                try:
+                    host=urlparse(str(ev.get('source_url') or '')).hostname
+                except ValueError:
+                    host=None
+                if host:hosts.add(host.lower())
+            for host in hosts:evidence_hosts.setdefault(source,Counter())[host]+=1
+            continue
         eligible_sources[source]+=1
         address_origin['recovered_source_detail' if recovered else 'frozen_golden_row']+=1
         out.append(r)
     diagnostics={'eligible_by_primary_name_source':dict(eligible_sources),
                  'blocked_by_primary_name_source':dict(blocked_sources),
                  'blocked_input_completeness':dict(completeness),
+                 'blocked_inputs_by_primary_name_source':{k:dict(v) for k,v in completeness_by_source.items()},
+                 'blocked_evidence_hosts_by_primary_name_source':{k:dict(v) for k,v in evidence_hosts.items()},
                  'eligible_address_origin':dict(address_origin)}
     return out[:row_limit],dict(reasons),len(out),diagnostics
 
