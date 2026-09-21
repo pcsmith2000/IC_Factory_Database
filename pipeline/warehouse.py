@@ -37,7 +37,11 @@ GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_l
                  "annual_revenue_usd", "automation_level", "states_serviced", "country_based",
                  "value_basis",
                  # measured/concluded by stages 11-12, and employee_notes from the feedback path
-                 "building_sqft", "existence_flag", "employee_notes"]
+                 "building_sqft", "existence_flag", "employee_notes",
+                 # stage 15, over registry/taxonomy.yaml. Two columns rather than one because the
+                 # two are measured differently: the group carries a real accuracy over ADL's 218
+                 # labels and most leaves have too few examples to score at all.
+                 "capability_group", "capability_leaf"]
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "tako_ai_search": {"name": "Tako AI Search", "class": "tako_ai_search"},
     "adl_employee_feedback": {"name": "ADL employee feedback", "class": "human_feedback"},
@@ -51,6 +55,11 @@ SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "overture:building": {"name": "Enrichment 11 — Overture building footprint", "class": "enrichment"},
     "enrich:existence": {"name": "Enrichment 12 — existence review flag", "class": "enrichment"},
     "overture:place": {"name": "Enrichment 13 — Overture place at the same address", "class": "enrichment"},
+    # Stage 15's own class, not "enrichment". Survivorship names it directly so the model can sit
+    # BELOW class D — ADL's plant lists, which carry the primary_capability this stage is scored
+    # against — while every other enrichment stage stays where it is.
+    "capability": {"name": "Enrichment 15 — capability over registry/taxonomy.yaml",
+                   "class": "capability"},
 }
 
 

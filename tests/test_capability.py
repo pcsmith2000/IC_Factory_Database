@@ -344,3 +344,36 @@ def test_a_prediction_report_claims_no_accuracy():
     assert rep["by_group"] == {"Panel": 1}
     assert "Bathroom Pods" in rep["leaves_never_used"]
     assert rep["no_evidence_beyond_a_name"] == 0
+
+
+# ---- the gate
+def test_a_capability_outside_the_taxonomy_fails_the_run():
+    """The taxonomy is a file, so a leaf renamed there must FAIL rather than silently orphan every
+    value carrying the old name. And a stage that both validates and coerces has no validation."""
+    from pipeline.enrich import gates
+    good = [{"field": "capability_leaf", "value": "Mass Timber (CLT)"},
+            {"field": "capability_group", "value": "Panel"}]
+    assert gates.e9_every_capability_is_a_member_of_the_taxonomy(good).passed
+    bad = good + [{"field": "capability_leaf", "value": "Steel Buildings Division"}]
+    r = gates.e9_every_capability_is_a_member_of_the_taxonomy(bad)
+    assert not r.passed and "Steel Buildings Division" in r.summary
+
+
+def test_the_group_can_never_outrank_adls_own_label():
+    """Stage 15 is SCORED against ADL's primary_capability. A stage that could overwrite its own
+    answer key would make its measurement meaningless."""
+    from pipeline import registry
+    rules = registry.load_yaml("registry/survivorship.yaml")["fields"]
+    for f in ("capability_group", "capability_leaf"):
+        order = rules[f]["order"]
+        assert order.index("class:D") < order.index("capability")
+
+
+def test_the_stage_is_a_registered_source():
+    """An assertion whose source_id is not in dim_source makes v_provenance answer "who says so"
+    with a null join — the value is published and unattributable, which is the one thing this
+    database is not allowed to do."""
+    from pipeline import warehouse
+    assert warehouse.SYNTHETIC_SOURCES[cap.SOURCE_ID]["class"] == "capability"
+    assert "capability_group" in warehouse.GOLDEN_FIELDS
+    assert "capability_leaf" in warehouse.GOLDEN_FIELDS
