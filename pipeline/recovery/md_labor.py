@@ -94,14 +94,17 @@ def recover(db,campaign,pass_id,limit,workflow):
         official=parse_pdf(pdf)
     matches=unique_addresses(official)
     rows=db.execute("""SELECT DISTINCT ON(c.facility_id) c.facility_id,c.baseline,g.release_tag,
-                              a.value AS source_name,r.source_url
+                              a.value AS source_name
                        FROM coordinate_recovery_rows c
                        JOIN golden_facility g ON g.facility_key=c.facility_id
                        JOIN fact_assertions a ON a.facility_key=c.facility_id AND a.release_tag=g.release_tag
                          AND a.source_key='ic_directories_more' AND a.field_key='name'
-                       JOIN ref_source_row r ON r.row_hash=a.row_hash
                        WHERE c.campaign_id=%s AND c.status='unresolved' AND c.recovered_address IS NULL
-                         AND lower(COALESCE(r.source_url,'')) LIKE 'https://labor.maryland.gov/%%'
+                         AND EXISTS (SELECT 1 FROM fact_assertions e
+                           JOIN ref_source_row er ON er.row_hash=e.row_hash
+                           WHERE e.facility_key=c.facility_id AND e.release_tag=g.release_tag
+                             AND e.source_key='ic_directories_more'
+                             AND lower(COALESCE(er.source_url,'')) LIKE 'https://labor.maryland.gov/%%')
                          AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts x
                            WHERE x.campaign_id=c.campaign_id AND x.facility_id=c.facility_id
                              AND x.pass_id=%s AND x.stage='md_labor')
