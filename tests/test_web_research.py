@@ -1,5 +1,5 @@
 import pytest
-from pipeline.web_research.run import assess, safe_url
+from pipeline.web_research.run import assess, minor_city_correction, safe_url
 from pipeline.web_research.select import query, settings
 
 @pytest.fixture(autouse=True)
@@ -30,6 +30,41 @@ def test_state_conflict_blocks_all_candidates():
     out=assess(r,result(state=c),p)
     assert out['status']=='conflict'
     assert out['proposals'][0]['decision']=='review'
+
+def test_small_city_typo_is_a_bounded_correction():
+    assert minor_city_correction('Remond','Redmond')
+    assert not minor_city_correction('Dallas','Garland')
+    row={'name':'The Truss Company','city':'Remond','state':'OR','facility_id':'IC-1'}
+    fields={
+        'city':candidate('Redmond','The Truss Company Redmond OR'),
+        'state':candidate('OR','The Truss Company Redmond OR'),
+        'website':candidate('https://example.com','The Truss Company Redmond OR',scope='company'),
+    }
+    pages={'https://example.com/contact':{'text':'The Truss Company Redmond OR','final_url':'https://example.com/contact'}}
+    out=assess(row,result(**fields),pages)
+    assert out['status']=='matched'
+    assert next(p for p in out['proposals'] if p['field']=='city')['relationship']=='correction'
+
+def test_physical_address_replaces_mail_without_becoming_identity_conflict():
+    row={'name':'Acme Factory','address':'P.O. Box 7','city':'Elma','state':'WA','zip':'98541','facility_id':'IC-1'}
+    quote='Acme Factory manufacturing plant 10 Main St Elma WA 98542'
+    fields={field:candidate(value,quote) for field,value in {
+        'address':'10 Main St','city':'Elma','state':'WA','zip':'98542'}.items()}
+    fields['website']=candidate('https://example.com',quote,scope='company')
+    pages={'https://example.com/contact':{'text':quote,'final_url':'https://example.com/contact'}}
+    out=assess(row,result(**fields),pages)
+    by_field={p['field']:p for p in out['proposals']}
+    assert by_field['address']['relationship']=='correction'
+    assert by_field['zip']['relationship']=='correction'
+
+def test_coordinate_followup_cost_is_included():
+    from datetime import date
+    from pipeline.web_research.costs import calculate
+    catalog={'data':[{'id':'cheap','pricing':{'input':'0.00000025','output':'0.0000015'}}]}
+    normal=calculate(10,('cheap','cheap'),catalog,date(2026,9,20))
+    recovery=calculate(10,('cheap','cheap'),catalog,date(2026,9,20),coordinate_followup=True)
+    assert recovery['estimated_total_usd']==normal['estimated_total_usd']*2
+    assert recovery['tako']['estimated_calls']==60
 
 def test_different_phone_retains_old_value_and_conflict():
     c=candidate('4109287700','Millington 4109287700')

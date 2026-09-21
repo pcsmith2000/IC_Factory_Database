@@ -64,3 +64,27 @@ def test_incomplete_or_over_budget_research_is_rejected(tmp_path):
     (tmp_path / 'summary.json').write_text(json.dumps(summary))
     with pytest.raises(ValueError, match='cost'):
         build(tmp_path, tmp_path / 'out', '123')
+
+def test_mailing_zip_and_small_city_typo_can_be_replaced(tmp_path):
+    research_artifact(tmp_path)
+    rows=json.loads((tmp_path/'input.json').read_text())
+    rows[0].update(address='P.O. Box 7',city='Remond',state='OR',zip='97701')
+    text=json.dumps(rows,indent=2)
+    (tmp_path/'input.json').write_text(text)
+    plan=json.loads((tmp_path/'approved-plan.json').read_text())
+    plan['input_sha256']=hashlib.sha256(text.encode()).hexdigest()
+    plan['plan_sha256']=digest({k:v for k,v in plan.items() if k not in ('created_at','plan_sha256')})
+    (tmp_path/'approved-plan.json').write_text(json.dumps(plan))
+    run=json.loads((tmp_path/'run-manifest.json').read_text())
+    run['input_sha256']=hashlib.sha256(text.encode()).hexdigest()
+    (tmp_path/'run-manifest.json').write_text(json.dumps(run))
+    results=json.loads((tmp_path/'results.json').read_text())
+    by_field={p['field']:p for p in results[0]['proposals']}
+    by_field['address'].update(value='2405 SW 1st St',quote='Acme Factory 2405 SW 1st St Redmond OR 97756')
+    by_field['city'].update(value='Redmond',quote='2405 SW 1st St Redmond OR 97756',relationship='correction')
+    by_field['state'].update(value='OR',quote='2405 SW 1st St Redmond OR 97756')
+    by_field['zip'].update(value='97756',quote='2405 SW 1st St Redmond OR 97756')
+    (tmp_path/'results.json').write_text(json.dumps(results))
+    manifest,report=build(tmp_path,tmp_path/'out','123')
+    assert report['facilities_approved']==1
+    assert {a['value'] for a in manifest['assertions']} >= {'2405 SW 1st St','Redmond','OR','97756'}

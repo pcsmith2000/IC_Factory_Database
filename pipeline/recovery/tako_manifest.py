@@ -10,7 +10,7 @@ import re
 from urllib.parse import urlsplit
 
 from pipeline.web_research.campaign import normalized_detail
-from pipeline.web_research.run import domain
+from pipeline.web_research.run import domain, minor_city_correction
 from pipeline.recovery.tako_select import DESTINATION, digest
 
 LOCATION = ('address', 'city', 'state', 'zip')
@@ -52,11 +52,14 @@ def _strict_bundle(row, result):
         if proposal.get('source_kind') not in ('official', 'registry'): reasons.append(f'{field}_source_not_authoritative')
     existing_city = row.get('city')
     existing_state = row.get('state')
-    if existing_city and normalized_detail('city', existing_city) != normalized_detail('city', bundle['city']['value']):
+    if (existing_city and normalized_detail('city', existing_city) != normalized_detail('city', bundle['city']['value'])
+            and not minor_city_correction(existing_city,bundle['city']['value'])):
         reasons.append('city_changed')
     if existing_state and normalized_detail('state', existing_state) != normalized_detail('state', bundle['state']['value']):
         reasons.append('state_changed')
-    if row.get('zip') and 'zip' in bundle and normalized_detail('zip', row['zip']) != normalized_detail('zip', bundle['zip']['value']):
+    existing_is_physical=bool(re.match(r'^\d+[A-Za-z]?\s', str(row.get('address') or '').strip()))
+    if (existing_is_physical and row.get('zip') and 'zip' in bundle and
+            normalized_detail('zip', row['zip']) != normalized_detail('zip', bundle['zip']['value'])):
         reasons.append('zip_changed')
     website = proposals.get('website', {}).get('value') or row.get('website')
     official = domain(website)
