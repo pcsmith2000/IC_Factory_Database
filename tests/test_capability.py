@@ -284,3 +284,16 @@ def test_a_contract_error_says_what_came_back(monkeypatch):
     assert st["unanswered"] == 1
     detail = " ".join(st["contract_error_detail"])
     assert "max_tokens" in detail and "Wood Volu" in detail
+
+
+def test_a_limited_run_is_a_sample_not_a_prefix(tmp_path):
+    """facility_ids cluster by the source that issued them. The first 25 of 218 scored 0.44 on the
+    floor against 0.372 for the whole set — a cheap run has to be comparable to a full one."""
+    (tmp_path / "normalised").mkdir()
+    (tmp_path / "assertions.csv").write_text("facility_id,row_hash\n", encoding="utf-8")
+    rows = "\n".join(f"IC-{i:04d},Wood Volumetric Modular" for i in range(100))
+    (tmp_path / "golden.csv").write_text("facility_id,primary_capability\n" + rows + "\n",
+                                         encoding="utf-8")
+    picked = [r["facility_id"] for r in cap.labelled_from(tmp_path, 10)]
+    assert len(picked) == 10
+    assert picked[0] == "IC-0000" and picked[-1] == "IC-0090"     # spans the whole range

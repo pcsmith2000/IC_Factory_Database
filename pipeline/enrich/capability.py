@@ -421,7 +421,14 @@ def labelled_from(build: Path, limit: int = 0) -> list[dict]:
             ev = idx.get(r.get("facility_id", ""), {})
             out.append({**r, **{k: v for k, v in ev.items() if k in ("notes", "website", "sq_ft")}})
     out.sort(key=lambda r: r["facility_id"])            # deterministic before any limit
-    return out[:limit] if limit else out
+    if not limit or limit >= len(out):
+        return out
+    # EVENLY SPACED, not the first N. facility_ids cluster by the source that issued them, so the
+    # first 25 are not a sample of the 218 — their floor scored 0.44 against 0.372 for the whole
+    # set, which would have read as the model being tested on a harder or easier problem than the
+    # one it will do. Taking every kth row keeps a cheap run comparable to a full one.
+    step = len(out) / limit
+    return [out[int(i * step)] for i in range(limit)]
 
 
 def _main(argv: list[str] | None = None) -> int:
