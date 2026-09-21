@@ -1,0 +1,1095 @@
+{
+ "source_id": "astra_manual_web_lookup",
+ "source_name": "ASTRA manual web lookup",
+ "approval": "Addresses located by hand for ADL-listed plants with no street address: each page was fetched and the address quoted verbatim; only findings whose city and state agree with the ADL row are included. Locality discrepancies and uncited search snippets were held out for human review. Lowest precedence; never displaces a roster or geocode.",
+ "campaign_runs": [
+  "claude-session-01JpeeSuyKd1qZCPnQn9MooE"
+ ],
+ "held_for_review": [
+  {
+   "facility_id": "IC-95306",
+   "finding": "610 3rd Street West, Columbia Falls, MT 59912 (APA certified mill listing)",
+   "reason": "ADL row says OR; SmartLam plant is in Montana"
+  },
+  {
+   "facility_id": "IC-95317",
+   "finding": "25 Guenther Boulevard, St. Peters, MO 63376 (official contact page)",
+   "reason": "ADL row says O Fallon; prefab plant page says St. Peters"
+  },
+  {
+   "facility_id": "IC-95319",
+   "finding": "11251 SE 232nd Ave, Damascus, OR 97089 (official contact page, HQ)",
+   "reason": "ADL row says Portland"
+  },
+  {
+   "facility_id": "IC-95320",
+   "finding": "131 Yankee Barn Road, Grantham, NH 03753 (NHHBA member listing)",
+   "reason": "ADL row says Northwood"
+  },
+  {
+   "facility_id": "IC-95329",
+   "finding": "1541B North Powerline Road, Pompano Beach, FL 33069 (official manufacturing-facility page)",
+   "reason": "ADL row says Opa Locka (older Innova Eco site)"
+  },
+  {
+   "facility_id": "IC-95321",
+   "finding": "2424 Merchant Street, Lexington, KY (official site)",
+   "reason": "ADL row says Elizabethtown; no Elizabethtown facility found"
+  },
+  {
+   "facility_id": "IC-95338",
+   "finding": "100 Houston Rd, Phoenix, OR 97535 (official contact page)",
+   "reason": "ADL row says Seattle WA; no Seattle facility listed"
+  },
+  {
+   "facility_id": "IC-95337",
+   "finding": "1186 E Stearns St, Fayetteville, AR (tcmenterprises.com)",
+   "reason": "ADL row says Hutchinson KS; may be a different company"
+  },
+  {
+   "facility_id": "IC-95333",
+   "finding": "Head office High River, Alberta (titanwall.com)",
+   "reason": "Canadian company; no Elizabethtown PA facility found"
+  },
+  {
+   "facility_id": "IC-95341",
+   "finding": "900 W San Mateo Rd Suite 500, Santa Fe NM (office)",
+   "reason": "Office address; manufacturing is decentralised, no plant address"
+  },
+  {
+   "facility_id": "IC-95318",
+   "finding": "17645 Juniper Path (Suite 260), Lakeville MN (BBB)",
+   "reason": "Suite address; corporate office rather than the SIP plant"
+  }
+ ],
+ "uncited_candidates": [
+  {
+   "facility_id": "IC-95316",
+   "candidate": "2604 Sunset Dr, Grenada MS 38901",
+   "status": "search snippet only; generalpanel.com is parked"
+  },
+  {
+   "facility_id": "IC-95292",
+   "candidate": "101 Canary Lane, Grand Junction CO 81507",
+   "status": "search snippet only"
+  },
+  {
+   "facility_id": "IC-95294",
+   "candidate": "11 Goodwin Drive, Windsor CT",
+   "status": "search snippet only; 450,000 sf plant confirmed by press"
+  },
+  {
+   "facility_id": "IC-95302",
+   "candidate": "150 Southridge Pkwy, Bessemer City NC 28016",
+   "status": "search snippet only; plant confirmed on official site"
+  },
+  {
+   "facility_id": "IC-95323",
+   "candidate": "15 Arden Dr, Belgrade MT 59714",
+   "status": "search snippet only"
+  },
+  {
+   "facility_id": "IC-95325",
+   "candidate": "3045 Fruitville Commons Blvd, Sarasota FL 34240",
+   "status": "search snippet only; not Bradenton"
+  },
+  {
+   "facility_id": "IC-95334",
+   "candidate": "204 Bilmar Dr, Pittsburgh PA 15205",
+   "status": "search snippet only; not Lewisburg"
+  },
+  {
+   "facility_id": "IC-95300",
+   "candidate": "1354 Hall Spencer Road, Rock Hill SC 29730",
+   "status": "search snippet only"
+  }
+ ],
+ "assertions": [
+  {
+   "facility_id": "IC-95295",
+   "field": "address",
+   "value": "6 Blackjack Crossing",
+   "source_url": "https://bensonwood.com/work-with-us/",
+   "quote": "6 Blackjack Crossing Walpole, NH 03608",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Blueprint Robotics - Windor",
+    "city": "WINDSOR",
+    "state": "CT"
+   },
+   "review_note": "Official 'work with us' page; the only street address Bensonwood publishes. Site says a newer production facility is in Keene NH (no street given); Walpole is the HQ campus and original shop."
+  },
+  {
+   "facility_id": "IC-95295",
+   "field": "city",
+   "value": "WINDSOR",
+   "source_url": "https://bensonwood.com/work-with-us/",
+   "quote": "6 Blackjack Crossing Walpole, NH 03608",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Blueprint Robotics - Windor",
+    "city": "WINDSOR",
+    "state": "CT"
+   },
+   "review_note": "Official 'work with us' page; the only street address Bensonwood publishes. Site says a newer production facility is in Keene NH (no street given); Walpole is the HQ campus and original shop."
+  },
+  {
+   "facility_id": "IC-95295",
+   "field": "state",
+   "value": "CT",
+   "source_url": "https://bensonwood.com/work-with-us/",
+   "quote": "6 Blackjack Crossing Walpole, NH 03608",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Blueprint Robotics - Windor",
+    "city": "WINDSOR",
+    "state": "CT"
+   },
+   "review_note": "Official 'work with us' page; the only street address Bensonwood publishes. Site says a newer production facility is in Keene NH (no street given); Walpole is the HQ campus and original shop."
+  },
+  {
+   "facility_id": "IC-95295",
+   "field": "zip",
+   "value": "03608",
+   "source_url": "https://bensonwood.com/work-with-us/",
+   "quote": "6 Blackjack Crossing Walpole, NH 03608",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Blueprint Robotics - Windor",
+    "city": "WINDSOR",
+    "state": "CT"
+   },
+   "review_note": "Official 'work with us' page; the only street address Bensonwood publishes. Site says a newer production facility is in Keene NH (no street given); Walpole is the HQ campus and original shop."
+  },
+  {
+   "facility_id": "IC-95307",
+   "field": "address",
+   "value": "1991 Pruner Rd",
+   "source_url": "https://www.drjwoodinnovations.com/about/",
+   "quote": "1991 Pruner Rd, Riddle, OR. 97469",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Mercer Mass Timber - WA",
+    "city": "Spokane",
+    "state": "WA"
+   },
+   "review_note": "DRJ Wood Innovations (glulam/CLT, DR Johnson) about page, 'LOCATION & MAILING'; the Riddle mill site."
+  },
+  {
+   "facility_id": "IC-95307",
+   "field": "city",
+   "value": "Spokane",
+   "source_url": "https://www.drjwoodinnovations.com/about/",
+   "quote": "1991 Pruner Rd, Riddle, OR. 97469",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Mercer Mass Timber - WA",
+    "city": "Spokane",
+    "state": "WA"
+   },
+   "review_note": "DRJ Wood Innovations (glulam/CLT, DR Johnson) about page, 'LOCATION & MAILING'; the Riddle mill site."
+  },
+  {
+   "facility_id": "IC-95307",
+   "field": "state",
+   "value": "WA",
+   "source_url": "https://www.drjwoodinnovations.com/about/",
+   "quote": "1991 Pruner Rd, Riddle, OR. 97469",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Mercer Mass Timber - WA",
+    "city": "Spokane",
+    "state": "WA"
+   },
+   "review_note": "DRJ Wood Innovations (glulam/CLT, DR Johnson) about page, 'LOCATION & MAILING'; the Riddle mill site."
+  },
+  {
+   "facility_id": "IC-95307",
+   "field": "zip",
+   "value": "97469",
+   "source_url": "https://www.drjwoodinnovations.com/about/",
+   "quote": "1991 Pruner Rd, Riddle, OR. 97469",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Mercer Mass Timber - WA",
+    "city": "Spokane",
+    "state": "WA"
+   },
+   "review_note": "DRJ Wood Innovations (glulam/CLT, DR Johnson) about page, 'LOCATION & MAILING'; the Riddle mill site."
+  },
+  {
+   "facility_id": "IC-95322",
+   "field": "address",
+   "value": "1530 Riverside Dr, Suite B",
+   "source_url": "https://www.branch.technology/contact",
+   "quote": "1530 Riverside Dr, Suite B, Chattanooga, TN 37406",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "YANKEE BARN HOMES",
+    "city": "NORTHWOOD",
+    "state": "NH"
+   },
+   "review_note": "Official contact page; 2018 Times Free Press reported the 40,000 sf production move to 1530 Riverside Drive."
+  },
+  {
+   "facility_id": "IC-95322",
+   "field": "city",
+   "value": "NORTHWOOD",
+   "source_url": "https://www.branch.technology/contact",
+   "quote": "1530 Riverside Dr, Suite B, Chattanooga, TN 37406",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "YANKEE BARN HOMES",
+    "city": "NORTHWOOD",
+    "state": "NH"
+   },
+   "review_note": "Official contact page; 2018 Times Free Press reported the 40,000 sf production move to 1530 Riverside Drive."
+  },
+  {
+   "facility_id": "IC-95322",
+   "field": "state",
+   "value": "NH",
+   "source_url": "https://www.branch.technology/contact",
+   "quote": "1530 Riverside Dr, Suite B, Chattanooga, TN 37406",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "YANKEE BARN HOMES",
+    "city": "NORTHWOOD",
+    "state": "NH"
+   },
+   "review_note": "Official contact page; 2018 Times Free Press reported the 40,000 sf production move to 1530 Riverside Drive."
+  },
+  {
+   "facility_id": "IC-95322",
+   "field": "zip",
+   "value": "37406",
+   "source_url": "https://www.branch.technology/contact",
+   "quote": "1530 Riverside Dr, Suite B, Chattanooga, TN 37406",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "YANKEE BARN HOMES",
+    "city": "NORTHWOOD",
+    "state": "NH"
+   },
+   "review_note": "Official contact page; 2018 Times Free Press reported the 40,000 sf production move to 1530 Riverside Drive."
+  },
+  {
+   "facility_id": "IC-95336",
+   "field": "address",
+   "value": "10821 Eagle Dr",
+   "source_url": "https://www.bbb.org/us/ny/north-collins/profile/home-builders/timberbuilt-0041-235986864",
+   "quote": "10821 Eagle Dr",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "TITAN WALL",
+    "city": "ELIZABETHTOWN",
+    "state": "PA"
+   },
+   "review_note": "BBB business listing for Timberbuilt, North Collins; the official site publishes no street address. Directory evidence, not the company's own page."
+  },
+  {
+   "facility_id": "IC-95336",
+   "field": "city",
+   "value": "ELIZABETHTOWN",
+   "source_url": "https://www.bbb.org/us/ny/north-collins/profile/home-builders/timberbuilt-0041-235986864",
+   "quote": "10821 Eagle Dr",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "TITAN WALL",
+    "city": "ELIZABETHTOWN",
+    "state": "PA"
+   },
+   "review_note": "BBB business listing for Timberbuilt, North Collins; the official site publishes no street address. Directory evidence, not the company's own page."
+  },
+  {
+   "facility_id": "IC-95336",
+   "field": "state",
+   "value": "PA",
+   "source_url": "https://www.bbb.org/us/ny/north-collins/profile/home-builders/timberbuilt-0041-235986864",
+   "quote": "10821 Eagle Dr",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "TITAN WALL",
+    "city": "ELIZABETHTOWN",
+    "state": "PA"
+   },
+   "review_note": "BBB business listing for Timberbuilt, North Collins; the official site publishes no street address. Directory evidence, not the company's own page."
+  },
+  {
+   "facility_id": "IC-95271",
+   "field": "address",
+   "value": "8625 Otis Street",
+   "source_url": "https://www.midrisemodular.com/contact",
+   "quote": "8625 Otis Street, South Gate, California 90280, United States",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "WACO MODULAR MANUFACTURIN LLC",
+    "city": "TROY",
+    "state": "TX"
+   },
+   "review_note": "Official contact page; only address published. Page spells the city 'South Gate' (ADL row: Southgate)."
+  },
+  {
+   "facility_id": "IC-95271",
+   "field": "city",
+   "value": "TROY",
+   "source_url": "https://www.midrisemodular.com/contact",
+   "quote": "8625 Otis Street, South Gate, California 90280, United States",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "WACO MODULAR MANUFACTURIN LLC",
+    "city": "TROY",
+    "state": "TX"
+   },
+   "review_note": "Official contact page; only address published. Page spells the city 'South Gate' (ADL row: Southgate)."
+  },
+  {
+   "facility_id": "IC-95271",
+   "field": "state",
+   "value": "TX",
+   "source_url": "https://www.midrisemodular.com/contact",
+   "quote": "8625 Otis Street, South Gate, California 90280, United States",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "WACO MODULAR MANUFACTURIN LLC",
+    "city": "TROY",
+    "state": "TX"
+   },
+   "review_note": "Official contact page; only address published. Page spells the city 'South Gate' (ADL row: Southgate)."
+  },
+  {
+   "facility_id": "IC-95271",
+   "field": "zip",
+   "value": "90280",
+   "source_url": "https://www.midrisemodular.com/contact",
+   "quote": "8625 Otis Street, South Gate, California 90280, United States",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "WACO MODULAR MANUFACTURIN LLC",
+    "city": "TROY",
+    "state": "TX"
+   },
+   "review_note": "Official contact page; only address published. Page spells the city 'South Gate' (ADL row: Southgate)."
+  },
+  {
+   "facility_id": "IC-95310",
+   "field": "address",
+   "value": "425 Stump Road",
+   "source_url": "https://www.pdmconstructors.com/",
+   "quote": "425 Stump Road, North Wales, PA 19454",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Vaagen Timbers",
+    "city": "COLVILLE",
+    "state": "WA"
+   },
+   "review_note": "PDM Constructors home page (parent of DuraPod); HQ address, page implies Durapods manufacturing at the same site. Plant not separately labelled."
+  },
+  {
+   "facility_id": "IC-95310",
+   "field": "city",
+   "value": "COLVILLE",
+   "source_url": "https://www.pdmconstructors.com/",
+   "quote": "425 Stump Road, North Wales, PA 19454",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Vaagen Timbers",
+    "city": "COLVILLE",
+    "state": "WA"
+   },
+   "review_note": "PDM Constructors home page (parent of DuraPod); HQ address, page implies Durapods manufacturing at the same site. Plant not separately labelled."
+  },
+  {
+   "facility_id": "IC-95310",
+   "field": "state",
+   "value": "WA",
+   "source_url": "https://www.pdmconstructors.com/",
+   "quote": "425 Stump Road, North Wales, PA 19454",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Vaagen Timbers",
+    "city": "COLVILLE",
+    "state": "WA"
+   },
+   "review_note": "PDM Constructors home page (parent of DuraPod); HQ address, page implies Durapods manufacturing at the same site. Plant not separately labelled."
+  },
+  {
+   "facility_id": "IC-95310",
+   "field": "zip",
+   "value": "19454",
+   "source_url": "https://www.pdmconstructors.com/",
+   "quote": "425 Stump Road, North Wales, PA 19454",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Vaagen Timbers",
+    "city": "COLVILLE",
+    "state": "WA"
+   },
+   "review_note": "PDM Constructors home page (parent of DuraPod); HQ address, page implies Durapods manufacturing at the same site. Plant not separately labelled."
+  },
+  {
+   "facility_id": "IC-95313",
+   "field": "address",
+   "value": "2300 Principal Row, Suite 101",
+   "source_url": "https://www.surepods.com/contact",
+   "quote": "2300 Principal Row, Suite 101 Orlando, FL 32837",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "DuraPod - Chalfont",
+    "city": "Chalfont",
+    "state": "PA"
+   },
+   "review_note": "Official contact page; only address published (industrial park). Not explicitly labelled factory."
+  },
+  {
+   "facility_id": "IC-95313",
+   "field": "city",
+   "value": "Chalfont",
+   "source_url": "https://www.surepods.com/contact",
+   "quote": "2300 Principal Row, Suite 101 Orlando, FL 32837",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "DuraPod - Chalfont",
+    "city": "Chalfont",
+    "state": "PA"
+   },
+   "review_note": "Official contact page; only address published (industrial park). Not explicitly labelled factory."
+  },
+  {
+   "facility_id": "IC-95313",
+   "field": "state",
+   "value": "PA",
+   "source_url": "https://www.surepods.com/contact",
+   "quote": "2300 Principal Row, Suite 101 Orlando, FL 32837",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "DuraPod - Chalfont",
+    "city": "Chalfont",
+    "state": "PA"
+   },
+   "review_note": "Official contact page; only address published (industrial park). Not explicitly labelled factory."
+  },
+  {
+   "facility_id": "IC-95313",
+   "field": "zip",
+   "value": "32837",
+   "source_url": "https://www.surepods.com/contact",
+   "quote": "2300 Principal Row, Suite 101 Orlando, FL 32837",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "DuraPod - Chalfont",
+    "city": "Chalfont",
+    "state": "PA"
+   },
+   "review_note": "Official contact page; only address published (industrial park). Not explicitly labelled factory."
+  },
+  {
+   "facility_id": "IC-95330",
+   "field": "address",
+   "value": "203 South Redmond Road",
+   "source_url": "https://buildingclean.org/manufacturers/facility/5770",
+   "quote": "203 South Redmond Road Jacksonville, AR 72076 United States",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "ENERGY PANEL STRUCTURES INC",
+    "city": "GRAETTINGER",
+    "state": "IA"
+   },
+   "review_note": "Building Clean manufacturer FACILITY listing for Thermafoam (R-Control SIP). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95330",
+   "field": "city",
+   "value": "GRAETTINGER",
+   "source_url": "https://buildingclean.org/manufacturers/facility/5770",
+   "quote": "203 South Redmond Road Jacksonville, AR 72076 United States",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "ENERGY PANEL STRUCTURES INC",
+    "city": "GRAETTINGER",
+    "state": "IA"
+   },
+   "review_note": "Building Clean manufacturer FACILITY listing for Thermafoam (R-Control SIP). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95330",
+   "field": "state",
+   "value": "IA",
+   "source_url": "https://buildingclean.org/manufacturers/facility/5770",
+   "quote": "203 South Redmond Road Jacksonville, AR 72076 United States",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "ENERGY PANEL STRUCTURES INC",
+    "city": "GRAETTINGER",
+    "state": "IA"
+   },
+   "review_note": "Building Clean manufacturer FACILITY listing for Thermafoam (R-Control SIP). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95330",
+   "field": "zip",
+   "value": "72076",
+   "source_url": "https://buildingclean.org/manufacturers/facility/5770",
+   "quote": "203 South Redmond Road Jacksonville, AR 72076 United States",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "ENERGY PANEL STRUCTURES INC",
+    "city": "GRAETTINGER",
+    "state": "IA"
+   },
+   "review_note": "Building Clean manufacturer FACILITY listing for Thermafoam (R-Control SIP). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95299",
+   "field": "address",
+   "value": "6635 Edgewater Dr",
+   "source_url": "https://www.factoryregistry.com/facility/fl/orlando/banker-steel-orlando-110060280057",
+   "quote": "6635 Edgewater Dr, Orlando, FL 32810",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Bankersteel - South Plainfield",
+    "city": "SOUTH PLAINFIELD",
+    "state": "NJ"
+   },
+   "review_note": "Factory registry listing for Banker Steel South fabrication facility; bankersteel.com lists only Lynchburg/NYC. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95299",
+   "field": "city",
+   "value": "SOUTH PLAINFIELD",
+   "source_url": "https://www.factoryregistry.com/facility/fl/orlando/banker-steel-orlando-110060280057",
+   "quote": "6635 Edgewater Dr, Orlando, FL 32810",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Bankersteel - South Plainfield",
+    "city": "SOUTH PLAINFIELD",
+    "state": "NJ"
+   },
+   "review_note": "Factory registry listing for Banker Steel South fabrication facility; bankersteel.com lists only Lynchburg/NYC. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95299",
+   "field": "state",
+   "value": "NJ",
+   "source_url": "https://www.factoryregistry.com/facility/fl/orlando/banker-steel-orlando-110060280057",
+   "quote": "6635 Edgewater Dr, Orlando, FL 32810",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Bankersteel - South Plainfield",
+    "city": "SOUTH PLAINFIELD",
+    "state": "NJ"
+   },
+   "review_note": "Factory registry listing for Banker Steel South fabrication facility; bankersteel.com lists only Lynchburg/NYC. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95299",
+   "field": "zip",
+   "value": "32810",
+   "source_url": "https://www.factoryregistry.com/facility/fl/orlando/banker-steel-orlando-110060280057",
+   "quote": "6635 Edgewater Dr, Orlando, FL 32810",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Bankersteel - South Plainfield",
+    "city": "SOUTH PLAINFIELD",
+    "state": "NJ"
+   },
+   "review_note": "Factory registry listing for Banker Steel South fabrication facility; bankersteel.com lists only Lynchburg/NYC. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95258",
+   "field": "address",
+   "value": "202 N Gazzie St",
+   "source_url": "https://www.studiobuilthomes.com/contact/",
+   "quote": "StudioBuilt HQ: 202 N Gazzie St Cuero, TX 77954",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Fading West",
+    "city": "Buena Vista",
+    "state": "CO"
+   },
+   "review_note": "Official contact page, labelled 'StudioBuilt HQ'; Cuero is the factory town (parent Amherst is in Austin)."
+  },
+  {
+   "facility_id": "IC-95258",
+   "field": "city",
+   "value": "Buena Vista",
+   "source_url": "https://www.studiobuilthomes.com/contact/",
+   "quote": "StudioBuilt HQ: 202 N Gazzie St Cuero, TX 77954",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Fading West",
+    "city": "Buena Vista",
+    "state": "CO"
+   },
+   "review_note": "Official contact page, labelled 'StudioBuilt HQ'; Cuero is the factory town (parent Amherst is in Austin)."
+  },
+  {
+   "facility_id": "IC-95258",
+   "field": "state",
+   "value": "CO",
+   "source_url": "https://www.studiobuilthomes.com/contact/",
+   "quote": "StudioBuilt HQ: 202 N Gazzie St Cuero, TX 77954",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Fading West",
+    "city": "Buena Vista",
+    "state": "CO"
+   },
+   "review_note": "Official contact page, labelled 'StudioBuilt HQ'; Cuero is the factory town (parent Amherst is in Austin)."
+  },
+  {
+   "facility_id": "IC-95258",
+   "field": "zip",
+   "value": "77954",
+   "source_url": "https://www.studiobuilthomes.com/contact/",
+   "quote": "StudioBuilt HQ: 202 N Gazzie St Cuero, TX 77954",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Fading West",
+    "city": "Buena Vista",
+    "state": "CO"
+   },
+   "review_note": "Official contact page, labelled 'StudioBuilt HQ'; Cuero is the factory town (parent Amherst is in Austin)."
+  },
+  {
+   "facility_id": "IC-95246",
+   "field": "address",
+   "value": "11203 Galveston Rd",
+   "source_url": "https://members.ghba.org/memberdirectory/Search/wood-roof-and-floor-truss-manufacturer-132688",
+   "quote": "84 Lumber 11203 Galveston Rd, Houston, TX 77034",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Universal Forest Products",
+    "city": "Conway",
+    "state": "SC"
+   },
+   "review_note": "Greater Houston Builders Association member directory, category 'Wood Roof and Floor Truss Manufacturer'. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95246",
+   "field": "city",
+   "value": "Conway",
+   "source_url": "https://members.ghba.org/memberdirectory/Search/wood-roof-and-floor-truss-manufacturer-132688",
+   "quote": "84 Lumber 11203 Galveston Rd, Houston, TX 77034",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Universal Forest Products",
+    "city": "Conway",
+    "state": "SC"
+   },
+   "review_note": "Greater Houston Builders Association member directory, category 'Wood Roof and Floor Truss Manufacturer'. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95246",
+   "field": "state",
+   "value": "SC",
+   "source_url": "https://members.ghba.org/memberdirectory/Search/wood-roof-and-floor-truss-manufacturer-132688",
+   "quote": "84 Lumber 11203 Galveston Rd, Houston, TX 77034",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Universal Forest Products",
+    "city": "Conway",
+    "state": "SC"
+   },
+   "review_note": "Greater Houston Builders Association member directory, category 'Wood Roof and Floor Truss Manufacturer'. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95246",
+   "field": "zip",
+   "value": "77034",
+   "source_url": "https://members.ghba.org/memberdirectory/Search/wood-roof-and-floor-truss-manufacturer-132688",
+   "quote": "84 Lumber 11203 Galveston Rd, Houston, TX 77034",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Universal Forest Products",
+    "city": "Conway",
+    "state": "SC"
+   },
+   "review_note": "Greater Houston Builders Association member directory, category 'Wood Roof and Floor Truss Manufacturer'. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95225",
+   "field": "address",
+   "value": "120 Welby Rd",
+   "source_url": "https://www.bldr.com/location/new-bedford-ma-lumber-yard/NEWBMAYD",
+   "quote": "120 Welby Rd, New Bedford, MA 02745",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Builders FirstSource",
+    "city": "New Bedford",
+    "state": "MA"
+   },
+   "review_note": "Official BFS location page; lists trusses and wall panels among products made at this yard."
+  },
+  {
+   "facility_id": "IC-95225",
+   "field": "city",
+   "value": "New Bedford",
+   "source_url": "https://www.bldr.com/location/new-bedford-ma-lumber-yard/NEWBMAYD",
+   "quote": "120 Welby Rd, New Bedford, MA 02745",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Builders FirstSource",
+    "city": "New Bedford",
+    "state": "MA"
+   },
+   "review_note": "Official BFS location page; lists trusses and wall panels among products made at this yard."
+  },
+  {
+   "facility_id": "IC-95225",
+   "field": "state",
+   "value": "MA",
+   "source_url": "https://www.bldr.com/location/new-bedford-ma-lumber-yard/NEWBMAYD",
+   "quote": "120 Welby Rd, New Bedford, MA 02745",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Builders FirstSource",
+    "city": "New Bedford",
+    "state": "MA"
+   },
+   "review_note": "Official BFS location page; lists trusses and wall panels among products made at this yard."
+  },
+  {
+   "facility_id": "IC-95225",
+   "field": "zip",
+   "value": "02745",
+   "source_url": "https://www.bldr.com/location/new-bedford-ma-lumber-yard/NEWBMAYD",
+   "quote": "120 Welby Rd, New Bedford, MA 02745",
+   "scope": "facility",
+   "page_type": "official_site",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Builders FirstSource",
+    "city": "New Bedford",
+    "state": "MA"
+   },
+   "review_note": "Official BFS location page; lists trusses and wall panels among products made at this yard."
+  },
+  {
+   "facility_id": "IC-95263",
+   "field": "address",
+   "value": "3926 Fountain Valley Road",
+   "source_url": "https://www.firststatemha.org/company/clayton-homes-halls/",
+   "quote": "3926 Fountain Valley Road",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - Waco 1",
+    "city": "Bonham",
+    "state": "TX"
+   },
+   "review_note": "Manufactured housing association listing for Clayton Homes Halls; Clayton's blog confirms the Halls home building facility. Directory evidence; ZIP not quoted."
+  },
+  {
+   "facility_id": "IC-95263",
+   "field": "city",
+   "value": "Bonham",
+   "source_url": "https://www.firststatemha.org/company/clayton-homes-halls/",
+   "quote": "3926 Fountain Valley Road",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - Waco 1",
+    "city": "Bonham",
+    "state": "TX"
+   },
+   "review_note": "Manufactured housing association listing for Clayton Homes Halls; Clayton's blog confirms the Halls home building facility. Directory evidence; ZIP not quoted."
+  },
+  {
+   "facility_id": "IC-95263",
+   "field": "state",
+   "value": "TX",
+   "source_url": "https://www.firststatemha.org/company/clayton-homes-halls/",
+   "quote": "3926 Fountain Valley Road",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "Clayton - Waco 1",
+    "city": "Bonham",
+    "state": "TX"
+   },
+   "review_note": "Manufactured housing association listing for Clayton Homes Halls; Clayton's blog confirms the Halls home building facility. Directory evidence; ZIP not quoted."
+  },
+  {
+   "facility_id": "IC-95284",
+   "field": "address",
+   "value": "3401 W Corsicana St",
+   "source_url": "https://www.modularhomes.com/manufacturer/2686/champion-home-builders/athens/",
+   "quote": "3401 W Corsicana St , Athens,  TX 75751",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CLAYTON MAYNARDVILLE",
+    "city": "MAYNARDVILLE",
+    "state": "TN"
+   },
+   "review_note": "Manufacturer (plant) listing; other sources spell the road 'W Corsicana Hwy'. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95284",
+   "field": "city",
+   "value": "MAYNARDVILLE",
+   "source_url": "https://www.modularhomes.com/manufacturer/2686/champion-home-builders/athens/",
+   "quote": "3401 W Corsicana St , Athens,  TX 75751",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CLAYTON MAYNARDVILLE",
+    "city": "MAYNARDVILLE",
+    "state": "TN"
+   },
+   "review_note": "Manufacturer (plant) listing; other sources spell the road 'W Corsicana Hwy'. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95284",
+   "field": "state",
+   "value": "TN",
+   "source_url": "https://www.modularhomes.com/manufacturer/2686/champion-home-builders/athens/",
+   "quote": "3401 W Corsicana St , Athens,  TX 75751",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CLAYTON MAYNARDVILLE",
+    "city": "MAYNARDVILLE",
+    "state": "TN"
+   },
+   "review_note": "Manufacturer (plant) listing; other sources spell the road 'W Corsicana Hwy'. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95284",
+   "field": "zip",
+   "value": "75751",
+   "source_url": "https://www.modularhomes.com/manufacturer/2686/champion-home-builders/athens/",
+   "quote": "3401 W Corsicana St , Athens,  TX 75751",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CLAYTON MAYNARDVILLE",
+    "city": "MAYNARDVILLE",
+    "state": "TN"
+   },
+   "review_note": "Manufacturer (plant) listing; other sources spell the road 'W Corsicana Hwy'. Directory evidence."
+  },
+  {
+   "facility_id": "IC-95285",
+   "field": "address",
+   "value": "4055 U.S. 401",
+   "source_url": "https://www.manufacturedhomes.com/manufacturer/2058/champion-homes/lillington/",
+   "quote": "4055 U.S. 401 , Lillington, NC 27546",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOME BUILDERS INC - ATHENS TX",
+    "city": "ATHENS",
+    "state": "TX"
+   },
+   "review_note": "Manufacturer (plant) listing; EPA TRI also lists a Champion facility in Lillington. Retail centre is elsewhere (115 Titan Roberts Rd). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95285",
+   "field": "city",
+   "value": "ATHENS",
+   "source_url": "https://www.manufacturedhomes.com/manufacturer/2058/champion-homes/lillington/",
+   "quote": "4055 U.S. 401 , Lillington, NC 27546",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOME BUILDERS INC - ATHENS TX",
+    "city": "ATHENS",
+    "state": "TX"
+   },
+   "review_note": "Manufacturer (plant) listing; EPA TRI also lists a Champion facility in Lillington. Retail centre is elsewhere (115 Titan Roberts Rd). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95285",
+   "field": "state",
+   "value": "TX",
+   "source_url": "https://www.manufacturedhomes.com/manufacturer/2058/champion-homes/lillington/",
+   "quote": "4055 U.S. 401 , Lillington, NC 27546",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOME BUILDERS INC - ATHENS TX",
+    "city": "ATHENS",
+    "state": "TX"
+   },
+   "review_note": "Manufacturer (plant) listing; EPA TRI also lists a Champion facility in Lillington. Retail centre is elsewhere (115 Titan Roberts Rd). Directory evidence."
+  },
+  {
+   "facility_id": "IC-95285",
+   "field": "zip",
+   "value": "27546",
+   "source_url": "https://www.manufacturedhomes.com/manufacturer/2058/champion-homes/lillington/",
+   "quote": "4055 U.S. 401 , Lillington, NC 27546",
+   "scope": "facility",
+   "page_type": "directory",
+   "retrieved_date": "2026-09-21",
+   "approved": true,
+   "expected_identity": {
+    "name": "CHAMPION HOMES - CHAMPION HOME BUILDERS INC - ATHENS TX",
+    "city": "ATHENS",
+    "state": "TX"
+   },
+   "review_note": "Manufacturer (plant) listing; EPA TRI also lists a Champion facility in Lillington. Retail centre is elsewhere (115 Titan Roberts Rd). Directory evidence."
+  }
+ ]
+}
