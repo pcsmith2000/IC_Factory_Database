@@ -1,5 +1,6 @@
 from copy import deepcopy
 from pipeline.recovery.run import eligible,validate_rooftop
+from pipeline.recovery.overture_rooftop import strict_address_match,strict_choose,control_gate
 
 ROW={'address':'10 Main Street','city':'Boston','state':'MA','zip':'02101'}
 HIT={'accuracy_type':'rooftop','accuracy':1,'address_components':{'number':'10','formatted_street':'Main St','city':'Boston','state_province':'MA','postal_code':'02101'},'location':{'lat':42.1,'lng':-71.1}}
@@ -20,3 +21,33 @@ def test_coarse_and_invalid_points_are_never_counted():
     h={**HIT,'location':{'lat':float('nan'),'lng':-71.1}}
     assert validate_rooftop(ROW,{'response':{'results':[h]}})[0] is None
     assert validate_rooftop(ROW,{'response':{'results':[]}})[1]=='no_result'
+
+
+def test_overture_rooftop_requires_exact_address_and_name():
+    fac={'name':'Acme Components LLC','address':'10 Main Street','city':'Boston','state':'MA','zip':'02101'}
+    place={'id':'p1','nm':'Acme Components','addr':'10 Main St','loc':'BOSTON','reg':'MA',
+           'zip':'02101-1234','lat':42.1,'lon':-71.1}
+    assert strict_address_match(fac,place)==(True,'matched')
+    for key,value,reason in [('addr','11 Main St','street_number_mismatch'),
+                             ('addr','10 Other St','street_name_mismatch'),
+                             ('loc','CAMBRIDGE','city_mismatch'),
+                             ('reg','NH','state_mismatch'),
+                             ('zip','02102','zip_mismatch'),
+                             ('nm','Different Tenant','name_mismatch')]:
+        ok,why=strict_address_match(fac,{**place,key:value})
+        assert not ok and why==reason
+
+
+def test_overture_rooftop_refuses_distinct_place_points():
+    fac={'facility_id':'IC-1','name':'Acme Components','address':'10 Main St',
+         'city':'Boston','state':'MA','zip':'02101'}
+    one={'id':'p1','nm':'Acme Components','addr':'10 Main Street','loc':'BOSTON','reg':'MA',
+         'zip':'02101','lat':42.1,'lon':-71.1}
+    assert strict_choose(fac,[one])[0]['id']=='p1'
+    assert strict_choose(fac,[one,{**one,'id':'p2','lat':42.2}])==(None,'ambiguous_place_points')
+
+
+def test_overture_control_gate_is_pre_registered_and_strict():
+    assert control_gate([20.0]*10)[0]
+    assert not control_gate([20.0]*9)[0]
+    assert not control_gate([20.0]*9+[600.0])[0]
