@@ -3,7 +3,7 @@
 Campaign: `missing-rooftops-2026-09-21`  
 Frozen cohort: 1,668 rows  
 Current result: 431 rooftop assertions recovered; 1,237 unresolved  
-Recorded API cost: $0.650 of the $9.50 campaign ceiling
+Recorded API cost: $0.714585 of the $9.50 campaign ceiling
 
 Times are GitHub Actions elapsed runtime. Repeated implementation-triggered plan/test runs are
 excluded; dry-run validation passes that directly informed a write are included.
@@ -35,3 +35,5 @@ excluded; dry-run validation passes that directly informed a write are included.
 |23|Internal exact-address rooftop plan|0m 24s|$0.000|
 |24|Internal exact-address write, 3 recovered|0m 19s|$0.000|
 |25|Tako coordinate-recovery read-only plan, 10 of 825 address-research-eligible rows; research estimate $0.15 and cap $0.50|0m 19s|$0.000|
+|26|Tako coordinate-recovery pilot, 10/10 completed; 6 matched, 2 review, 2 conflict|2m 57s|$0.064585|
+|27|Strict Tako assertion plan, 0 address bundles accepted and 0 database writes|0m 26s|$0.000|

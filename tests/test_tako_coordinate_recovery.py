@@ -5,7 +5,7 @@ import pytest
 from pipeline.recovery.tako_select import choose, digest, verify_plan
 
 
-def cfg(scope='needs_address'):
+def cfg(scope='missing_street_known_locality'):
     return {'limit': 10, 'offset': 0, 'seed': 'stable', 'states': [],
             'address_scope': scope, 'pass_id': 'p1', 'max_cost_usd': .5}
 
@@ -29,6 +29,16 @@ def test_selection_is_stable_and_scoped_to_unchanged_unresolved_identity():
     assert 'address' in first[0]['research_focus_fields']
     complete, eligible = choose(rows(), cfg('complete_address'))
     assert eligible == 1 and complete[0]['facility_id'] == 'IC-1'
+
+
+def test_high_confidence_default_requires_known_city_state_and_missing_street():
+    extra = rows() + [{'facility_id': 'IC-4', 'baseline': {'name': 'No Locality', 'phone': '5551234567'},
+                       'recovered_address': None, 'live_name': 'No Locality', 'live_city': None,
+                       'live_state': None, 'live_release': 'r1'}]
+    selected, eligible = choose(extra, cfg())
+    assert eligible == 1 and selected[0]['facility_id'] == 'IC-2'
+    broad, eligible = choose(extra, cfg('needs_address'))
+    assert eligible == 2 and {row['facility_id'] for row in broad} == {'IC-2', 'IC-4'}
 
 
 def test_research_requires_exact_unchanged_plan(tmp_path, monkeypatch):

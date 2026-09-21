@@ -27,14 +27,14 @@ def settings():
         'offset': int(os.environ.get('ROW_OFFSET', '0')),
         'seed': os.environ.get('SAMPLE_SEED', '20260921').strip(),
         'states': [v.strip().upper() for v in os.environ.get('STATES', '').split(',') if v.strip()],
-        'address_scope': os.environ.get('ADDRESS_SCOPE', 'needs_address').strip(),
+        'address_scope': os.environ.get('ADDRESS_SCOPE', 'missing_street_known_locality').strip(),
         'pass_id': os.environ.get('PASS_ID', 'tako-address-1').strip(),
         'max_cost_usd': float(os.environ.get('MAX_COST_USD', '0.50')),
     }
     if not 1 <= cfg['limit'] <= 100 or cfg['offset'] < 0:
         raise ValueError('row_limit must be 1..100 and row_offset must be nonnegative')
-    if cfg['address_scope'] not in ('needs_address', 'complete_address', 'all'):
-        raise ValueError('address_scope must be needs_address, complete_address, or all')
+    if cfg['address_scope'] not in ('missing_street_known_locality', 'needs_address', 'complete_address', 'all'):
+        raise ValueError('address_scope must be missing_street_known_locality, needs_address, complete_address, or all')
     if any(not re.fullmatch(r'[A-Z]{2}', state) for state in cfg['states']):
         raise ValueError('states must be comma-separated two-letter codes')
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,63}', cfg['pass_id']):
@@ -61,6 +61,12 @@ def choose(rows, cfg):
         if cfg['states'] and str(baseline.get('state') or '').upper() not in cfg['states']:
             continue
         is_complete = complete_address(baseline)
+        if cfg['address_scope'] == 'missing_street_known_locality':
+            has_street = bool(re.match(r'^\d+[A-Za-z]?\s', str(baseline.get('address') or '').strip()))
+            known_locality = bool(str(baseline.get('city') or '').strip() and
+                                  re.fullmatch(r'[A-Za-z]{2}', str(baseline.get('state') or '').strip()))
+            if has_street or not known_locality:
+                continue
         if cfg['address_scope'] == 'needs_address' and is_complete:
             continue
         if cfg['address_scope'] == 'complete_address' and not is_complete:
