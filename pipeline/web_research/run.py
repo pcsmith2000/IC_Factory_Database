@@ -233,12 +233,20 @@ def main():
     (out/'run-manifest.json').write_text(json.dumps(manifest,indent=2))
     (out/'input.json').write_text(json.dumps(rows,indent=2))
     from .costs import estimate
-    estimate(len(rows),(MODEL,EXTRACT_MODEL),out)
+    live_estimate=estimate(len(rows),(MODEL,EXTRACT_MODEL),out)
     if args.mode=='research' and os.environ.get('RESEARCH_CACHE_ROOT'):
         from .evidence_cache import recent_pages
         EVIDENCE_CACHE.update(recent_pages(os.environ['RESEARCH_CACHE_ROOT']))
     results=[]; errors=[]; started=time.time()
+    max_cost=float(os.environ.get('RESEARCH_MAX_COST_USD','0') or 0)
+    if max_cost < 0:
+        raise ValueError('RESEARCH_MAX_COST_USD cannot be negative')
+    if max_cost and live_estimate['expected_range_usd'][1] > max_cost:
+        raise RuntimeError('Live pre-run estimate exceeds the reviewed cost cap; no research calls made')
     for row in rows:
+        current_usage=usage_summary(out)
+        if max_cost and (current_usage['responses_missing_cost'] or current_usage['known_cost_subtotal_usd'] >= max_cost):
+            raise RuntimeError('Per-run research cost guard stopped before the next row')
         if time.time()-started>int(os.environ.get('RESEARCH_TIME_LIMIT_SECONDS','1200')):
             errors.append({'error':'Run time budget reached; remaining rows not attempted'})
             summary=json.loads((out/'summary.json').read_text()); summary['errors']=errors
@@ -279,6 +287,10 @@ def main():
     if os.environ.get('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
             f.write('\n## Actual research cost\n\n'+(f'Gateway reported ${actual:.6f}.' if actual is not None else 'Some responses omitted cost; see known subtotal in summary.json.')+'\n\nDatabase writes: 0.\n')
+    if max_cost and actual is None:
+        raise RuntimeError('Gateway omitted actual cost; research stopped for budget review')
+    if max_cost and actual > max_cost:
+        raise RuntimeError('Gateway actual cost exceeded the reviewed per-run cap')
     if errors: raise SystemExit('Research incomplete; inspect summary.json')
 
 if __name__=='__main__': main()

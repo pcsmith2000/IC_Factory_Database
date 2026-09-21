@@ -1,0 +1,108 @@
+name: Tako coordinate recovery research
+run-name: Tako coordinate recovery · ${{ inputs.mode || 'plan' }} · ${{ inputs.row_limit || '10' }} rows
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [plan, research]
+        default: plan
+      pass_id:
+        description: 'Stable pass identifier'
+        default: 'tako-address-1'
+      row_limit:
+        description: 'Maximum rows (1-100)'
+        default: '10'
+      row_offset:
+        description: 'Offset within the deterministic eligible cohort'
+        default: '0'
+      states:
+        description: 'Optional state codes, comma-separated'
+        default: ''
+      address_scope:
+        description: 'needs_address, complete_address, or all'
+        type: choice
+        options: [needs_address, complete_address, all]
+        default: needs_address
+      sample_seed:
+        description: 'Stable sampling seed'
+        default: '20260921'
+      max_cost_usd:
+        description: 'Per-run estimated upper cost cap (maximum 8.85)'
+        default: '0.50'
+      plan_run:
+        description: 'Exact plan workflow run ID; required for research'
+        default: ''
+      plan_sha256:
+        description: 'Exact SHA256 printed by the plan; required for research'
+        default: ''
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: tako-coordinate-recovery
+  cancel-in-progress: false
+jobs:
+  plan:
+    if: inputs.mode == 'plan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ROW_LIMIT: ${{ inputs.row_limit || '10' }}
+      ROW_OFFSET: ${{ inputs.row_offset || '0' }}
+      STATES: ${{ inputs.states }}
+      ADDRESS_SCOPE: ${{ inputs.address_scope || 'needs_address' }}
+      SAMPLE_SEED: ${{ inputs.sample_seed || '20260921' }}
+      PASS_ID: ${{ inputs.pass_id || 'tako-address-1' }}
+      MAX_COST_USD: ${{ inputs.max_cost_usd || '0.50' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_web_research.py -q
+      - name: Freeze unresolved rows and estimate cost (database read-only)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: python -c "from pathlib import Path; from pipeline.recovery.tako_select import create_plan; create_plan(Path('tako-coordinate-plan'))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tako-coordinate-plan-${{ github.run_id }}
+          path: tako-coordinate-plan/
+          retention-days: 30
+  research:
+    if: inputs.mode == 'research'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RESEARCH_OUT: research-output
+      GH_TOKEN: ${{ github.token }}
+      PLAN_RUN: ${{ inputs.plan_run }}
+      PLAN_SHA256: ${{ inputs.plan_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_web_research.py -q
+      - name: Retrieve the exact reviewed plan
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          run=os.environ['PLAN_RUN']
+          if not re.fullmatch(r'\d+',run):raise ValueError('Exact plan workflow run ID required')
+          subprocess.run(['gh','run','download',run,'--name',f'tako-coordinate-plan-{run}','--dir','downloaded-plan'],check=True)
+          PY
+      - name: Verify plan SHA and freeze research input
+        run: python -c "import os; from pathlib import Path; from pipeline.recovery.tako_select import verify_plan; verify_plan(Path('downloaded-plan'),Path('research-output'),os.environ['PLAN_SHA256'])"
+      - name: Research without database credentials
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
+        run: python -m pipeline.web_research.run --mode research
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tako-coordinate-research-${{ github.run_id }}
+          path: research-output/
+          retention-days: 30
