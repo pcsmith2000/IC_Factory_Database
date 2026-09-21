@@ -241,3 +241,46 @@ def test_adls_prose_labels_still_resolve_loosely():
     assert TX.resolve(prose, exact=True) is None
     # a spelling that IS listed resolves either way — the alias table is the contract
     assert TX.resolve("MgO Panel", exact=True) == "SIP / ICF (Other Composite Panel)"
+
+
+def test_accounting_that_does_not_open_with_a_number_is_still_dropped(tmp_path):
+    """"ADL list adl_4ward: 96 plants; 0 rows with no company" opens with a source name, not a
+    number, and it was reaching the model as if it described the plant on that row."""
+    (tmp_path / "normalised").mkdir()
+    (tmp_path / "normalised" / "s.csv").write_text(
+        "source_id,notes,website,sq_ft,naics_verbatim,row_hash\n"
+        "adl,ADL list adl_4ward: 96 plants; 0 rows with no company,,,321214,h1\n"
+        "adl,60000 SF factory + 200000 SF storage,,,321214,h2\n", encoding="utf-8")
+    (tmp_path / "assertions.csv").write_text("facility_id,row_hash\nIC-1,h1\nIC-2,h2\n",
+                                             encoding="utf-8")
+    idx = cap.evidence_index(tmp_path)
+    assert idx["IC-1"]["notes"] == ""
+    # a number about THIS plant is not accounting and must survive
+    assert "200000 SF storage" in idx["IC-2"]["notes"]
+
+
+def test_the_token_ceiling_has_a_floor():
+    """A per-row budget alone gave a 25-row batch 3,000 tokens. mercury-2.5 spent 2,930 of it on
+    every attempt and returned truncated JSON, so the first real run answered 0 of 25."""
+    import inspect
+    src = inspect.getsource(cap._call_once)
+    assert "max(16000" in src
+
+
+def test_a_contract_error_says_what_came_back(monkeypatch):
+    """"3 contract errors" and nothing else is unactionable — the cause was only visible in the
+    token counts. The stop reason and a head of the text ride on the error."""
+    import pipeline
+
+    class Msg:
+        usage = None
+        stop_reason = "max_tokens"
+        content = [type("B", (), {"type": "text", "text": '[{"i": 0, "leaf": "Wood Volu'})()]
+
+    client = type("C", (), {"messages": type("M", (), {"create": staticmethod(lambda **k: Msg())})()})()
+    monkeypatch.setattr(pipeline, "ai_client_and_model", lambda m: (client, m, "fake"))
+    tx = cap.load()
+    cap.classify(tx, [{"name": "A"}], stats=(st := {}))
+    assert st["unanswered"] == 1
+    detail = " ".join(st["contract_error_detail"])
+    assert "max_tokens" in detail and "Wood Volu" in detail

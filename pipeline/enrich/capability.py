@@ -206,7 +206,11 @@ def evaluate(tx: Taxonomy, labelled: list[dict], predict) -> dict:
 # "Missouri PSC registered manufacturer, HUD-code manufactured homes" ARE the product evidence,
 # and an earlier version of this filter threw both away looking for a `product_types:` key that
 # these sources never write.
-RUN_ACCOUNTING = re.compile(r"^\s*\d|\bskipped\b", re.I)
+RUN_ACCOUNTING = re.compile(
+    r"\bskipped\b|\bdropped as\b"                              # "2 non-US skipped"
+    r"|\b\d+\s+(plants|rows|cards|records|members|manufacturers|organisations)\b"
+    r"|\b\d+\s+kept\b|\bkept of\b",                          # "135 kept of 5454 cards"
+    re.I)
 
 
 def evidence_index(build: Path) -> dict[str, dict]:
@@ -321,7 +325,14 @@ def _call_once(tx: Taxonomy, facs: list[dict], model: str, temperature: float,
             "quotes. Do not use a double quote inside a value.\n\n" + json.dumps(payload))
     if repair:
         user = ("Your previous answer was not valid JSON. Return ONLY the array.\n\n" + user)
-    msg = client.messages.create(model=model_id, max_tokens=min(32000, 80 * len(facs) + 1000),
+    # A FLOOR, not just a per-row budget. 80 tokens a row gave a 25-row batch a 3,000 ceiling;
+    # mercury-2.5 spent 2,930 of it on all three attempts and returned truncated JSON every time,
+    # so the run reported 0 of 25 answered and 8,788 tokens spent. A model that reasons before it
+    # answers spends the budget thinking first — the same failure classify.py records for
+    # nemotron-nano and gpt-5-nano. Output tokens bill for what is generated, so headroom given
+    # to a terse model is free.
+    want = min(32000, max(16000, 120 * len(facs) + 1000))
+    msg = client.messages.create(model=model_id, max_tokens=want,
                                  extra_body={"temperature": temperature},
                                  system=prompt_for(tx),
                                  messages=[{"role": "user", "content": user}])
@@ -329,13 +340,18 @@ def _call_once(tx: Taxonomy, facs: list[dict], model: str, temperature: float,
         usage_out["input_tokens"] = usage_out.get("input_tokens", 0) + msg.usage.input_tokens
         usage_out["output_tokens"] = usage_out.get("output_tokens", 0) + msg.usage.output_tokens
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
+    # A contract error that does not say what came back is unactionable. The first run of this
+    # stage reported "3 contract errors" and nothing else, and the cause — a truncated array —
+    # was only visible in the token counts. Carry the stop reason and a head of the text.
+    stop = getattr(msg, "stop_reason", "?")
+    head = text[:220].replace("\n", " ")
     start, end = text.find("["), text.rfind("]")
     if start < 0 or end < start:
-        raise BatchError("no JSON array in the answer")
+        raise BatchError(f"no JSON array (stop_reason={stop}, {len(text)} chars): {head}")
     try:
         got = json.loads(text[start:end + 1])
     except json.JSONDecodeError as e:
-        raise BatchError(f"invalid JSON: {e}") from None
+        raise BatchError(f"invalid JSON (stop_reason={stop}, {len(text)} chars): {e} :: {head}")
     out = {}
     for o in got if isinstance(got, list) else []:
         try:
@@ -372,9 +388,10 @@ def classify(tx: Taxonomy, facs: list[dict], model: str = MODEL,
         try:
             got = _call_once(tx, [facs[i] for i in pending], model,
                              temperature + 0.2 * attempt, bool(attempt), usage_out)
-        except BatchError:
+        except BatchError as e:
             if stats is not None:
                 stats["contract_errors"] = stats.get("contract_errors", 0) + 1
+                stats.setdefault("contract_error_detail", []).append(str(e)[:300])
             continue
         for local, o in got.items():
             answers[pending[local]] = o
