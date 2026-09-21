@@ -11,6 +11,7 @@ it expects raises LayoutChanged with the archived page — the form field names 
 not assumed, so the first live run is the check.
 """
 from __future__ import annotations
+import html as html_lib
 import re, urllib.parse
 from pathlib import Path
 from ._common import http_get, html_tables, contract_row, require, LayoutChanged
@@ -83,7 +84,8 @@ def _reject_error_page(path: Path) -> None:
 # number in siblings keyed by the same _ctl<N>_. Reading those ids is far steadier than picking a
 # table by size — the page nests ~800 layout tables and the largest of them is a layout wrapper,
 # so the generic "biggest table" shape returned the page furniture as rows.
-_REC = re.compile(r'id="grdReport__ctl(\d+)_hlnkOrgName"[^>]*>(.*?)</a>', re.I | re.S)
+_REC = re.compile(r'<a(?=[^>]*id="grdReport__ctl(\d+)_hlnkOrgName")'
+                  r'(?=[^>]*href="([^"]+)")[^>]*>(.*?)</a>', re.I | re.S)
 _FIELD = r'id="grdReport__ctl{n}_{f}"[^>]*>(.*?)</span>'
 _ORGNUM = re.compile(r"FBC\s*Organization\s*Number\s*</b>\s*([A-Za-z0-9\-]+)", re.I)
 # The grid's Administrator cell is three things in one: the registered contact's name, their
@@ -123,7 +125,7 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
         page_note = f"PARTIAL EXPORT: {len(recs)} rows saved but the pager reports {pg.group(2)} pages"
     out = []
     for i, m in enumerate(recs, 1):
-        n, name = m.group(1), _untag(m.group(2))
+        n, href, name = m.group(1), html_lib.unescape(m.group(2)), _untag(m.group(3))
         if not name:
             continue
         block = html[m.end():recs[i].start() if i < len(recs) else len(html)]
@@ -144,8 +146,14 @@ def parse(paths: list[Path], source: dict) -> list[dict]:
             notes += f"; org type: {_untag(typ.group(1))}"
         if page_note:
             notes += f"; {page_note}"
+        detail_url=urllib.parse.urljoin(MENU,href)
+        parsed=urllib.parse.urlparse(detail_url)
+        require(parsed.scheme in ('http','https') and (parsed.hostname or '').lower() in
+                ('floridabuilding.org','www.floridabuilding.org') and
+                parsed.path.lower().endswith('/mb_orgapp_dtl2.aspx'),path,
+                'organisation detail link left the official Florida BCIS application endpoint')
         out.append(contract_row(source, i, name=name, address="", city="", state="", zip_code="",
-                                source_url=MENU, source_document=path.name,
+                                source_url=detail_url, source_document=path.name,
                                 source_identifier=num.group(1) if num else "",
                                 phone="".join(g for g in ph.groups() if g) if ph else "",
                                 email=em.group(1) if em else "",
