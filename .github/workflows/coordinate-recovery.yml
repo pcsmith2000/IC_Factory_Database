@@ -1,0 +1,48 @@
+name: Budgeted rooftop recovery
+run-name: Rooftop recovery · ${{ inputs.mode || 'plan' }} · pass ${{ inputs.pass_id || '1' }}
+on:
+  push:
+    branches: [feat/coordinate-recovery]
+    paths: [.github/workflows/coordinate-recovery.yml]
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [plan, geocode]
+        default: plan
+      pass_id:
+        description: 'Pass identifier; repeats resume unfinished rows'
+        default: '1'
+      row_limit:
+        description: 'Maximum100 frozen-cohort rows per batch'
+        default: '100'
+permissions:
+  contents: read
+concurrency:
+  group: ic-warehouse-pipeline
+  cancel-in-progress: false
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_coordinate_recovery.py -q
+      - name: Frozen-cohort recovery with private provenance and budget tracking
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.GEOCODIO_API || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
+          MODE: ${{ inputs.mode || 'plan' }}
+          PASS_ID: ${{ inputs.pass_id || '1' }}
+          ROW_LIMIT: ${{ inputs.row_limit || '100' }}
+        run: python -m pipeline.recovery.run --mode "$MODE" --pass-id "$PASS_ID" --limit "$ROW_LIMIT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recovery-summary-${{ github.run_id }}
+          path: recovery-summary/summary.json
+          retention-days: 90
