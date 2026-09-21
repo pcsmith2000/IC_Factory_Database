@@ -2,7 +2,7 @@
 
 Campaign: `missing-rooftops-2026-09-21`  
 Frozen cohort: 1,668 rows  
-Current result: 428 rooftop assertions recovered; 1,240 unresolved  
+Current result: 431 rooftop assertions recovered; 1,237 unresolved  
 Recorded API cost: $0.650 of the $9.50 campaign ceiling
 
 Times are GitHub Actions elapsed runtime. Repeated implementation-triggered plan/test runs are
@@ -32,3 +32,5 @@ excluded; dry-run validation passes that directly informed a write are included.
 |20|Internal contact-and-locality write, 16 recovered|0m 24s|$0.000|
 |21|Internal nationally unique-name rooftop plan|0m 23s|$0.000|
 |22|Internal nationally unique-name write, 78 recovered|0m 48s|$0.000|
+|23|Internal exact-address rooftop plan|0m 24s|$0.000|
+|24|Internal exact-address write, 3 recovered|0m 19s|$0.000|
