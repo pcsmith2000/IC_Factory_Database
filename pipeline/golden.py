@@ -54,6 +54,9 @@ def assertions_from_rows(rows: list[dict], source_class: dict[str, str]) -> list
 
 
 def _rank(a: dict, order: list[str]) -> int:
+    # Tako search is below even an unlisted source; recency must never elevate it.
+    if a["source_id"] == "tako_ai_search":
+        return len(order) + 1
     for i, pref in enumerate(order):
         if pref == "site_visit" and a.get("site_visit") in (True, "True"): return i
         # A bare token names a source directly: operator, lookup, classifier. This replaces three

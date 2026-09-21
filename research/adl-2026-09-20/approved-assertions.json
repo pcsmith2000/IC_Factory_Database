@@ -1,0 +1,2682 @@
+{
+  "source_id": "tako_ai_search",
+  "source_name": "Tako AI Search",
+  "approval": "User authorized writing approved results as lowest-precedence Tako AI Search assertions. Conflicts, ambiguous contacts and rooftop coordinates excluded. Live import rechecks current missingness and competing assertions.",
+  "campaign_runs": [
+    35542280759,
+    35543290961,
+    35543728157,
+    35544556280,
+    35545449667
+  ],
+  "assertions": [
+    {
+      "facility_id": "IC-55084",
+      "field": "phone",
+      "value": "+1 502 306 2428",
+      "source_url": "https://www.mmyus.com/contact-us",
+      "quote": "+1 502 306 2428",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-55084",
+      "field": "website",
+      "value": "https://www.mmyus.com/",
+      "source_url": "https://www.mmyus.com/",
+      "quote": "MMY Multiplex | Accelerated Modular Homes for Urban Infill Sites by MMY US",
+      "scope": "company",
+      "evidence_rounds": [
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-66632",
+      "field": "website",
+      "value": "https://www.longleaftruss.com/",
+      "source_url": "https://www.longleaftruss.com/",
+      "quote": "Longleaf Truss",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-75276",
+      "field": "phone",
+      "value": "503-581-8787",
+      "source_url": "https://oregontruss.com/contact-us/",
+      "quote": "503-581-8787",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-75276",
+      "field": "website",
+      "value": "https://oregontruss.com/",
+      "source_url": "https://oregontruss.com/",
+      "quote": "Northwest Leading Truss Manufacturer | Oregon Truss Company",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-75324",
+      "field": "phone",
+      "value": "(541) 923-2759",
+      "source_url": "https://parr.com/locations/redmond-oregon-truss/",
+      "quote": "(541) 923-2759",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-75324",
+      "field": "website",
+      "value": "https://parr.com/locations/redmond-oregon-truss/",
+      "source_url": "https://parr.com/locations/redmond-oregon-truss/",
+      "quote": "Parr Truss Redmond",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-78067",
+      "field": "phone",
+      "value": "(570) 774-1000",
+      "source_url": "https://www.signaturebuildingsystems.com/contact",
+      "quote": "(570) 774-1000",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-78285",
+      "field": "email",
+      "value": "CIC@tollbrothers.com",
+      "source_url": "https://www.tisbuildingsolutions.com/contact",
+      "quote": "CIC@tollbrothers.com",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-89084",
+      "field": "website",
+      "value": "https://www.bldr.com",
+      "source_url": "https://www.bldr.com/location/fredericksburg-va-truss-trussway/FREDVAMF",
+      "quote": "Builders FirstSource",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-89116",
+      "field": "email",
+      "value": "warsaw@apextruss.com",
+      "source_url": "https://www.apextruss.com/contact",
+      "quote": "Email: warsaw@apextruss.com",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-93472",
+      "field": "zip",
+      "value": "03431",
+      "source_url": "https://bensonwood.com/blog/bensonwood-officially-purchases-building-systems-production-facility-copy/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. e for Sustainable Construction in Keene We are pleased to share that after seven years of leasing, we\u2019ve officially purchased our 104,000-square-foot manufacturing facility at 25 Production Avenue in Keene, New Hampshire. This development isn\u2019t just a real estate transaction for us \u2013 it\u2019s a reaffirmation of our commitment to Keene, to sustainable design homes, and to our community. Since our founding in 1972, we\u2019ve been on a m",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-93634",
+      "field": "zip",
+      "value": "18603",
+      "source_url": "https://www.vbc.co/factories",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. lti-Family Apartments Refugee Housing Student Housing Furniture MODULAR FACTORIES Tracy U.S. 2302 E. Paradise Rd. Tracy, CA 95304 Berwick U.S 499 W 3rd St. Berwick, PA 18603 Poland Topole 68 89-600 Chojnice OFFICE LOCATIONS Philadelphia U.S. 6128 Ridge Ave Philadelphia, PA 19128 Boston U.S 143 South St., 6th Floor Boston, MA 02111 Monaghan Ireland Gallinagh, Monaghan Co. Monaghan, H18 HW62 ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-93701",
+      "field": "phone",
+      "value": "800-743-2284",
+      "source_url": "https://claytonparkmodels.com/contact/",
+      "quote": "800-743-2284",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-93701",
+      "field": "zip",
+      "value": "35540",
+      "source_url": "https://claytonparkmodels.com/contact/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. ting an order to basic questions and friendly introductions, this is the place. Tell us a little more and we\u2019ll circle back soon. 17645 County Road 41 Addison, AL 35540 800-743-2284 parkmodels@claytonhomes.com Clayton Park Models are built out of Addison, Alabama and currently only delivered to the following states: AL, AR, FL, GA, IL, IN, KY, LA, MO, MS, NC, OH, OK, ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-93853",
+      "field": "website",
+      "value": "https://vantem.com",
+      "source_url": "https://vantem.com/locations/",
+      "quote": "Vantem",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-93968",
+      "field": "address",
+      "value": "7172 Route 522",
+      "source_url": "https://www.apexhomesofpa.com/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. ents or questions Submit Learn more about Modular Homes Explore the many advantages of building a custom modular home. Apex Homes 7172 Route 522 Middleburg, PA 17842 Phone: 570-837-2333 Toll-Free: 800-326-9524 Fax: 570-837-2346 Site Map Home Floor Plans New Featured Floor Plans Ranch Two-Story Cape Chalet Urban Living Resources Inspiration Center Elegant Traditi",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-93968",
+      "field": "phone",
+      "value": "570-837-2333",
+      "source_url": "https://www.apexhomesofpa.com/",
+      "quote": "Phone: 570-837-2333",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-93968",
+      "field": "zip",
+      "value": "17842",
+      "source_url": "https://www.apexhomesofpa.com/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. ents or questions Submit Learn more about Modular Homes Explore the many advantages of building a custom modular home. Apex Homes 7172 Route 522 Middleburg, PA 17842 Phone: 570-837-2333 Toll-Free: 800-326-9524 Fax: 570-837-2346 Site Map Home Floor Plans New Featured Floor Plans Ranch Two-Story Cape Chalet Urban Living Resources Inspiration Center Elegant Traditi",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94050",
+      "field": "website",
+      "value": "https://sunbeltmodular.com",
+      "source_url": "https://sunbeltmodular.com/gallery/specialized-structures/",
+      "quote": "Specialized Structures A Sunbelt Company",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94090",
+      "field": "website",
+      "value": "https://biltwisestructures.com",
+      "source_url": "https://biltwisestructures.com/",
+      "quote": "BiltWise Structures",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94316",
+      "field": "phone",
+      "value": "(518) 798-4009",
+      "source_url": "https://www.bldr.com/location/ballston-spa-ny-truss/709620",
+      "quote": "(518) 798-4009",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94316",
+      "field": "website",
+      "value": "https://www.bldr.com/location/ballston-spa-ny-truss/709620",
+      "source_url": "https://www.bldr.com/location/ballston-spa-ny-truss/709620",
+      "quote": "Ballston Spa NY Lumber Yard & Truss & Wall Panels",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94379",
+      "field": "phone",
+      "value": "(854) 254-4710",
+      "source_url": "https://www.bldr.com/location/yemassee-sc-truss/YEMASCMF",
+      "quote": "(854)\n                                                            254-4710",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94379",
+      "field": "website",
+      "value": "https://www.bldr.com/location/yemassee-sc-truss/YEMASCMF",
+      "source_url": "https://www.bldr.com/location/yemassee-sc-truss/YEMASCMF",
+      "quote": "Yemassee SC Truss",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94380",
+      "field": "phone",
+      "value": "(503) 941-7177",
+      "source_url": "https://parr.com/locations/cornelius-oregon-truss/",
+      "quote": "(503) 941-7177",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94380",
+      "field": "website",
+      "value": "https://parr.com",
+      "source_url": "https://parr.com/locations/cornelius-oregon-truss/",
+      "quote": "PARR Truss Cornelius - PARR Lumber",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94463",
+      "field": "phone",
+      "value": "208-606-7500",
+      "source_url": "https://autovol.com/contact/",
+      "quote": "Phone: 208-606-7500",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94463",
+      "field": "website",
+      "value": "https://autovol.com/",
+      "source_url": "https://autovol.com/",
+      "quote": "Autovol",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94502",
+      "field": "phone",
+      "value": "(888) 662-8458",
+      "source_url": "https://www.mandevillemodular.com/contact",
+      "quote": "(888) 662-8458",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94502",
+      "field": "website",
+      "value": "https://mandevillemodular.com/",
+      "source_url": "https://www.mandevillemodular.com/contact",
+      "quote": "Mandeville Modular",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-94579",
+      "field": "phone",
+      "value": "717-354-7770",
+      "source_url": "https://www.modlogiq.com/contact",
+      "quote": "717-354-7770",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95183",
+      "field": "zip",
+      "value": "43025",
+      "source_url": "https://www.armstrong.com/en-us/contact.html",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. Contact Us | Armstrong World Industries Armstrong Expands Design and Fabrication Capabilities with Acquisition of Eventscape, Inc. Armstrong Expands Design and Fabrication Capabilities with Acquisition of Eventscape, Inc. Armstrong Expands Design and Fabrica",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95201",
+      "field": "address",
+      "value": "1392 N. VIP Blvd.",
+      "source_url": "https://www.bldr.com/location/casa-grande-az-truss/CASAAZMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Resolved factory-versus-lumber-yard ambiguity: official Casa Grande Truss page explicitly calls 1392 N VIP Blvd a manufacturing facility; did not select the separate lumber yard.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95201",
+      "field": "phone",
+      "value": "(520) 251-5718",
+      "source_url": "https://www.bldr.com/location/casa-grande-az-truss/CASAAZMF",
+      "quote": "(520)\n                                                            251-5718",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95201",
+      "field": "website",
+      "value": "https://www.bldr.com/location/casa-grande-az-truss/CASAAZMF",
+      "source_url": "https://www.bldr.com/location/casa-grande-az-truss/CASAAZMF",
+      "quote": "Casa Grande AZ Truss",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95201",
+      "field": "zip",
+      "value": "85122",
+      "source_url": "https://www.bldr.com/location/casa-grande-az-truss/CASAAZMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Resolved factory-versus-lumber-yard ambiguity: official Casa Grande Truss page explicitly calls 1392 N VIP Blvd a manufacturing facility; did not select the separate lumber yard.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95203",
+      "field": "phone",
+      "value": "979.567.0400",
+      "source_url": "https://www.trussworksllc.net/locations/kingman",
+      "quote": "Trussworks Kingman 5010 Olympic Way, Kingman, AZ 86401 979.567.0400",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95203",
+      "field": "website",
+      "value": "https://www.trussworksllc.net",
+      "source_url": "https://www.trussworksllc.net",
+      "quote": "Trussworks, LLC",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95204",
+      "field": "zip",
+      "value": "92570",
+      "source_url": "https://www.bldr.com/location/perris-ca-truss/PERRCAMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official location page identifies this site as a truss facility in the original city, distinct from lumber-yard locations. e & Community In The News Family of Brands Investors CSR Get a Quote Home Find a Location Perris CA Truss Perris CA Truss Address 23665 Cajalco Road Perris,\n        CA\u00a0\n        92570 Get Directions contact (951)\n                                                            657-7491 Send a Message Get a Quote hours Monday",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95207",
+      "field": "phone",
+      "value": "772-409-1010",
+      "source_url": "https://a1industries.com/who-we-are/",
+      "quote": "Phone: (772) 409-1010",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95207",
+      "field": "website",
+      "value": "https://a1industries.com",
+      "source_url": "https://a1industries.com",
+      "quote": "A-1 Industries | Premier Wood Truss Manufacturer",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95208",
+      "field": "address",
+      "value": "1801 7th Street S.W.",
+      "source_url": "https://www.americanbuildsupply.com/locations/winter-haven-truss/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. arch Site Menu Search Winter Haven Truss Contact: Phone: (863) 294-0611 Fax: (863) 293-1561 Manager: Jacob Saunders \u2013 Ops Manager Address: 1801 7th Street S.W. Winter Haven, FL 33880 Hours: M \u2013 F: 7:00 am \u2013 5:00 pm\u2028 Sat \u2013 Sun: CLOSED About this location At ABS, we combine cutting-edge technology with dedicated design expertise to deliver the highest quality trusses. Our local ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95208",
+      "field": "phone",
+      "value": "(863) 294-0611",
+      "source_url": "https://www.americanbuildsupply.com/locations/winter-haven-truss/",
+      "quote": "Phone: (863) 294-0611",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95208",
+      "field": "website",
+      "value": "https://www.americanbuildsupply.com",
+      "source_url": "https://www.americanbuildsupply.com/locations/winter-haven-truss/",
+      "quote": "American Builders Supply",
+      "scope": "company",
+      "evidence_rounds": [
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95208",
+      "field": "zip",
+      "value": "33880",
+      "source_url": "https://www.americanbuildsupply.com/locations/winter-haven-truss/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. arch Site Menu Search Winter Haven Truss Contact: Phone: (863) 294-0611 Fax: (863) 293-1561 Manager: Jacob Saunders \u2013 Ops Manager Address: 1801 7th Street S.W. Winter Haven, FL 33880 Hours: M \u2013 F: 7:00 am \u2013 5:00 pm\u2028 Sat \u2013 Sun: CLOSED About this location At ABS, we combine cutting-edge technology with dedicated design expertise to deliver the highest quality trusses. Our local ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95210",
+      "field": "phone",
+      "value": "(352) 343-7477",
+      "source_url": "https://www.miamidade.gov/building/pc-result_detail_app.asp?app_alias=103296",
+      "quote": "Phone (352) 343-7477",
+      "scope": "facility",
+      "evidence_rounds": [
+        3
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95211",
+      "field": "address",
+      "value": "4408 Airport Rd",
+      "source_url": "https://www.bldr.com/location/plant-city-fl-truss/PLANFLMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official location page identifies this site as a truss facility in the original city, distinct from lumber-yard locations. unity In The News Family of Brands Investors CSR Get a Quote Home Find a Location Plant City FL Truss Plant City FL Truss Address 4408 Airport Rd Plant City,\n        FL\u00a0\n        33567 Get Directions contact (813)\n                                                            305-1300 Send a Message Get a Quote hours Monda",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95211",
+      "field": "phone",
+      "value": "(813) 305-1300",
+      "source_url": "https://www.bldr.com/location/plant-city-fl-truss/PLANFLMF",
+      "quote": "(813) 305-1300",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95211",
+      "field": "website",
+      "value": "https://www.bldr.com",
+      "source_url": "https://www.bldr.com/location/plant-city-fl-truss/PLANFLMF",
+      "quote": "Builders FirstSource",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95211",
+      "field": "zip",
+      "value": "33567",
+      "source_url": "https://www.bldr.com/location/plant-city-fl-truss/PLANFLMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official location page identifies this site as a truss facility in the original city, distinct from lumber-yard locations. unity In The News Family of Brands Investors CSR Get a Quote Home Find a Location Plant City FL Truss Plant City FL Truss Address 4408 Airport Rd Plant City,\n        FL\u00a0\n        33567 Get Directions contact (813)\n                                                            305-1300 Send a Message Get a Quote hours Monda",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95212",
+      "field": "phone",
+      "value": "+1 813 460 0006",
+      "source_url": "https://fsftm.com/contact-us/",
+      "quote": "Phone: +1 813 460 0006",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95212",
+      "field": "website",
+      "value": "https://fsftm.com/",
+      "source_url": "https://fsftm.com/",
+      "quote": "Florida Steel Frame & Truss Manufacturing",
+      "scope": "company",
+      "evidence_rounds": [
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95214",
+      "field": "phone",
+      "value": "+1-561- 641-7272",
+      "source_url": "http://www.metalitetruss.com/contact-3/",
+      "quote": "+1-561- 641-7272",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95214",
+      "field": "website",
+      "value": "https://www.metalitetruss.com",
+      "source_url": "http://www.metalitetruss.com/",
+      "quote": "Metalite Truss Systems of Florida, Inc",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95215",
+      "field": "phone",
+      "value": "(689) 677-2977",
+      "source_url": "https://www.steelpaneltruss.com/",
+      "quote": "(689) 677-2977",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95215",
+      "field": "website",
+      "value": "https://www.steelpaneltruss.com/",
+      "source_url": "https://www.steelpaneltruss.com/",
+      "quote": "Steel Panel Truss",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95217",
+      "field": "address",
+      "value": "4094 Blue Ridge Ind Pkwy NW",
+      "source_url": "https://www.bldr.com/location/norcross-ga-truss/NORCGAMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official location page identifies this site as a truss facility in the original city, distinct from lumber-yard locations. lture & Community In The News Family of Brands Investors CSR Get a Quote Home Find a Location Norcross GA Truss Norcross GA Truss Address 4094 Blue Ridge Ind Pkwy NW Norcross,\n        GA\u00a0\n        30071 Get Directions contact (770)\n                                                            813-2200 Send a Message Get a",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95217",
+      "field": "phone",
+      "value": "(770) 813-2200",
+      "source_url": "https://www.bldr.com/location/norcross-ga-truss/NORCGAMF",
+      "quote": "(770)\n                                                            813-2200",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95217",
+      "field": "website",
+      "value": "https://www.bldr.com/location/norcross-ga-truss/NORCGAMF",
+      "source_url": "https://www.bldr.com/location/norcross-ga-truss/NORCGAMF",
+      "quote": "Norcross GA Truss",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95217",
+      "field": "zip",
+      "value": "30071",
+      "source_url": "https://www.bldr.com/location/norcross-ga-truss/NORCGAMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official location page identifies this site as a truss facility in the original city, distinct from lumber-yard locations. lture & Community In The News Family of Brands Investors CSR Get a Quote Home Find a Location Norcross GA Truss Norcross GA Truss Address 4094 Blue Ridge Ind Pkwy NW Norcross,\n        GA\u00a0\n        30071 Get Directions contact (770)\n                                                            813-2200 Send a Message Get a",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95220",
+      "field": "address",
+      "value": "4075 Blue Ridge Industrial Pkwy",
+      "source_url": "https://forgecousa.com/contact/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official company launch announcement identifies its Norcross manufacturing facility; official contact page gives 4075 Blue Ridge Industrial Parkway.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95220",
+      "field": "phone",
+      "value": "470.682.0851",
+      "source_url": "https://forgecousa.com/contact/",
+      "quote": "470.682.0851",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95220",
+      "field": "website",
+      "value": "https://forgecousa.com",
+      "source_url": "https://forgecousa.com/",
+      "quote": "FORGE - Cold-Formed Steel Construction",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95220",
+      "field": "zip",
+      "value": "30071",
+      "source_url": "https://forgecousa.com/contact/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official company launch announcement identifies its Norcross manufacturing facility; official contact page gives 4075 Blue Ridge Industrial Parkway.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95222",
+      "field": "zip",
+      "value": "39828",
+      "source_url": "https://unitedstructures.net/connect/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official homepage describes its Cairo production facility and repeats 153 Wight Road; Miami-Dade product-control steel-fabrication record corroborates the address.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95225",
+      "field": "website",
+      "value": "https://www.bldr.com/location/new-bedford-ma-lumber-yard/NEWBMAYD",
+      "source_url": "https://www.bldr.com/location/new-bedford-ma-lumber-yard/NEWBMAYD",
+      "quote": "New Bedford MA Lumber Yard | Builders FirstSource",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95228",
+      "field": "address",
+      "value": "420 Dixon Dairy Rd.",
+      "source_url": "https://www.84lumber.com/manufacturing",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. s Plant Store #980 4488 Quad Counties Court Mt. Airy, MD 21771 301-829-2845 GET DIRECTIONS Kings Mountain Truss Plant Store #2381 420 Dixon Dairy Rd. Kings Mountain, NC  28086 704-937-3712 GET DIRECTIONS Coal Center Truss Plant Store #280 151 Poplar Drive Coal Center, PA  15423 724-938-6000 GET DIRECTIONS Lavergne Truss Plant Store #1280 136 Wheeler Street Lavergne, ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95228",
+      "field": "phone",
+      "value": "704-937-3712",
+      "source_url": "https://www.84lumber.com/manufacturing",
+      "quote": "704-937-3712",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95228",
+      "field": "website",
+      "value": "https://www.84lumber.com",
+      "source_url": "https://www.84lumber.com/manufacturing",
+      "quote": "84 Lumber",
+      "scope": "company",
+      "evidence_rounds": [
+        2
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95228",
+      "field": "zip",
+      "value": "28086",
+      "source_url": "https://www.84lumber.com/manufacturing",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. s Plant Store #980 4488 Quad Counties Court Mt. Airy, MD 21771 301-829-2845 GET DIRECTIONS Kings Mountain Truss Plant Store #2381 420 Dixon Dairy Rd. Kings Mountain, NC  28086 704-937-3712 GET DIRECTIONS Coal Center Truss Plant Store #280 151 Poplar Drive Coal Center, PA  15423 724-938-6000 GET DIRECTIONS Lavergne Truss Plant Store #1280 136 Wheeler Street Lavergne, ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95231",
+      "field": "address",
+      "value": "2591 Jenkins Dairy Rd.",
+      "source_url": "https://tbcinc.us/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. sboro, NC 27406 Gastonia, NC The Building Center Gastonia \u2013 Distribution Center & Truss Plant Phone 704-824-8182 Fax 704-824-2232 2591 Jenkins Dairy Rd. Gastonia, NC 28052 Gastonia, NC The Building Center Gastonia \u2013 Distribution Center Phone 704-824-8182 2591 Jenkins Dairy Rd. Gastonia, NC 28052 BUILDING MATERIALS STORE, LUMBER STORE, TRUSS MANUFACTURER Hours of Operations Monday \u2013 Friday",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95231",
+      "field": "phone",
+      "value": "704-824-8182",
+      "source_url": "https://tbcinc.us/locations/",
+      "quote": "Phone 704-824-8182",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95231",
+      "field": "zip",
+      "value": "28052",
+      "source_url": "https://tbcinc.us/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. sboro, NC 27406 Gastonia, NC The Building Center Gastonia \u2013 Distribution Center & Truss Plant Phone 704-824-8182 Fax 704-824-2232 2591 Jenkins Dairy Rd. Gastonia, NC 28052 Gastonia, NC The Building Center Gastonia \u2013 Distribution Center Phone 704-824-8182 2591 Jenkins Dairy Rd. Gastonia, NC 28052 BUILDING MATERIALS STORE, LUMBER STORE, TRUSS MANUFACTURER Hours of Operations Monday \u2013 Friday",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95232",
+      "field": "phone",
+      "value": "(704) 888-0920",
+      "source_url": "https://ufpsitebuilt.com/our-locations",
+      "quote": "UFP Site Built Stanfield , NC 102 S Love Chapel Rd Stanfield , NC 28163 (704) 888-0920",
+      "scope": "facility",
+      "evidence_rounds": [
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95233",
+      "field": "address",
+      "value": "6080 Collett Rd.",
+      "source_url": "https://www.morselumber.com/nextgen-building-components",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. et Rochester, NY 14608 585-328-1400 Morse Sash & Door 40 Jarley Road Rochester, NY 14623 585-475-1010 NextGen Building Components 6080 Collett Rd. Farmington, NY 14425 585-924-7171 Home Product Center Exterior Exterior Doors Exterior Products Windows, Skylights & Sun Tunnels Interior Custom Millwork, Moulding & Trim Hardware Interior Doors Stairs & Railings Buildi",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95233",
+      "field": "phone",
+      "value": "585-924-7171",
+      "source_url": "https://www.morselumber.com/nextgen-building-components",
+      "quote": "585-924-7171",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95233",
+      "field": "website",
+      "value": "https://www.morselumber.com/nextgen-building-components",
+      "source_url": "https://www.morselumber.com/nextgen-building-components",
+      "quote": "NextGen Building Components | Wm. B. Morse Lumber Co.",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95233",
+      "field": "zip",
+      "value": "14425",
+      "source_url": "https://www.morselumber.com/nextgen-building-components",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. et Rochester, NY 14608 585-328-1400 Morse Sash & Door 40 Jarley Road Rochester, NY 14623 585-475-1010 NextGen Building Components 6080 Collett Rd. Farmington, NY 14425 585-924-7171 Home Product Center Exterior Exterior Doors Exterior Products Windows, Skylights & Sun Tunnels Interior Custom Millwork, Moulding & Trim Hardware Interior Doors Stairs & Railings Buildi",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95234",
+      "field": "address",
+      "value": "8111 Halsey Rd",
+      "source_url": "https://www.srsloan.com/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. IMES Stairs: 4 Weeks CURRENT LEAD TIMES Wall Panels: 4 Weeks Lead times may vary for different locations Get A Quote \ue081 NEW YORK \ue081 8111 Halsey Rd Whitesboro, NY 13492 \ue090 800-366-7562 \ue103 315-736-7740 \ue081 PENNSYLVANIA \ue081 87 Pinedale Industrial Rd Orwigsburg, PA 17961 \ue090 570-366-8934 \ue103 570-366-0807 \ue081 BALLSTON SPA- OFFICE ONLY \ue081 61 Rowland St. Suite 201 Ballston Spa, NY 12",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95234",
+      "field": "phone",
+      "value": "800-366-7562",
+      "source_url": "https://www.srsloan.com/",
+      "quote": "800-366-7562",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95234",
+      "field": "website",
+      "value": "https://www.srsloan.com/",
+      "source_url": "https://www.srsloan.com/",
+      "quote": "S.R. Sloan | The Engineered Solution",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95234",
+      "field": "zip",
+      "value": "13492",
+      "source_url": "https://www.srsloan.com/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. IMES Stairs: 4 Weeks CURRENT LEAD TIMES Wall Panels: 4 Weeks Lead times may vary for different locations Get A Quote \ue081 NEW YORK \ue081 8111 Halsey Rd Whitesboro, NY 13492 \ue090 800-366-7562 \ue103 315-736-7740 \ue081 PENNSYLVANIA \ue081 87 Pinedale Industrial Rd Orwigsburg, PA 17961 \ue090 570-366-8934 \ue103 570-366-0807 \ue081 BALLSTON SPA- OFFICE ONLY \ue081 61 Rowland St. Suite 201 Ballston Spa, NY 12",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95236",
+      "field": "address",
+      "value": "11 Falls Industrial Park Rd",
+      "source_url": "https://ufpsitebuilt.com/our-locations/hudson-ny",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. e Built Products Services About Careers Locations Contact TRUSSTRAX\u00ae Locations / Hudson UFP Site Built \u2014 Hudson, New York Address 11 Falls Industrial Park Rd Hudson , NY 12534 Phone (518) 828-2888 About UFP Site Built UFP Site Built is an industry leader in designing and manufacturing value-added wood and non-wood components for the construction industry. We provide leading ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95236",
+      "field": "phone",
+      "value": "(518) 828-2888",
+      "source_url": "https://ufpsitebuilt.com/our-locations/hudson-ny",
+      "quote": "Phone (518) 828-2888",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95236",
+      "field": "website",
+      "value": "https://ufpsitebuilt.com",
+      "source_url": "https://ufpsitebuilt.com/our-locations/hudson-ny",
+      "quote": "UFP Site Built",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95236",
+      "field": "zip",
+      "value": "12534",
+      "source_url": "https://ufpsitebuilt.com/our-locations/hudson-ny",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. e Built Products Services About Careers Locations Contact TRUSSTRAX\u00ae Locations / Hudson UFP Site Built \u2014 Hudson, New York Address 11 Falls Industrial Park Rd Hudson , NY 12534 Phone (518) 828-2888 About UFP Site Built UFP Site Built is an industry leader in designing and manufacturing value-added wood and non-wood components for the construction industry. We provide leading ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95237",
+      "field": "address",
+      "value": "5350 SW 107th Drive",
+      "source_url": "https://www.bldr.com/location/beaverton-or-truss/BEAVORMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official location page identifies this site as a truss facility in the original city, distinct from lumber-yard locations. mmunity In The News Family of Brands Investors CSR Get a Quote Home Find a Location Beaverton OR Truss Beaverton OR Truss Address 5350 SW 107th Drive Beaverton,\n        OR\u00a0\n        97005 Get Directions contact (971)\n                                                            371-5971 Send a Message Get a Quote hours Mo",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95237",
+      "field": "phone",
+      "value": "(971) 371-5971",
+      "source_url": "https://www.bldr.com/location/beaverton-or-truss/BEAVORMF",
+      "quote": "(971) 371-5971",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95237",
+      "field": "website",
+      "value": "https://www.bldr.com",
+      "source_url": "https://www.bldr.com/location/beaverton-or-truss/BEAVORMF",
+      "quote": "Builders FirstSource",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95237",
+      "field": "zip",
+      "value": "97005",
+      "source_url": "https://www.bldr.com/location/beaverton-or-truss/BEAVORMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official location page identifies this site as a truss facility in the original city, distinct from lumber-yard locations. mmunity In The News Family of Brands Investors CSR Get a Quote Home Find a Location Beaverton OR Truss Beaverton OR Truss Address 5350 SW 107th Drive Beaverton,\n        OR\u00a0\n        97005 Get Directions contact (971)\n                                                            371-5971 Send a Message Get a Quote hours Mo",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95238",
+      "field": "address",
+      "value": "29336 Airport Rd.",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. ished in 1988, and has 30,000 square feet of production space. The current General Manager has been with The Truss Co since 2012. 29336 Airport Rd. Eugene, OR 97402 (541) 688-8671 (800) 699-8671 Toll Free (541) 688-0412 Fax Burlington, WA The Burlington facility was established in 2011, and has 18,000 square feet of production space. The current General Manager has",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95238",
+      "field": "phone",
+      "value": "(541) 688-8671",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "(541) 688-8671",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95238",
+      "field": "zip",
+      "value": "97402",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. ished in 1988, and has 30,000 square feet of production space. The current General Manager has been with The Truss Co since 2012. 29336 Airport Rd. Eugene, OR 97402 (541) 688-8671 (800) 699-8671 Toll Free (541) 688-0412 Fax Burlington, WA The Burlington facility was established in 2011, and has 18,000 square feet of production space. The current General Manager has",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95239",
+      "field": "address",
+      "value": "2405 SW 1st ST., Unit 6",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context.  October 2023, and has 33,750 square feet of production space. The current General Manager has been with The Truss Co since 2022. 2405 SW 1st ST., Unit 6 Redmond, OR 97756 (541) 526-4851 Credit Applications Main Menu Contractor/Supplier Consumer Quick Links Main Menu Contact Us FTP Site Facebook-f Linkedin-in Copyright \u00a9 2026 The Truss Company Since 1985 Website by Keybridge Web Scroll to",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95239",
+      "field": "phone",
+      "value": "(541) 526-4851",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "(541) 526-4851",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95239",
+      "field": "website",
+      "value": "https://www.thetrussco.com/",
+      "source_url": "https://www.thetrussco.com/",
+      "quote": "The Truss Company",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95239",
+      "field": "zip",
+      "value": "97756",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context.  October 2023, and has 33,750 square feet of production space. The current General Manager has been with The Truss Co since 2022. 2405 SW 1st ST., Unit 6 Redmond, OR 97756 (541) 526-4851 Credit Applications Main Menu Contractor/Supplier Consumer Quick Links Main Menu Contact Us FTP Site Facebook-f Linkedin-in Copyright \u00a9 2026 The Truss Company Since 1985 Website by Keybridge Web Scroll to",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95242",
+      "field": "phone",
+      "value": "(401) 295-0669",
+      "source_url": "https://www.trussus.com/contact.htm",
+      "quote": "(401) 295-0669 Local",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95242",
+      "field": "zip",
+      "value": "02852",
+      "source_url": "https://www.trussus.com/contact.htm",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. mbers: (888) TRUSS-20 Toll Free (401) 295-0669 Local (401) 295-5760 Fax Mailing Address: P.O. Box 839 North Kingstown, R.I. 02852 Physical Address: 25 Bonneau Rd. North Kingstown, R.I. 02852 View in Google Maps E-mail: Plant Manager: Scott Duckworth Office Mgr: Denise Duckworth Design/Sales: Matt White , Bill Deutsch , Nick Clegg TRUSSCO, MFG. \u00a9 2010",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95245",
+      "field": "address",
+      "value": "2650 Shoffner Rd",
+      "source_url": "https://ufpsitebuilt.com/our-locations/conway-sc",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. t Products Services About Careers Locations Contact TRUSSTRAX\u00ae Locations / Conway UFP Site Built \u2014 Conway, South Carolina Address 2650 Shoffner Rd Conway , SC 29526 Phone (843) 248-0123 Hours Mon\u2013Fri 8:00 AM\u20135:00 PM, Sat 8:00 AM\u20135:00 PM About UFP Site Built UFP Site Built is an industry leader in designing and manufacturing value-added wood and non-wood components",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95245",
+      "field": "phone",
+      "value": "(843) 248-0123",
+      "source_url": "https://ufpsitebuilt.com/our-locations/conway-sc",
+      "quote": "(843) 248-0123",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95245",
+      "field": "website",
+      "value": "https://ufpsitebuilt.com",
+      "source_url": "https://ufpsitebuilt.com/our-locations/conway-sc",
+      "quote": "UFP Site Built",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        3
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95245",
+      "field": "zip",
+      "value": "29526",
+      "source_url": "https://ufpsitebuilt.com/our-locations/conway-sc",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. t Products Services About Careers Locations Contact TRUSSTRAX\u00ae Locations / Conway UFP Site Built \u2014 Conway, South Carolina Address 2650 Shoffner Rd Conway , SC 29526 Phone (843) 248-0123 Hours Mon\u2013Fri 8:00 AM\u20135:00 PM, Sat 8:00 AM\u20135:00 PM About UFP Site Built UFP Site Built is an industry leader in designing and manufacturing value-added wood and non-wood components",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95246",
+      "field": "phone",
+      "value": "281-213-3062",
+      "source_url": "https://www.84lumber.com/store-locator/store-detail/?storeId=1949",
+      "quote": "P: 281-213-3062",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95246",
+      "field": "website",
+      "value": "https://www.84lumber.com",
+      "source_url": "https://www.84lumber.com/store-locator/store-detail/?storeId=1949",
+      "quote": "84 Lumber Company",
+      "scope": "company",
+      "evidence_rounds": [
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95247",
+      "field": "address",
+      "value": "15585 I-45 South",
+      "source_url": "https://www.bldr.com/location/conroe-tx-truss/CONRTXMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official location page identifies this site as a truss facility in the original city, distinct from lumber-yard locations. e & Community In The News Family of Brands Investors CSR Get a Quote Home Find a Location Conroe TX Truss Conroe TX Truss Address 15585 I-45 South Conroe,\n        TX\u00a0\n        77385 Get Directions contact (936)\n                                                            273-2256 Send a Message Get a Quote hours Monday -",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95247",
+      "field": "phone",
+      "value": "(936) 273-2256",
+      "source_url": "https://www.bldr.com/location/conroe-tx-truss/CONRTXMF",
+      "quote": "(936) 273-2256",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95247",
+      "field": "website",
+      "value": "https://www.bldr.com/",
+      "source_url": "https://www.bldr.com/location/conroe-tx-truss/CONRTXMF",
+      "quote": "Builders FirstSource",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95247",
+      "field": "zip",
+      "value": "77385",
+      "source_url": "https://www.bldr.com/location/conroe-tx-truss/CONRTXMF",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official location page identifies this site as a truss facility in the original city, distinct from lumber-yard locations. e & Community In The News Family of Brands Investors CSR Get a Quote Home Find a Location Conroe TX Truss Conroe TX Truss Address 15585 I-45 South Conroe,\n        TX\u00a0\n        77385 Get Directions contact (936)\n                                                            273-2256 Send a Message Get a Quote hours Monday -",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95250",
+      "field": "phone",
+      "value": "(540) 665-9600",
+      "source_url": "https://www.amcasc.com",
+      "quote": "(540) 665-9600",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95250",
+      "field": "website",
+      "value": "https://www.amcasc.com",
+      "source_url": "https://www.amcasc.com",
+      "quote": "Annandale Millwork & Allied Systems",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95251",
+      "field": "address",
+      "value": "15599 Ashten Rd.",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. ished in 2011, and has 18,000 square feet of production space. The current General Manager has been with The Truss Co since 2016. 15599 Ashten Rd. Burlington, WA 98233 (360) 757-8500 (800) 523-3847 Toll Free (360) 757-8756 Fax Pasco, WA The Pasco facility was established in 2013-14, and has 65,000 square feet of production space. The current General Manager has been with The Truss Co ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95251",
+      "field": "phone",
+      "value": "(360) 757-8500",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "15599 Ashten Rd. Burlington, WA 98233 (360) 757-8500",
+      "scope": "facility",
+      "evidence_rounds": [
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95251",
+      "field": "zip",
+      "value": "98233",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. ished in 2011, and has 18,000 square feet of production space. The current General Manager has been with The Truss Co since 2016. 15599 Ashten Rd. Burlington, WA 98233 (360) 757-8500 (800) 523-3847 Toll Free (360) 757-8756 Fax Pasco, WA The Pasco facility was established in 2013-14, and has 65,000 square feet of production space. The current General Manager has been with The Truss Co ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95252",
+      "field": "address",
+      "value": "202 Robert Thompson Rd.",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. feet of production space. The current General Manager has been with The Truss Co since 2011, and GM of this location for 2 years. 202 Robert Thompson Rd. Centralia, WA 98531 (360) 669-4200 Redmond, OR The Redmond Facility was established in October 2023, and has 33,750 square feet of production space. The current General Manager has been with The Truss Co since 2022. 2405 SW 1st ST., Unit 6",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95252",
+      "field": "phone",
+      "value": "(360) 669-4200",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "(360) 669-4200",
+      "scope": "facility",
+      "evidence_rounds": [
+        2,
+        3
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95252",
+      "field": "zip",
+      "value": "98531",
+      "source_url": "https://www.thetrussco.com/locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. feet of production space. The current General Manager has been with The Truss Co since 2011, and GM of this location for 2 years. 202 Robert Thompson Rd. Centralia, WA 98531 (360) 669-4200 Redmond, OR The Redmond Facility was established in October 2023, and has 33,750 square feet of production space. The current General Manager has been with The Truss Co since 2022. 2405 SW 1st ST., Unit 6",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95254",
+      "field": "address",
+      "value": "92 Modern Living Solutions Way",
+      "source_url": "https://www.modsbymodern.com/contact-us/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. lar Our Impact Modular Projects Careers Contact Us Contact Us Headquarters 2650 Quarry Lake Drive | Suite 300 Baltimore, MD 21209 Flagship Factory 92 Modern Living Solutions Way Knox, PA 16232 Email Job Inquiries: mlsjobs@greystar.com General Inquiries: mlshr@greystar.com Row edge-slant Shape Decorative svg added to top We'd Love to Hear from You! We're pleased you're interested in reaching out to us. Send us",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95254",
+      "field": "website",
+      "value": "https://www.modsbymodern.com/",
+      "source_url": "https://www.modsbymodern.com/",
+      "quote": "Modern Living Solutions by Greystar",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95254",
+      "field": "zip",
+      "value": "16232",
+      "source_url": "https://www.modsbymodern.com/contact-us/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. lar Our Impact Modular Projects Careers Contact Us Contact Us Headquarters 2650 Quarry Lake Drive | Suite 300 Baltimore, MD 21209 Flagship Factory 92 Modern Living Solutions Way Knox, PA 16232 Email Job Inquiries: mlsjobs@greystar.com General Inquiries: mlshr@greystar.com Row edge-slant Shape Decorative svg added to top We'd Love to Hear from You! We're pleased you're interested in reaching out to us. Send us",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95257",
+      "field": "phone",
+      "value": "570-966-1053",
+      "source_url": "https://www.ritz-craft.com/contact-us",
+      "quote": "570-966-1053",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95257",
+      "field": "website",
+      "value": "https://www.ritz-craft.com",
+      "source_url": "https://www.ritz-craft.com/contact-us",
+      "quote": "Contact Ritz-Craft",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95258",
+      "field": "email",
+      "value": "studiobuiltcuero@amherst.com",
+      "source_url": "https://studiobuilthomes.com/contact/",
+      "quote": "Email studiobuiltcuero@amherst.com",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95258",
+      "field": "website",
+      "value": "https://studiobuilthomes.com",
+      "source_url": "https://studiobuilthomes.com/contact/",
+      "quote": "StudioBuilt Homes",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95260",
+      "field": "address",
+      "value": "333 AUSTIN STREET",
+      "source_url": "https://mhweb.tdhca.state.tx.us/mhweb/license_detail.jsp?db=ins&lic_num=MHDMAN00000334",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. cense Issue Date: 03/24/2026 License Expiration Date: 03/23/2028 Mailing Address PO BOX 4098 MARYVILLE, TN 37802 Location Address 333 AUSTIN STREET BONHAM, TX 75418 Phone: (903)583-1949 County: FANNIN Associates Name Type KEITH O.\n     HOLDBROOKS PRESIDENT ANGELIA\n     LUSBY RELATED PERSON SONYA\n     LOWERY RELATED PERSON GEORGE PRICE\n     COOPER VICE PRESIDENT Lic",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95260",
+      "field": "website",
+      "value": "https://claytonbuiltmiyo.com/",
+      "source_url": "https://claytonbuiltmiyo.com/facilities/bonham/",
+      "quote": "Bonham - Clayton MiYO",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95260",
+      "field": "zip",
+      "value": "75418",
+      "source_url": "https://mhweb.tdhca.state.tx.us/mhweb/license_detail.jsp?db=ins&lic_num=MHDMAN00000334",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. cense Issue Date: 03/24/2026 License Expiration Date: 03/23/2028 Mailing Address PO BOX 4098 MARYVILLE, TN 37802 Location Address 333 AUSTIN STREET BONHAM, TX 75418 Phone: (903)583-1949 County: FANNIN Associates Name Type KEITH O.\n     HOLDBROOKS PRESIDENT ANGELIA\n     LUSBY RELATED PERSON SONYA\n     LOWERY RELATED PERSON GEORGE PRICE\n     COOPER VICE PRESIDENT Lic",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95262",
+      "field": "website",
+      "value": "https://claytonwaco2.com",
+      "source_url": "https://claytonwaco2.com",
+      "quote": "Clayton Waco II",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95263",
+      "field": "website",
+      "value": "https://www.claytonhomes.com",
+      "source_url": "https://www.claytonhomes.com/newsroom/press-releases/pr-tru-halls-builds-50000-home/",
+      "quote": "Learn more about TRU homes and Clayton at Clayton Home Building Group",
+      "scope": "company",
+      "evidence_rounds": [
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95267",
+      "field": "website",
+      "value": "https://www.claytonhomes.com",
+      "source_url": "https://www.claytonhomes.com/newsroom/press-releases/clayton-celebrates-grand-opening-new-facility-conway-arkansas",
+      "quote": "Clayton",
+      "scope": "company",
+      "evidence_rounds": [
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95270",
+      "field": "address",
+      "value": "832 E. Walnut St.",
+      "source_url": "https://oas.dhs.in.gov/dfbs/code/main.do;jsessionid=byUuebxD_1VI_2OIzRUJeD0WSzWUKfMdCgXuRwccKc0ABy1NR-Db!-589601166?manufacturerNameId=4488&method=view",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35543290961,
+      "review_note": "Indiana DHS industrialized-building manufacturer registry identifies Amtex Corporation and explicitly repeats this Garland street address as Facilities Address; original city/state match.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95270",
+      "field": "zip",
+      "value": "75040",
+      "source_url": "https://oas.dhs.in.gov/dfbs/code/main.do;jsessionid=byUuebxD_1VI_2OIzRUJeD0WSzWUKfMdCgXuRwccKc0ABy1NR-Db!-589601166?manufacturerNameId=4488&method=view",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35543290961,
+      "review_note": "Indiana DHS industrialized-building manufacturer registry identifies Amtex Corporation and explicitly repeats this Garland street address as Facilities Address; original city/state match.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95271",
+      "field": "phone",
+      "value": "(310) 809-1520",
+      "source_url": "https://midrisemodular.com/contact",
+      "quote": "Main: (310) 809-1520",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95271",
+      "field": "website",
+      "value": "https://midrisemodular.com",
+      "source_url": "https://midrisemodular.com/contact",
+      "quote": "MID-RISE MODULAR",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95272",
+      "field": "phone",
+      "value": "570-966-1053",
+      "source_url": "https://www.ritz-craft.com/contact-us",
+      "quote": "570-966-1053",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95272",
+      "field": "website",
+      "value": "https://www.ritz-craft.com",
+      "source_url": "https://www.ritz-craft.com/contact-us",
+      "quote": "Contact Ritz-Craft",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95275",
+      "field": "address",
+      "value": "2181 E Market St",
+      "source_url": "https://oas.dhs.in.gov/dfbs/code/main.do;jsessionid=vEvu7yA_A57rsHeI7RbByOcXySAi5cbYXu1-fRHhn8StpYYEsnb_!1089120397?manufacturerNameId=3339&method=view",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. /14/2026 RELEASES SUBMITTED - 1- CONFIRMATION 26173839 [ Cancel and Start Over New ] Cavco Manufacturing, LLC - Nappanee address: 2181 E Market St POBX 27 Nappanee,\r\n            IN\r\n            46550\r\n            A Web Page URL: www.cavcohomes.com [ Edit web page information ] Releases: [ View Design Release's ] [ Apply for New Design Release ] Contact(s): [ Add n",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95275",
+      "field": "zip",
+      "value": "46550",
+      "source_url": "https://oas.dhs.in.gov/dfbs/code/main.do;jsessionid=vEvu7yA_A57rsHeI7RbByOcXySAi5cbYXu1-fRHhn8StpYYEsnb_!1089120397?manufacturerNameId=3339&method=view",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. /14/2026 RELEASES SUBMITTED - 1- CONFIRMATION 26173839 [ Cancel and Start Over New ] Cavco Manufacturing, LLC - Nappanee address: 2181 E Market St POBX 27 Nappanee,\r\n            IN\r\n            46550\r\n            A Web Page URL: www.cavcohomes.com [ Edit web page information ] Releases: [ View Design Release's ] [ Apply for New Design Release ] Contact(s): [ Add n",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95276",
+      "field": "website",
+      "value": "https://www.champion-building.com",
+      "source_url": "https://www.champion-building.com/",
+      "quote": "Champion Integrated Building Solutions",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95283",
+      "field": "phone",
+      "value": "800-849-6603",
+      "source_url": "https://claytonmaynardville.com/contact-us/",
+      "quote": "800-849-6603",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95283",
+      "field": "website",
+      "value": "https://claytonmaynardville.com",
+      "source_url": "https://claytonmaynardville.com",
+      "quote": "Home - Maynardville",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95284",
+      "field": "website",
+      "value": "https://www.championhomes.com",
+      "source_url": "https://www.championhomes.com/retailers/tx/athens/champion-homes-center",
+      "quote": "Champion Homes Center",
+      "scope": "company",
+      "evidence_rounds": [
+        1
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95285",
+      "field": "website",
+      "value": "https://www.championhomesofnc.com/",
+      "source_url": "https://www.championhomesofnc.com/",
+      "quote": "Champion Homes - North Carolina Homebuyer Assistance",
+      "scope": "facility",
+      "evidence_rounds": [
+        3
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95290",
+      "field": "phone",
+      "value": "(865) 828-5771",
+      "source_url": "https://claytonrutledge.com/contact/",
+      "quote": "Phone (865) 828-5771",
+      "scope": "facility",
+      "evidence_rounds": [
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95290",
+      "field": "website",
+      "value": "https://claytonrutledge.com",
+      "source_url": "https://claytonrutledge.com/",
+      "quote": "Clayton Home Building Group",
+      "scope": "facility",
+      "evidence_rounds": [
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95291",
+      "field": "address",
+      "value": "1500 Bernheim Lane",
+      "source_url": "https://dantclayton.com/about/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. ayton.com About Products Expertise Our Process Resources Careers Find a Rep Contact us Stadia Arenas Specialty Venues Grandstands Address: 1500 Bernheim Lane Louisville, Kentucky 40210 Contact Number: 800-626-2177 Email: info@DantClayton.com Certified to Work Instagram Facebook Vimeo YouTube Privacy Policy Terms and Conditions \u00a9 DANT CLAYTON 2026",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95291",
+      "field": "website",
+      "value": "https://dantclayton.com",
+      "source_url": "https://dantclayton.com",
+      "quote": "Dant Clayton Stadium Seating",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95291",
+      "field": "zip",
+      "value": "40210",
+      "source_url": "https://dantclayton.com/about/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. ayton.com About Products Expertise Our Process Resources Careers Find a Rep Contact us Stadia Arenas Specialty Venues Grandstands Address: 1500 Bernheim Lane Louisville, Kentucky 40210 Contact Number: 800-626-2177 Email: info@DantClayton.com Certified to Work Instagram Facebook Vimeo YouTube Privacy Policy Terms and Conditions \u00a9 DANT CLAYTON 2026",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95293",
+      "field": "address",
+      "value": "1500 Broening Hwy",
+      "source_url": "https://www.blueprint-robotics.com/work-with-us",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. projects. Use the contact us form and learn more about how Blueprint Robotics can partner with you on your next project. Visit Us 1500 Broening Hwy Baltimore, MD 21224 Hours Monday\u2013Friday 9:00am\u20135:00pm Phone (443) 927-9027 Call or submit a contact form to schedule a tour of Blueprint Robotics\u2019 Manufacturing Plant. Work With Us 1500 Broening Hwy Baltimore, MD 21224 ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95293",
+      "field": "zip",
+      "value": "21224",
+      "source_url": "https://www.blueprint-robotics.com/work-with-us",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. projects. Use the contact us form and learn more about how Blueprint Robotics can partner with you on your next project. Visit Us 1500 Broening Hwy Baltimore, MD 21224 Hours Monday\u2013Friday 9:00am\u20135:00pm Phone (443) 927-9027 Call or submit a contact form to schedule a tour of Blueprint Robotics\u2019 Manufacturing Plant. Work With Us 1500 Broening Hwy Baltimore, MD 21224 ",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95296",
+      "field": "address",
+      "value": "1619 Wythe Road",
+      "source_url": "https://www.bankersteel.com/contact/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. lobal 2026-09-16T15:44:14+00:00 Contact Us Office Locations Fabrication Facilities DBM Global Fabrication Facilities Headquarters 1619 Wythe Road, Lynchburg, VA 24501 (434) 847-4575 Toll Free 1 (800) 285-4939 Georgia 2905 Premiere Pkwy, Suite 210, Duluth, GA 30097 (678) 821-7061 New York 110 East 42nd Street, Suite 610, New York, NY 10017 (212) 444-1044 Toronto 600 Cochrane Drive, Su",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95296",
+      "field": "zip",
+      "value": "24501",
+      "source_url": "https://www.bankersteel.com/contact/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. lobal 2026-09-16T15:44:14+00:00 Contact Us Office Locations Fabrication Facilities DBM Global Fabrication Facilities Headquarters 1619 Wythe Road, Lynchburg, VA 24501 (434) 847-4575 Toll Free 1 (800) 285-4939 Georgia 2905 Premiere Pkwy, Suite 210, Duluth, GA 30097 (678) 821-7061 New York 110 East 42nd Street, Suite 610, New York, NY 10017 (212) 444-1044 Toronto 600 Cochrane Drive, Su",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95297",
+      "field": "address",
+      "value": "351 Rangoon Street",
+      "source_url": "https://www.bankersteel.com/contact/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. 1044 Toronto 600 Cochrane Drive, Suite 300, Markham, Ontario L3R 5K3 (416) 241-6967 Virginia 1619 Wythe Road, Lynchburg, VA 24501 351 Rangoon Street, Lynchburg, VA 24502 New Jersey 1640 New Market Avenue, South Plainfield, NJ 07080 Arizona 1705 W. Battaglia Road, Eloy, AZ 85131 420 S. 19th Avenue, Phoenix, AZ 85009 California 2324 Navy Drive, Stockton, CA 95206 Kansas 2001 N. Davis Aven",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95297",
+      "field": "zip",
+      "value": "24502",
+      "source_url": "https://www.bankersteel.com/contact/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. 1044 Toronto 600 Cochrane Drive, Suite 300, Markham, Ontario L3R 5K3 (416) 241-6967 Virginia 1619 Wythe Road, Lynchburg, VA 24501 351 Rangoon Street, Lynchburg, VA 24502 New Jersey 1640 New Market Avenue, South Plainfield, NJ 07080 Arizona 1705 W. Battaglia Road, Eloy, AZ 85131 420 S. 19th Avenue, Phoenix, AZ 85009 California 2324 Navy Drive, Stockton, CA 95206 Kansas 2001 N. Davis Aven",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95298",
+      "field": "zip",
+      "value": "07080",
+      "source_url": "https://www.bankersteel.com/contact/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. , Ontario L3R 5K3 (416) 241-6967 Virginia 1619 Wythe Road, Lynchburg, VA 24501 351 Rangoon Street, Lynchburg, VA 24502 New Jersey 1640 New Market Avenue, South Plainfield, NJ 07080 Arizona 1705 W. Battaglia Road, Eloy, AZ 85131 420 S. 19th Avenue, Phoenix, AZ 85009 California 2324 Navy Drive, Stockton, CA 95206 Kansas 2001 N. Davis Avenue, Ottawa, KS 66067 Kentucky 280 Ellis Smeathers Road, Owensb",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95301",
+      "field": "address",
+      "value": "312 Bibb Industrial Drive",
+      "source_url": "https://www.bpublicprefab.com/installer-training",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. list Where is Training? Both days of training will take place at our main fabrication facility - the B.PUBLIC prefab R&D Shop at: 312 Bibb Industrial Drive Las Vegas, New Mexico 87701 Where should I stay? There are quite a few great hotels in the town of Las Vegas. Our favorites are the Castaneda and the Plaza Hotels. Both are wonderfully restored historic hotels and have the same owner. Both have re",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95301",
+      "field": "zip",
+      "value": "87701",
+      "source_url": "https://www.bpublicprefab.com/installer-training",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. list Where is Training? Both days of training will take place at our main fabrication facility - the B.PUBLIC prefab R&D Shop at: 312 Bibb Industrial Drive Las Vegas, New Mexico 87701 Where should I stay? There are quite a few great hotels in the town of Las Vegas. Our favorites are the Castaneda and the Plaza Hotels. Both are wonderfully restored historic hotels and have the same owner. Both have re",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95304",
+      "field": "zip",
+      "value": "75901",
+      "source_url": "https://sterlingsolutions.com/site-access-home/sterling-locations/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. e Phoenix campus houses our corporate headquarters and primary manufacturing facility. Lufkin, TX - Office & Manufacturing South, 7309 US HWY 69, Lufkin, TX 75901 | (936) 824-1200 | Directions Lufkin was opened in 2019 as a secondary manufacturing facility and operational base for the South and West regions. Downers Grove, IL - Satellite Office 2001 Butterfield Rd, Suite 510, Dow",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95309",
+      "field": "zip",
+      "value": "97321",
+      "source_url": "https://timberlab.com/news/landmark-cross-laminated-timber-facility-tops-out",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context.  and inspiration. Subscribe to our newsletter to stay up to date on the latest in mass timber. Subscribe Timberlab logo Locations MANUFACTURING - CLT 2360 Conser Road Millersburg, OR 97321 MANUFACTURING - GLULAM 600 Applegate Avenue Drain, OR 97435 MANUFACTURING - GLULAM 12796 Highway 36 Swisshome, OR 97480 Phone: 541-268-4428 FABRICATION 1601 NE Columbia Blvd Portland, OR 97211 FABR",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95311",
+      "field": "zip",
+      "value": "18914",
+      "source_url": "https://durapods.com/contact/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. Us Let\u2019s talk about how Durapods modular bathrooms can save time and money on your next project. info@durapods.com (610) 941-9070 180 New Britain Blvd Chalfont, PA 18914 Sitemap Privacy Policy Why Durapods Projects Gallery Contact DURAPODS  | 180 New Britain Blvd, Chalfont, PA 18914 | 610.941.9070",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95312",
+      "field": "address",
+      "value": "1600 Sedivy Ln",
+      "source_url": "https://www.bandtmfg.com/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. Prefabricated Steel Frame Buildings | B&T Manufacturing Skip to content (605) 716-7822 | 1600 Sedivy Ln, Rapid City, SD 57703 Home About Us Our Products ADUs-Campground Cabins H\u00b3 Wellness Hub Modular Bathroom Pods Steel Frame Construction Backyard Greenhouse Kits Workforce Housing CFS Home Kits Why B&T? Blog Menu Navigation Menu Navigation Men",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95312",
+      "field": "zip",
+      "value": "57703",
+      "source_url": "https://www.bandtmfg.com/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Reviewed official facility/manufacturer evidence and address context. Prefabricated Steel Frame Buildings | B&T Manufacturing Skip to content (605) 716-7822 | 1600 Sedivy Ln, Rapid City, SD 57703 Home About Us Our Products ADUs-Campground Cabins H\u00b3 Wellness Hub Modular Bathroom Pods Steel Frame Construction Backyard Greenhouse Kits Workforce Housing CFS Home Kits Why B&T? Blog Menu Navigation Menu Navigation Men",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95315",
+      "field": "address",
+      "value": "5301 Polk St 20",
+      "source_url": "https://bathsystemusa.com/contact-us/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35543290961,
+      "review_note": "Official Bathsystem USA about page describes U.S. manufacturing under one roof, and contact page gives the Houston site in the original city/state.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95315",
+      "field": "zip",
+      "value": "77023",
+      "source_url": "https://bathsystemusa.com/contact-us/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35543290961,
+      "review_note": "Official Bathsystem USA about page describes U.S. manufacturing under one roof, and contact page gives the Houston site in the original city/state.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95324",
+      "field": "address",
+      "value": "103 Kelly Avenue",
+      "source_url": "https://www.northamericantruss.com/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official North American Truss page describes controlled manufacturing and shipping directly from its factory beside the Middleport address.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95324",
+      "field": "zip",
+      "value": "14105",
+      "source_url": "https://www.northamericantruss.com/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official North American Truss page describes controlled manufacturing and shipping directly from its factory beside the Middleport address.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95331",
+      "field": "address",
+      "value": "4240 136th Ave",
+      "source_url": "https://www.portersips.com",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official PorterSIPs site describes Porter Corp manufacturing and identifies the Holland address; matches the original city and state.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95331",
+      "field": "zip",
+      "value": "49424",
+      "source_url": "https://www.portersips.com",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official PorterSIPs site describes Porter Corp manufacturing and identifies the Holland address; matches the original city and state.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95332",
+      "field": "address",
+      "value": "1500 Broening Hwy",
+      "source_url": "https://www.blueprint-robotics.com/work-with-us",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official work-with-us page explicitly offers tours of the manufacturing plant at this Baltimore address. Phone conflict retained separately.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95332",
+      "field": "zip",
+      "value": "21224",
+      "source_url": "https://www.blueprint-robotics.com/work-with-us",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official work-with-us page explicitly offers tours of the manufacturing plant at this Baltimore address. Phone conflict retained separately.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95340",
+      "field": "address",
+      "value": "40600 County Road 18C",
+      "source_url": "https://www.clarkpacific.com/contact-us/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official Clark Pacific contact page labels this address Woodland Plant, separately from corporate and sales offices.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-95340",
+      "field": "zip",
+      "value": "95776",
+      "source_url": "https://www.clarkpacific.com/contact-us/",
+      "quote": "",
+      "scope": "facility",
+      "source_run": 35542280759,
+      "review_note": "Official Clark Pacific contact page labels this address Woodland Plant, separately from corporate and sales offices.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-96336",
+      "field": "website",
+      "value": "https://www.atlanticbcs.com/",
+      "source_url": "https://www.atlanticbcs.com/",
+      "quote": "Atlantic Building Components",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-96338",
+      "field": "phone",
+      "value": "1.603.824.9690",
+      "source_url": "https://atlanticprefab.com/contact-us/",
+      "quote": "1.603.824.9690",
+      "scope": "facility",
+      "evidence_rounds": [
+        1,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-96338",
+      "field": "website",
+      "value": "https://atlanticprefab.com",
+      "source_url": "https://atlanticprefab.com",
+      "quote": "Atlantic Prefab | A UFP Site Built Company",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-96451",
+      "field": "website",
+      "value": "https://cornerstonetruss.com/",
+      "source_url": "https://cornerstonetruss.com/",
+      "quote": "Cornerstone Truss & Components",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-96658",
+      "field": "website",
+      "value": "https://pwtruss.com/",
+      "source_url": "https://pwtruss.com/",
+      "quote": "Precision Wall & Truss",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    },
+    {
+      "facility_id": "IC-96790",
+      "field": "website",
+      "value": "https://www.trussworksllc.net",
+      "source_url": "https://www.trussworksllc.net/locations/mabank",
+      "quote": "Trussworks Home",
+      "scope": "company",
+      "evidence_rounds": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "review_note": "Noncompeting missing-field proposal supported by saved primary-source evidence; reviewed for this assertion import.",
+      "retrieved_date": "2026-09-20",
+      "approved": true
+    }
+  ],
+  "held_from_candidate_fills": [
+    {
+      "facility_id": "IC-95225",
+      "field": "phone",
+      "value": "(508) 990-8020",
+      "reason": "Source identifies a lumber yard; plant contact not independently resolved."
+    },
+    {
+      "facility_id": "IC-95230",
+      "field": "zip",
+      "value": "28677",
+      "reason": "Location field has not passed the separate manufacturing-site address review."
+    },
+    {
+      "facility_id": "IC-95258",
+      "field": "phone",
+      "value": "361.418.1747",
+      "reason": "Quoted source identifies headquarters; direct plant contact remains unresolved."
+    },
+    {
+      "facility_id": "IC-95276",
+      "field": "zip",
+      "value": "77049",
+      "reason": "Location field has not passed the separate manufacturing-site address review."
+    },
+    {
+      "facility_id": "IC-95283",
+      "field": "zip",
+      "value": "37807",
+      "reason": "Location field has not passed the separate manufacturing-site address review."
+    },
+    {
+      "facility_id": "IC-95284",
+      "field": "phone",
+      "value": "903-675-5055",
+      "reason": "Source is an Athens retail home center, not the manufacturing plant."
+    },
+    {
+      "facility_id": "IC-95289",
+      "field": "zip",
+      "value": "46540",
+      "reason": "Location field has not passed the separate manufacturing-site address review."
+    },
+    {
+      "facility_id": "IC-95290",
+      "field": "zip",
+      "value": "37861",
+      "reason": "Location field has not passed the separate manufacturing-site address review."
+    },
+    {
+      "facility_id": "IC-95303",
+      "field": "zip",
+      "value": "75081-3024",
+      "reason": "Location field has not passed the separate manufacturing-site address review."
+    },
+    {
+      "facility_id": "IC-96334",
+      "field": "email",
+      "value": "yumainfo@azbuildingsupply.com",
+      "reason": "Home-center email; association with the target factory remains unresolved."
+    }
+  ]
+}
