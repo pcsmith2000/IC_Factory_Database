@@ -99,15 +99,29 @@ def validate_rooftop(row,result):
 def select_rows(db, pass_id, row_limit):
     # Retry flags from other workflows are deliberately not a selection criterion.
     rows=db.execute("SELECT r.facility_id,r.baseline,r.recovered_address,r.evidence,g.name AS live_name,g.city AS live_city,g.state AS live_state,g.release_tag AS live_release FROM coordinate_recovery_rows r JOIN golden_facility g ON g.facility_key=r.facility_id WHERE r.campaign_id=%s AND r.status='unresolved' AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts a WHERE a.campaign_id=r.campaign_id AND a.facility_id=r.facility_id AND a.pass_id=%s AND a.stage='geocode') ORDER BY r.facility_id",(CAMPAIGN,pass_id)).fetchall()
-    out=[]; reasons=Counter()
+    out=[]; reasons=Counter();eligible_sources=Counter();blocked_sources=Counter();address_origin=Counter();completeness=Counter()
     for r in rows:
         frozen=r['baseline']
+        source=frozen.get('name__source') or 'unattributed'
         if norm(frozen.get('name'))!=norm(r.get('live_name')) or any(frozen.get(k) and norm(frozen.get(k))!=norm(r.get('live_'+k)) for k in ('city','state')):
-            reasons['changed_identity']+=1;continue
-        b={**frozen,**(r.get('recovered_address') or {})};r['frozen']=frozen;r['baseline']=b
-        if not eligible(b):reasons['needs_full_street_city_state']+=1;continue
+            reasons['changed_identity']+=1;blocked_sources[source]+=1;continue
+        recovered=r.get('recovered_address') or {}
+        b={**frozen,**recovered};r['frozen']=frozen;r['baseline']=b
+        fields=[]
+        if not re.match(r'^\d+[a-zA-Z]?\s',str(b.get('address') or '').strip()):fields.append('street')
+        if not str(b.get('city') or '').strip():fields.append('city')
+        if str(b.get('state') or '').upper() not in US_STATES:fields.append('state')
+        if fields:
+            reasons['needs_full_street_city_state']+=1;blocked_sources[source]+=1
+            completeness['missing_'+'_'.join(fields)]+=1;continue
+        eligible_sources[source]+=1
+        address_origin['recovered_source_detail' if recovered else 'frozen_golden_row']+=1
         out.append(r)
-    return out[:row_limit],dict(reasons),len(out)
+    diagnostics={'eligible_by_primary_name_source':dict(eligible_sources),
+                 'blocked_by_primary_name_source':dict(blocked_sources),
+                 'blocked_input_completeness':dict(completeness),
+                 'eligible_address_origin':dict(address_origin)}
+    return out[:row_limit],dict(reasons),len(out),diagnostics
 
 
 def reserve(db,r,pass_id,query,cost):
@@ -244,7 +258,7 @@ def execute(mode,pass_id,row_limit):
             summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
             out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
             print(json.dumps(summary,indent=2));return
-        selected,blocked,eligible_count=select_rows(db,pass_id,row_limit)
+        selected,blocked,eligible_count,diagnostics=select_rows(db,pass_id,row_limit)
         queries=[one_line(r['baseline']) for r in selected]
         keys=[cache.geocode_key(q) for q in queries]
         saved=db.execute("SELECT * FROM cache_lookup WHERE cache_key=ANY(%s) AND provider='geocodio'",(keys,)).fetchall()
@@ -259,7 +273,8 @@ def execute(mode,pass_id,row_limit):
                  scanned_for_cached=scanned if mode=='cached' else None,
                  cached_unique_queries=len(set(keys)&set(cached)),estimated_new_lookups=fresh,
                  estimated_api_upper_bound_usd=round(fresh*.001,3),budget_ceiling_usd=float(campaign['api_ceiling']),
-                 budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+                 budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0,
+                 recovery_input_diagnostics=diagnostics)
     print(json.dumps(summary),flush=True)
     outcomes=Counter();inserted=0;calls=0
     if mode in ('geocode','cached'):
