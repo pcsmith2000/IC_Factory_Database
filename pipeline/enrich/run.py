@@ -264,8 +264,9 @@ def main(argv=None) -> int:
         # the same six states forever and the other 36 never get their turn.
         from . import cache as lookup_cache
         lookup_cache.ensure(db)
+        adopted = lookup_cache.adopt_places_state(db, list(by_state), places.RELEASE, tag)
         done = {s for s in by_state
-                if lookup_cache.get(db, lookup_cache.places_state_key(s, places.RELEASE))}
+                if lookup_cache.get(db, lookup_cache.places_state_key(s, places.RELEASE, tag))}
         ranked = [s for s, _ in by_state.most_common() if s in boxes and s not in done]
         chosen, deferred_states = ranked[:args.places_limit], ranked[args.places_limit:]
         no_box = sorted({s for s in by_state if s not in boxes})
@@ -283,12 +284,13 @@ def main(argv=None) -> int:
         rep = places.run(sel, places.fetch(chosen, boxes, localities=cities, postcodes=zips),
                          need_coord=need_ids)
         rep.update(states_this_run=chosen, states_deferred=deferred_states,
-                   states_already_read=sorted(done),
+                   states_already_read=sorted(done), legacy_markers_adopted=adopted,
+                   release_tag=tag,
                    states_without_a_box=no_box,
                    deferred=sum(by_state[s] for s in deferred_states),
                    boxes={s: [round(v, 3) for v in boxes[s]] for s in chosen})
         for st in chosen:                       # mark the state read, so the next run moves on
-            lookup_cache.put(db, lookup_cache.places_state_key(st, places.RELEASE), "places_state",
+            lookup_cache.put(db, lookup_cache.places_state_key(st, places.RELEASE, tag), "places_state",
                              st, {"facilities": by_state[st], "run": tag}, True,
                              f"overture:{places.RELEASE}")
         (args.out).mkdir(parents=True, exist_ok=True)

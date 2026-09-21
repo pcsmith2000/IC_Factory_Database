@@ -254,8 +254,8 @@ def test_a_state_already_read_for_this_release_is_not_read_again():
     src = inspect.getsource(enrich_run.main)
     block = src[src.index('if args.stage == "places"'):src.index('if args.stage == "footprint"')]
     assert "places_state_key" in block and "s not in done" in block
-    assert cache.places_state_key("or", "2026-08-19.0") == cache.places_state_key("OR", "2026-08-19.0")
-    assert cache.places_state_key("OR", "2026-08-19.0") != cache.places_state_key("OR", "2027-01-01.0")
+    assert cache.places_state_key("or", "2026-08-19.0", "t") == cache.places_state_key("OR", "2026-08-19.0", "t")
+    assert cache.places_state_key("OR", "2026-08-19.0", "t") != cache.places_state_key("OR", "2027-01-01.0", "t")
 
 
 def test_the_states_it_read_are_recorded_before_the_assertions_are_written():
@@ -315,3 +315,49 @@ def test_the_run_record_counts_places_not_the_pair_of_indexes():
                                place("Other Co", "100 Mill Rd", 47.3, -122.3)])
     assert rep["places_read"] == 2
     assert rep["address_keys_city"] == 2 and "places_indexed" not in rep
+
+
+# ---- the marker has to carry the release tag, or a rebuild skips everything
+
+def test_the_marker_is_scoped_to_the_release_tag_as_well_as_the_overture_release():
+    """The marker means "the assertions for this state are in the database", and promote reads
+    assertions BY TAG. After layers 1-8 publish a new tag, a marker without one claims work the
+    new release cannot see: on a from-zero rebuild every state reads as done, nothing is written,
+    and ~2,000 websites are silently absent while the stage reports success."""
+    from pipeline.enrich import cache
+    a = cache.places_state_key("OR", "2026-08-19.0", "v1+surv.55439e11")
+    b = cache.places_state_key("OR", "2026-08-19.0", "v1+surv.e3ca5da6")
+    assert a != b
+
+
+def test_a_legacy_marker_is_adopted_rather_than_ignored():
+    """Every legacy marker was written under the tag that is current now, so carrying it forward
+    is correct — and it is what stops a concurrently running pass re-reading states it has already
+    paid S3 for."""
+    from pipeline.enrich import cache
+    store = {}
+
+    class DB: pass
+    db = DB()
+    orig_get, orig_put = cache.get, cache.put
+    cache.get = lambda d, k, provider=None: store.get(k)
+    cache.put = lambda d, k, kind, inp, res, found, prov: store.__setitem__(k, {"result": res, "found": found})
+    try:
+        store[cache.places_state_key_legacy("OR", "R")] = {"result": {"facilities": 80}, "found": True}
+        n = cache.adopt_places_state(db, ["OR", "WA"], "R", "TAG")
+        assert n == 1                                     # OR carried forward, WA had nothing
+        assert cache.places_state_key("OR", "R", "TAG") in store
+        assert cache.places_state_key("WA", "R", "TAG") not in store
+        assert cache.adopt_places_state(db, ["OR"], "R", "TAG") == 0      # idempotent
+    finally:
+        cache.get, cache.put = orig_get, orig_put
+
+
+def test_a_legacy_marker_is_never_written_only_read():
+    import inspect
+    from pipeline.enrich import cache, run as enrich_run
+    assert "return key(" in inspect.getsource(cache.places_state_key_legacy)
+    src = inspect.getsource(enrich_run.main)
+    block = src[src.index('if args.stage == "places"'):src.index('if args.stage == "anchor"')]
+    assert "places_state_key_legacy" not in block        # only adopt_places_state reads it
+    assert "places_state_key(st, places.RELEASE, tag)" in block
