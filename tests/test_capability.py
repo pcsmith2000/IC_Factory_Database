@@ -425,10 +425,13 @@ def test_the_predict_cli_writes_an_artifact_the_gates_accept(tmp_path, monkeypat
     assert {a["field"] for a in asserts} == {"capability_group", "capability_leaf"}
     assert gates.e9_every_capability_is_a_member_of_the_taxonomy(asserts).passed
 
-    # and the floor withholds rather than guessing
+    # The floor withholds the MODEL's answers rather than guessing. ADL's own labels are not
+    # the model's and are not confidence-gated: a 0.9 floor leaves exactly the label assertions.
     assert cap._main(["--build", str(tmp_path), "--predict", "5", "--min-confidence", "0.9",
                       "--assertions-out", str(out)]) == 0
-    assert json.loads(out.read_text()) == []
+    left = json.loads(out.read_text())
+    assert {a["source_id"] for a in left} == {"adl_july"}     # IC-1's label, no source named
+    assert all(a["basis"] == cap.ADL_BASIS for a in left)
 
 
 def test_the_load_stage_knows_this_stage_exists():
@@ -439,3 +442,37 @@ def test_the_load_stage_knows_this_stage_exists():
     assert "capability" in enrich_run.ASSERTION_STAGES
     # the file this stage writes is the one load looks for
     assert cap.SOURCE_ID == "capability"
+
+
+def test_adl_labels_fill_the_column_the_model_is_forbidden_to_touch():
+    """Stage 15 never classifies a facility ADL labelled, so capability_leaf was NULL on exactly
+    the 218 plants a reader trusts most. ADL's own value, normalised through the alias table and
+    asserted under the list that carried it."""
+    tx = cap.load()
+    got, unresolved = cap.assertions_from_adl_labels(tx, [
+        {"facility_id": "IC-1", "primary_capability": "Wood Structural Components (trusses etc)",
+         "primary_capability__source": "adl_4ward"}])
+    assert unresolved == []
+    assert {a["field"] for a in got} == {"capability_group", "capability_leaf"}
+    for a in got:
+        assert a["source_id"] == "adl_4ward"       # the roster that said it, not "capability"
+        assert a["source_class"] == "D"            # so survivorship ranks it above the model
+        assert a["confidence"] == 1.0
+        assert a["basis"] == cap.ADL_BASIS
+        assert "ADL primary_capability" in a["evidence"]
+
+
+def test_adl_outranks_the_model_by_source_order_not_by_confidence():
+    """Survivorship in this warehouse picks by the `order:` list, not by the confidence column.
+    class:D is ADL's lists and sits above `capability`; the 1.0 confidence agrees with that
+    ranking rather than causing it."""
+    from pipeline import registry
+    order = registry.load_yaml("registry/survivorship.yaml")["fields"]["capability_leaf"]["order"]
+    assert order.index("class:D") < order.index("capability")
+
+
+def test_an_unresolvable_label_is_reported_not_guessed():
+    tx = cap.load()
+    got, unresolved = cap.assertions_from_adl_labels(
+        tx, [{"facility_id": "IC-9", "primary_capability": "Something ADL Invented"}])
+    assert got == [] and unresolved == ["Something ADL Invented"]

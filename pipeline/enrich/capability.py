@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 TAXONOMY = ROOT / "registry" / "taxonomy.yaml"
 SOURCE_ID = "capability"
 BASIS = "model_capability"
+ADL_BASIS = "adl_label"     # ADL said so; no model was asked
 _NOISE = re.compile(r"[^a-z0-9 ]")
 
 
@@ -501,6 +502,39 @@ def _predict_report(tx: Taxonomy, rows: list[dict], answers: dict[str, dict]) ->
     }
 
 
+def assertions_from_adl_labels(tx: Taxonomy, labelled: list[dict]) -> tuple[list[dict], list[str]]:
+    """ADL's own primary_capability, normalised into the taxonomy's vocabulary.
+
+    Stage 15 never classifies a facility ADL labelled, so without this the 218 best-known plants in
+    the database are the only ones with capability_leaf NULL — the column is blank on exactly the
+    rows a reader trusts most, which is worse than being blank everywhere.
+
+    No model call. The value is ADL's, resolved through the alias table because ADL writes "Wood
+    Structural Components (trusses etc)" where the taxonomy writes "(Trusses, etc.)". It is
+    asserted under the ADL LIST THAT CARRIED IT — adl_4ward or adl_july, class D — so survivorship
+    ranks it above `capability` by source order and the model can never displace it. Confidence is
+    1.0 so the number agrees with that ranking; it is the ranking that decides, not the number.
+    """
+    from ._db import assertion
+    out, unresolved = [], []
+    for f in labelled:
+        raw = (f.get("primary_capability") or "").strip()
+        leaf = tx.resolve(raw)
+        if leaf is None:
+            unresolved.append(raw)
+            continue
+        src = (f.get("primary_capability__source") or "").strip() or "adl_july"
+        ev = f"taxonomy v{tx.version} :: ADL primary_capability, normalised :: {raw}"
+        for field, value in (("capability_group", tx.group_of[leaf]), ("capability_leaf", leaf)):
+            a = assertion(f["facility_id"], field, value, source_id=src,
+                          basis=ADL_BASIS, confidence=1.0, evidence=ev)
+            # class D, not enrichment: this is the source roster's own claim, and survivorship
+            # ranks `class:D` above `capability` for exactly this reason.
+            a["source_class"] = "D"
+            out.append(a)
+    return out, unresolved
+
+
 def _main(argv: list[str] | None = None) -> int:
     import argparse, json, time
     ap = argparse.ArgumentParser(description="stage 15 — capability classification and its eval")
@@ -542,11 +576,17 @@ def _main(argv: list[str] | None = None) -> int:
             asserts = [x for r, o in kept
                        for x in assertions_for(r["facility_id"], o["leaf"], tx, o["confidence"],
                                                o["reason"], evidence(r))]
+            # ADL's own labels ride the same file. They cost nothing — no model call — and without
+            # them capability_leaf is NULL on exactly the 218 facilities a reader trusts most.
+            adl, unresolved = assertions_from_adl_labels(tx, labelled_from(a.build, 0))
+            asserts += adl
             a.assertions_out.parent.mkdir(parents=True, exist_ok=True)
             a.assertions_out.write_text(json.dumps(asserts, default=str))
             report["published"] = {"facilities": len(kept), "assertions": len(asserts),
                                    "withheld_below_confidence": len(answers) - len(kept),
                                    "min_confidence": a.min_confidence,
+                                   "adl_label_assertions": len(adl),
+                                   "adl_labels_unresolved": sorted(set(unresolved)),
                                    "file": str(a.assertions_out)}
         text = json.dumps(report, indent=2)
         print(text)
