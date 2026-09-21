@@ -1,0 +1,27 @@
+name: Audit missing coordinates (read-only aggregates)
+on:
+  push:
+    branches: [audit/missing-coordinates]
+    paths: [diagnostics/missing_coordinates.py, .github/workflows/audit-missing-coordinates.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres]'
+      - name: Read-only row inspection; emit aggregate counts only
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: python -m diagnostics.missing_coordinates
+      - uses: actions/upload-artifact@v4
+        with:
+          name: missing-coordinates-${{ github.run_id }}
+          path: coordinate-audit/summary.json
+          retention-days: 90
