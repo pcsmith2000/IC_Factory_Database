@@ -173,6 +173,22 @@ jobs:
   # gets first refusal on every address, so a real rooftop fix is always taken when there is one
   # and this only ever fills what is left. footprint still reads rooftop coordinates only — a 64m
   # place match would measure the building next door — so nothing downstream is loosened by it.
+  # The lookup ledger, dumped as an artifact. It holds the FULL provider response for every
+  # address ever looked up — including the coordinates Geocodio returned for addresses gate E2
+  # then refused to publish because they were not rooftop. Those 555 coordinates exist and are
+  # paid for; this is how you read them without spending a lookup or reaching into the database.
+  cache:
+    needs: [branch]
+    if: always() && needs.branch.result == 'success'
+    uses: ./.github/workflows/enrich-stage.yml
+    secrets: inherit
+    with:
+      stage: cache
+      branch_id: ${{ needs.branch.outputs.branch_id }}
+      run_key: ${{ github.run_id }}
+      enabled: ${{ contains(inputs.stages, 'cache') }}
+      args: --cache-dump enrich/cache.ledger.json
+
   places:
     needs: [branch, geocode]
     if: always() && needs.branch.result == 'success'
