@@ -310,12 +310,12 @@ def test_the_evidence_leads_with_what_a_source_said():
     assert ev.index("modular") < ev.index("321991")
 
 
-def test_hud_needs_positive_evidence_of_the_federal_standard():
+def test_a_register_saying_modular_outranks_the_naics_code():
     """321991 is the manufactured-homes code and is assigned by convention to modular plants that
-    build nothing to the HUD standard. Four of seven Modular rows in run 35637626925 were called
-    HUD on that code alone."""
+    build nothing to the HUD standard, so a register that says "modular" in words beats it. The
+    rule took Wood Volumetric Modular from 8/21 to 16/21 without costing HUD Modular its 11/12."""
     p = cap.prompt_for(cap.load())
-    assert "321991" in p and "POSITIVE evidence" in p
+    assert "321991" in p and "outranks it" in p
     assert "layer3_type" in p        # named as the weakest evidence, not as an answer
 
 
@@ -377,3 +377,13 @@ def test_the_stage_is_a_registered_source():
     assert warehouse.SYNTHETIC_SOURCES[cap.SOURCE_ID]["class"] == "capability"
     assert "capability_group" in warehouse.GOLDEN_FIELDS
     assert "capability_leaf" in warehouse.GOLDEN_FIELDS
+
+
+def test_the_modular_rule_cuts_both_ways():
+    """Run 35638557632 sent CLAYTON CAVALIER — a manufactured-home plant — to Wood Volumetric at
+    0.3 confidence, reasoning "NAICS 321991 lacks positive HUD evidence per rules". The rule was
+    measured on 12 HUD rows; there are 514 hud_code facilities in the wild, so the labelled set
+    could not show this. A register saying "modular" outranks the code; silence does not."""
+    p = cap.prompt_for(cap.load())
+    assert "outranks it" in p
+    assert "HUD Modular IS the answer the code implies" in p

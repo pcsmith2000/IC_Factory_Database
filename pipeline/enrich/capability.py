@@ -300,9 +300,10 @@ def prompt_for(tx: Taxonomy) -> str:
         "6. NAICS 321991 is the manufactured-homes code and is assigned by convention to modular "
         "plants that build nothing to the HUD standard. A register that says \"modular\" in words "
         "— \"Modular Manufacturers registry\", \"Modular Unit Manufacturer\", \"registered "
-        "manufacturer, modular\" — outranks it. Answer HUD Modular only on POSITIVE evidence of "
-        "the federal standard: a HUD-code register, a manufactured-housing plant list, or the "
-        "words manufactured home, mobile home or HUD label.",
+        "manufacturer, modular\" — outranks it, and there you answer a volumetric leaf. But where "
+        "NOTHING says modular and 321991 is all there is, HUD Modular IS the answer the code "
+        "implies and you should give it: 321991 without contrary evidence is not a reason to "
+        "reach for Wood Volumetric Modular instead.",
         "7. Volumetric or panel is decided by whether the plant ships a three-dimensional unit or "
         "a flat assembly, and a plant that does both is named by what it is registered to build. "
         "Wood or steel is decided by the FRAMING MATERIAL, which a roster rarely states: where "
