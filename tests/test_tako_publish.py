@@ -72,3 +72,22 @@ def test_recycled_or_changed_facility_identity_is_held():
     g=[{'facility_key':'IC-1','release_tag':'current','name':'Different Plant','city':'Boston','state':'MA'}]
     accepted,skipped=select_import(m,g,[])
     assert not accepted and 'identity changed' in skipped[0]['reason']
+
+def test_strict_address_bundle_can_record_bounded_correction_at_lowest_precedence():
+    m=manifest();m['approval']='strict_automatic_address_bundle_v1'
+    r=m['assertions'][0]
+    r.update(field='city',value='Redmond',expected_current_value='Remond',
+             correction_kind='minor_city_spelling',expected_identity={'name':'Plant','city':'Remond','state':'OR'})
+    g=[{'facility_key':'IC-1','release_tag':'current','name':'Plant','city':'Remond','state':'OR'}]
+    existing=[{'facility_key':'IC-1','field_key':'city','source_key':'directory','value':'Remond'}]
+    accepted,skipped=select_import(m,g,existing)
+    assert len(accepted)==1 and not skipped
+
+def test_correction_authorization_does_not_cover_unrelated_change():
+    m=manifest();m['approval']='strict_automatic_address_bundle_v1'
+    r=m['assertions'][0]
+    r.update(field='city',value='Garland',expected_current_value='Dallas',
+             correction_kind='minor_city_spelling')
+    g=[{'facility_key':'IC-1','release_tag':'current','city':'Dallas'}]
+    accepted,skipped=select_import(m,g,[])
+    assert not accepted and skipped

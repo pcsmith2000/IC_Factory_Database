@@ -10,9 +10,12 @@ from urllib.parse import urlsplit
 from pipeline.enrich._db import assertion, _rows_for
 from pipeline.web_research.select import FIELDS
 from pipeline.web_research.campaign import normalized_detail
+from pipeline.web_research.run import minor_city_correction, physical_street
 
 SOURCE = 'tako_ai_search'
 MANIFEST = Path('research/adl-2026-09-20/approved-assertions.json')
+CORRECTIONS = {'minor_city_spelling', 'physical_address_replaces_mailing',
+               'physical_zip_replaces_mailing'}
 
 
 def digest(value):
@@ -36,6 +39,9 @@ def load_manifest(path=MANIFEST):
             raise ValueError('Missing evidence URL')
         if r['field'] in ('address', 'city', 'state', 'zip') and r.get('scope') != 'facility':
             raise ValueError('Location must refer to a reviewed facility')
+        if r.get('correction_kind') not in (None, *CORRECTIONS) or (
+                r.get('correction_kind') and 'expected_current_value' not in r):
+            raise ValueError('Invalid correction authorization')
     return manifest
 
 
@@ -56,6 +62,7 @@ def select_import(manifest, golden, existing):
     for r in existing:
         by_cell.setdefault((r['facility_key'], r['field_key']), []).append(r)
     accepted, skipped = [], []
+    strict_address_bundle = manifest.get('approval') == 'strict_automatic_address_bundle_v1'
     for r in manifest['assertions']:
         fid, field = r['facility_id'], r['field']
         g = current.get(fid)
@@ -65,8 +72,21 @@ def select_import(manifest, golden, existing):
         elif any(normalized_detail(f,g.get(f)) != normalized_detail(f,v) for f,v in r.get('expected_identity',{}).items()):
             reason = 'Facility identity changed since the reviewed snapshot'
         elif str(g.get(field) or '').strip() and normalized_detail(field, g[field]) != normalized_detail(field, r['value']):
-            reason = 'Current golden field contains a different value; hold for review'
-        elif any(str(a.get('value') or '').strip() and
+            expected = r.get('expected_current_value')
+            correction = r.get('correction_kind')
+            current_matches = normalized_detail(field, g[field]) == normalized_detail(field, expected)
+            valid_correction = (
+                correction == 'minor_city_spelling' and field == 'city' and current_matches and
+                minor_city_correction(g[field], r['value'])
+            ) or (
+                correction == 'physical_address_replaces_mailing' and field == 'address' and current_matches and
+                not physical_street(g[field]) and physical_street(r['value'])
+            ) or (
+                correction == 'physical_zip_replaces_mailing' and field == 'zip' and current_matches
+            )
+            if not valid_correction:
+                reason = 'Current golden field contains a different value; hold for review'
+        if not reason and not strict_address_bundle and any(str(a.get('value') or '').strip() and
                  normalized_detail(field, a['value']) != normalized_detail(field, r['value'])
                  for a in by_cell.get((fid, field), [])):
             reason = 'Another assertion already supplies this field; hold for review'

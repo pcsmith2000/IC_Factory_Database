@@ -114,7 +114,7 @@ def build(research_dir: Path, out: Path, research_run: str):
             proposal = bundle.get(field)
             if not proposal:
                 continue
-            assertions.append({
+            item = {
                 'facility_id': result['facility_id'], 'field': field,
                 'value': proposal['value'].strip(), 'approved': True,
                 'source_url': proposal['source_url'], 'quote': proposal['quote'],
@@ -122,7 +122,13 @@ def build(research_dir: Path, out: Path, research_run: str):
                 'expected_identity': expected, 'source_run': int(research_run),
                 'evidence_rounds': [1],
                 'review_note': 'Strict automatic Tako facility-address bundle: matched result, unchanged locality, exact fetched quote, facility scope, and official or government source domain.',
-            })
+            }
+            if proposal.get('relationship') == 'correction':
+                item['expected_current_value'] = row.get(field)
+                item['correction_kind'] = ({'city': 'minor_city_spelling',
+                                            'address': 'physical_address_replaces_mailing',
+                                            'zip': 'physical_zip_replaces_mailing'}.get(field))
+            assertions.append(item)
     manifest = {
         'source_id': 'tako_ai_search',
         'approval': 'strict_automatic_address_bundle_v1',
