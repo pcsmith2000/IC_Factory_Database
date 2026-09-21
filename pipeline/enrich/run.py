@@ -29,8 +29,8 @@ from pathlib import Path
 
 from . import _db
 
-STAGES = ("plan", "locate", "geocode", "places", "footprint", "existence", "load", "promote",
-          "cache")
+STAGES = ("plan", "locate", "geocode", "places", "anchor", "footprint", "existence",
+          "load", "promote", "cache")
 DEFAULT_AI_LIMIT = 200
 DEFAULT_GEOCODE_LIMIT = 2000        # the free tier is 2500/day and is shared with anyone else using it
 # Footprint cost is per distinct Overture file, not per facility: ten plants in one county read one
@@ -68,7 +68,7 @@ def _emit(out: Path, stage: str, metrics: dict, table: list[tuple[str, object]])
 
 def _load_assertions(out: Path) -> list[dict]:
     got = []
-    for stage in ("locate", "geocode", "places", "footprint", "existence"):
+    for stage in ("locate", "geocode", "places", "anchor", "footprint", "existence"):
         f = out / f"{stage}.assertions.json"
         if f.exists():
             got.extend(json.loads(f.read_text()))
@@ -86,6 +86,11 @@ def main(argv=None) -> int:
                     help="hard ceiling on Geocodio lookups per run (default 2000, free tier 2500/day)")
     ap.add_argument("--regeocode", action="store_true",
                     help="look up addresses again that a previous run could not place")
+    ap.add_argument("--anchor-radius", type=float, default=50.0,
+                    help="metres a building may be from an interpolated point and still confirm it "
+                         "(default 50; stage 11 uses 30 because a ROOFTOP point should be on the roof)")
+    ap.add_argument("--anchor-limit", type=int, default=DEFAULT_FOOTPRINT_LIMIT,
+                    help="hard ceiling on distinct Overture files the anchor stage may read")
     ap.add_argument("--places-limit", type=int, default=DEFAULT_PLACES_STATES,
                     help="hard ceiling on STATES whose Overture places a run may read (default 6); "
                          "cost is per state box read, not per facility")
@@ -300,6 +305,31 @@ def main(argv=None) -> int:
         if no_box:
             table.append(("states with no coordinate to derive a box from", " ".join(no_box)))
         _emit(args.out, "places", {k: v for k, v in rep.items() if k != "assertions"}, table)
+        return 0
+
+    if args.stage == "anchor":
+        from . import anchor
+        from .geocode import one_line
+        # Every facility with an address and no rooftop coordinate. The ledger decides which of
+        # them stage 10 actually looked up — this stage makes no provider call of its own, it only
+        # reads answers already paid for.
+        todo = [r for r in rows if (r.get("address") or "").strip() and not rooftop(r)]
+        if args.dry_run:
+            _emit(args.out, "anchor", {"eligible": len(todo), "called": 0},
+                  [("eligible", len(todo)), ("provider calls (always zero)", 0)])
+            return 0
+        rep = anchor.run(todo, db, one_line, radius_m=args.anchor_radius,
+                         cache_path=args.out / "overture_index.json", max_files=args.anchor_limit)
+        (args.out).mkdir(parents=True, exist_ok=True)
+        (args.out / "anchor.assertions.json").write_text(json.dumps(rep["assertions"], default=str))
+        _emit(args.out, "anchor", {k: v for k, v in rep.items() if k != "assertions"},
+              [("eligible (address, no rooftop coordinate)", rep["eligible"]),
+               ("coordinates already in the ledger, postcode verified", rep["coordinates_in_the_ledger"]),
+               ("confirmed by an Overture building", rep["confirmed_by_a_building"]),
+               ("radius", f"{rep['radius_m']:.0f}m"),
+               ("offset to that building", f"median {rep['offset_median_m']}m, max {rep['offset_max_m']}m"),
+               ("accuracy types confirmed", json.dumps(rep["accuracy_mix"])),
+               ("refused", json.dumps(rep["refused"]))])
         return 0
 
     if args.stage == "footprint":

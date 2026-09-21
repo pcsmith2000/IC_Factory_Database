@@ -29,7 +29,7 @@ fields:
   # facility. Measured against 241 verified rooftop coordinates: median 63m, p90 302m. That is
   # good enough to place a facility that has NO coordinate and not good enough to displace one
   # that has a real geocode, so it sits below basis:rooftop and only ever fills a hole.
-  lat_lon:         {order: [adl_employee_feedback, operator, "basis:rooftop", "basis:place_match", "class:B"], tie: most_recent}
+  lat_lon:         {order: [adl_employee_feedback, operator, "basis:rooftop", "basis:place_match", "basis:interpolated_on_building", "class:B"], tie: most_recent}
   naics:           {order: [adl_employee_feedback, operator, "class:B"], tie: most_recent}
   status:          {order: [adl_employee_feedback, operator, "basis:dated_expiry", "basis:explicit_status_field", "basis:certified_as_of_date", "basis:on_current_list"], tie: most_recent}
   expiry_date:     {order: [adl_employee_feedback, operator, "basis:dated_expiry"], tie: most_recent}

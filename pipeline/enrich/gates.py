@@ -37,6 +37,10 @@ def e1_every_located_address_is_cited(assertions: list[dict]) -> GateResult:
 COORDINATE_BASES = {
     "rooftop",       # Geocodio, accuracy_type=rooftop
     "place_match",   # stage 13, an Overture place at the same street address (see places.py)
+    # stage 14: a coordinate Geocodio computed and its own accuracy_type refused, kept only when
+    # the postcode it returned is ours AND an Overture building stands within the radius. The
+    # label is Geocodio's opinion of its method; the building is a measurement (see anchor.py).
+    "interpolated_on_building",
 }
 
 
@@ -56,6 +60,18 @@ def e2_no_coordinate_from_a_non_rooftop_geocode(assertions: list[dict]) -> GateR
     return GateResult("E2", not bad,
                       f"{len(coords)} coordinates, {len(bad)} on a basis that is not "
                       f"{' or '.join(sorted(COORDINATE_BASES))}")
+
+
+def e8_every_anchored_coordinate_names_its_building(assertions: list[dict]) -> GateResult:
+    """An interpolated point is believable here only because a building was found under it. Without
+    the Overture id and the distance in the evidence, the claim cannot be re-checked when Overture
+    changes and is indistinguishable from publishing the accuracy_type we set out to stop trusting.
+    """
+    an = [a for a in assertions if a.get("basis") == "interpolated_on_building"]
+    bad = [a for a in an if "building:" not in (a.get("evidence") or "")
+           or "confirmed by" not in (a.get("evidence") or "")]
+    return GateResult("E8", not bad,
+                      f"{len(an)} anchored coordinates, {len(bad)} without an Overture building id")
 
 
 def e7_every_place_match_cites_the_address_that_agreed(assertions: list[dict]) -> GateResult:
@@ -133,7 +149,8 @@ def run_all(assertions: list[dict], before: list[dict] | None = None,
                e2_no_coordinate_from_a_non_rooftop_geocode(assertions),
                e3_every_footprint_names_its_building(assertions),
                e5_existence_is_advisory(assertions),
-               e7_every_place_match_cites_the_address_that_agreed(assertions)]
+               e7_every_place_match_cites_the_address_that_agreed(assertions),
+               e8_every_anchored_coordinate_names_its_building(assertions)]
     if before is not None and after is not None:
         results.insert(3, e4_enrichment_never_removes_a_field(before, after))
     return results

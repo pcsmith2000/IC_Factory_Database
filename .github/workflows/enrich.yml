@@ -31,7 +31,7 @@ on:
         default: ""
       stages:
         description: "which stages to run, comma separated"
-        default: "plan,locate,geocode,places,footprint,existence,load,promote"
+        default: "plan,locate,geocode,places,anchor,footprint,existence,load,promote"
       target:
         description: "which database to write to"
         type: choice
@@ -49,6 +49,9 @@ on:
       geocode_limit:
         description: "max Geocodio lookups this run (2500/day are free, the rest bills at $1/1000)"
         default: "2000"
+      anchor_radius:
+        description: "metres a building may be from an interpolated point and still confirm it (stage 14)"
+        default: "50"
       places_limit:
         description: "max STATES whose Overture places stage 13 may read (cost is per state, not per facility)"
         default: "6"
@@ -203,8 +206,25 @@ jobs:
         ${{ needs.branch.outputs.common_args }}
         --places-limit ${{ inputs.places_limit || 6 }}
 
-  footprint:
+  # Stage 14 runs AFTER geocode (whose answers it reads from the ledger) and BEFORE footprint,
+  # so a coordinate it confirms is available to be measured. It makes no provider call at all.
+  anchor:
     needs: [branch, places]
+    if: always() && needs.branch.result == 'success'
+    uses: ./.github/workflows/enrich-stage.yml
+    secrets: inherit
+    with:
+      stage: anchor
+      branch_id: ${{ needs.branch.outputs.branch_id }}
+      run_key: ${{ github.run_id }}
+      overture_release: "2026-08-19.0"
+      enabled: ${{ contains(inputs.stages, 'anchor') || github.event_name == 'workflow_run' }}
+      args: >-
+        ${{ needs.branch.outputs.common_args }}
+        --anchor-radius ${{ inputs.anchor_radius || 50 }}
+
+  footprint:
+    needs: [branch, anchor]
     if: always() && needs.branch.result == 'success'
     uses: ./.github/workflows/enrich-stage.yml
     secrets: inherit
