@@ -31,8 +31,8 @@ def settings():
         'pass_id': os.environ.get('PASS_ID', 'tako-address-1').strip(),
         'max_cost_usd': float(os.environ.get('MAX_COST_USD', '0.50')),
     }
-    if not 1 <= cfg['limit'] <= 100 or cfg['offset'] < 0:
-        raise ValueError('row_limit must be 1..100 and row_offset must be nonnegative')
+    if not 1 <= cfg['limit'] <= 200 or cfg['offset'] < 0:
+        raise ValueError('row_limit must be 1..200 and row_offset must be nonnegative')
     if cfg['address_scope'] not in ('missing_street_known_locality', 'needs_address', 'complete_address', 'all'):
         raise ValueError('address_scope must be missing_street_known_locality, needs_address, complete_address, or all')
     if any(not re.fullmatch(r'[A-Z]{2}', state) for state in cfg['states']):

@@ -1,5 +1,5 @@
 from copy import deepcopy
-from pipeline.recovery.run import eligible,validate_rooftop
+from pipeline.recovery.run import eligible,recovered_source_matches,validate_rooftop
 from pipeline.recovery.overture_rooftop import strict_address_match,strict_choose,control_gate
 from pipeline.recovery.internal_crossmatch import choose as choose_internal,choose_contact,choose_name_only,choose_address,distinctive
 
@@ -9,6 +9,12 @@ HIT={'accuracy_type':'rooftop','accuracy':1,'address_components':{'number':'10',
 def test_complete_physical_addresses_only():
     assert eligible(ROW)
     for k,v in [('address','PO Box 10'),('city',''),('state',''),('state','XX')]:assert not eligible({**ROW,k:v})
+
+def test_recovered_address_source_filter_is_explicit():
+    recovered={'_source':'tako_ai_search','address':'10 Main St'}
+    assert recovered_source_matches(recovered,'tako_ai_search')
+    assert not recovered_source_matches(recovered,'state_registry')
+    assert recovered_source_matches(recovered,'')
 
 def test_verified_rooftop_requires_all_address_components():
     assert validate_rooftop(ROW,{'response':{'results':[HIT]}})[1]=='rooftop_verified'

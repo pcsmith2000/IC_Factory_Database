@@ -78,6 +78,9 @@ def eligible(row):
     return bool(row.get('city') and str(row.get('state') or '').upper() in US_STATES and
                 re.match(r'^\d+[a-zA-Z]?\s',str(row.get('address') or '').strip()))
 
+def recovered_source_matches(recovered, required_source):
+    return not required_source or (recovered or {}).get('_source') == required_source
+
 
 def validate_rooftop(row,result):
     hits=(result.get('response') or {}).get('results') or []
@@ -101,6 +104,7 @@ def select_rows(db, pass_id, row_limit):
     # Retry flags from other workflows are deliberately not a selection criterion.
     rows=db.execute("SELECT r.facility_id,r.baseline,r.recovered_address,r.evidence,g.name AS live_name,g.city AS live_city,g.state AS live_state,g.release_tag AS live_release FROM coordinate_recovery_rows r JOIN golden_facility g ON g.facility_key=r.facility_id WHERE r.campaign_id=%s AND r.status='unresolved' AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts a WHERE a.campaign_id=r.campaign_id AND a.facility_id=r.facility_id AND a.pass_id=%s AND a.stage='geocode') ORDER BY r.facility_id",(CAMPAIGN,pass_id)).fetchall()
     out=[]; reasons=Counter();eligible_sources=Counter();blocked_sources=Counter();address_origin=Counter();completeness=Counter()
+    required_recovered_source=os.environ.get('RECOVERED_ADDRESS_SOURCE','').strip()
     completeness_by_source={};evidence_hosts={}
     for r in rows:
         frozen=r['baseline']
@@ -108,6 +112,8 @@ def select_rows(db, pass_id, row_limit):
         if norm(frozen.get('name'))!=norm(r.get('live_name')) or any(frozen.get(k) and norm(frozen.get(k))!=norm(r.get('live_'+k)) for k in ('city','state')):
             reasons['changed_identity']+=1;blocked_sources[source]+=1;continue
         recovered=r.get('recovered_address') or {}
+        if not recovered_source_matches(recovered,required_recovered_source):
+            reasons['recovered_address_source_filter']+=1;continue
         recovered_fields={k:recovered.get(k) for k in ('address','city','state','zip') if recovered.get(k)}
         if recovered.get('_evidence'):
             r['evidence']=list(r.get('evidence') or [])+list(recovered['_evidence'])
@@ -352,6 +358,7 @@ def execute(mode,pass_id,row_limit):
                  estimated_api_upper_bound_usd=round(fresh*.001,3),budget_ceiling_usd=float(campaign['api_ceiling']),
                  budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0,
                  recovery_input_diagnostics=diagnostics)
+    summary['recovered_address_source_filter']=os.environ.get('RECOVERED_ADDRESS_SOURCE','').strip() or None
     print(json.dumps(summary),flush=True)
     outcomes=Counter();inserted=0;calls=0
     if mode in ('geocode','cached'):

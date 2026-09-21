@@ -16,6 +16,9 @@ on:
       row_limit:
         description: 'Maximum rows (100 plan/geocode; 2000 cached-only)'
         default: '100'
+      recovered_address_source:
+        description: 'Optional recovered-address source filter (for example tako_ai_search)'
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -41,6 +44,7 @@ jobs:
           MODE: ${{ inputs.mode || 'plan' }}
           PASS_ID: ${{ inputs.pass_id || '1' }}
           ROW_LIMIT: ${{ inputs.row_limit || '100' }}
+          RECOVERED_ADDRESS_SOURCE: ${{ inputs.recovered_address_source }}
         run: python -m pipeline.recovery.run --mode "$MODE" --pass-id "$PASS_ID" --limit "$ROW_LIMIT"
       - uses: actions/upload-artifact@v4
         if: always()
