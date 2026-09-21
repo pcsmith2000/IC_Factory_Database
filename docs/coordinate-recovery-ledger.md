@@ -2,8 +2,8 @@
 
 Campaign: `missing-rooftops-2026-09-21`  
 Frozen cohort: 1,668 rows  
-Current result: 431 rooftop assertions recovered; 1,237 unresolved  
-Recorded API cost: $0.945896 of the $9.50 campaign ceiling
+Current result: 433 rooftop assertions recovered; 1,235 unresolved  
+Recorded API cost: $0.946896 before production-batch settlement, of the $9.50 campaign ceiling
 
 Times are GitHub Actions elapsed runtime. Repeated implementation-triggered plan/test runs are
 excluded; dry-run validation passes that directly informed a write are included.
@@ -42,3 +42,20 @@ excluded; dry-run validation passes that directly informed a write are included.
 |30|Authoritative-follow-up Tako read-only plan, 10 of 388 eligible rows; estimate $0.30 and cap $0.75|1m 01s|$0.000|
 |31|Authoritative-follow-up Tako pilot, 10/10 completed; 6 matched, 3 conflict, 1 review|3m 19s|$0.148211|
 |32|Strict Tako assertion plan, 2 address bundles and 8 assertions approved; 0 database writes|0m 26s|$0.000|
+
+## End-to-end batch reporting
+
+The detailed historical steps above are retained for audit. Subsequent user-facing
+reports group planning, research, assertion publication, and rooftop validation into
+one batch rather than counting each control action as a separate research pass.
+
+|Pass #|Pipeline or Action Used|Time|Cost|
+|---:|---|---:|---:|
+|30|Authoritative-follow-up pilot through assertion publication and rooftop geocoding: 10 researched, 2 address bundles published, 2 rooftops recovered|Research 3m 19s; end-to-end timing pending reconciliation|$0.149211|
+|31|Production Tako batch: 140 rows; [research run](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35638378694)|Running; 60-minute research window|Estimated $4.20; $8.40 reserved, actual pending|
+
+Pass 30 includes the historical detailed steps 30–32 above and the subsequent
+[assertion apply](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35637698399)
+and [rooftop execution](https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35638575769).
+These are not additional costs to add twice. The production reservation is not actual spend.
+All recovery writes are cited assertions; these runs made zero golden-table writes.
