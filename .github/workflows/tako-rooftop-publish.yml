@@ -1,9 +1,6 @@
 name: Publish reviewed cached rooftops
 run-name: Cached rooftop publication · ${{ inputs.mode || 'plan' }}
 on:
-  push:
-    branches: [feat/tako-rooftop-publish]
-    paths: [.github/workflows/tako-rooftop-publish.yml]
   workflow_dispatch:
     inputs:
       mode:
@@ -20,7 +17,7 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: ic-warehouse-pipeline
+  group: ${{ inputs.mode == 'apply' && 'ic-warehouse-pipeline' || format('rooftop-preview-{0}', github.run_id) }}
   cancel-in-progress: false
 jobs:
   publish:
