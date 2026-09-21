@@ -1,0 +1,86 @@
+name: Tako AI Search pass (read-only)
+run-name: Tako research · ${{ inputs.mode || 'plan' }} · ${{ inputs.row_limit || '10' }} rows
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan selects rows; research searches them; pilot uses the frozen 10-row reference input'
+        type: choice
+        options: [plan, research, pilot]
+        default: plan
+      row_limit:
+        description: 'Maximum selected rows (1–200)'
+        default: '10'
+      states:
+        description: 'State codes, comma-separated; blank = all'
+        default: ''
+      facility_ids:
+        description: 'Exact IC IDs, comma-separated; blank = all'
+        default: ''
+      missing_fields:
+        description: 'Missing ANY of: website,phone,email,address,name,city,state,zip; use all for no missing-field filter'
+        default: 'website,phone'
+      source_ids:
+        description: 'Has current-release evidence from ANY of these source IDs; blank = all'
+        default: ''
+      tiers:
+        description: 'Evidence tiers, comma-separated: T0,T1,T2,T3; blank = all'
+        default: ''
+      release_tag:
+        description: 'Exact golden release tag; blank = currently published rows'
+        default: ''
+      row_offset:
+        description: 'Skip this many eligible rows in deterministic order'
+        default: '0'
+      sample_seed:
+        description: 'Stable sampling seed; keep unchanged to compare runs'
+        default: '20260920'
+permissions:
+  contents: read
+concurrency:
+  group: tako-readonly-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RESEARCH_OUT: research-output
+      ROW_LIMIT: ${{ inputs.row_limit || '10' }}
+      ROW_OFFSET: ${{ inputs.row_offset || '0' }}
+      SAMPLE_SEED: ${{ inputs.sample_seed || '20260920' }}
+      STATES: ${{ inputs.states }}
+      FACILITY_IDS: ${{ inputs.facility_ids }}
+      MISSING_FIELDS: ${{ inputs.missing_fields }}
+      SOURCE_IDS: ${{ inputs.source_ids }}
+      TIERS: ${{ inputs.tiers }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      RESEARCH_MODE: ${{ inputs.mode || 'plan' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - name: Test research protections
+        run: pytest tests/test_web_research.py -q
+      - name: Select rows (database-enforced read-only)
+        if: env.RESEARCH_MODE != 'pilot'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: python -m pipeline.web_research.select
+      - name: Research without database credentials
+        if: env.RESEARCH_MODE != 'plan'
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
+        run: python -m pipeline.web_research.run --mode "$RESEARCH_MODE"
+      - name: Compare frozen pilot to independent reference
+        if: always() && env.RESEARCH_MODE == 'pilot'
+        run: python -m pipeline.web_research.evaluate
+      - name: Retain research results and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tako-research-${{ github.run_id }}
+          path: research-output/
+          retention-days: 14

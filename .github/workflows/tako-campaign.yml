@@ -1,0 +1,71 @@
+name: Tako ADL research campaign (read-only)
+run-name: Tako ADL campaign round ${{ inputs.round || '1' }} · batches of 100
+on:
+  workflow_dispatch:
+    inputs:
+      round:
+        description: 'Research round number'
+        default: '1'
+      prior_runs:
+        description: 'ALL previous campaign run IDs, comma-separated; blank for first round'
+        default: ''
+      resume_run:
+        description: 'Incomplete run from this same round; skip its completed facilities'
+        default: ''
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: tako-adl-campaign
+  cancel-in-progress: false
+jobs:
+  research:
+    strategy:
+      fail-fast: false
+      matrix:
+        batch: [0, 1, 2]
+    runs-on: ubuntu-latest
+    timeout-minutes: 110
+    env:
+      RESEARCH_OUT: research-output
+      RESEARCH_CACHE_ROOT: campaign-input/prior
+      RESEARCH_TIME_LIMIT_SECONDS: '5700'
+      ROUND: ${{ inputs.round || '1' }}
+      PRIOR_RUNS: ${{ inputs.prior_runs }}
+      RESUME_RUN: ${{ inputs.resume_run }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_web_research.py -q
+      - name: Download frozen baseline and earlier evidence
+        run: |
+          gh run download 35541907051 --dir campaign-input/baseline/first
+          gh run download 35541991622 --dir campaign-input/baseline/rest
+          python - <<'PY'
+          import os,re,subprocess
+          for rid in filter(None,os.environ['PRIOR_RUNS'].split(',')):
+              if not re.fullmatch(r'\d+',rid):raise ValueError('Invalid run ID')
+              subprocess.run(['gh','run','download',rid,'--dir',f'campaign-input/prior/{rid}'],check=True)
+          rid=os.environ['RESUME_RUN']
+          if rid:
+              if not re.fullmatch(r'\d+',rid):raise ValueError('Invalid resume run ID')
+              subprocess.run(['gh','run','download',rid,'--dir','campaign-input/resume'],check=True)
+          PY
+      - name: Select frozen batch
+        run: python -m pipeline.web_research.campaign prepare --batch ${{ matrix.batch }} --round "$ROUND"
+      - name: Research with cost estimate, without database credentials
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
+        run: python -m pipeline.web_research.campaign execute
+      - name: Count new supported details
+        if: always()
+        run: python -m pipeline.web_research.campaign report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tako-campaign-${{ github.run_id }}-${{ matrix.batch }}
+          path: research-output/
+          retention-days: 30

@@ -1,0 +1,22 @@
+{
+  "mode": "apply",
+  "inserted": 179,
+  "already_present": 0,
+  "verified": 179,
+  "facilities": 88,
+  "skipped": 0,
+  "plan_sha256": "8522c9a48ab7d64ae56268585e649fcdbbee7687b8d6df1f2b6c9f7947a37bd2",
+  "golden_writes": 0,
+  "source": "tako_ai_search",
+  "source_name": "Tako AI Search",
+  "run_url": "https://github.com/pcsmith2000/IC_Factory_Database/actions/runs/35547749508",
+  "plan_run": 35547568047,
+  "by_field": {
+    "phone": 45,
+    "website": 54,
+    "email": 3,
+    "zip": 44,
+    "address": 33
+  },
+  "precedence_code_status": "Implemented and tested in PR23; not yet merged to main. No golden promotion performed."
+}

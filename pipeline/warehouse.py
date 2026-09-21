@@ -39,6 +39,7 @@ GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_l
                  # measured/concluded by stages 11-12, and employee_notes from the feedback path
                  "building_sqft", "existence_flag", "employee_notes"]
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
+    "tako_ai_search": {"name": "Tako AI Search", "class": "tako_ai_search"},
     "adl_employee_feedback": {"name": "ADL employee feedback", "class": "human_feedback"},
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},
     "lookup": {"name": "Layer 4 entity resolution", "class": "lookup"},
