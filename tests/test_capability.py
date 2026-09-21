@@ -429,3 +429,13 @@ def test_the_predict_cli_writes_an_artifact_the_gates_accept(tmp_path, monkeypat
     assert cap._main(["--build", str(tmp_path), "--predict", "5", "--min-confidence", "0.9",
                       "--assertions-out", str(out)]) == 0
     assert json.loads(out.read_text()) == []
+
+
+def test_the_load_stage_knows_this_stage_exists():
+    """_load_assertions reads a hardcoded list of stage files. A stage missing from it is not an
+    error, it is silence: load finds no file, writes nothing, and reports success. Stage 15 was
+    missing, so a full pass would have been gated and then dropped on the floor."""
+    from pipeline.enrich import run as enrich_run
+    assert "capability" in enrich_run.ASSERTION_STAGES
+    # the file this stage writes is the one load looks for
+    assert cap.SOURCE_ID == "capability"

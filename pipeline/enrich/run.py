@@ -66,9 +66,17 @@ def _emit(out: Path, stage: str, metrics: dict, table: list[tuple[str, object]])
             fh.write(md)
 
 
+# Every stage that writes assertions, and the list is exhaustive on purpose: a stage missing from
+# it is not an error, it is SILENCE — load reads the files it knows about, finds nothing for the
+# one nobody added, and reports success having written none of it. `capability` (stage 15) was
+# missing here and its 12,000-odd assertions would have been collected into an artifact, gated,
+# and then quietly dropped on the floor.
+ASSERTION_STAGES = ("locate", "geocode", "places", "anchor", "footprint", "existence", "capability")
+
+
 def _load_assertions(out: Path) -> list[dict]:
     got = []
-    for stage in ("locate", "geocode", "places", "anchor", "footprint", "existence"):
+    for stage in ASSERTION_STAGES:
         f = out / f"{stage}.assertions.json"
         if f.exists():
             got.extend(json.loads(f.read_text()))
