@@ -27,6 +27,8 @@ def settings():
         'offset': int(os.environ.get('ROW_OFFSET', '0')),
         'seed': os.environ.get('SAMPLE_SEED', '20260921').strip(),
         'states': [v.strip().upper() for v in os.environ.get('STATES', '').split(',') if v.strip()],
+        # Primary-name source ids (registry ids such as adl_4ward, adl_july); blank = every source.
+        'sources': [v.strip() for v in os.environ.get('SOURCE_IDS', '').split(',') if v.strip()],
         'address_scope': os.environ.get('ADDRESS_SCOPE', 'missing_street_known_locality').strip(),
         'pass_id': os.environ.get('PASS_ID', 'tako-address-1').strip(),
         'max_cost_usd': float(os.environ.get('MAX_COST_USD', '0.50')),
@@ -37,6 +39,8 @@ def settings():
         raise ValueError('address_scope must be missing_street_known_locality, needs_address, complete_address, or all')
     if any(not re.fullmatch(r'[A-Z]{2}', state) for state in cfg['states']):
         raise ValueError('states must be comma-separated two-letter codes')
+    if any(not re.fullmatch(r'[a-z0-9_]{1,64}', source) for source in cfg['sources']):
+        raise ValueError('source_ids must be comma-separated registry source ids')
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,63}', cfg['pass_id']):
         raise ValueError('pass_id must be a short stable identifier')
     if not 0 < cfg['max_cost_usd'] <= 9.50:
@@ -59,6 +63,8 @@ def choose(rows, cfg):
         if any(baseline.get(k) and norm(baseline.get(k)) != norm(raw.get('live_' + k)) for k in ('city', 'state')):
             continue
         if cfg['states'] and str(baseline.get('state') or '').upper() not in cfg['states']:
+            continue
+        if cfg.get('sources') and str(baseline.get('name__source') or '') not in cfg['sources']:
             continue
         is_complete = complete_address(baseline)
         if cfg['address_scope'] == 'missing_street_known_locality':

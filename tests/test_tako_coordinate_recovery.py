@@ -41,6 +41,17 @@ def test_high_confidence_default_requires_known_city_state_and_missing_street():
     assert eligible == 2 and {row['facility_id'] for row in broad} == {'IC-2', 'IC-4'}
 
 
+def test_source_filter_selects_by_primary_name_source():
+    extra = rows() + [{'facility_id': 'IC-5', 'baseline': {'name': 'ADL Plant', 'city': 'Walpole', 'state': 'NH',
+                                                          'name__source': 'adl_july'},
+                       'recovered_address': None, 'live_name': 'ADL Plant', 'live_city': 'Walpole',
+                       'live_state': 'NH', 'live_release': 'r1'}]
+    selected, eligible = choose(extra, {**cfg(), 'sources': ['adl_4ward', 'adl_july']})
+    assert eligible == 1 and selected[0]['facility_id'] == 'IC-5'
+    selected, eligible = choose(extra, {**cfg(), 'sources': []})
+    assert eligible == 2
+
+
 def test_research_requires_exact_unchanged_plan(tmp_path, monkeypatch):
     plan_dir = tmp_path / 'plan'; out = tmp_path / 'out'; plan_dir.mkdir()
     input_text = json.dumps([{'facility_id': 'IC-1'}], indent=2)

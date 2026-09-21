@@ -22,6 +22,9 @@ on:
       states:
         description: 'Optional state codes, comma-separated'
         default: ''
+      source_ids:
+        description: 'Optional primary-name source ids, comma-separated (for example adl_4ward,adl_july)'
+        default: ''
       address_scope:
         description: 'Which address-completeness cohort to select'
         type: choice
@@ -57,6 +60,7 @@ jobs:
       ROW_LIMIT: ${{ inputs.row_limit || '10' }}
       ROW_OFFSET: ${{ inputs.row_offset || '0' }}
       STATES: ${{ inputs.states }}
+      SOURCE_IDS: ${{ inputs.source_ids }}
       ADDRESS_SCOPE: ${{ inputs.address_scope || 'missing_street_known_locality' }}
       SAMPLE_SEED: ${{ inputs.sample_seed || '20260921' }}
       PASS_ID: ${{ inputs.pass_id || 'tako-address-1' }}
