@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 from pipeline.enrich import cache
 from pipeline.enrich.geocode import one_line, _post
 from pipeline.enrich._db import assertion, _rows_for
-from pipeline.web_research.rooftops import street_matches
+from pipeline.web_research.rooftops import street_matches, street_rule
 from pipeline.web_research.run import norm
 
 CAMPAIGN = 'missing-rooftops-2026-09-21'
@@ -160,7 +160,8 @@ def reserve(db,r,pass_id,query,cost):
 def append_coordinate(db,r,hit):
     point=hit['location'];b=r['baseline'];workflow=run_url()
     document=json.dumps({'campaign_id':CAMPAIGN,'workflow':workflow,'address':one_line(b),'address_evidence':r['evidence'],
-                         'geocodio':hit,'checks':['rooftop accuracy','street number','street name','city','state','postal code when available']},sort_keys=True)
+                         'geocodio':hit,'checks':['rooftop accuracy','street number','street name','city','state','postal code when available'],
+                         'street_match':street_rule(b['address'],hit.get('address_components') or {})[1]},sort_keys=True)
     a=assertion(r['facility_id'],'lat_lon',f"{point['lat']},{point['lng']}",source_id='geocode:geocodio',basis='rooftop',confidence=hit.get('accuracy'),evidence=workflow+' :: '+document)
     now=datetime.now(timezone.utc).isoformat(timespec='seconds')
     ev,fact=_rows_for(a,r['live_release'],now[:10],now)

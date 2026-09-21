@@ -8,6 +8,7 @@ from pathlib import Path
 from .run import norm
 from .campaign import normalized_detail
 from pipeline.enrich.geocode import _post, one_line
+from pipeline.recovery.streets import street_equivalent
 
 
 def validate(rows):
@@ -21,14 +22,23 @@ def validate(rows):
         if 'pobox' in norm(r['address']):raise ValueError('Mailing address cannot locate a plant')
 
 
-def street_matches(address, components):
+def street_rule(address, components):
+    """The rule under which the source street and the geocoder's street are the same street, or
+    the reason they are not — see pipeline.recovery.streets.  A verbatim comparison rejected 85
+    rooftop results in the first campaign pass on spellings like "Hwy 231" / "US-231"."""
     street=re.sub(r'^\d+[a-zA-Z]?\s*','',address).strip()
     street=re.split(r'(?i)\b(?:suite|ste|unit|bldg|building)\b|#',street,maxsplit=1)[0].strip()
     unit=str(components.get('unit_number') or '')
     if unit:
         street=re.sub(r'\s+'+re.escape(unit)+r'$','',street).strip()
     returned=components.get('formatted_street')
-    return bool(returned) and normalized_detail('address',street)==normalized_detail('address',returned)
+    if not returned:return False,'missing_street'
+    if normalized_detail('address',street)==normalized_detail('address',returned):return True,'exact'
+    return street_equivalent(street,returned)
+
+
+def street_matches(address, components):
+    return street_rule(address, components)[0]
 
 
 def run(rows, out, prior=None):
