@@ -1,6 +1,7 @@
 from copy import deepcopy
 from pipeline.recovery.run import eligible,validate_rooftop
 from pipeline.recovery.overture_rooftop import strict_address_match,strict_choose,control_gate
+from pipeline.recovery.internal_crossmatch import choose as choose_internal,distinctive
 
 ROW={'address':'10 Main Street','city':'Boston','state':'MA','zip':'02101'}
 HIT={'accuracy_type':'rooftop','accuracy':1,'address_components':{'number':'10','formatted_street':'Main St','city':'Boston','state_province':'MA','postal_code':'02101'},'location':{'lat':42.1,'lng':-71.1}}
@@ -51,3 +52,16 @@ def test_overture_control_gate_is_pre_registered_and_strict():
     assert control_gate([20.0]*10)[0]
     assert not control_gate([20.0]*9)[0]
     assert not control_gate([20.0]*9+[600.0])[0]
+
+
+def test_internal_crossmatch_requires_exact_distinctive_site_and_one_coordinate():
+    target={'facility_id':'IC-T','name':'Acme Components LLC','city':'Boston','state':'MA'}
+    donor={'facility_id':'IC-D','name':'ACME COMPONENTS INC','city':'BOSTON','state':'ma',
+           'value':'42.1,-71.1','assertion_id':'a1'}
+    picked,refused=choose_internal([target],[donor])
+    assert len(picked)==1 and picked[0]['donor']['facility_id']=='IC-D'
+    assert not refused
+    conflicting={**donor,'facility_id':'IC-D2','value':'42.2,-71.2','assertion_id':'a2'}
+    assert choose_internal([target],[donor,conflicting])[0]==[]
+    assert choose_internal([{**target,'city':'Cambridge'}],[donor])[0]==[]
+    assert distinctive('Acme Components') and not distinctive('ABC')
