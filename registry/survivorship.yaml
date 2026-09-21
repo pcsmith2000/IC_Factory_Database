@@ -16,7 +16,10 @@
 #            loses to the very coordinate stage 10 exists to replace.
 #   address  `class:enrichment` sits LAST. A web-cited address is worth having where no registry
 #            publishes one, and is worth less than any registry that does.
-version: 3
+# Tako AI Search is always below the listed AND unlisted sources. golden._rank enforces
+# this source-wide floor, rather than allowing it to tie an unlisted source on recency.
+lowest_priority_sources: [tako_ai_search]
+version: 4
 default_order: [adl_employee_feedback, operator, site_visit, "class:A", "class:D", "class:B", "class:C"]
 fields:
   name:            {order: [adl_employee_feedback, operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
