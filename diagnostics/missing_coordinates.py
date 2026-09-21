@@ -2,7 +2,15 @@
 import json
 from collections import Counter, defaultdict
 from pathlib import Path
-from pipeline.web_research.publish import connection
+import os
+import psycopg
+from psycopg.rows import dict_row
+
+def connection():
+    url=next((os.environ[k] for k in ('DATABASE_URL_UNPOOLED','DATABASE_URL') if os.environ.get(k) and os.environ[k].isascii()),'')
+    if not url:raise RuntimeError('No database connection available')
+    return psycopg.connect(url,connect_timeout=20,row_factory=dict_row,
+                          options='-c default_transaction_read_only=on -c statement_timeout=60000')
 from pipeline.enrich.cache import locate_key, geocode_key, places_state_key
 from pipeline.enrich.geocode import one_line
 from pipeline.enrich.places import RELEASE
