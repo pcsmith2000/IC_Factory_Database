@@ -62,3 +62,18 @@ User-authorized import run **35547749508** committed and verified **179 assertio
 facilities**: 54 websites, 45 phones, 3 emails, 33 addresses and 44 ZIP codes. The receipt is
 `research/adl-2026-09-20/assertion-import-receipt.json`. No rooftop coordinates or unresolved
 conflicts were imported, and golden values were unchanged. Broad research remains paused.
+
+
+## Publish reviewed cached rooftops
+
+`Publish reviewed cached rooftops` revalidates the complete saved cache from run35545590293;
+no external geocoding/search credentials are provided. `plan` reads a repeatable database
+snapshot and records the exact proposed assertions and golden-cell updates. `apply` requires
+the plan run and SHA256, shares the warehouse execution lock, and aborts if the snapshot changed.
+
+Only reviewed matching rooftops can assert `lat_lon` under `geocode:geocodio`, basis `rooftop`.
+Current facility identity and the winning address must match the reviewed/geocoded site.
+Human coordinates, conflicting existing rooftops and unresolved address corrections are held.
+The normal survivorship function also promotes previously approved Tako basics into blank
+cells where that source wins. This is scoped promotion: unrelated facts/facilities are untouched.
+All assertions, provenance and golden updates commit together, with exact read-back verification.

@@ -1,0 +1,412 @@
+{
+  "IC-09320": {
+    "name": "Mercer",
+    "city": "Conway",
+    "state": "AR"
+  },
+  "IC-11954": {
+    "name": "Builders FirstSource",
+    "city": "OLIVEHURST",
+    "state": "CA"
+  },
+  "IC-21206": {
+    "name": "Builders FirstSource",
+    "city": "Lake City",
+    "state": "FL"
+  },
+  "IC-22544": {
+    "name": "Builders FirstSource",
+    "city": "ORLANDO",
+    "state": "FL"
+  },
+  "IC-50700": {
+    "name": "Sterling Structural - IL",
+    "city": "Phoenix",
+    "state": "IL"
+  },
+  "IC-51359": {
+    "name": "Rochester Homes Inc",
+    "city": "Rochester",
+    "state": "IN"
+  },
+  "IC-55084": {
+    "name": "MMY US",
+    "city": "Louisville",
+    "state": "KY"
+  },
+  "IC-66137": {
+    "name": "Carolina Structural Systems",
+    "city": "Star",
+    "state": "NC"
+  },
+  "IC-71971": {
+    "name": "PDJ Components",
+    "city": "CHESTER",
+    "state": "NY"
+  },
+  "IC-77516": {
+    "name": "SUPERIOR WALLS - ADVANCED CONCRETE SYSTEMS",
+    "city": "MIDDLEBURG",
+    "state": "PA"
+  },
+  "IC-78042": {
+    "name": "Icon Legacy Custom Modular Homes, LLC",
+    "city": "SELINSGROVE",
+    "state": "PA"
+  },
+  "IC-78067": {
+    "name": "Signature Building Systems",
+    "city": "MOOSIC",
+    "state": "PA"
+  },
+  "IC-79268": {
+    "name": "Champion Modular, Inc. #41",
+    "city": "LIVERPOOL",
+    "state": "PA"
+  },
+  "IC-89084": {
+    "name": "Builders FirstSource",
+    "city": "FREDERICKSBURG",
+    "state": "VA"
+  },
+  "IC-90459": {
+    "name": "THE TRUSS COMPANY",
+    "city": "SUMNER",
+    "state": "WA"
+  },
+  "IC-93472": {
+    "name": "Bensonwood - Tektoniks & Unity Homes",
+    "city": "KEENE",
+    "state": "NH"
+  },
+  "IC-93483": {
+    "name": "Pennwest Homes",
+    "city": "Emlenton",
+    "state": "PA"
+  },
+  "IC-93634": {
+    "name": "VBC Manufacturing",
+    "city": "Berwick",
+    "state": "PA"
+  },
+  "IC-93701": {
+    "name": "CLAYTON TINY HOMES",
+    "city": "ADDISON",
+    "state": "AL"
+  },
+  "IC-93853": {
+    "name": "Vantem Clio",
+    "city": "Clio",
+    "state": "SC"
+  },
+  "IC-93968": {
+    "name": "Apex Homes",
+    "city": "Middleburg",
+    "state": "PA"
+  },
+  "IC-94090": {
+    "name": "BiltWise Structures LLC",
+    "city": "Greenwood",
+    "state": "SC"
+  },
+  "IC-94316": {
+    "name": "Builders FirstSource",
+    "city": "Ballston Spa",
+    "state": "NY"
+  },
+  "IC-94319": {
+    "name": "Builders FirstSource",
+    "city": "Carrollton",
+    "state": "TX"
+  },
+  "IC-94359": {
+    "name": "Builders FirstSource",
+    "city": "Sanger",
+    "state": "CA"
+  },
+  "IC-94375": {
+    "name": "Builders FirstSource",
+    "city": "West Point",
+    "state": "VA"
+  },
+  "IC-94379": {
+    "name": "Builders FirstSource",
+    "city": "Yemassee",
+    "state": "SC"
+  },
+  "IC-94463": {
+    "name": "AUTOVOL INC",
+    "city": "Nampa",
+    "state": "ID"
+  },
+  "IC-94577": {
+    "name": "THE MURUS COMPANY INC",
+    "city": "MANSFIELD",
+    "state": "PA"
+  },
+  "IC-94881": {
+    "name": "Freres Engineered Wood",
+    "city": "Lyons",
+    "state": "OR"
+  },
+  "IC-94890": {
+    "name": "TimberLab",
+    "city": "Portland",
+    "state": "OR"
+  },
+  "IC-94958": {
+    "name": "Z Modular LLC",
+    "city": "Chandler",
+    "state": "AZ"
+  },
+  "IC-95174": {
+    "name": "ACME PANEL COMPANY",
+    "city": "RADFORD",
+    "state": "VA"
+  },
+  "IC-95181": {
+    "name": "FISCHERSIPS",
+    "city": "LOUISVILLE",
+    "state": "KY"
+  },
+  "IC-95183": {
+    "name": "LAMIT BY ARMSTRONG",
+    "city": "HEBRON",
+    "state": "OH"
+  },
+  "IC-95201": {
+    "name": "Builders FirstSource",
+    "city": "Casa Grande",
+    "state": "AZ"
+  },
+  "IC-95204": {
+    "name": "Builders FirstSource",
+    "city": "Perris",
+    "state": "CA"
+  },
+  "IC-95208": {
+    "name": "American Builders Supply",
+    "city": "Winter Haven",
+    "state": "FL"
+  },
+  "IC-95211": {
+    "name": "Builders FirstSource",
+    "city": "Plant City",
+    "state": "FL"
+  },
+  "IC-95216": {
+    "name": "True House",
+    "city": "Crecent City",
+    "state": "FL"
+  },
+  "IC-95217": {
+    "name": "Builders FirstSource",
+    "city": "Norcross",
+    "state": "GA"
+  },
+  "IC-95220": {
+    "name": "Forge CFS Components",
+    "city": "Norcross",
+    "state": "GA"
+  },
+  "IC-95222": {
+    "name": "United Structures of Georgia",
+    "city": "Cairo",
+    "state": "GA"
+  },
+  "IC-95228": {
+    "name": "84 Lumber",
+    "city": "Kings Mountain",
+    "state": "NC"
+  },
+  "IC-95231": {
+    "name": "The Building Center",
+    "city": "Gastonia",
+    "state": "NC"
+  },
+  "IC-95233": {
+    "name": "NextGen Building Components",
+    "city": "Farmington",
+    "state": "NY"
+  },
+  "IC-95234": {
+    "name": "SR Sloan",
+    "city": "Whitesboro",
+    "state": "NY"
+  },
+  "IC-95236": {
+    "name": "Universal Forest Products",
+    "city": "Hudson",
+    "state": "NY"
+  },
+  "IC-95237": {
+    "name": "Builders FirstSource",
+    "city": "Beaverton",
+    "state": "OR"
+  },
+  "IC-95238": {
+    "name": "The Truss Company",
+    "city": "Eugene",
+    "state": "OR"
+  },
+  "IC-95239": {
+    "name": "The Truss Company",
+    "city": "Redmond",
+    "state": "OR"
+  },
+  "IC-95242": {
+    "name": "Trussco Manufacturing",
+    "city": "North Kingstown",
+    "state": "RI"
+  },
+  "IC-95245": {
+    "name": "Universal Forest Products",
+    "city": "Conway",
+    "state": "SC"
+  },
+  "IC-95247": {
+    "name": "Builders FirstSource",
+    "city": "Conroe",
+    "state": "TX"
+  },
+  "IC-95251": {
+    "name": "The Truss Company",
+    "city": "Burlington",
+    "state": "WA"
+  },
+  "IC-95252": {
+    "name": "The Truss Company",
+    "city": "Centralia",
+    "state": "WA"
+  },
+  "IC-95254": {
+    "name": "Modern Living Solutions / Greystar",
+    "city": "Knox",
+    "state": "PA"
+  },
+  "IC-95260": {
+    "name": "Clayton - Bonham",
+    "city": "Bonham",
+    "state": "TX"
+  },
+  "IC-95270": {
+    "name": "Amtex Corp.",
+    "city": "Garland",
+    "state": "TX"
+  },
+  "IC-95275": {
+    "name": "CAVCO INDUSTRIES - CAVCO - NAPPANEE",
+    "city": "NAPPANEE",
+    "state": "IN"
+  },
+  "IC-95291": {
+    "name": "DANT CLAYTON CORPORATION",
+    "city": "LOUISVILLE",
+    "state": "KY"
+  },
+  "IC-95293": {
+    "name": "Blueprint Robotics - Baltimore",
+    "city": "BALTIMORE",
+    "state": "MD"
+  },
+  "IC-95296": {
+    "name": "Bankersteel - Lynchburg (Main plant 1619 Wythe Road)",
+    "city": "LYNCHBURG",
+    "state": "VA"
+  },
+  "IC-95297": {
+    "name": "Bankersteel - Lynchburg (South plant 351 Rangoon St)",
+    "city": "LYNCHBURG",
+    "state": "VA"
+  },
+  "IC-95298": {
+    "name": "Bankersteel - South Plainfield",
+    "city": "SOUTH PLAINFIELD",
+    "state": "NJ"
+  },
+  "IC-95301": {
+    "name": "B.Public Prefab",
+    "city": "LAS VEGAS",
+    "state": "NM"
+  },
+  "IC-95304": {
+    "name": "Sterling Structural - TX",
+    "city": "LUFKIN",
+    "state": "TX"
+  },
+  "IC-95309": {
+    "name": "TimberLab - Middleburg",
+    "city": "Millersburg",
+    "state": "OR"
+  },
+  "IC-95311": {
+    "name": "DuraPod - Chalfont",
+    "city": "Chalfont",
+    "state": "PA"
+  },
+  "IC-95312": {
+    "name": "B&T Manufacturing",
+    "city": "RAPID CITY",
+    "state": "SD"
+  },
+  "IC-95315": {
+    "name": "BathSystems",
+    "city": "HOUSTON",
+    "state": "TX"
+  },
+  "IC-95324": {
+    "name": "BARDEN BUILDING PRODUCTS / NORTH AMERICAN TRUSS",
+    "city": "MIDDLEPORT",
+    "state": "NY"
+  },
+  "IC-95331": {
+    "name": "PORTERSIPS DIVISION OF PORTER CORP",
+    "city": "HOLLAND",
+    "state": "MI"
+  },
+  "IC-95332": {
+    "name": "BLUEPRINT ROBOTICS",
+    "city": "BALTIMORE",
+    "state": "MD"
+  },
+  "IC-95340": {
+    "name": "CLARK PACIFIC - WOODLAND PLANT",
+    "city": "WOODLAND",
+    "state": "CA"
+  },
+  "IC-96173": {
+    "name": "True House",
+    "city": "JACKSONVILLE",
+    "state": "FL"
+  },
+  "IC-96338": {
+    "name": "Atlantic PreFab",
+    "city": "Wilton",
+    "state": "NH"
+  },
+  "IC-96451": {
+    "name": "Cornerstone Building",
+    "city": "Uxbridge",
+    "state": "MA"
+  },
+  "IC-96574": {
+    "name": "Louws Truss",
+    "city": "Burlington",
+    "state": "WA"
+  },
+  "IC-96583": {
+    "name": "Mainely Trusses",
+    "city": "Fairfield",
+    "state": "ME"
+  },
+  "IC-96658": {
+    "name": "Precision Wall & Truss",
+    "city": "Landisville",
+    "state": "PA"
+  },
+  "IC-96710": {
+    "name": "Shelter Systems",
+    "city": "Westminster",
+    "state": "MD"
+  }
+}
