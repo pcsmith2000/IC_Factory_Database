@@ -55,10 +55,19 @@ def run_url():
     return 'https://github.com/'+os.environ.get('GITHUB_REPOSITORY','pcsmith2000/IC_Factory_Database')+'/actions/runs/'+os.environ.get('GITHUB_RUN_ID','local')
 
 
+def ensure_schema():
+    # In its own transaction, committed before any pass starts. ALTER TABLE ... ADD COLUMN IF NOT
+    # EXISTS takes an ACCESS EXCLUSIVE lock even when the column exists, and holding it for the
+    # length of a pass (an Overture pilot reads S3 for many minutes inside one transaction) blocked
+    # every other reader of coordinate_recovery_rows until lock_timeout — a Tako plan failed with
+    # LockNotAvailable while a pilot ran.
+    with connect() as db:
+        for sql in SCHEMA:db.execute(sql)
+        db.execute(cache.DDL)
+
+
 def freeze(db):
     from psycopg.types.json import Jsonb
-    for sql in SCHEMA:db.execute(sql)
-    db.execute(cache.DDL)
     db.execute('SELECT pg_advisory_xact_lock(73941668)')
     campaign=db.execute('SELECT * FROM coordinate_recovery_campaigns WHERE campaign_id=%s',(CAMPAIGN,)).fetchone()
     if campaign:return campaign
@@ -261,6 +270,7 @@ def historical_cached(db, pass_id):
 
 def execute(mode,pass_id,row_limit):
     from psycopg.types.json import Jsonb
+    ensure_schema()
     with connect() as db:
         campaign=freeze(db)
         if mode in ('fl_bcis','md_labor','md_labor_crossmatch'):
