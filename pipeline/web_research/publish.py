@@ -62,6 +62,8 @@ def select_import(manifest, golden, existing):
         reason = None
         if not g:
             reason = 'Facility no longer in current golden table'
+        elif any(normalized_detail(f,g.get(f)) != normalized_detail(f,v) for f,v in r.get('expected_identity',{}).items()):
+            reason = 'Facility identity changed since the reviewed snapshot'
         elif str(g.get(field) or '').strip() and normalized_detail(field, g[field]) != normalized_detail(field, r['value']):
             reason = 'Current golden field contains a different value; hold for review'
         elif any(str(a.get('value') or '').strip() and
@@ -105,8 +107,9 @@ def run(mode, out, plan_path=None, expected_sha=None):
             db.execute('LOCK TABLE golden_facility IN SHARE MODE')
         golden = db.execute('SELECT facility_key, release_tag, ' + ','.join(FIELDS) +
                             ' FROM golden_facility WHERE facility_key = ANY(%s) ORDER BY facility_key', (ids,)).fetchall()
-        existing = db.execute('SELECT facility_key, field_key, source_key, value FROM fact_assertions '
-                              'WHERE facility_key = ANY(%s)', (ids,)).fetchall()
+        existing = db.execute('SELECT a.facility_key,a.field_key,a.source_key,a.value FROM fact_assertions a '
+                              'JOIN golden_facility g ON g.facility_key=a.facility_key '
+                              "WHERE a.facility_key=ANY(%s) AND (a.release_tag=g.release_tag OR a.source_class IN ('enrichment','tako_ai_search'))", (ids,)).fetchall()
         accepted, skipped = select_import(manifest, golden, existing)
         plan = dict(manifest_sha256=digest(manifest), golden_sha256=digest(golden),
                     assertions=accepted, skipped=skipped, source=SOURCE,

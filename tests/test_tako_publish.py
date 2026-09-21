@@ -65,3 +65,10 @@ def test_unapproved_manifest_is_rejected(tmp_path):
     m=manifest();m.update(source_id=SOURCE,approval='approved');m['assertions'][0]['approved']=False
     p=tmp_path/'input.json';p.write_text(json.dumps(m))
     with pytest.raises(ValueError):load_manifest(p)
+
+
+def test_recycled_or_changed_facility_identity_is_held():
+    m=manifest();m['assertions'][0]['expected_identity']={'name':'Original Plant','city':'Boston','state':'MA'}
+    g=[{'facility_key':'IC-1','release_tag':'current','name':'Different Plant','city':'Boston','state':'MA'}]
+    accepted,skipped=select_import(m,g,[])
+    assert not accepted and 'identity changed' in skipped[0]['reason']
