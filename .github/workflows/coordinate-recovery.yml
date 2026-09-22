@@ -19,6 +19,12 @@ on:
       recovered_address_source:
         description: 'Optional recovered-address source filter (for example tako_ai_search)'
         default: ''
+      campaign_id:
+        description: 'Campaign to work (blank = missing-rooftops-2026-09-21); a new id freezes a new cohort from the current golden table'
+        default: ''
+      ceiling_usd:
+        description: 'API ceiling for a NEW campaign only (its share of the $10; ignored for an existing campaign)'
+        default: '9.50'
 permissions:
   contents: read
 concurrency:
@@ -45,6 +51,8 @@ jobs:
           PASS_ID: ${{ inputs.pass_id || '1' }}
           ROW_LIMIT: ${{ inputs.row_limit || '100' }}
           RECOVERED_ADDRESS_SOURCE: ${{ inputs.recovered_address_source }}
+          RECOVERY_CAMPAIGN: ${{ inputs.campaign_id }}
+          RECOVERY_CEILING_USD: ${{ inputs.ceiling_usd || '9.50' }}
         run: python -m pipeline.recovery.run --mode "$MODE" --pass-id "$PASS_ID" --limit "$ROW_LIMIT"
       - uses: actions/upload-artifact@v4
         if: always()

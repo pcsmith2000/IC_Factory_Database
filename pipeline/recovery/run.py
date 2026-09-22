@@ -17,8 +17,12 @@ from pipeline.enrich._db import assertion, _rows_for
 from pipeline.web_research.rooftops import street_matches, street_rule
 from pipeline.web_research.run import norm
 
-CAMPAIGN = 'missing-rooftops-2026-09-21'
-LIMIT = Decimal('9.50')  # leave $0.50 below the user's $10 limit
+# A campaign freezes the cohort of facilities without a coordinate as golden shows them at the time.
+# The first cohort (2026-09-21) was frozen from a release whose id registry has since been
+# superseded, so a second campaign may be opened on the current release: RECOVERY_CAMPAIGN names it
+# and RECOVERY_CEILING_USD is its share of the user's $10 — what the first campaign left unspent.
+CAMPAIGN = os.environ.get('RECOVERY_CAMPAIGN', '').strip() or 'missing-rooftops-2026-09-21'
+LIMIT = Decimal(os.environ.get('RECOVERY_CEILING_USD', '').strip() or '9.50')  # leave $0.50 below the user's $10 limit
 US_STATES=set('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split())
 SCHEMA=[
 """CREATE TABLE IF NOT EXISTS coordinate_recovery_campaigns (
