@@ -14,7 +14,7 @@ on:
         description: 'Pass identifier; repeats resume unfinished rows'
         default: '1'
       row_limit:
-        description: 'Maximum rows (100 plan/geocode; 2000 cached-only; 10000 ledger_replay)'
+        description: 'Maximum rows (100 plan; 500 geocode = at most $0.50; 2000 cached-only; 10000 ledger_replay)'
         default: '100'
       recovered_address_source:
         description: 'Optional recovered-address source filter (for example tako_ai_search)'
