@@ -97,6 +97,8 @@ def carry_by_identity(assertions: list[dict], release_tag: str) -> tuple[list[di
                              "source": a.get("source_id"), "release_tag": tag, "reason": "no_identity_in_that_release"})
             continue
         targets = current.get(then, [])
+        if len(targets) > 1 and a["facility_id"] in targets:
+            targets = [a["facility_id"]]      # duplicates in the current release: the id it was written under wins
         if len(targets) != 1:
             withheld.append({"facility_id": a["facility_id"], "field": a.get("field"), "value": a.get("value"),
                              "source": a.get("source_id"), "release_tag": tag,

@@ -190,7 +190,7 @@ def append_coordinate(db,r,hit):
     point=hit['location'];b=r['baseline'];workflow=run_url()
     document=json.dumps({'campaign_id':CAMPAIGN,'workflow':workflow,'address':one_line(b),'address_evidence':r['evidence'],
                          'geocodio':hit,'checks':['rooftop accuracy','street number','street name','city','state','postal code when available'],
-                         'street_match':street_rule(b['address'],hit.get('address_components') or {})[1]},sort_keys=True)
+                         'street_match':street_rule(b['address'],hit.get('address_components') or {})[1]},sort_keys=True,default=str)
     a=assertion(r['facility_id'],'lat_lon',f"{point['lat']},{point['lng']}",source_id='geocode:geocodio',basis='rooftop',confidence=hit.get('accuracy'),evidence=workflow+' :: '+document)
     now=datetime.now(timezone.utc).isoformat(timespec='seconds')
     ev,fact=_rows_for(a,r['live_release'],now[:10],now)
@@ -288,6 +288,49 @@ def historical_cached(db, pass_id):
                 coordinate_assertions_inserted=inserted,new_api_calls=0)
 
 
+def ledger_replay(db, pass_id, row_limit):
+    """Re-assert a cached rooftop for any CURRENT golden facility whose own address already has a
+    validated Geocodio result in cache_lookup. No API call, no dependence on the campaign cohort
+    or on facility ids: the ledger is keyed by the address, the facility is the one that carries
+    that address in the current release, and the check is the same validate_rooftop the paid pass
+    uses. This is how paid work survives a change of ids — by the question, not the asker."""
+    from psycopg.types.json import Jsonb
+    rows=db.execute("""SELECT g.facility_key AS facility_id,g.release_tag AS live_release,g.name,g.address,g.city,g.state,g.zip
+                       FROM golden_facility g
+                       WHERE NULLIF(btrim(g.lat_lon),'') IS NULL AND g.address ~ '^[0-9]+[A-Za-z]? '
+                         AND NULLIF(btrim(g.city),'') IS NOT NULL
+                         AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts a WHERE a.campaign_id=%s
+                                         AND a.facility_id=g.facility_key AND a.pass_id=%s AND a.stage='ledger_replay')
+                       ORDER BY g.facility_key LIMIT %s""",(CAMPAIGN,pass_id,row_limit)).fetchall()
+    rows=[r for r in rows if eligible(r)]
+    queries={r['facility_id']:one_line(r) for r in rows}
+    keys={fid:cache.geocode_key(q) for fid,q in queries.items()}
+    saved=db.execute("SELECT * FROM cache_lookup WHERE cache_key=ANY(%s) AND provider='geocodio'",(list(set(keys.values())),)).fetchall() if keys else []
+    cached={c['cache_key']:c for c in saved}
+    outcomes=Counter();inserted=0
+    for r in rows:
+        fid=r['facility_id'];key=keys[fid]
+        if key not in cached:outcomes['not_in_ledger']+=1;continue
+        result=cached[key]['result'];result=json.loads(result) if isinstance(result,str) else result
+        baseline={k:r.get(k) for k in ('name','address','city','state','zip')}
+        hit,outcome=validate_rooftop(baseline,result)
+        evidence=db.execute("SELECT a.facility_key,a.field_key,a.value,a.source_key,s.source_url,s.source_document,a.row_hash FROM fact_assertions a LEFT JOIN ref_source_row s ON s.row_hash=a.row_hash WHERE a.facility_key=%s AND a.release_tag=%s AND a.field_key=ANY(%s)",(fid,r['live_release'],['name','address','city','state','zip'])).fetchall()
+        with connect() as tx:
+            tx.execute("""INSERT INTO coordinate_recovery_attempts(campaign_id,facility_id,pass_id,stage,query_key,request,result,outcome,reserved_usd,run_url,completed_at)
+                          VALUES(%s,%s,%s,'ledger_replay',%s,%s,%s,%s,0,%s,now()) ON CONFLICT(campaign_id,facility_id,pass_id,stage) DO NOTHING""",
+                       (CAMPAIGN,fid,pass_id,key,Jsonb({'address':queries[fid],'ledger':'cache_lookup'}),Jsonb(result),outcome,run_url()))
+            if hit:
+                live=tx.execute("SELECT name,city,state,release_tag,lat_lon FROM golden_facility WHERE facility_key=%s FOR SHARE",(fid,)).fetchone()
+                if not live or live['release_tag']!=r['live_release'] or norm(live['name'])!=norm(r['name']) or str(live.get('lat_lon') or '').strip():
+                    outcome='live_row_changed'
+                else:
+                    record={'facility_id':fid,'baseline':baseline,'evidence':[dict(e) for e in evidence]+[{'ledger':'cache_lookup','cache_key':key,'query':queries[fid],'fetched_at':str(cached[key].get('fetched_at'))}],'live_release':r['live_release']}
+                    inserted+=append_coordinate(tx,record,hit)
+        outcomes[outcome]+=1
+    return dict(scanned=len(rows),ledger_hits=sum(1 for k in keys.values() if k in cached),outcomes=dict(outcomes),
+                coordinate_assertions_inserted=inserted,new_api_calls=0,api_cost_usd=0.0)
+
+
 def execute(mode,pass_id,row_limit):
     from psycopg.types.json import Jsonb
     ensure_schema()
@@ -361,6 +404,13 @@ def execute(mode,pass_id,row_limit):
             summary.update(run_address(db,CAMPAIGN,run_url(),write=mode=='internal_address',limit=row_limit))
             statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
             summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        if mode=='ledger_replay':
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
+                         budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(ledger_replay(db,pass_id,row_limit))
             out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
             print(json.dumps(summary,indent=2));return
         if mode=='historical_cached':

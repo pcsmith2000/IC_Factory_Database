@@ -8,13 +8,13 @@ on:
     inputs:
       mode:
         type: choice
-        options: [plan, cached, historical_cached, fl_bcis, md_labor, md_labor_crossmatch, internal_crossmatch_plan, internal_crossmatch, internal_contact_plan, internal_contact, internal_name_plan, internal_name, internal_address_plan, internal_address, overture_pilot, overture_rooftop, geocode]
+        options: [plan, cached, ledger_replay, historical_cached, fl_bcis, md_labor, md_labor_crossmatch, internal_crossmatch_plan, internal_crossmatch, internal_contact_plan, internal_contact, internal_name_plan, internal_name, internal_address_plan, internal_address, overture_pilot, overture_rooftop, geocode]
         default: plan
       pass_id:
         description: 'Pass identifier; repeats resume unfinished rows'
         default: '1'
       row_limit:
-        description: 'Maximum rows (100 plan/geocode; 2000 cached-only)'
+        description: 'Maximum rows (100 plan/geocode; 2000 cached-only; 10000 ledger_replay)'
         default: '100'
       recovered_address_source:
         description: 'Optional recovered-address source filter (for example tako_ai_search)'

@@ -88,3 +88,19 @@ def test_carry_over_is_by_identity_not_by_id():
     assert counts['carried_rekeyed_by_identity'] == 5 and counts['carried_same_id_same_plant'] == 4
     moved = [k for k in kept if k.get('carried_from_facility_id') == 'IC-95293']
     assert all(k['facility_id'] == 'IC-95295' for k in moved) and len(moved) == 5
+
+
+def test_identity_carry_prefers_the_written_id_when_the_current_release_holds_duplicates():
+    from pipeline.enrich.identity import carry_by_identity
+    cur = 'rel.now'; old = 'rel.then'
+    def row(fid, field, value, tag, src='x'): return {'facility_id': fid, 'field': field, 'value': value, 'release_tag': tag, 'source_id': src}
+    a = [row('IC-1', 'name', 'Builders FirstSource', cur), row('IC-1', 'city', 'Orlando', cur), row('IC-1', 'state', 'FL', cur),
+         row('IC-2', 'name', 'Builders FirstSource', cur), row('IC-2', 'city', 'Orlando', cur), row('IC-2', 'state', 'FL', cur),
+         row('IC-2', 'name', 'Builders FirstSource', old), row('IC-2', 'city', 'Orlando', old), row('IC-2', 'state', 'FL', old),
+         row('IC-2', 'lat_lon', '28.5,-81.4', old, 'geocode:geocodio'),
+         row('IC-7', 'name', 'Builders FirstSource', old), row('IC-7', 'city', 'Orlando', old), row('IC-7', 'state', 'FL', old),
+         row('IC-7', 'lat_lon', '28.6,-81.3', old, 'geocode:geocodio')]
+    kept, withheld, counts = carry_by_identity(a, cur)
+    assert ('IC-2', 'lat_lon') in {(k['facility_id'], k['field']) for k in kept}
+    assert {w['facility_id'] for w in withheld} == {'IC-7'}
+    assert all(w['reason'] == 'identity_ambiguous_in_current_release' for w in withheld)
