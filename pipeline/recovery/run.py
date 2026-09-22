@@ -481,7 +481,7 @@ def execute(mode,pass_id,row_limit):
     if outcomes.get('error'):raise RuntimeError('Some rows failed; private attempt records retained for diagnosis')
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','historical_cached','fl_bcis','md_labor','md_labor_crossmatch','internal_crossmatch_plan','internal_crossmatch','internal_contact_plan','internal_contact','internal_name_plan','internal_name','internal_address_plan','internal_address','overture_pilot','overture_rooftop','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','ledger_replay','historical_cached','fl_bcis','md_labor','md_labor_crossmatch','internal_crossmatch_plan','internal_crossmatch','internal_contact_plan','internal_contact','internal_name_plan','internal_name','internal_address_plan','internal_address','overture_pilot','overture_rooftop','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
     maximum=2000 if a.mode in ('cached','historical_cached') else 100
     if not 1<=a.limit<=maximum:raise ValueError(f'{a.mode} batches are limited to {maximum} rows')
     execute(a.mode,a.pass_id,a.limit)
