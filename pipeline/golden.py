@@ -58,6 +58,10 @@ def _rank(a: dict, order: list[str]) -> int:
     # recency must never elevate them. They fill a hole and never displace a roster or a geocode.
     if a["source_id"] in ("tako_ai_search", "astra_manual_web_lookup"):
         return len(order) + 1
+    # A street-level geocode (on the right street, not a verified building; confidence 0.3) sits
+    # below everything, reviewed lookups included: it fills an empty map pin and nothing else.
+    if a.get("basis") == "street_interpolated":
+        return len(order) + 2
     for i, pref in enumerate(order):
         if pref == "site_visit" and a.get("site_visit") in (True, "True"): return i
         # A bare token names a source directly: operator, lookup, classifier. This replaces three

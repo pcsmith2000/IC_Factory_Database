@@ -111,11 +111,29 @@ def identity_for(frozen, live, recovered):
     return None
 
 
+# Geocodio accuracy types that put a point on the right street without naming the building: an
+# address-range interpolation, the rooftop of the nearest known address, the centre of the street
+# segment. 'place' and 'state' are centroids of a town or a state and are never accepted.
+STREET_LEVEL_ACCURACY=('range_interpolation','nearest_rooftop_match','street_center')
+STREET_SOURCE='geocode:geocodio_street';STREET_BASIS='street_interpolated';STREET_CONFIDENCE=0.3
+
+
 def validate_rooftop(row,result):
+    return _validate(row,result,('rooftop',),'rooftop_verified','not_rooftop')
+
+
+def validate_street_level(row,result):
+    """The rooftop checks with the accuracy requirement relaxed to STREET_LEVEL_ACCURACY. The house
+    number, street, city, state and ZIP must still all agree: the point is on the right street of the
+    right town, and the assertion says so — basis street_interpolated, confidence 0.3."""
+    return _validate(row,result,STREET_LEVEL_ACCURACY,'street_level_verified','not_street_level')
+
+
+def _validate(row,result,accepted,verified,refused):
     hits=(result.get('response') or {}).get('results') or []
     if not hits:return None,'no_result'
     hit=hits[0];parts=hit.get('address_components') or {};loc=hit.get('location') or {}
-    if hit.get('accuracy_type')!='rooftop':return None,'not_rooftop'
+    if hit.get('accuracy_type') not in accepted:return None,refused
     number=re.match(r'^\d+[a-zA-Z]?',row['address'].strip())
     if not number or norm(parts.get('number'))!=norm(number.group()):return None,'street_number_mismatch'
     if norm(parts.get('city'))!=norm(row['city']):return None,'city_mismatch'
@@ -130,7 +148,7 @@ def validate_rooftop(row,result):
     if not street_matches(row['address'].strip(),parts,parcel=parcel):return None,'street_name_mismatch'
     lat,lng=loc.get('lat'),loc.get('lng')
     if not all(isinstance(v,(int,float)) and math.isfinite(v) for v in (lat,lng)) or not -90<=lat<=90 or not -180<=lng<=180:return None,'invalid_coordinate'
-    return hit,'rooftop_verified'
+    return hit,verified
 
 
 def select_rows(db, pass_id, row_limit):
@@ -201,21 +219,30 @@ def reserve(db,r,pass_id,query,cost):
     db.execute('UPDATE coordinate_recovery_campaigns SET reserved_usd=reserved_usd+%s WHERE campaign_id=%s',(cost,CAMPAIGN))
 
 
-def append_coordinate(db,r,hit):
-    point=hit['location'];b=r['baseline'];workflow=run_url()
+def append_coordinate(db,r,hit,level='rooftop'):
+    """Write the coordinate assertion. level 'rooftop' is the verified rooftop under source
+    geocode:geocodio, basis rooftop, Geocodio's own accuracy score as confidence. level 'street' is a
+    street-level point (see STREET_LEVEL_ACCURACY) under its own source id so every reader can tell
+    the two apart, basis street_interpolated, confidence 0.3, ranked below every other coordinate by
+    golden._rank; the campaign row stays unresolved so a rooftop can still replace it."""
+    point=hit['location'];b=r['baseline'];workflow=run_url();street=level=='street'
     document=json.dumps({'campaign_id':CAMPAIGN,'workflow':workflow,'address':one_line(b),'address_evidence':r['evidence'],
-                         'geocodio':hit,'checks':['rooftop accuracy','street number','street name','city','state','postal code when available'],
+                         'geocodio':hit,'accuracy_type':hit.get('accuracy_type'),
+                         'checks':[('street-level accuracy: '+'/'.join(STREET_LEVEL_ACCURACY)) if street else 'rooftop accuracy','street number','street name','city','state','postal code when available'],
+                         'note':'Point lies on the named street, not on a verified building; a rooftop geocode supersedes it.' if street else None,
                          'street_match':street_rule(b['address'],hit.get('address_components') or {},parcel=True)[1]},sort_keys=True,default=str)
-    a=assertion(r['facility_id'],'lat_lon',f"{point['lat']},{point['lng']}",source_id='geocode:geocodio',basis='rooftop',confidence=hit.get('accuracy'),evidence=workflow+' :: '+document)
+    source=STREET_SOURCE if street else 'geocode:geocodio';basis=STREET_BASIS if street else 'rooftop'
+    a=assertion(r['facility_id'],'lat_lon',f"{point['lat']},{point['lng']}",source_id=source,basis=basis,confidence=STREET_CONFIDENCE if street else hit.get('accuracy'),evidence=workflow+' :: '+document)
     now=datetime.now(timezone.utc).isoformat(timespec='seconds')
     ev,fact=_rows_for(a,r['live_release'],now[:10],now)
     db.execute("INSERT INTO dim_source(source_key,source_id,name,class,status) VALUES('geocode:geocodio','geocode:geocodio','Enrichment 10 — Geocodio rooftop geocode','enrichment','active') ON CONFLICT(source_key) DO NOTHING")
+    db.execute("INSERT INTO dim_source(source_key,source_id,name,class,method,status_basis,status) VALUES(%s,%s,'Enrichment 10b — Geocodio street-level geocode (interpolated, not a rooftop)','enrichment','Geocodio range_interpolation / nearest_rooftop_match / street_center result whose house number, street, city, state and ZIP all match the source address','Lowest precedence coordinate; confidence 0.3; superseded by any rooftop','active') ON CONFLICT(source_key) DO NOTHING",(STREET_SOURCE,STREET_SOURCE))
     db.execute('INSERT INTO ref_source_row(row_hash,source_key,source_url,source_document,retrieved_date,facility_key,match_method,match_confidence,last_seen_release) VALUES('+','.join(['%s']*9)+') ON CONFLICT(row_hash) DO NOTHING',ev)
     cur=db.execute('INSERT INTO fact_assertions(assertion_id,release_tag,facility_key,source_key,field_key,date_key,value,basis,site_visit,row_hash,confidence,source_class,asserted_at) VALUES('+','.join(['%s']*13)+') ON CONFLICT(assertion_id,release_tag) DO NOTHING RETURNING assertion_id',fact)
     inserted=len(cur.fetchall())
     saved=db.execute('SELECT a.value,a.basis,r.source_url FROM fact_assertions a JOIN ref_source_row r ON r.row_hash=a.row_hash WHERE a.assertion_id=%s AND a.release_tag=%s',(fact[0],r['live_release'])).fetchone()
-    if not saved or saved['value']!=a['value'] or saved['basis']!='rooftop' or saved['source_url']!=workflow:raise RuntimeError('Coordinate provenance verification failed')
-    db.execute("UPDATE coordinate_recovery_rows SET status='rooftop_asserted' WHERE campaign_id=%s AND facility_id=%s",(CAMPAIGN,r['facility_id']))
+    if not saved or saved['value']!=a['value'] or saved['basis']!=basis or saved['source_url']!=workflow:raise RuntimeError('Coordinate provenance verification failed')
+    if not street:db.execute("UPDATE coordinate_recovery_rows SET status='rooftop_asserted' WHERE campaign_id=%s AND facility_id=%s",(CAMPAIGN,r['facility_id']))
     return inserted
 
 
@@ -303,20 +330,33 @@ def historical_cached(db, pass_id):
                 coordinate_assertions_inserted=inserted,new_api_calls=0)
 
 
-def ledger_replay(db, pass_id, row_limit):
+def ledger_street_level(db, pass_id, row_limit):
+    """The ledger replay with validate_street_level: for a CURRENT golden facility with no
+    coordinate at all whose own address has a cached Geocodio result that is on the right street
+    but not a rooftop, write the street-level point (source geocode:geocodio_street, basis
+    street_interpolated, confidence 0.3). Approved 2026-09-23 so those plants have a pin the map
+    can show and label as approximate; a rooftop found later outranks it."""
+    return ledger_replay(db, pass_id, row_limit, level='street')
+
+
+def ledger_replay(db, pass_id, row_limit, level='rooftop'):
     """Re-assert a cached rooftop for any CURRENT golden facility whose own address already has a
     validated Geocodio result in cache_lookup. No API call, no dependence on the campaign cohort
     or on facility ids: the ledger is keyed by the address, the facility is the one that carries
     that address in the current release, and the check is the same validate_rooftop the paid pass
     uses. This is how paid work survives a change of ids — by the question, not the asker."""
     from psycopg.types.json import Jsonb
-    rows=db.execute("""SELECT g.facility_key AS facility_id,g.release_tag AS live_release,g.name,g.address,g.city,g.state,g.zip
+    street=level=='street';stage='ledger_street_level' if street else 'ledger_replay';validate=validate_street_level if street else validate_rooftop
+    # A street-level pin is not a located facility for the rooftop replay: the rooftop outranks it.
+    unlocated="NULLIF(btrim(g.lat_lon),'') IS NULL" if street else "(NULLIF(btrim(g.lat_lon),'') IS NULL OR g.lat_lon__source=%s)"
+    params=(CAMPAIGN,pass_id,row_limit) if street else (STREET_SOURCE,CAMPAIGN,pass_id,row_limit)
+    rows=db.execute(f"""SELECT g.facility_key AS facility_id,g.release_tag AS live_release,g.name,g.address,g.city,g.state,g.zip
                        FROM golden_facility g
-                       WHERE NULLIF(btrim(g.lat_lon),'') IS NULL AND g.address ~ '^[0-9]+[A-Za-z]? '
+                       WHERE {unlocated} AND g.address ~ '^[0-9]+[A-Za-z]? '
                          AND NULLIF(btrim(g.city),'') IS NOT NULL
                          AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts a WHERE a.campaign_id=%s
-                                         AND a.facility_id=g.facility_key AND a.pass_id=%s AND a.stage='ledger_replay')
-                       ORDER BY g.facility_key LIMIT %s""",(CAMPAIGN,pass_id,row_limit)).fetchall()
+                                         AND a.facility_id=g.facility_key AND a.pass_id=%s AND a.stage='{stage}')
+                       ORDER BY g.facility_key LIMIT %s""",params).fetchall()
     rows=[r for r in rows if eligible(r)]
     queries={r['facility_id']:one_line(r) for r in rows}
     keys={fid:cache.geocode_key(q) for fid,q in queries.items()}
@@ -328,19 +368,22 @@ def ledger_replay(db, pass_id, row_limit):
         if key not in cached:outcomes['not_in_ledger']+=1;continue
         result=cached[key]['result'];result=json.loads(result) if isinstance(result,str) else result
         baseline={k:r.get(k) for k in ('name','address','city','state','zip')}
-        hit,outcome=validate_rooftop(baseline,result)
+        hit,outcome=validate(baseline,result)
+        if street and hit and validate_rooftop(baseline,result)[0]:
+            hit,outcome=None,'rooftop_available'                     # the rooftop replay writes this one
         evidence=db.execute("SELECT a.facility_key,a.field_key,a.value,a.source_key,s.source_url,s.source_document,a.row_hash FROM fact_assertions a LEFT JOIN ref_source_row s ON s.row_hash=a.row_hash WHERE a.facility_key=%s AND a.release_tag=%s AND a.field_key=ANY(%s)",(fid,r['live_release'],['name','address','city','state','zip'])).fetchall()
         with connect() as tx:
-            tx.execute("""INSERT INTO coordinate_recovery_attempts(campaign_id,facility_id,pass_id,stage,query_key,request,result,outcome,reserved_usd,run_url,completed_at)
-                          VALUES(%s,%s,%s,'ledger_replay',%s,%s,%s,%s,0,%s,now()) ON CONFLICT(campaign_id,facility_id,pass_id,stage) DO NOTHING""",
+            tx.execute(f"""INSERT INTO coordinate_recovery_attempts(campaign_id,facility_id,pass_id,stage,query_key,request,result,outcome,reserved_usd,run_url,completed_at)
+                          VALUES(%s,%s,%s,'{stage}',%s,%s,%s,%s,0,%s,now()) ON CONFLICT(campaign_id,facility_id,pass_id,stage) DO NOTHING""",
                        (CAMPAIGN,fid,pass_id,key,Jsonb({'address':queries[fid],'ledger':'cache_lookup'}),Jsonb(result),outcome,run_url()))
             if hit:
-                live=tx.execute("SELECT name,city,state,release_tag,lat_lon FROM golden_facility WHERE facility_key=%s FOR SHARE",(fid,)).fetchone()
-                if not live or live['release_tag']!=r['live_release'] or norm(live['name'])!=norm(r['name']) or str(live.get('lat_lon') or '').strip():
+                live=tx.execute("SELECT name,city,state,release_tag,lat_lon,lat_lon__source FROM golden_facility WHERE facility_key=%s FOR SHARE",(fid,)).fetchone()
+                located=bool(str(live.get('lat_lon') or '').strip()) and (street or live.get('lat_lon__source')!=STREET_SOURCE) if live else False
+                if not live or live['release_tag']!=r['live_release'] or norm(live['name'])!=norm(r['name']) or located:
                     outcome='live_row_changed'
                 else:
                     record={'facility_id':fid,'baseline':baseline,'evidence':[dict(e) for e in evidence]+[{'ledger':'cache_lookup','cache_key':key,'query':queries[fid],'fetched_at':str(cached[key].get('fetched_at'))}],'live_release':r['live_release']}
-                    inserted+=append_coordinate(tx,record,hit)
+                    inserted+=append_coordinate(tx,record,hit,level=level)
         outcomes[outcome]+=1
     return dict(scanned=len(rows),ledger_hits=sum(1 for k in keys.values() if k in cached),outcomes=dict(outcomes),
                 coordinate_assertions_inserted=inserted,new_api_calls=0,api_cost_usd=0.0)
@@ -421,6 +464,13 @@ def execute(mode,pass_id,row_limit):
             summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
             out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
             print(json.dumps(summary,indent=2));return
+        if mode=='ledger_street_level':
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],workflow=run_url(),golden_writes=0)
+            summary.update(ledger_street_level(db,pass_id,row_limit))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
         if mode=='ledger_replay':
             summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
                          budget_ceiling_usd=float(campaign['api_ceiling']),
@@ -496,11 +546,11 @@ def execute(mode,pass_id,row_limit):
     if outcomes.get('error'):raise RuntimeError('Some rows failed; private attempt records retained for diagnosis')
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','ledger_replay','historical_cached','fl_bcis','md_labor','md_labor_crossmatch','internal_crossmatch_plan','internal_crossmatch','internal_contact_plan','internal_contact','internal_name_plan','internal_name','internal_address_plan','internal_address','overture_pilot','overture_rooftop','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','ledger_replay','ledger_street_level','historical_cached','fl_bcis','md_labor','md_labor_crossmatch','internal_crossmatch_plan','internal_crossmatch','internal_contact_plan','internal_contact','internal_name_plan','internal_name','internal_address_plan','internal_address','overture_pilot','overture_rooftop','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
     # ledger_replay and cached make no API call; a geocode batch is bounded so one run can spend at
     # most $0.50 (500 lookups at $0.001) against the campaign ceiling the reserve() guard enforces.
     # fl_bcis reads the public registry a page a row inside one transaction: 300 keeps a run well
     # inside the job's 30-minute limit, since a timeout would roll the whole batch back.
-    maximum=10000 if a.mode=='ledger_replay' else 2000 if a.mode in ('cached','historical_cached') else 500 if a.mode=='geocode' else 300 if a.mode=='fl_bcis' else 100
+    maximum=10000 if a.mode in ('ledger_replay','ledger_street_level') else 2000 if a.mode in ('cached','historical_cached') else 500 if a.mode=='geocode' else 300 if a.mode=='fl_bcis' else 100
     if not 1<=a.limit<=maximum:raise ValueError(f'{a.mode} batches are limited to {maximum} rows')
     execute(a.mode,a.pass_id,a.limit)
