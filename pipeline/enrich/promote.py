@@ -68,7 +68,9 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
     # release is read under the current facility that has the (name, city, state) its own release
     # gave its id — the plant it was about — and withheld when no current facility has it.
     # See pipeline/enrich/identity.py.
-    asserts, carried_withheld, carry_counts = identity.carry_by_identity(asserts, release_tag)
+    other_tags = {a.get("release_tag") for a in asserts if a.get("release_tag") and a.get("release_tag") != release_tag}
+    identity_rows = _db.fetch_identity_rows(db, other_tags) if other_tags else []
+    asserts, carried_withheld, carry_counts = identity.carry_by_identity(asserts, release_tag, identity_rows)
     unjudged = sum(1 for w in carried_withheld if w.get('reason') == 'no_identity_in_that_release')
     rows, conflicts = build(asserts, rules)
     # Gate E10: a coordinate carried onto a facility must lie in that facility's state. Assertions

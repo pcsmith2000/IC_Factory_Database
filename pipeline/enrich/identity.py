@@ -53,10 +53,11 @@ def split_carried(assertions: list[dict], release_tag: str) -> tuple[list[dict],
     return kept, withheld, unjudged
 
 
-def _identity_by_release(assertions: list[dict]) -> dict[tuple[str, str], tuple[str, str, str]]:
-    """(facility_id, release) -> (name, city, state) as that release asserted them, normalised.
-    Several sources may assert a name in one release; the alphabetically first normalised value
-    is taken so the key is deterministic."""
+def _identity_by_release(assertions: list[dict]) -> dict[tuple[str, str], set[tuple[str, str, str]]]:
+    """(facility_id, release) -> every (name, city, state) that release asserted for the id,
+    normalised. Several sources may spell the name or the city differently in one release
+    ("Clayton Homes" / "CLAYTON HOMES INC", "Ft Worth" / "Fort Worth"); each combination is a key,
+    and two releases name the same plant when any key is shared."""
     parts: dict[tuple[str, str], dict[str, set[str]]] = {}
     for a in assertions:
         f = a.get("field")
@@ -65,24 +66,30 @@ def _identity_by_release(assertions: list[dict]) -> dict[tuple[str, str], tuple[
     out = {}
     for key, fields in parts.items():
         if "name" in fields:
-            out[key] = (min(fields["name"]), min(fields.get("city") or {""}), min(fields.get("state") or {""}))
+            out[key] = {(n, c, s) for n in fields["name"] for c in (fields.get("city") or {""}) for s in (fields.get("state") or {""})}
     return out
 
 
-def carry_by_identity(assertions: list[dict], release_tag: str) -> tuple[list[dict], list[dict], dict]:
+def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: list[dict] | None = None) -> tuple[list[dict], list[dict], dict]:
     """Rebuild the cross-release carry-over on identity rather than on id.
 
     Every assertion from the current release is kept as is. An assertion from another release
-    is re-keyed to the CURRENT facility whose (name, city, state) equals what its own release
-    asserted for its id — the plant it was actually about — and dropped when no current facility
-    or more than one carries that identity. The assertion rows in the warehouse are untouched;
-    only the facility they are read under changes, and each re-key is reported.
+    is re-keyed to the CURRENT facility that shares a (name, city, state) with what its own
+    release asserted for its id — the plant it was actually about — and dropped when no current
+    facility or more than one does. The assertion rows in the warehouse are untouched; only the
+    facility they are read under changes, and each re-key is reported.
+
+    `identity_rows` are the name, city and state rows of the other releases (_db.fetch_identity_rows):
+    the carried enrichment alone carries no name, so without them every carried assertion would
+    be withheld as coming from a release that asserted no identity — which is what happened on
+    2026-09-23, when 14,509 footprints, existence flags and coordinates were withheld at once.
     """
-    ident = _identity_by_release(assertions)
-    current: dict[tuple[str, str, str], list[str]] = {}
-    for (fid, tag), key in ident.items():
+    ident = _identity_by_release(list(assertions) + list(identity_rows or []))
+    current: dict[tuple[str, str, str], set[str]] = {}
+    for (fid, tag), keys in ident.items():
         if tag == release_tag:
-            current.setdefault(key, []).append(fid)
+            for key in keys:
+                current.setdefault(key, set()).add(fid)
     kept, withheld = [], []
     rekeyed = 0
     same_plant = 0
@@ -96,16 +103,18 @@ def carry_by_identity(assertions: list[dict], release_tag: str) -> tuple[list[di
             withheld.append({"facility_id": a["facility_id"], "field": a.get("field"), "value": a.get("value"),
                              "source": a.get("source_id"), "release_tag": tag, "reason": "no_identity_in_that_release"})
             continue
-        targets = current.get(then, [])
+        targets: set[str] = set()
+        for key in then:
+            targets |= current.get(key, set())
         if len(targets) > 1 and a["facility_id"] in targets:
-            targets = [a["facility_id"]]      # duplicates in the current release: the id it was written under wins
+            targets = {a["facility_id"]}      # duplicates in the current release: the id it was written under wins
         if len(targets) != 1:
             withheld.append({"facility_id": a["facility_id"], "field": a.get("field"), "value": a.get("value"),
                              "source": a.get("source_id"), "release_tag": tag,
                              "reason": "identity_absent_from_current_release" if not targets else "identity_ambiguous_in_current_release",
-                             "identity_then": list(then)})
+                             "identity_then": sorted(min(then))})
             continue
-        target = targets[0]
+        target = next(iter(targets))
         if target == a["facility_id"]:
             same_plant += 1
             kept.append(a)

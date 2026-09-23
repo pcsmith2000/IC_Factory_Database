@@ -104,3 +104,32 @@ def test_identity_carry_prefers_the_written_id_when_the_current_release_holds_du
     assert ('IC-2', 'lat_lon') in {(k['facility_id'], k['field']) for k in kept}
     assert {w['facility_id'] for w in withheld} == {'IC-7'}
     assert all(w['reason'] == 'identity_ambiguous_in_current_release' for w in withheld)
+
+
+def test_identity_rows_of_other_releases_are_what_lets_carried_enrichment_through():
+    """fetch_assertions returns only the current release plus carried enrichment; the old release's
+    own name/city/state arrive separately as identity_rows. Without them everything is withheld."""
+    from pipeline.enrich.identity import carry_by_identity
+    cur = 'rel.now'; old = 'rel.then'
+    def row(fid, field, value, tag, src='x'): return {'facility_id': fid, 'field': field, 'value': value, 'release_tag': tag, 'source_id': src}
+    asserts = [row('IC-1', 'name', 'Same Plant', cur), row('IC-1', 'city', 'X', cur), row('IC-1', 'state', 'TX', cur),
+               row('IC-1', 'building_sqft', '84210', old, 'overture:building')]
+    kept, withheld, _ = carry_by_identity(asserts, cur)
+    assert [w['reason'] for w in withheld] == ['no_identity_in_that_release']
+    ident = [row('IC-1', 'name', 'SAME PLANT', old), row('IC-1', 'city', 'x', old), row('IC-1', 'state', 'tx', old)]
+    kept, withheld, counts = carry_by_identity(asserts, cur, ident)
+    assert not withheld and ('IC-1', 'building_sqft') in {(k['facility_id'], k['field']) for k in kept}
+    assert counts['carried_same_id_same_plant'] == 1
+
+
+def test_any_shared_spelling_identifies_the_plant():
+    from pipeline.enrich.identity import carry_by_identity
+    cur = 'rel.now'; old = 'rel.then'
+    def row(fid, field, value, tag, src='x'): return {'facility_id': fid, 'field': field, 'value': value, 'release_tag': tag, 'source_id': src}
+    # the current release spells the city two ways; the old release used the second one
+    asserts = [row('IC-5', 'name', 'Clayton Homes', cur), row('IC-5', 'city', 'Ft Worth', cur), row('IC-5', 'city', 'Fort Worth', cur), row('IC-5', 'state', 'TX', cur),
+               row('IC-9', 'lat_lon', '32.7,-97.3', old, 'geocode:geocodio')]
+    ident = [row('IC-9', 'name', 'CLAYTON HOMES', old), row('IC-9', 'city', 'FORT WORTH', old), row('IC-9', 'state', 'TX', old)]
+    kept, withheld, counts = carry_by_identity(asserts, cur, ident)
+    assert not withheld and counts['carried_rekeyed_by_identity'] == 1
+    assert [k for k in kept if k['field'] == 'lat_lon'][0]['facility_id'] == 'IC-5'
