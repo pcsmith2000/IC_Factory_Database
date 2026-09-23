@@ -13,6 +13,9 @@ on:
       manifest_path:
         description: 'manifest_plan only: a committed reviewed manifest (research/<campaign>/approved-assertions.json)'
         default: ''
+      campaign_id:
+        description: 'Coordinate recovery campaign to work (blank = the 2026-09-21 campaign)'
+        default: ''
       pass_id:
         description: 'Stable pass identifier'
         default: 'tako-address-1'
@@ -51,6 +54,8 @@ on:
 permissions:
   contents: read
   actions: read
+env:
+  RECOVERY_CAMPAIGN: ${{ inputs.campaign_id }}
 concurrency:
   group: tako-coordinate-recovery
   cancel-in-progress: false
