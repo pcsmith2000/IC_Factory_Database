@@ -488,6 +488,8 @@ if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','ledger_replay','historical_cached','fl_bcis','md_labor','md_labor_crossmatch','internal_crossmatch_plan','internal_crossmatch','internal_contact_plan','internal_contact','internal_name_plan','internal_name','internal_address_plan','internal_address','overture_pilot','overture_rooftop','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
     # ledger_replay and cached make no API call; a geocode batch is bounded so one run can spend at
     # most $0.50 (500 lookups at $0.001) against the campaign ceiling the reserve() guard enforces.
-    maximum=10000 if a.mode=='ledger_replay' else 2000 if a.mode in ('cached','historical_cached') else 500 if a.mode=='geocode' else 100
+    # fl_bcis reads the public registry a page a row inside one transaction: 300 keeps a run well
+    # inside the job's 30-minute limit, since a timeout would roll the whole batch back.
+    maximum=10000 if a.mode=='ledger_replay' else 2000 if a.mode in ('cached','historical_cached') else 500 if a.mode=='geocode' else 300 if a.mode=='fl_bcis' else 100
     if not 1<=a.limit<=maximum:raise ValueError(f'{a.mode} batches are limited to {maximum} rows')
     execute(a.mode,a.pass_id,a.limit)
