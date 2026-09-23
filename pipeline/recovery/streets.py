@@ -13,7 +13,9 @@ The canonical form is deliberately narrow.  Two spellings are the same street on
   * a numbered route agrees on its number ("Route 522" / "US-522"; "Hwy 231" / "US-231") and
     disagrees when the numbers differ ("GA Highway 3" / "US-19", even though they are one road);
   * suffixes agree, or one side has none ("120 Fairview" / "Fairview St"); "Alamo Dr" against
-    "Alamo Rd" is a different street until something says otherwise;
+    "Alamo Rd" is a different street until something says otherwise, and the thing that says
+    otherwise is the parcel rule: the same house number in the same five-digit ZIP on a
+    rooftop-grade result (see street_equivalent);
   * directionals agree, or one side has none ("Airport Rd" / "S Airport Rd"); "SW Silver Springs"
     against "W Silver Springs" is refused.
 
@@ -70,7 +72,7 @@ SUFFIX_CODES = set(SUFFIXES.values())
 ROUTE_WORDS = {"us", "hwy", "highway", "hiway", "hgwy", "route", "rte", "rt", "sr", "state",
                "interstate", "i", "county", "cr", "c", "r", "fm", "farm", "market", "loop", "ranch",
                "township", "twp", "tsr"}
-ROUTE_FILLERS = {"rd", "road", "hwy", "highway", "route", "rte"}   # "County Rd 3", "Farm Road 12"
+ROUTE_FILLERS = {"rd", "road", "hwy", "highway", "route", "rte", "to"}   # "County Rd 3", "Farm To Market Rd 2100"
 PREFIXES = {"saint": "st", "fort": "ft", "mount": "mt", "mt": "mt", "ft": "ft"}
 ORDINAL_WORDS = {"first": "1", "second": "2", "third": "3", "fourth": "4", "fifth": "5",
                  "sixth": "6", "seventh": "7", "eighth": "8", "ninth": "9", "tenth": "10",
@@ -86,8 +88,9 @@ US_STATE_CODES = set("al ak az ar ca co ct de fl ga hi id il in ia ks ky la me m
 
 def _tokens(text: str) -> list[str]:
     text = str(text or "").lower()
-    text = re.sub(r"(?<=[a-z])-(?=\d)|(?<=\d)-(?=[a-z])", " ", text)   # us-231, i-45, 11-w
+    text = re.sub(r"-", " ", text)                                      # us-231, i-45, us-rte 6
     text = re.sub(r"[.,'’]", "", text)
+    text = re.sub(r"\bjr\b", "", text)                                  # Martin Luther King Jr Ave
     text = re.sub(r"#", " # ", text)
     text = re.sub(r"\bunited states\b", "us", text)
     text = re.sub(r"\bu\s+s\b(?=\s+(?:\d|hwy|highway|route|rte))", "us", text)
@@ -215,7 +218,7 @@ def _edit_distance_le1(a: str, b: str) -> bool:
 
 def _cores_agree(a: list[str], b: list[str]) -> str:
     """'' when the distinctive words differ, else the rule that reconciles them."""
-    if a == b:
+    if a == b or "".join(a) == "".join(b):
         return "canonical"
     # "27th Street Terrace" against "27th Ter": one side carries a redundant suffix word
     longer, shorter = (a, b) if len(a) > len(b) else (b, a)
@@ -228,8 +231,15 @@ def _cores_agree(a: list[str], b: list[str]) -> str:
     return ""
 
 
-def street_equivalent(left: str, right: str) -> tuple[bool, str]:
-    """(same street?, rule).  Rules: exact · canonical · one_edit; otherwise the reason refused."""
+def street_equivalent(left: str, right: str, parcel: bool = False) -> tuple[bool, str]:
+    """(same street?, rule).  Rules: exact · canonical · one_edit · parcel; otherwise the reason refused.
+
+    `parcel` says the caller has already matched the house number, city, state AND five-digit ZIP
+    against a rooftop-grade result.  Within one ZIP a given house number on a given street name
+    is one parcel, so the suffix and the directional are then allowed to differ ("840 Palm Ave" /
+    "840 Palm St", "8905 Industrial Rd" / "8905 E Industrial Dr") as long as the distinctive words
+    agree exactly.  Without the ZIP the stricter rules apply unchanged.
+    """
     if not left or not right:
         return False, "missing_street"
     if re.sub(r"[^a-z0-9]", "", left.lower()) == re.sub(r"[^a-z0-9]", "", right.lower()):
@@ -237,11 +247,21 @@ def street_equivalent(left: str, right: str) -> tuple[bool, str]:
     a, b = canonical(left), canonical(right)
     if a["route"] != b["route"]:
         return False, "route_number_differs"
-    if a["suffix"] and b["suffix"] and a["suffix"] != b["suffix"]:
-        return False, "suffix_differs"
-    if a["dirs"] and b["dirs"] and a["dirs"] != b["dirs"]:
-        return False, "direction_differs"
+    suffix_differs = bool(a["suffix"] and b["suffix"] and a["suffix"] != b["suffix"])
+    direction_differs = bool(a["dirs"] and b["dirs"] and a["dirs"] != b["dirs"])
+    # "1200 S Lake St" against "1200 N Lake St" is the other end of town whatever the ZIP says; only
+    # a directional one side leaves out ("W Sam Houston Pkwy N" / "W Sam Houston Pkwy") may differ.
+    direction_conflicts = direction_differs and not (a["dirs"] <= b["dirs"] or b["dirs"] <= a["dirs"])
     if not a["core"] and not b["core"]:
-        return (True, "canonical") if a["route"] else (False, "no_street_words")
-    rule = _cores_agree(a["core"], b["core"])
-    return (True, rule) if rule else (False, "street_words_differ")
+        if not a["route"]:
+            return False, "no_street_words"
+        rule = "canonical"
+    else:
+        rule = _cores_agree(a["core"], b["core"])
+        if not rule:
+            return False, "street_words_differ"
+    if suffix_differs or direction_differs:
+        if parcel and rule == "canonical" and (a["core"] or a["route"]) and not direction_conflicts:
+            return True, "parcel"
+        return False, "suffix_differs" if suffix_differs else "direction_differs"
+    return True, rule

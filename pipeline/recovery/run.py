@@ -118,12 +118,16 @@ def validate_rooftop(row,result):
     if hit.get('accuracy_type')!='rooftop':return None,'not_rooftop'
     number=re.match(r'^\d+[a-zA-Z]?',row['address'].strip())
     if not number or norm(parts.get('number'))!=norm(number.group()):return None,'street_number_mismatch'
-    if not street_matches(row['address'].strip(),parts):return None,'street_name_mismatch'
     if norm(parts.get('city'))!=norm(row['city']):return None,'city_mismatch'
     if norm(parts.get('state_province') or parts.get('state'))!=norm(row['state']):return None,'state_mismatch'
+    # The street is judged last, so the parcel rule (see pipeline.recovery.streets) knows whether the
+    # five-digit ZIP was supplied and agrees: only then may a suffix or directional differ.
+    parcel=False
     if row.get('zip') and re.fullmatch(r'\d{5}(?:-\d{4})?',row['zip'].strip()):
         returned=str(parts.get('postal_code') or parts.get('zip') or '')
         if returned and row['zip'][:5]!=returned[:5]:return None,'zip_mismatch'
+        parcel=bool(returned)
+    if not street_matches(row['address'].strip(),parts,parcel=parcel):return None,'street_name_mismatch'
     lat,lng=loc.get('lat'),loc.get('lng')
     if not all(isinstance(v,(int,float)) and math.isfinite(v) for v in (lat,lng)) or not -90<=lat<=90 or not -180<=lng<=180:return None,'invalid_coordinate'
     return hit,'rooftop_verified'
@@ -201,7 +205,7 @@ def append_coordinate(db,r,hit):
     point=hit['location'];b=r['baseline'];workflow=run_url()
     document=json.dumps({'campaign_id':CAMPAIGN,'workflow':workflow,'address':one_line(b),'address_evidence':r['evidence'],
                          'geocodio':hit,'checks':['rooftop accuracy','street number','street name','city','state','postal code when available'],
-                         'street_match':street_rule(b['address'],hit.get('address_components') or {})[1]},sort_keys=True,default=str)
+                         'street_match':street_rule(b['address'],hit.get('address_components') or {},parcel=True)[1]},sort_keys=True,default=str)
     a=assertion(r['facility_id'],'lat_lon',f"{point['lat']},{point['lng']}",source_id='geocode:geocodio',basis='rooftop',confidence=hit.get('accuracy'),evidence=workflow+' :: '+document)
     now=datetime.now(timezone.utc).isoformat(timespec='seconds')
     ev,fact=_rows_for(a,r['live_release'],now[:10],now)

@@ -68,3 +68,37 @@ def test_rooftop_validation_uses_the_canonical_street():
     assert street_matches('2676 Highway 231', hit['address_components'])
     other = {**hit, 'address_components': {**hit['address_components'], 'formatted_street': 'US-90'}}
     assert validate_rooftop(row, {'response': {'results': [other]}})[1] == 'street_name_mismatch'
+
+
+# With house number, city, state and five-digit ZIP already matched against a rooftop result, the
+# suffix or a one-sided directional may differ; a directional conflict or a different name may not.
+PARCEL_SAME = [('Alamo Dr', 'Alamo Rd'), ('Eisenhower Dr.', 'Eisenhower Rd'), ('PALM AVE', 'Palm St'),
+               ('INDUSTRIAL RD', 'E Industrial Dr'), ('Imperial Loop Drive', 'Imperial Loop'),
+               ('McNaughton Street', 'Mc Naughton Ave'), ('W SAM HOUSTON PARKWAY N STE 500', 'W Sam Houston Pkwy'),
+               ('Martin Luther King Ave', 'Martin Luther King Jr Ave'), ('FM-2100', 'Farm To Market Rd 2100th Rd'),
+               ('US HWY 6', 'US-Rte 6')]
+PARCEL_DIFFERENT = [('SOUTH LAKE STREET', 'N Lake St'), ('NORTH HERITAGE ROAD', 'S Heritage Rd'),
+                    ('Iris Drive SW', 'Iris Dr SE'), ('SW Silver Springs Blvd.', 'W Silver Springs Blvd'),
+                    ('New Tamap Highway', 'New Tampa Hwy'), ('Delany Rd', 'Delaney Ave'), ('GA Highway 3', 'US-19')]
+
+
+@pytest.mark.parametrize('left,right', PARCEL_SAME)
+def test_parcel_rule_tolerates_suffix_and_one_sided_directional(left, right):
+    ok, rule = street_equivalent(left, right, parcel=True)
+    assert ok, (left, right, rule)
+
+
+@pytest.mark.parametrize('left,right', PARCEL_DIFFERENT)
+def test_parcel_rule_refuses_direction_conflicts_and_other_names(left, right):
+    assert not street_equivalent(left, right, parcel=True)[0]
+
+
+def test_parcel_rule_needs_the_zip():
+    assert not street_equivalent('Alamo Dr', 'Alamo Rd')[0]
+    assert street_equivalent('Alamo Dr', 'Alamo Rd', parcel=True) == (True, 'parcel')
+    row = {'address': '4746 Alamo Dr', 'city': 'Bowie', 'state': 'TX', 'zip': ''}
+    parts = {'number': '4746', 'formatted_street': 'Alamo Rd', 'city': 'Bowie', 'state': 'TX', 'zip': '76230'}
+    result = {'response': {'results': [{'accuracy_type': 'rooftop', 'address_components': parts, 'location': {'lat': 33.5, 'lng': -97.8}}]}}
+    assert validate_rooftop(row, result)[1] == 'street_name_mismatch'
+    assert validate_rooftop({**row, 'zip': '76230'}, result)[1] == 'rooftop_verified'
+    assert validate_rooftop({**row, 'zip': '76231'}, result)[1] == 'zip_mismatch'

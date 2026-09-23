@@ -22,7 +22,7 @@ def validate(rows):
         if 'pobox' in norm(r['address']):raise ValueError('Mailing address cannot locate a plant')
 
 
-def street_rule(address, components):
+def street_rule(address, components, parcel=False):
     """The rule under which the source street and the geocoder's street are the same street, or
     the reason they are not — see pipeline.recovery.streets.  A verbatim comparison rejected 85
     rooftop results in the first campaign pass on spellings like "Hwy 231" / "US-231"."""
@@ -34,11 +34,11 @@ def street_rule(address, components):
     returned=components.get('formatted_street')
     if not returned:return False,'missing_street'
     if normalized_detail('address',street)==normalized_detail('address',returned):return True,'exact'
-    return street_equivalent(street,returned)
+    return street_equivalent(street,returned,parcel=parcel)
 
 
-def street_matches(address, components):
-    return street_rule(address, components)[0]
+def street_matches(address, components, parcel=False):
+    return street_rule(address, components, parcel=parcel)[0]
 
 
 def run(rows, out, prior=None):
