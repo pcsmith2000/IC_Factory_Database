@@ -56,6 +56,30 @@ operational flag listed under `flag_fields:` in `registry/survivorship.yaml` (e.
 `geocode_quality`), with `survivorship_order_json` NULL because it never reaches golden. A new
 flag-only field must be listed there; `tests/test_warehouse.py` fails on any orphan `field_key`.
 
+## Permanent facility IDs (epic #39)
+An IC-number is minted once, in the warehouse, and never reissued. `id_registry.json` used to be
+the registry, and every pipeline run minted into its own copy on its own branch, so forks handed the same
+numbers to different plants (21 releases, 17 registries, 2,286 IC-numbers naming a plant in
+another state). The registry is now four tables and a counter, owned by `pipeline/facility_registry.py`:
+
+```
+facility            facility_id "IC-00001", status active | merged | retired, merged_into
+facility_match_key  match_key (a reconcile signature) -> facility_id; many keys per plant, one plant per key
+facility_event      seed · mint · merge · split · retire · repoint, with actor and reason
+legacy_id_map       (registry hash, historical IC-number) -> permanent facility_id   (#42)
+facility_id_seq     Postgres sequence (SQLite: facility_id_counter), starts at IC-96841,
+                    above every number any registry ever issued; never lowered
+```
+The 6,426 facilities in golden on 2026-09-24 keep their numbers (the owner's decision). Seed and
+inspect, on main only:
+```
+python -m pipeline.facility_registry seed --dry-run    # coverage and collisions, writes nothing
+python -m pipeline.facility_registry seed              # idempotent
+python -m pipeline.facility_registry status
+```
+(or the `facility-registry` workflow). Until #43 lands, reconcile still reads `id_registry.json`,
+and only a run on main may write it (`run.yml`; `ci.yml` rejects any other PR that changes it).
+
 ## Loader (Layer 8)
 `build/assertions.csv` → `fact_assertions` (append, tagged with release; `assertion_id` is a hash
 of facility · field · value · source · date · row_hash, so re-loading a release is a no-op);

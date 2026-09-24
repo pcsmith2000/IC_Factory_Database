@@ -147,6 +147,27 @@ DDL = [
         retrieved_date TEXT, row_position TEXT, source_identifier TEXT,
         name_verbatim TEXT, address_verbatim TEXT, city_verbatim TEXT, state_verbatim TEXT, zip_verbatim TEXT,
         facility_key TEXT, match_method TEXT, match_confidence REAL, last_seen_release TEXT)""",
+    # ---- the permanent facility registry (epic #39; pipeline/facility_registry.py) ----------------
+    # An IC-number is minted once, here, and never reissued. id_registry.json minted per git
+    # branch and every fork handed the same next numbers to different plants; the registry now
+    # lives in one place and a plant may carry many match keys (a spelling, an address) without
+    # ever being given a second number.
+    """CREATE TABLE IF NOT EXISTS facility (
+        facility_id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'active'
+            CHECK (status IN ('active', 'merged', 'retired')),
+        merged_into TEXT REFERENCES facility (facility_id), created_at TEXT NOT NULL, created_by TEXT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS facility_match_key (
+        match_key TEXT PRIMARY KEY, facility_id TEXT NOT NULL REFERENCES facility (facility_id),
+        method TEXT NOT NULL, confidence REAL, source TEXT, first_seen TEXT NOT NULL)""",
+    "CREATE INDEX IF NOT EXISTS ix_match_key_facility ON facility_match_key (facility_id)",
+    """CREATE TABLE IF NOT EXISTS facility_event (
+        event_id TEXT PRIMARY KEY, at TEXT NOT NULL, kind TEXT NOT NULL, facility_id TEXT NOT NULL,
+        other_facility_id TEXT, match_key TEXT, actor TEXT NOT NULL, reason TEXT)""",
+    "CREATE INDEX IF NOT EXISTS ix_facility_event_facility ON facility_event (facility_id)",
+    """CREATE TABLE IF NOT EXISTS legacy_id_map (
+        registry_hash TEXT NOT NULL, legacy_id TEXT NOT NULL,
+        facility_id TEXT REFERENCES facility (facility_id), method TEXT NOT NULL, confidence REAL,
+        PRIMARY KEY (registry_hash, legacy_id))""",
 ]
 
 # Views are created after the golden columns are reconciled, not with the tables: they name every
@@ -265,6 +286,15 @@ class _Warehouse:
             self._migrate_golden(c)              # widen them before anything selects by name
             for stmt in VIEWS:                   # drops and recreates, so a widened table is seen
                 c.execute(stmt)
+            # The IC-number counter. Postgres: a sequence, so two writers can never draw the same
+            # number. SQLite (one writer by construction): a one-row table. Created at the floor
+            # and never lowered; pipeline/facility_registry.py owns it from here.
+            from .facility_registry import ID_FLOOR
+            if self.engine == "postgres":
+                c.execute(f"CREATE SEQUENCE IF NOT EXISTS facility_id_seq START WITH {ID_FLOOR} MINVALUE 1")
+            else:
+                c.execute("CREATE TABLE IF NOT EXISTS facility_id_counter (name TEXT PRIMARY KEY, next INTEGER NOT NULL)")
+                c.execute("INSERT INTO facility_id_counter VALUES ('facility_id', ?) ON CONFLICT (name) DO NOTHING", (ID_FLOOR,))
             if self.engine == "postgres":
                 # Execute raw: the migration contains Postgres's JSON existence operator '?'.
                 migration = Path(__file__).resolve().parent / "migrations" / "001_employee_feedback.sql"
