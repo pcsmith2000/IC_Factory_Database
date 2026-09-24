@@ -1283,3 +1283,31 @@ def test_a_connection_string_with_an_elided_password_is_refused_by_name():
 def test_an_ordinary_connection_string_still_connects():
     from pipeline.enrich import _db
     assert _db.connect("postgresql://neondb_owner:pw@ep-x.aws.neon.tech/neondb").host == "ep-x.aws.neon.tech"
+
+
+def test_an_operator_allowance_is_parsed_strictly_and_excuses_only_what_it_names():
+    import pytest
+    from pipeline.enrich import gates, promote
+    assert promote.parse_allowed_loss("") == {}
+    assert promote.parse_allowed_loss("existence_flag=6, lat_lon=2") == {"existence_flag": 6, "lat_lon": 2}
+    assert promote.parse_allowed_loss("existence_flag=6;existence_flag=2") == {"existence_flag": 6}
+    for bad in ("existence_flag", "existence_flag=six", "not_a_field=1"):
+        with pytest.raises(ValueError):
+            promote.parse_allowed_loss(bad)
+    before = {"__rows": 10, "existence_flag": 8, "address": 9}
+    after = {"__rows": 10, "existence_flag": 2, "address": 9}
+    assert e6(before, after, {"existence_flag": 6}).passed
+    assert not e6(before, after, {"existence_flag": 5}).passed
+    assert not e6(before, {"__rows": 10, "existence_flag": 2, "address": 8}, {"existence_flag": 6}).passed
+
+
+def e6(before, after, allowed):
+    from pipeline.enrich import gates
+    return gates.e6_rebuilt_golden_loses_nothing(before, after, allowed)
+
+
+def test_promote_reports_the_operator_allowance_it_was_given():
+    from pipeline.enrich import promote
+    db = _RecordingDB(["name", "name__source", "__rows"])
+    rep = promote.run(db, "rel-1", dry_run=True, allowed_loss={"existence_flag": 6})
+    assert rep["allowed_loss_operator"] == {"existence_flag": 6}

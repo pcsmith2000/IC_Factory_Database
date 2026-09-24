@@ -51,8 +51,36 @@ def _count_by(items: list[dict], key: str) -> dict[str, int]:
     return dict(sorted(out.items(), key=lambda kv: -kv[1]))
 
 
-def run(db, release_tag: str, dry_run: bool = False) -> dict:
+def parse_allowed_loss(text: str) -> dict[str, int]:
+    """An operator's one-run allowance for gate E6, spelled `field=count,field=count`.
+
+    E6 tolerates on its own exactly what E10 and E11 withheld. It cannot tolerate a loss that a
+    RULE change moves rather than withholds: promote #87 asked the unique-name rule before the
+    address rule, six existence verdicts left the duplicate rows they had been carried to, and
+    the plants they belong to already held one, so the count fell by six and the gate halted a
+    rebuild that was right. The allowance is declared per run, by field, never stored, and is
+    written into the promote report so the loss it excused is on the record.
+    """
+    out: dict[str, int] = {}
+    for part in (text or "").replace(";", ",").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "=" not in part:
+            raise ValueError(f"allowed loss must be field=count, got {part!r}")
+        field, _, count = part.partition("=")
+        field, count = field.strip(), count.strip()
+        if field not in GOLDEN_FIELDS:
+            raise ValueError(f"allowed loss names {field!r}, which is not a golden field")
+        if not count.isdigit():
+            raise ValueError(f"allowed loss for {field} must be a whole number, got {count!r}")
+        out[field] = max(out.get(field, 0), int(count))
+    return out
+
+
+def run(db, release_tag: str, dry_run: bool = False, allowed_loss: dict[str, int] | None = None) -> dict:
     rules = load_yaml(ROOT / "registry" / "survivorship.yaml")
+    operator_loss = dict(allowed_loss or {})
     # Widening comes first: the before-coverage below counts every golden column, and a column this
     # build knows that the database has not got yet would make that count fail rather than read 0.
     # Adding a nullable column changes no existing row, so it is safe ahead of the gate.
@@ -92,7 +120,9 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
     # E6 must tolerate exactly what E10 and E11 withheld and nothing else: the difference between
     # the rebuild with every assertion and the rebuild after the two gates, field by field.
     cov_unfiltered = coverage(unfiltered_rows, measurable)
-    allowed_loss = {f: max(0, cov_unfiltered[f] - cov_after[f]) for f in measurable}
+    # An operator may add a declared allowance on top (parse_allowed_loss); the larger of the two
+    # applies per field, and both are reported so a reader can see what was excused and by whom.
+    allowed_loss = {f: max(0, cov_unfiltered[f] - cov_after[f], operator_loss.get(f, 0)) for f in measurable}
     results = gates.run_promote(cov_before, cov_after, allowed_loss=allowed_loss)
     results.append(gates.e11_carried_assertions_name_the_same_plant(carried_withheld, unjudged))
     results.append(gates.e10_no_coordinate_outside_its_state(quarantined))
@@ -104,6 +134,8 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
            "gained": {f: cov_after[f] - cov_before.get(f, 0) for f in measurable
                       if cov_after[f] != cov_before.get(f, 0)},
            "gates": [str(r) for r in results], "written": 0,
+           "allowed_loss": {f: n for f, n in allowed_loss.items() if n},
+           "allowed_loss_operator": operator_loss,
            "carried_withheld_other_plant": len(carried_withheld),
            "carried_withheld_by_field": _count_by(carried_withheld, 'field'),
            "carried_withheld_by_source": _count_by(carried_withheld, 'source'),

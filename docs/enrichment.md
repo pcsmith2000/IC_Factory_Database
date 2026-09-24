@@ -568,6 +568,12 @@ destroy a release rather than merely fail to improve it, so it compares per-fiel
 in the database — not in the eight-column snapshot the stages use, which would read zero for every
 field it does not select and wave the rebuild through.
 
+E6 excuses on its own exactly what gates E10 and E11 withheld. A loss that a rule change moves
+rather than withholds — a carried fact now read under the plant it belongs to, which already held
+one, so its duplicate row goes empty — is excused only by an operator, for that one run, through
+the `allowed_loss` input (`field=count,...`). The allowance is never stored; the promote report
+records what was declared and what the gate actually excused.
+
 ## Deconfliction — enrichment runs beside an active layers 1–8
 
 Layers 1–8 and enrichment are worked on concurrently, so enrichment must never assume it is the
