@@ -91,8 +91,30 @@ Read facts through **`v_assertions_resolved`**, which adds `permanent_facility_i
 `merged_into` hop) and `resolve_method`. On 2026-09-24 it resolved 90.8% of 743,681 fact rows. The
 rest belong to plants golden no longer holds.
 
-Until #43 lands, reconcile still reads `id_registry.json`,
-and only a run on main may write it (`run.yml`; `ci.yml` rejects any other PR that changes it).
+**Resolving and minting (#43).** Once the registry is seeded, Layer 5 resolves every cluster
+through it (`facility_registry.DbIdRegistry`). The steps are tried in order:
+1. **known**: the cluster's signature is a key, so it gets that facility (following a merge).
+2. **attach**: the signature is new, but its rows' other signatures name exactly one live
+   facility. The plant keeps its number, for example when it's respelled or gains an address.
+3. **adopt**: `id_registry.json` already numbered this signature. The plant is registered under
+   that old number, which covers the ~90,000 T0 leads and excluded rows the seed didn't register.
+4. **mint**: otherwise, a new number comes from `facility_id_seq`.
+
+Keys are only ever added. If a key would re-point to another facility, the run halts at Layer 5,
+which is the new G3 guarantee alongside "a re-run issues 0 ids". Every step writes a
+`facility_event`. `id_registry.json` is then an export: a superset that is never pruned, whose
+`next` never falls behind the sequence. A scratch registry (`IC_ID_REGISTRY`, which every run
+off main uses) or an unseeded warehouse still uses the file.
+
+Operator acts, each an event with `--actor` and `--reason`:
+```
+python -m pipeline.facility_registry merge IC-00002 --into IC-00001 ...   # one plant, two numbers
+python -m pipeline.facility_registry retire IC-00003 ...                  # not a plant; never reissued
+python -m pipeline.facility_registry repoint "TX|S|1 main st" --to IC-00004 ...
+python -m pipeline.facility_registry mint ...                             # a split = mint + repoint
+```
+A merge always points at a live root and re-roots anything merged into its source, so
+`v_assertions_resolved` resolves every fact in a single hop.
 
 ## Loader (Layer 8)
 `build/assertions.csv` → `fact_assertions` (append, tagged with release; `assertion_id` is a hash

@@ -37,7 +37,9 @@ class IdRegistry:
         self.data = json.loads(path.read_text()) if path.exists() else {"next": 1, "ids": {}}
         self.issued_this_run = 0
 
-    def get(self, sig: str) -> str:
+    def get(self, sig: str, alts=()) -> str:
+        # alts (the cluster's other member signatures) matter only to the warehouse registry,
+        # facility_registry.DbIdRegistry, which uses them to keep a respelled plant's number.
         if sig not in self.data["ids"]:
             self.data["ids"][sig] = f"IC-{self.data['next']:05d}"
             self.data["next"] += 1
@@ -200,20 +202,28 @@ def _attach_addressless(clusters: dict[str, list[dict]], methods: dict[str, str]
     return folded
 
 
-def run(rows: list[dict], registry_path: Path) -> dict:
-    reg = IdRegistry(registry_path)
+def _row_signature(r: dict) -> tuple[str, str]:
+    if r.get("no_fixed_plant"):
+        return (f"NFP|{norm_name(r.get('name_verbatim',''))}", "no-fixed-plant")
+    return signature(r)
+
+
+def run(rows: list[dict], registry_path: Path, registry=None) -> dict:
+    """registry: facility_registry.DbIdRegistry when the permanent registry is live (#43), else
+    the id_registry.json file at registry_path."""
+    reg = registry if registry is not None else IdRegistry(registry_path)
     clusters: dict[str, list[dict]] = defaultdict(list)
     methods: dict[str, str] = {}
     for r in rows:
-        if r.get("no_fixed_plant"):
-            sig, m = (f"NFP|{norm_name(r.get('name_verbatim',''))}", "no-fixed-plant")
-        else:
-            sig, m = signature(r)
+        sig, m = _row_signature(r)
         clusters[sig].append(r); methods[sig] = m
     _attach_addressless(clusters, methods)
     facilities = []
     for sig, members in clusters.items():
-        fid = reg.get(sig)
+        # A folded-in row still carries its own signature. If the cluster's signature is new but a
+        # member's is known, the registry keeps that plant's number rather than minting another.
+        alts = sorted({_row_signature(r)[0] for r in members} - {sig})
+        fid = reg.get(sig, alts)
         for r in members:
             # A row folded in by _attach_addressless was matched on name and city, NOT on the
             # street key that gives its new cluster an id. Recording the cluster's method here
@@ -245,6 +255,9 @@ def run(rows: list[dict], registry_path: Path) -> dict:
         })
     reg.save()
     return {"facilities": facilities, "rows": rows, "ids_issued": reg.issued_this_run,
+            "ids_attached": getattr(reg, "attached_this_run", 0),
+            "ids_adopted": getattr(reg, "adopted_this_run", 0),
+            "ids_ambiguous": getattr(reg, "ambiguous_this_run", 0),
             "n_facilities": len(facilities), "tiers": _count(f["tier"] for f in facilities)}
 
 
