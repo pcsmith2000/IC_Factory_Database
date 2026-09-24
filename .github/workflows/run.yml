@@ -91,6 +91,17 @@ jobs:
           IC_AI: ${{ github.event.inputs.ai || 'on' }}
           IC_CLASSIFIER_MODEL: ${{ github.event.inputs.model }}
         run: |
+          # Ids are minted only by a run on main (#40, epic #39). A run on any other ref minted into
+          # its own copy of id_registry.json, and every fork then issued the same next numbers to
+          # different plants: 21 releases were built from 17 diverging registries. Elsewhere the run
+          # reconciles against a scratch copy and does not load the warehouse, so nothing it mints
+          # reaches a shared table; run.py labels it NOT A CLEAN RELEASE, which is what it is.
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            cp id_registry.json "$RUNNER_TEMP/id_registry.scratch.json"
+            export IC_ID_REGISTRY="$RUNNER_TEMP/id_registry.scratch.json"
+            export IC_WAREHOUSE_ENGINE=none
+            echo "::warning::${{ github.ref }} is not main: ids go to a scratch registry and the warehouse is not loaded"
+          fi
           python -m pipeline.run \
             --layers "${{ github.event.inputs.layers || '1-8' }}" \
             ${{ github.event.inputs.rerun == 'true' && '--rerun' || '' }}
@@ -117,7 +128,8 @@ jobs:
         # not a pipeline failure, and it marked a run whose gates all passed as failed. The branch
         # is the release artifact; the PR is a convenience on top of it.
         id: pr
-        if: success()
+        # Only a main run is a release; a branch run's ids were scratch (see "Run pipeline").
+        if: success() && github.ref == 'refs/heads/main'
         continue-on-error: true
         uses: peter-evans/create-pull-request@v6
         with:
@@ -131,7 +143,7 @@ jobs:
             run_records/*.json
 
       - name: Say where the release is
-        if: success()
+        if: success() && github.ref == 'refs/heads/main'
         run: |
           branch="release/${{ github.run_id }}"
           if [ "${{ steps.pr.outcome }}" = "success" ]; then

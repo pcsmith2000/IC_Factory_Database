@@ -14,6 +14,23 @@ jobs:
           --health-cmd "pg_isready -U ic" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: id_registry.json changes only through a release or a labelled PR (#40)
+        # Ids are permanent: a PR that edits the registry by hand, or carries one minted on a
+        # branch, re-issues numbers other rows already hold. A release PR from a main run
+        # (release/<run id>) is the one legitimate writer; anything else needs the
+        # id-registry-change label, which says a person looked.
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+          LABELLED: ${{ contains(github.event.pull_request.labels.*.name, 'id-registry-change') }}
+        run: |
+          if git diff --quiet "$BASE_SHA" HEAD -- id_registry.json; then exit 0; fi
+          case "$HEAD_REF" in release/*) echo "release PR: registry change allowed"; exit 0;; esac
+          if [ "$LABELLED" = "true" ]; then echo "labelled id-registry-change: allowed"; exit 0; fi
+          echo "::error::id_registry.json changed outside a release PR. Revert it, or add the id-registry-change label if a person has reviewed the change."
+          exit 1
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -e ".[dev,acquire,postgres]"
