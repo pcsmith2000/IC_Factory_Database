@@ -176,3 +176,20 @@ def test_an_address_bound_fact_follows_the_street_address_to_the_current_plant_s
     assert ('IC-1', 'website') not in moved                       # a website is the business's, not the parcel's
     assert {(w['facility_id'], w['field']) for w in withheld} == {('IC-7', 'website'), ('IC-8', 'lat_lon')}   # 5 Main St is two current plants
     assert counts['carried_by_address'] == 1
+
+
+def test_the_unique_name_is_asked_before_the_address():
+    """Promote #86 lost ten coordinates: a plant the current release knows by a unique name alone
+    also had a duplicate row, with a locality, at the same street address, and the address rule
+    moved the coordinate to the duplicate. The name is the stronger signal and is asked first."""
+    from pipeline.enrich.identity import carry_by_identity
+    cur = 'rel.now'; old = 'rel.then'
+    def row(fid, field, value, tag, src='x'): return {'facility_id': fid, 'field': field, 'value': value, 'release_tag': tag, 'source_id': src}
+    asserts = [row('IC-1', 'name', 'Simplex Homes', cur), row('IC-1', 'address', '1 Simplex Dr', cur),
+               row('IC-2', 'name', 'Simplex Homes Plant 2', cur), row('IC-2', 'state', 'PA', cur), row('IC-2', 'address', '1 Simplex Dr', cur),
+               row('IC-1', 'lat_lon', '41.4,-75.7', old, 'geocode:geocodio')]
+    ident = [row('IC-1', 'name', 'Simplex Homes', old), row('IC-1', 'city', 'Scranton', old), row('IC-1', 'state', 'PA', old), row('IC-1', 'address', '1 Simplex Dr', old)]
+    kept, withheld, counts = carry_by_identity(asserts, cur, ident)
+    carried = [k for k in kept if k.get('release_tag') == old]
+    assert carried and carried[0]['facility_id'] == 'IC-1' and carried[0]['carried_by'] == 'unique_name'
+    assert counts == {'carried_same_id_same_plant': 1, 'carried_rekeyed_by_identity': 0, 'carried_by_unique_name': 1, 'carried_by_address': 0}

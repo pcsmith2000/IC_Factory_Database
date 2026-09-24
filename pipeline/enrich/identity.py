@@ -139,17 +139,6 @@ def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: l
             targets |= current.get(key, set())
         unique_name = False
         by_addr = False
-        if not targets and a.get("field") in ADDRESS_BOUND_FIELDS:
-            # A numbered street address in a state is one parcel. A coordinate (or a footprint, or
-            # the verdict drawn from it) found for that address belongs to whichever current facility
-            # stands at it, whatever the business is now called — when exactly one does.
-            for key in addresses.get((a["facility_id"], tag), ()):
-                if len(current_by_address.get(key, ())) == 1:
-                    targets |= current_by_address[key]
-                    by_addr = True
-            if len(targets) > 1:
-                targets = set()
-                by_addr = False
         if not targets:
             # The current release knows the plant by name alone — no city, no state — and that name
             # belongs to exactly one current facility. Nothing contradicts the old release's locality,
@@ -158,6 +147,19 @@ def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: l
                 if name in nameless and len(by_name.get(name, ())) == 1:
                     targets |= nameless[name]
                     unique_name = True
+        if not targets and a.get("field") in ADDRESS_BOUND_FIELDS:
+            # A numbered street address in a state is one parcel. A coordinate (or a footprint, or
+            # the verdict drawn from it) found for that address belongs to whichever current facility
+            # stands at it, whatever the business is now called — when exactly one does. The name
+            # is asked first: a plant known by its unique name keeps its own coordinate even when a
+            # second current row (a duplicate with a locality) stands at the same address.
+            for key in addresses.get((a["facility_id"], tag), ()):
+                if len(current_by_address.get(key, ())) == 1:
+                    targets |= current_by_address[key]
+                    by_addr = True
+            if len(targets) > 1:
+                targets = set()
+                by_addr = False
         if len(targets) > 1 and a["facility_id"] in targets:
             targets = {a["facility_id"]}      # duplicates in the current release: the id it was written under wins
         if len(targets) != 1:
