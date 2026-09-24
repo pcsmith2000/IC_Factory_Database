@@ -58,6 +58,9 @@ on:
       sample:
         description: "work on a seeded stratified subset of this size (blank = all)"
         default: ""
+      allowed_loss:
+        description: "promote only: coverage gate E6 may excuse this much, as field=count,... (one run; recorded in the report)"
+        default: ""
       dry_run:
         description: "plan every stage, make no external call and write nothing"
         type: boolean
@@ -272,7 +275,9 @@ jobs:
       branch_id: ${{ needs.branch.outputs.branch_id }}
       run_key: ${{ github.run_id }}
       enabled: ${{ (contains(inputs.stages, 'promote') || github.event_name == 'workflow_run') && !inputs.dry_run }}
-      args: ${{ needs.branch.outputs.common_args }}
+      args: >-
+        ${{ needs.branch.outputs.common_args }}
+        ${{ inputs.allowed_loss && format('--allowed-loss {0}', inputs.allowed_loss) || '' }}
 
   # ---------------------------------------------------------------- always clean up
   cleanup:
