@@ -6,6 +6,14 @@ of three versioned inputs: the assertions, `id_registry.json`, and `registry/sur
 If you ever want to hand-edit a golden value, that is an assertion you have not recorded yet —
 put it in `control/operator_assertions.csv` and rebuild.
 
+**Ruling a facility out.** A row `IC-NNNNN,existence_flag,not_ic,<date>,<why>` in
+`control/operator_assertions.csv` (or the same assertion from `adl_employee_feedback`) keeps that
+facility out of golden, and so out of everything that reads golden, from the next rebuild on. Its
+IC-number stays reserved in `id_registry.json` and its assertions stay in `fact_assertions`; only a
+human source can do this (stage 12's `review` flag never removes anything). A later
+`existence_flag,review` row from a person puts it back. The run record lists the ids under
+`5b_golden.excluded_not_ic`; stage 13's gate E6 tolerates exactly those rows leaving.
+
 ## Assertions (`build/assertions.csv`, append-only in spirit)
 One row per (facility, field, value, source, retrieval). Derived from every reconciled contract
 row; a source row that names a plant with an address yields ~5 assertions.

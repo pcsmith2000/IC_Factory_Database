@@ -41,7 +41,7 @@ def build(assertions: list[dict], rules: dict) -> tuple[list[dict], list[dict]]:
     for a in assertions:
         a["retrieved_date"] = a.get("retrieved_date") or ""
         a["site_visit"] = a.get("site_visit") in (1, True, "1", "True")
-    return golden_mod.build_golden(assertions, rules)
+    return golden_mod.build_golden(assertions, rules, keep_excluded=True)
 
 
 def _count_by(items: list[dict], key: str) -> dict[str, int]:
@@ -87,12 +87,15 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
         withheld = {(b['facility_id'], b['lat_lon']) for b in bad}
         asserts = [a for a in asserts if not (a['field'] == 'lat_lon' and (a['facility_id'], a['value']) in withheld)]
         rows, conflicts = build(asserts, rules)
+    # A facility a person ruled not IC leaves golden here. It is a third legitimate shrinkage, and
+    # like E10's and E11's it is measured rather than assumed: E6 tolerates exactly these rows.
+    rows, conflicts, excluded = golden_mod.split_excluded(rows, conflicts)
     cov_after = coverage(rows, measurable)
     from . import gates
     # E6 must tolerate exactly what E10 and E11 withheld and nothing else: the difference between
     # the rebuild with every assertion and the rebuild after the two gates, field by field.
     cov_unfiltered = coverage(unfiltered_rows, measurable)
-    allowed_loss = {f: max(0, cov_unfiltered[f] - cov_after[f]) for f in measurable}
+    allowed_loss = {f: max(0, cov_unfiltered[f] - cov_after[f]) for f in [*measurable, "__rows"]}
     results = gates.run_promote(cov_before, cov_after, allowed_loss=allowed_loss)
     results.append(gates.e11_carried_assertions_name_the_same_plant(carried_withheld, unjudged))
     results.append(gates.e10_no_coordinate_outside_its_state(quarantined))
@@ -111,6 +114,7 @@ def run(db, release_tag: str, dry_run: bool = False) -> dict:
            "carried_withheld_by_reason": _count_by(carried_withheld, 'reason'),
            **carry_counts,
            "carried_withheld": carried_withheld,
+           "excluded_not_ic": sorted(g["facility_id"] for g in excluded),
            "coordinates_withheld_out_of_state": len(quarantined),
            "coordinates_withheld_by_source": _count_by(quarantined, 'source'),
            "coordinates_withheld": quarantined,

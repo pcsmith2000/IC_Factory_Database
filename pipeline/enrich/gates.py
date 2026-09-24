@@ -129,17 +129,18 @@ def e6_rebuilt_golden_loses_nothing(before: dict[str, int], after: dict[str, int
     E4 asks the same question of the stage outputs; this asks it of what actually lands in the
     table, which is the only version a reader ever sees.
     """
-    # allowed_loss names the one legitimate shrinkage: coordinates E10 withheld as out of state.
+    # allowed_loss names the legitimate shrinkage: what E10 and E11 withheld, and facilities a
+    # person ruled not IC ("__rows" carries how many of those left golden).
     allowed = allowed_loss or {}
     lost = {f: (before[f], after.get(f, 0)) for f in before
             if f != "__rows" and after.get(f, 0) < before[f] - allowed.get(f, 0)}
     n0, n1 = before.get("__rows", 0), after.get("__rows", 0)
-    ok = not lost and n1 >= n0
+    ok = not lost and n1 >= n0 - allowed.get("__rows", 0)
     detail = ", ".join(f"{f} {a}->{b}" for f, (a, b) in sorted(lost.items()))
     return GateResult("E6", ok,
                       f"{n0} golden rows -> {n1}"
                       + (f" — lost coverage: {detail}" if lost else "")
-                      + ("" if n1 >= n0 else " — fewer facilities than before"))
+                      + ("" if n1 >= n0 - allowed.get("__rows", 0) else " — fewer facilities than before"))
 
 
 def e9_every_capability_is_a_member_of_the_taxonomy(assertions: list[dict]) -> GateResult:
