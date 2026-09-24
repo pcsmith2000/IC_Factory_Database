@@ -133,3 +133,25 @@ def test_any_shared_spelling_identifies_the_plant():
     kept, withheld, counts = carry_by_identity(asserts, cur, ident)
     assert not withheld and counts['carried_rekeyed_by_identity'] == 1
     assert [k for k in kept if k['field'] == 'lat_lon'][0]['facility_id'] == 'IC-5'
+
+
+def test_a_plant_the_current_release_knows_by_a_unique_name_alone_keeps_its_coordinate():
+    """65 current facilities assert a name but no city and no state, and an earlier release located
+    exactly that name with a locality. Nothing contradicts; a unique name carries. A name two current
+    facilities share, or one the current release places somewhere else, does not."""
+    from pipeline.enrich.identity import carry_by_identity
+    cur = 'rel.now'; old = 'rel.then'
+    def row(fid, field, value, tag, src='x'): return {'facility_id': fid, 'field': field, 'value': value, 'release_tag': tag, 'source_id': src}
+    asserts = [row('IC-1', 'name', 'Smart Sheds Industries LLC', cur),
+               row('IC-2', 'name', 'Rapid Home', cur), row('IC-3', 'name', 'Rapid Home', cur),
+               row('IC-4', 'name', 'Moved Plant', cur), row('IC-4', 'city', 'Austin', cur), row('IC-4', 'state', 'TX', cur),
+               row('IC-1', 'lat_lon', '33.1,-87.2', old, 'geocode:geocodio'),
+               row('IC-2', 'lat_lon', '1,1', old, 'geocode:geocodio'),
+               row('IC-4', 'lat_lon', '2,2', old, 'geocode:geocodio')]
+    ident = [row('IC-1', 'name', 'SMART SHEDS INDUSTRIES, LLC', old), row('IC-1', 'city', 'Cullman', old), row('IC-1', 'state', 'AL', old),
+             row('IC-2', 'name', 'Rapid Home', old), row('IC-2', 'city', 'X', old), row('IC-2', 'state', 'OK', old),
+             row('IC-4', 'name', 'Moved Plant', old), row('IC-4', 'city', 'Tulsa', old), row('IC-4', 'state', 'OK', old)]
+    kept, withheld, counts = carry_by_identity(asserts, cur, ident)
+    carried = {(k['facility_id'], k['field']) for k in kept if k.get('release_tag') == old}
+    assert ('IC-1', 'lat_lon') in carried and counts['carried_by_unique_name'] == 1
+    assert {w['facility_id'] for w in withheld} == {'IC-2', 'IC-4'}

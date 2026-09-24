@@ -86,13 +86,19 @@ def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: l
     """
     ident = _identity_by_release(list(assertions) + list(identity_rows or []))
     current: dict[tuple[str, str, str], set[str]] = {}
+    by_name: dict[str, set[str]] = {}          # every current facility under each of its names
+    nameless: dict[str, set[str]] = {}         # current facilities that assert a name but no city and no state
     for (fid, tag), keys in ident.items():
         if tag == release_tag:
             for key in keys:
                 current.setdefault(key, set()).add(fid)
+                by_name.setdefault(key[0], set()).add(fid)
+                if key[1] == "" and key[2] == "":
+                    nameless.setdefault(key[0], set()).add(fid)
     kept, withheld = [], []
     rekeyed = 0
     same_plant = 0
+    by_unique_name = 0
     for a in assertions:
         tag = a.get("release_tag") or ""
         if tag == release_tag or not tag:
@@ -106,6 +112,15 @@ def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: l
         targets: set[str] = set()
         for key in then:
             targets |= current.get(key, set())
+        unique_name = False
+        if not targets:
+            # The current release knows the plant by name alone — no city, no state — and that name
+            # belongs to exactly one current facility. Nothing contradicts the old release's locality,
+            # and a unique name is the strongest signal left; the state gate still judges the point.
+            for name in {k[0] for k in then}:
+                if name in nameless and len(by_name.get(name, ())) == 1:
+                    targets |= nameless[name]
+                    unique_name = True
         if len(targets) > 1 and a["facility_id"] in targets:
             targets = {a["facility_id"]}      # duplicates in the current release: the id it was written under wins
         if len(targets) != 1:
@@ -115,10 +130,14 @@ def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: l
                              "identity_then": sorted(min(then))})
             continue
         target = next(iter(targets))
+        if unique_name:
+            by_unique_name += 1
         if target == a["facility_id"]:
             same_plant += 1
-            kept.append(a)
+            kept.append(a if not unique_name else {**a, "carried_by": "unique_name"})
         else:
             rekeyed += 1
-            kept.append({**a, "facility_id": target, "carried_from_facility_id": a["facility_id"]})
-    return kept, withheld, {"carried_same_id_same_plant": same_plant, "carried_rekeyed_by_identity": rekeyed}
+            kept.append({**a, "facility_id": target, "carried_from_facility_id": a["facility_id"],
+                         **({"carried_by": "unique_name"} if unique_name else {})})
+    return kept, withheld, {"carried_same_id_same_plant": same_plant, "carried_rekeyed_by_identity": rekeyed,
+                            "carried_by_unique_name": by_unique_name}
