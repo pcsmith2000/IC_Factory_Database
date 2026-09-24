@@ -155,3 +155,24 @@ def test_a_plant_the_current_release_knows_by_a_unique_name_alone_keeps_its_coor
     carried = {(k['facility_id'], k['field']) for k in kept if k.get('release_tag') == old}
     assert ('IC-1', 'lat_lon') in carried and counts['carried_by_unique_name'] == 1
     assert {w['facility_id'] for w in withheld} == {'IC-2', 'IC-4'}
+
+
+def test_an_address_bound_fact_follows_the_street_address_to_the_current_plant_standing_at_it():
+    """84 unlocated current facilities stand at a numbered address an earlier release located under
+    another id and another name. The coordinate belongs to the parcel; the name does not travel."""
+    from pipeline.enrich.identity import carry_by_identity
+    cur = 'rel.now'; old = 'rel.then'
+    def row(fid, field, value, tag, src='x'): return {'facility_id': fid, 'field': field, 'value': value, 'release_tag': tag, 'source_id': src}
+    asserts = [row('IC-1', 'name', 'New Owner LLC', cur), row('IC-1', 'city', 'Desoto', cur), row('IC-1', 'state', 'TX', cur), row('IC-1', 'address', '1200 Industrial Blvd', cur),
+               row('IC-2', 'name', 'Twin A', cur), row('IC-2', 'state', 'OH', cur), row('IC-2', 'address', '5 Main St', cur),
+               row('IC-3', 'name', 'Twin B', cur), row('IC-3', 'state', 'OH', cur), row('IC-3', 'address', '5 Main St', cur),
+               row('IC-7', 'lat_lon', '32.6,-96.9', old, 'geocode:geocodio'), row('IC-7', 'website', 'old-owner.example', old, 'enrich:locate'),
+               row('IC-8', 'lat_lon', '40.1,-82.9', old, 'geocode:geocodio')]
+    ident = [row('IC-7', 'name', 'Old Owner Inc', old), row('IC-7', 'city', 'DeSoto', old), row('IC-7', 'state', 'TX', old), row('IC-7', 'address', '1200 INDUSTRIAL BLVD.', old),
+             row('IC-8', 'name', 'Gone', old), row('IC-8', 'state', 'OH', old), row('IC-8', 'address', '5 Main St', old)]
+    kept, withheld, counts = carry_by_identity(asserts, cur, ident)
+    moved = {(k['facility_id'], k['field']): k for k in kept if k.get('carried_from_facility_id')}
+    assert ('IC-1', 'lat_lon') in moved and moved[('IC-1', 'lat_lon')]['carried_by'] == 'address'
+    assert ('IC-1', 'website') not in moved                       # a website is the business's, not the parcel's
+    assert {(w['facility_id'], w['field']) for w in withheld} == {('IC-7', 'website'), ('IC-8', 'lat_lon')}   # 5 Main St is two current plants
+    assert counts['carried_by_address'] == 1

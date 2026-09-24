@@ -70,6 +70,24 @@ def _identity_by_release(assertions: list[dict]) -> dict[tuple[str, str], set[tu
     return out
 
 
+# Facts that belong to the street address rather than to the business name: a coordinate, a
+# footprint measured at it, the existence verdict drawn from that footprint, the geocode's grade.
+ADDRESS_BOUND_FIELDS = ("lat_lon", "building_sqft", "existence_flag", "geocode_quality")
+
+
+def _address_by_release(rows: list[dict]) -> dict[tuple[str, str], set[tuple[str, str]]]:
+    """(facility_id, release) -> {(normalised numbered street address, state)}."""
+    parts: dict[tuple[str, str], dict[str, set[str]]] = {}
+    for a in rows:
+        f = a.get("field")
+        if f == "address" and re.match(r"^\s*\d", str(a.get("value") or "")) and _norm(a.get("value")):
+            parts.setdefault((a["facility_id"], a.get("release_tag") or ""), {}).setdefault("address", set()).add(_norm(a["value"]))
+        elif f == "state" and _norm(a.get("value")):
+            parts.setdefault((a["facility_id"], a.get("release_tag") or ""), {}).setdefault("state", set()).add(_norm(a["value"]))
+    return {key: {(ad, st) for ad in fields["address"] for st in fields.get("state", {""})}
+            for key, fields in parts.items() if "address" in fields}
+
+
 def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: list[dict] | None = None) -> tuple[list[dict], list[dict], dict]:
     """Rebuild the cross-release carry-over on identity rather than on id.
 
@@ -95,10 +113,17 @@ def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: l
                 by_name.setdefault(key[0], set()).add(fid)
                 if key[1] == "" and key[2] == "":
                     nameless.setdefault(key[0], set()).add(fid)
+    addresses = _address_by_release(list(assertions) + list(identity_rows or []))
+    current_by_address: dict[tuple[str, str], set[str]] = {}
+    for (fid, tag), keys in addresses.items():
+        if tag == release_tag:
+            for key in keys:
+                current_by_address.setdefault(key, set()).add(fid)
     kept, withheld = [], []
     rekeyed = 0
     same_plant = 0
     by_unique_name = 0
+    by_address = 0
     for a in assertions:
         tag = a.get("release_tag") or ""
         if tag == release_tag or not tag:
@@ -113,6 +138,18 @@ def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: l
         for key in then:
             targets |= current.get(key, set())
         unique_name = False
+        by_addr = False
+        if not targets and a.get("field") in ADDRESS_BOUND_FIELDS:
+            # A numbered street address in a state is one parcel. A coordinate (or a footprint, or
+            # the verdict drawn from it) found for that address belongs to whichever current facility
+            # stands at it, whatever the business is now called — when exactly one does.
+            for key in addresses.get((a["facility_id"], tag), ()):
+                if len(current_by_address.get(key, ())) == 1:
+                    targets |= current_by_address[key]
+                    by_addr = True
+            if len(targets) > 1:
+                targets = set()
+                by_addr = False
         if not targets:
             # The current release knows the plant by name alone — no city, no state — and that name
             # belongs to exactly one current facility. Nothing contradicts the old release's locality,
@@ -130,14 +167,17 @@ def carry_by_identity(assertions: list[dict], release_tag: str, identity_rows: l
                              "identity_then": sorted(min(then))})
             continue
         target = next(iter(targets))
+        how = "unique_name" if unique_name else "address" if by_addr else None
         if unique_name:
             by_unique_name += 1
+        if by_addr:
+            by_address += 1
         if target == a["facility_id"]:
             same_plant += 1
-            kept.append(a if not unique_name else {**a, "carried_by": "unique_name"})
+            kept.append(a if how is None else {**a, "carried_by": how})
         else:
             rekeyed += 1
             kept.append({**a, "facility_id": target, "carried_from_facility_id": a["facility_id"],
-                         **({"carried_by": "unique_name"} if unique_name else {})})
+                         **({"carried_by": how} if how else {})})
     return kept, withheld, {"carried_same_id_same_plant": same_plant, "carried_rekeyed_by_identity": rekeyed,
-                            "carried_by_unique_name": by_unique_name}
+                            "carried_by_unique_name": by_unique_name, "carried_by_address": by_address}

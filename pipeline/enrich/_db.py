@@ -309,12 +309,12 @@ def fetch_assertions(db, release_tag: str, page: int = 5000) -> list[dict]:
 IDENTITY_ROWS = """
     SELECT facility_key AS facility_id, release_tag, field_key AS field, value
     FROM fact_assertions
-    WHERE field_key IN ('name', 'city', 'state') AND release_tag = $1
+    WHERE field_key IN ('name', 'city', 'state', 'address') AND release_tag = $1
     ORDER BY facility_key, field_key LIMIT $2 OFFSET $3"""
 
 
 def fetch_identity_rows(db, release_tags: set[str], page: int = 5000) -> list[dict]:
-    """The name, city and state every listed release asserted for its facility ids. These rows are
+    """The name, city, state and address every listed release asserted for its facility ids. These rows are
     read only to judge identity (pipeline/enrich/identity.py): the carried enrichment fetch_assertions
     returns says nothing about which plant an old release meant by an id, and without this the
     carry-over withheld every cross-release assertion as 'no identity in that release'."""
