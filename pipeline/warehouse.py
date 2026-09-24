@@ -168,6 +168,9 @@ DDL = [
         registry_hash TEXT NOT NULL, legacy_id TEXT NOT NULL,
         facility_id TEXT REFERENCES facility (facility_id), method TEXT NOT NULL, confidence REAL,
         PRIMARY KEY (registry_hash, legacy_id))""",
+    # Which id registry each release was built from (its tag's `+ids.<hash>`), so a view can join
+    # fact_assertions to legacy_id_map in SQL both engines share. Written by pipeline/legacy_ids.py.
+    "CREATE TABLE IF NOT EXISTS release_registry (release_tag TEXT PRIMARY KEY, registry_hash TEXT NOT NULL)",
 ]
 
 # Views are created after the golden columns are reconciled, not with the tables: they name every
@@ -190,6 +193,17 @@ VIEWS = [
           ON a.release_tag = g.release_tag AND a.facility_key = g.facility_key
          AND a.field_key = g.field_key AND a.value = g.value AND a.source_key = g.source_key
         LEFT JOIN ref_source_row r ON r.row_hash = a.row_hash""",
+    "DROP VIEW IF EXISTS v_assertions_resolved",
+    # Every fact with the permanent facility it meant (#42): through the release's id registry to
+    # legacy_id_map, then one hop of merged_into (a merge always points at a live root, #43).
+    # NULL permanent_facility_id: the number is unresolved, so the fact belongs to no plant.
+    """CREATE VIEW v_assertions_resolved AS
+        SELECT a.*, rr.registry_hash, m.method AS resolve_method,
+               COALESCE(f.merged_into, m.facility_id) AS permanent_facility_id
+        FROM fact_assertions a
+        LEFT JOIN release_registry rr ON rr.release_tag = a.release_tag
+        LEFT JOIN legacy_id_map m ON m.registry_hash = rr.registry_hash AND m.legacy_id = a.facility_key
+        LEFT JOIN facility f ON f.facility_id = m.facility_id""",
 ]
 
 

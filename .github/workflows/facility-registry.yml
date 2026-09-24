@@ -10,12 +10,12 @@ on:
   workflow_dispatch:
     inputs:
       command:
-        description: "seed = register every golden facility under its current number · status = report"
+        description: "seed = register every golden facility under its current number · crosswalk = map every historical IC-number to its permanent facility (#42) · status = report"
         type: choice
-        options: ["status", "seed"]
+        options: ["status", "seed", "crosswalk"]
         default: "status"
       dry_run:
-        description: "seed only: check coverage and collisions, write nothing"
+        description: "seed / crosswalk: check and report, write nothing"
         type: boolean
         default: true
 
@@ -46,6 +46,10 @@ jobs:
           COMMAND: ${{ inputs.command }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          if [ "$COMMAND" = "seed" ] && [ "$DRY_RUN" = "true" ]; then set -- seed --dry-run; else set -- "$COMMAND"; fi
-          python -m pipeline.facility_registry "$@" | tee registry.json
+          case "$COMMAND" in
+            crosswalk) mod=pipeline.legacy_ids ;;
+            *)         mod=pipeline.facility_registry ;;
+          esac
+          if [ "$COMMAND" != "status" ] && [ "$DRY_RUN" = "true" ]; then set -- "$COMMAND" --dry-run; else set -- "$COMMAND"; fi
+          python -m "$mod" "$@" | tee registry.json
           { echo '```json'; cat registry.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

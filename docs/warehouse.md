@@ -77,7 +77,21 @@ python -m pipeline.facility_registry seed --dry-run    # coverage and collisions
 python -m pipeline.facility_registry seed              # idempotent
 python -m pipeline.facility_registry status
 ```
-(or the `facility-registry` workflow). Until #43 lands, reconcile still reads `id_registry.json`,
+(or the `facility-registry` workflow).
+
+**Legacy crosswalk (#42).** `fact_assertions` keeps the IC-number each release used and is never
+rewritten. `python -m pipeline.legacy_ids crosswalk` fills `legacy_id_map` with one row per
+(registry hash, historical number) → permanent `facility_id`, plus `release_registry` (release
+tag → registry hash). Resolution is per registry, because within one registry a number always
+names one plant. Rules are tried in order: `current` · `same_id` · `identity` (shared
+name+city+state) · `unique_name` (the only plant with that name in that state, and one side names
+no city) · `address` (a numbered street in the same state). Anything else, including every
+ambiguous case, is `unresolved`, with a NULL facility. The map is derived and a re-run replaces it.
+Read facts through **`v_assertions_resolved`**, which adds `permanent_facility_id` (following one
+`merged_into` hop) and `resolve_method`. On 2026-09-24 it resolved 90.8% of 743,681 fact rows. The
+rest belong to plants golden no longer holds.
+
+Until #43 lands, reconcile still reads `id_registry.json`,
 and only a run on main may write it (`run.yml`; `ci.yml` rejects any other PR that changes it).
 
 ## Loader (Layer 8)
