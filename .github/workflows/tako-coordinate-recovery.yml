@@ -1,0 +1,275 @@
+name: Tako coordinate recovery research
+run-name: Tako coordinate recovery · ${{ inputs.mode || 'plan' }} · ${{ inputs.row_limit || '10' }} rows
+on:
+  push:
+    branches: [feat/coordinate-recovery]
+    paths: [.github/workflows/tako-coordinate-recovery.yml]
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [plan, research, assertions_plan, manifest_plan, assertions_apply]
+        default: plan
+      manifest_path:
+        description: 'manifest_plan only: a committed reviewed manifest (research/<campaign>/approved-assertions.json)'
+        default: ''
+      campaign_id:
+        description: 'Coordinate recovery campaign to work (blank = the 2026-09-21 campaign)'
+        default: ''
+      pass_id:
+        description: 'Stable pass identifier'
+        default: 'tako-address-1'
+      row_limit:
+        description: 'Maximum rows (1-200)'
+        default: '10'
+      row_offset:
+        description: 'Offset within the deterministic eligible cohort'
+        default: '0'
+      states:
+        description: 'Optional state codes, comma-separated'
+        default: ''
+      source_ids:
+        description: 'Optional primary-name source ids, comma-separated (for example adl_4ward,adl_july)'
+        default: ''
+      address_scope:
+        description: 'Which address-completeness cohort to select'
+        type: choice
+        options: [missing_street_known_locality, needs_address, complete_address, all]
+        default: missing_street_known_locality
+      sample_seed:
+        description: 'Stable sampling seed'
+        default: '20260921'
+      max_cost_usd:
+        description: 'Per-run estimated upper cost cap (maximum 9.50)'
+        default: '0.75'
+      plan_run:
+        description: 'Exact plan workflow run ID; required for research'
+        default: ''
+      plan_sha256:
+        description: 'Exact SHA256 printed by the plan; required for research'
+        default: ''
+      research_run:
+        description: 'Exact completed research run; required for assertion planning'
+        default: ''
+permissions:
+  contents: read
+  actions: read
+env:
+  RECOVERY_CAMPAIGN: ${{ inputs.campaign_id }}
+concurrency:
+  group: tako-coordinate-recovery
+  cancel-in-progress: false
+jobs:
+  plan:
+    if: github.event_name == 'push' || inputs.mode == 'plan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ROW_LIMIT: ${{ inputs.row_limit || '10' }}
+      ROW_OFFSET: ${{ inputs.row_offset || '0' }}
+      STATES: ${{ inputs.states }}
+      SOURCE_IDS: ${{ inputs.source_ids }}
+      ADDRESS_SCOPE: ${{ inputs.address_scope || 'missing_street_known_locality' }}
+      SAMPLE_SEED: ${{ inputs.sample_seed || '20260921' }}
+      PASS_ID: ${{ inputs.pass_id || 'tako-address-1' }}
+      MAX_COST_USD: ${{ inputs.max_cost_usd || '0.75' }}
+      RESEARCH_COORDINATE_RECOVERY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_tako_budget.py tests/test_web_research.py -q
+      - name: Freeze unresolved rows and estimate cost (database read-only)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: python -c "from pathlib import Path; from pipeline.recovery.tako_select import create_plan; create_plan(Path('tako-coordinate-plan'))"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tako-coordinate-plan-${{ github.run_id }}
+          path: tako-coordinate-plan/
+          retention-days: 30
+  reserve:
+    if: inputs.mode == 'research'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PLAN_RUN: ${{ inputs.plan_run }}
+      PLAN_SHA256: ${{ inputs.plan_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_tako_budget.py tests/test_tako_coordinate_recovery.py -q
+      - name: Retrieve exact reviewed research plan
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          run=os.environ['PLAN_RUN']
+          if not re.fullmatch(r'\d+',run):raise ValueError('Exact plan workflow run ID required')
+          subprocess.run(['gh','run','download',run,'--name',f'tako-coordinate-plan-{run}','--dir','downloaded-plan'],check=True)
+          PY
+      - name: Reserve reviewed cap against shared campaign budget
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: python -c "import os; from pathlib import Path; from pipeline.recovery.tako_budget import reserve; reserve(Path('downloaded-plan'),os.environ['PLAN_SHA256'],os.environ['GITHUB_RUN_ID'],Path('budget-output'))"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tako-coordinate-budget-reservation-${{ github.run_id }}
+          path: budget-output/
+          retention-days: 90
+  research:
+    needs: reserve
+    if: inputs.mode == 'research'
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    env:
+      RESEARCH_OUT: research-output
+      GH_TOKEN: ${{ github.token }}
+      PLAN_RUN: ${{ inputs.plan_run }}
+      PLAN_SHA256: ${{ inputs.plan_sha256 }}
+      RESEARCH_COORDINATE_RECOVERY: '1'
+      RESEARCH_TIME_LIMIT_SECONDS: '3600'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_tako_budget.py tests/test_web_research.py -q
+      - name: Retrieve the exact reviewed plan
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          run=os.environ['PLAN_RUN']
+          if not re.fullmatch(r'\d+',run):raise ValueError('Exact plan workflow run ID required')
+          subprocess.run(['gh','run','download',run,'--name',f'tako-coordinate-plan-{run}','--dir','downloaded-plan'],check=True)
+          PY
+      - name: Verify plan SHA and freeze research input
+        run: python -c "import os; from pathlib import Path; from pipeline.recovery.tako_select import verify_plan; verify_plan(Path('downloaded-plan'),Path('research-output'),os.environ['PLAN_SHA256'])"
+      - name: Research without database credentials
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY || secrets.IC_DB_AI_GATEWAY_API_KEY || secrets.VERCEL_AI_GATEWAY_API_KEY }}
+        run: python -m pipeline.web_research.run --mode research
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tako-coordinate-research-${{ github.run_id }}
+          path: research-output/
+          retention-days: 30
+  settle:
+    needs: [reserve, research]
+    if: always() && inputs.mode == 'research' && needs.reserve.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - name: Retrieve research cost artifact
+        run: gh run download "$GITHUB_RUN_ID" --name "tako-coordinate-research-$GITHUB_RUN_ID" --dir research-output
+      - name: Settle actual cost against the shared campaign budget
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: python -c "import os; from pathlib import Path; from pipeline.recovery.tako_budget import settle; settle(Path('research-output'),os.environ['GITHUB_RUN_ID'],Path('budget-output'))"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tako-coordinate-budget-settlement-${{ github.run_id }}
+          path: budget-output/
+          retention-days: 90
+  assertions:
+    if: inputs.mode == 'assertions_plan' || inputs.mode == 'manifest_plan' || inputs.mode == 'assertions_apply'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MODE: ${{ inputs.mode }}
+      RESEARCH_RUN: ${{ inputs.research_run }}
+      PLAN_RUN: ${{ inputs.plan_run }}
+      PLAN_SHA256: ${{ inputs.plan_sha256 }}
+      MANIFEST_PATH: ${{ inputs.manifest_path }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]'
+      - run: pytest tests/test_tako_coordinate_recovery.py tests/test_tako_coordinate_manifest.py tests/test_tako_publish.py tests/test_web_research.py -q
+      - name: Download exact research or assertion plan artifact
+        if: inputs.mode != 'manifest_plan'
+        run: |
+          python - <<'PY'
+          import os,re,subprocess
+          if os.environ['MODE']=='assertions_plan':
+              run=os.environ['RESEARCH_RUN'];name=f'tako-coordinate-research-{run}';dest='research'
+          else:
+              run=os.environ['PLAN_RUN'];name=f'tako-coordinate-assertions-{run}';dest='assertion-plan'
+          if not re.fullmatch(r'\d+',run):raise ValueError('Exact source run ID required')
+          subprocess.run(['gh','run','download',run,'--name',name,'--dir',dest],check=True)
+          PY
+      - name: Build strict manifest and plan assertions
+        if: inputs.mode == 'assertions_plan'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from pipeline.recovery.tako_manifest import build
+          from pipeline.recovery.tako_address import run as sync
+          from pipeline.web_research.publish import run as publish
+          out=Path('assertion-output')
+          manifest,_=build(Path('research'),out,os.environ['RESEARCH_RUN'])
+          if not manifest['assertions']:raise RuntimeError('No strict address assertions passed; no plan created')
+          publish('plan',out,manifest_path=out/'approved-assertions.json')
+          sync('plan',out/'approved-assertions.json',out)
+          PY
+      - name: Plan assertions from a committed reviewed manifest (manual web lookups)
+        if: inputs.mode == 'manifest_plan'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: |
+          python - <<'PY'
+          import os,re,shutil
+          from pathlib import Path
+          from pipeline.recovery.tako_address import run as sync
+          from pipeline.web_research.publish import run as publish
+          src=os.environ['MANIFEST_PATH']
+          if not re.fullmatch(r'research/[A-Za-z0-9._-]+/approved-assertions\.json',src) or not Path(src).is_file():
+              raise ValueError('manifest_path must be a committed research/<campaign>/approved-assertions.json')
+          out=Path('assertion-output');out.mkdir(exist_ok=True)
+          shutil.copy(src,out/'approved-assertions.json')   # the apply step reads the manifest from this artifact
+          publish('plan',out,manifest_path=out/'approved-assertions.json')
+          sync('plan',out/'approved-assertions.json',out)
+          PY
+      - name: Apply exact assertion plan and hand addresses to rooftop recovery
+        if: inputs.mode == 'assertions_apply'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from pipeline.recovery.tako_address import run as sync
+          from pipeline.web_research.publish import run as publish
+          source=Path('assertion-plan');out=Path('assertion-output')
+          publish('apply',out,source/'plan.json',os.environ['PLAN_SHA256'],source/'approved-assertions.json')
+          sync('apply',source/'approved-assertions.json',out)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tako-coordinate-assertions-${{ github.run_id }}
+          path: assertion-output/
+          retention-days: 90

@@ -10,9 +10,22 @@ from urllib.parse import urlsplit
 from pipeline.enrich._db import assertion, _rows_for
 from pipeline.web_research.select import FIELDS
 from pipeline.web_research.campaign import normalized_detail
+from pipeline.web_research.run import minor_city_correction, physical_street
 
 SOURCE = 'tako_ai_search'
+# Every source a reviewed manifest may carry. The manifest names its own source and every row it
+# writes is filed under that id, its own class and a basis naming the review, so survivorship
+# can never mistake a manual web lookup for a roster or a geocode.
+SOURCES = {
+    'tako_ai_search': {'name': 'Tako AI Search', 'method': 'Reviewed web-search evidence',
+                       'basis': 'tako_ai_search_reviewed'},
+    'astra_manual_web_lookup': {'name': 'ASTRA manual web lookup',
+                                'method': 'Manual web lookup by the ASTRA session; page fetched and address quoted',
+                                'basis': 'manual_web_lookup_reviewed'},
+}
 MANIFEST = Path('research/adl-2026-09-20/approved-assertions.json')
+CORRECTIONS = {'minor_city_spelling', 'physical_address_replaces_mailing',
+               'physical_zip_replaces_mailing'}
 
 
 def digest(value):
@@ -21,8 +34,8 @@ def digest(value):
 
 def load_manifest(path=MANIFEST):
     manifest = json.loads(path.read_text())
-    if manifest.get('source_id') != SOURCE or not manifest.get('approval'):
-        raise ValueError('Expected reviewed Tako approval manifest')
+    if manifest.get('source_id') not in SOURCES or not manifest.get('approval'):
+        raise ValueError('Expected a reviewed approval manifest for a known source')
     seen = set()
     for r in manifest['assertions']:
         key = (r['facility_id'], r['field'])
@@ -36,16 +49,20 @@ def load_manifest(path=MANIFEST):
             raise ValueError('Missing evidence URL')
         if r['field'] in ('address', 'city', 'state', 'zip') and r.get('scope') != 'facility':
             raise ValueError('Location must refer to a reviewed facility')
+        if r.get('correction_kind') not in (None, *CORRECTIONS) or (
+                r.get('correction_kind') and 'expected_current_value' not in r):
+            raise ValueError('Invalid correction authorization')
     return manifest
 
 
 def to_assertion(r, manifest):
     document = json.dumps({k: r.get(k) for k in ('quote', 'scope', 'review_note', 'source_run', 'evidence_rounds')}, sort_keys=True)
     document += '\nCampaign runs: ' + ','.join(map(str, manifest['campaign_runs']))
-    a = assertion(r['facility_id'], r['field'], r['value'], source_id=SOURCE,
-                  basis='tako_ai_search_reviewed', evidence=r['source_url'] + ' :: ' + document)
+    source = manifest.get('source_id', SOURCE)
+    a = assertion(r['facility_id'], r['field'], r['value'], source_id=source,
+                  basis=SOURCES[source]['basis'], evidence=r['source_url'] + ' :: ' + document)
     # A separate class ensures existing enrichment rules cannot accidentally elevate this source.
-    a['source_class'] = SOURCE
+    a['source_class'] = source
     a['retrieved_date'] = r['retrieved_date']
     return a
 
@@ -56,6 +73,7 @@ def select_import(manifest, golden, existing):
     for r in existing:
         by_cell.setdefault((r['facility_key'], r['field_key']), []).append(r)
     accepted, skipped = [], []
+    strict_address_bundle = manifest.get('approval') == 'strict_automatic_address_bundle_v1'
     for r in manifest['assertions']:
         fid, field = r['facility_id'], r['field']
         g = current.get(fid)
@@ -65,8 +83,21 @@ def select_import(manifest, golden, existing):
         elif any(normalized_detail(f,g.get(f)) != normalized_detail(f,v) for f,v in r.get('expected_identity',{}).items()):
             reason = 'Facility identity changed since the reviewed snapshot'
         elif str(g.get(field) or '').strip() and normalized_detail(field, g[field]) != normalized_detail(field, r['value']):
-            reason = 'Current golden field contains a different value; hold for review'
-        elif any(str(a.get('value') or '').strip() and
+            expected = r.get('expected_current_value')
+            correction = r.get('correction_kind')
+            current_matches = normalized_detail(field, g[field]) == normalized_detail(field, expected)
+            valid_correction = (
+                correction == 'minor_city_spelling' and field == 'city' and current_matches and
+                minor_city_correction(g[field], r['value'])
+            ) or (
+                correction == 'physical_address_replaces_mailing' and field == 'address' and current_matches and
+                not physical_street(g[field]) and physical_street(r['value'])
+            ) or (
+                correction == 'physical_zip_replaces_mailing' and field == 'zip' and current_matches
+            )
+            if not valid_correction:
+                reason = 'Current golden field contains a different value; hold for review'
+        if not reason and not strict_address_bundle and any(str(a.get('value') or '').strip() and
                  normalized_detail(field, a['value']) != normalized_detail(field, r['value'])
                  for a in by_cell.get((fid, field), [])):
             reason = 'Another assertion already supplies this field; hold for review'
@@ -88,8 +119,9 @@ def connection():
                           options='-c statement_timeout=60000 -c lock_timeout=15000')
 
 
-def run(mode, out, plan_path=None, expected_sha=None):
-    manifest = load_manifest()
+def run(mode, out, plan_path=None, expected_sha=None, manifest_path=MANIFEST):
+    manifest = load_manifest(Path(manifest_path))
+    source = manifest['source_id']
     ids = sorted({r['facility_id'] for r in manifest['assertions']})
     prior = None
     if mode == 'apply':
@@ -109,10 +141,10 @@ def run(mode, out, plan_path=None, expected_sha=None):
                             ' FROM golden_facility WHERE facility_key = ANY(%s) ORDER BY facility_key', (ids,)).fetchall()
         existing = db.execute('SELECT a.facility_key,a.field_key,a.source_key,a.value FROM fact_assertions a '
                               'JOIN golden_facility g ON g.facility_key=a.facility_key '
-                              "WHERE a.facility_key=ANY(%s) AND (a.release_tag=g.release_tag OR a.source_class IN ('enrichment','tako_ai_search'))", (ids,)).fetchall()
+                              "WHERE a.facility_key=ANY(%s) AND (a.release_tag=g.release_tag OR a.source_class=ANY(%s))", (ids, ['enrichment', *SOURCES])).fetchall()
         accepted, skipped = select_import(manifest, golden, existing)
         plan = dict(manifest_sha256=digest(manifest), golden_sha256=digest(golden),
-                    assertions=accepted, skipped=skipped, source=SOURCE,
+                    assertions=accepted, skipped=skipped, source=source,
                     golden_writes=0)
         out.mkdir(parents=True, exist_ok=True)
         if mode == 'plan':
@@ -129,7 +161,7 @@ def run(mode, out, plan_path=None, expected_sha=None):
             db.execute("INSERT INTO dim_source (source_key,source_id,name,class,method,status_basis,status) "
                        "VALUES (%s,%s,%s,%s,%s,%s,'active') ON CONFLICT (source_key) DO UPDATE SET "
                        "name=EXCLUDED.name,class=EXCLUDED.class,method=EXCLUDED.method,status_basis=EXCLUDED.status_basis",
-                       (SOURCE, SOURCE, 'Tako AI Search', SOURCE, 'Reviewed web-search evidence', 'Lowest precedence; approved missing-field assertions'))
+                       (source, source, SOURCES[source]['name'], source, SOURCES[source]['method'], 'Lowest precedence; approved missing-field assertions'))
             inserted = 0
             assertion_ids = []
             for a in accepted:
@@ -147,7 +179,7 @@ def run(mode, out, plan_path=None, expected_sha=None):
                                   'ON r.row_hash=a.row_hash WHERE a.assertion_id=ANY(%s)', (assertion_ids,)).fetchall()
             expected = {(a['facility_id'], a['field'], a['value'], a['release_tag']) for a in accepted}
             found = {(r['facility_key'],r['field_key'],r['value'],r['release_tag']) for r in verified}
-            if not expected <= found or any(r['source_key'] != SOURCE or r['source_class'] != SOURCE or not r['source_url'] for r in verified):
+            if not expected <= found or any(r['source_key'] != source or r['source_class'] != source or not r['source_url'] for r in verified):
                 raise RuntimeError('Assertion read-back failed; rolling back')
             after = db.execute('SELECT facility_key, release_tag, ' + ','.join(FIELDS) +
                                ' FROM golden_facility WHERE facility_key=ANY(%s) ORDER BY facility_key', (ids,)).fetchall()
@@ -156,11 +188,12 @@ def run(mode, out, plan_path=None, expected_sha=None):
             result = dict(mode=mode, inserted=inserted, already_present=len(accepted)-inserted,
                           verified=len(expected), facilities=len({a['facility_id'] for a in accepted}),
                           skipped=len(skipped), plan_sha256=expected_sha, golden_writes=0,
-                          source=SOURCE, source_name='Tako AI Search')
+                          source=source, source_name=SOURCES[source]['name'])
             (out/'verified-assertions.json').write_text(json.dumps(verified, indent=2))
     # Only produce a success receipt after the transaction commits.
     (out/'receipt.json').write_text(json.dumps(result, indent=2))
     print(json.dumps(result, indent=2))
+    return result
 
 
 if __name__ == '__main__':

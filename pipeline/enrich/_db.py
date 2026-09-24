@@ -246,7 +246,7 @@ def append(db, assertions: list[dict], release_tag: str, chunk: int = 250) -> di
 # release drops them. That is accepted while the stages are separate actions (docs/enrichment.md);
 # this stage is what makes the run visible until then.
 SELECT_ASSERTIONS = """
-    SELECT facility_key AS facility_id, source_key AS source_id,
+    SELECT facility_key AS facility_id, source_key AS source_id, release_tag,
            COALESCE(source_class, '')  AS source_class,
            COALESCE(date_key, '')      AS retrieved_date,
            COALESCE(row_hash, '')      AS row_hash,
@@ -257,7 +257,7 @@ SELECT_ASSERTIONS = """
            field_key AS field, value
     FROM fact_assertions a
     WHERE a.release_tag = $1
-       OR (a.source_class IN ('enrichment', 'tako_ai_search')
+       OR (a.source_class IN ('enrichment', 'tako_ai_search', 'astra_manual_web_lookup')
            AND EXISTS (SELECT 1 FROM fact_assertions c
                         WHERE c.release_tag = $2 AND c.facility_key = a.facility_key))
     ORDER BY facility_key, field_key, assertion_id
@@ -304,6 +304,30 @@ def fetch_assertions(db, release_tag: str, page: int = 5000) -> list[dict]:
         if len(got) < page:
             return out
         offset += page
+
+
+IDENTITY_ROWS = """
+    SELECT facility_key AS facility_id, release_tag, field_key AS field, value
+    FROM fact_assertions
+    WHERE field_key IN ('name', 'city', 'state', 'address') AND release_tag = $1
+    ORDER BY facility_key, field_key LIMIT $2 OFFSET $3"""
+
+
+def fetch_identity_rows(db, release_tags: set[str], page: int = 5000) -> list[dict]:
+    """The name, city, state and address every listed release asserted for its facility ids. These rows are
+    read only to judge identity (pipeline/enrich/identity.py): the carried enrichment fetch_assertions
+    returns says nothing about which plant an old release meant by an id, and without this the
+    carry-over withheld every cross-release assertion as 'no identity in that release'."""
+    out: list[dict] = []
+    for tag in sorted(release_tags):
+        offset = 0
+        while True:
+            got = db.query(IDENTITY_ROWS, (tag, page, offset))
+            out.extend(got)
+            if len(got) < page:
+                break
+            offset += page
+    return out
 
 
 def golden_columns(db) -> set[str]:

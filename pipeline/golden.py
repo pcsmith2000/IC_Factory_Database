@@ -7,6 +7,7 @@ A human correction is an assertion with source_id='operator' (control/operator_a
 """
 from __future__ import annotations
 import csv
+import re
 from collections import defaultdict
 from pathlib import Path
 
@@ -54,9 +55,14 @@ def assertions_from_rows(rows: list[dict], source_class: dict[str, str]) -> list
 
 
 def _rank(a: dict, order: list[str]) -> int:
-    # Tako search is below even an unlisted source; recency must never elevate it.
-    if a["source_id"] == "tako_ai_search":
+    # Reviewed web lookups (Tako search, a manual ASTRA lookup) are below even an unlisted source;
+    # recency must never elevate them. They fill a hole and never displace a roster or a geocode.
+    if a["source_id"] in ("tako_ai_search", "astra_manual_web_lookup"):
         return len(order) + 1
+    # A street-level geocode (on the right street, not a verified building; confidence 0.3) sits
+    # below everything, reviewed lookups included: it fills an empty map pin and nothing else.
+    if a.get("basis") == "street_interpolated":
+        return len(order) + 2
     for i, pref in enumerate(order):
         if pref == "site_visit" and a.get("site_visit") in (True, "True"): return i
         # A bare token names a source directly: operator, lookup, classifier. This replaces three
@@ -107,10 +113,33 @@ def build_golden(assertions: list[dict], rules: dict) -> tuple[list[dict], list[
             if len(distinct) > 1:
                 conflicts.append({"facility_id": fid, "field": field, "winner": win["value"], "winner_source": win["source_id"],
                                   "n_values": len(distinct), "values": " | ".join(sorted(distinct))[:300]})
+        for field, rule in (rules.get("derived") or {}).items():
+            pool = [a for src in rule.get("from", []) for a in fields.get(src, []) if _plausible_number(a.get("value"), rule)]
+            if not pool:
+                continue
+            order = rule.get("order", rules["default_order"])
+            best_rank = min(_rank(a, order) for a in pool)
+            win = max((a for a in pool if _rank(a, order) == best_rank), key=_recency)
+            g[field] = _plausible_number(win["value"], rule); g[f"{field}__source"] = win["source_id"]
         g["n_assertions"] = sum(len(v) for v in fields.values())
         g["n_sources"] = len({a["source_id"] for v in fields.values() for a in v})
         golden.append(g)
     return golden, conflicts
+
+
+def _plausible_number(value, rule: dict) -> str | None:
+    """The value as a canonical integer string when it reads as a number inside the rule's
+    [min, max]; None otherwise. '120,000 sq ft' and '120000.0' both read as 120000."""
+    m = re.search(r"\d[\d,]*(?:\.\d+)?", str(value or ""))
+    if not m:
+        return None
+    try:
+        n = float(m.group().replace(",", ""))
+    except ValueError:
+        return None
+    if not (float(rule.get("min", 0)) <= n <= float(rule.get("max", float("inf")))):
+        return None
+    return str(int(round(n)))
 
 
 def load_operator_assertions(path: Path) -> list[dict]:

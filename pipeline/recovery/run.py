@@ -1,0 +1,556 @@
+"""Campaign state and cell-level evidence remain in the database; only totals are exported."""
+import argparse
+from collections import Counter
+from datetime import datetime, timezone
+from decimal import Decimal
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import re
+from urllib.parse import urlparse
+
+from pipeline.enrich import cache
+from pipeline.enrich.geocode import one_line, _post
+from pipeline.enrich._db import assertion, _rows_for
+from pipeline.web_research.rooftops import street_matches, street_rule
+from pipeline.web_research.run import norm
+
+# A campaign freezes the cohort of facilities without a coordinate as golden shows them at the time.
+# The first cohort (2026-09-21) was frozen from a release whose id registry has since been
+# superseded, so a second campaign may be opened on the current release: RECOVERY_CAMPAIGN names it
+# and RECOVERY_CEILING_USD is its share of the user's $10 — what the first campaign left unspent.
+CAMPAIGN = os.environ.get('RECOVERY_CAMPAIGN', '').strip() or 'missing-rooftops-2026-09-21'
+LIMIT = Decimal(os.environ.get('RECOVERY_CEILING_USD', '').strip() or '9.50')  # leave $0.50 below the user's $10 limit
+US_STATES=set('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split())
+SCHEMA=[
+"""CREATE TABLE IF NOT EXISTS coordinate_recovery_campaigns (
+ campaign_id TEXT PRIMARY KEY, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ api_ceiling NUMERIC NOT NULL, reserved_usd NUMERIC NOT NULL DEFAULT 0,
+ frozen_count INTEGER NOT NULL, freeze_run TEXT NOT NULL)""",
+"""CREATE TABLE IF NOT EXISTS coordinate_recovery_rows (
+ campaign_id TEXT NOT NULL REFERENCES coordinate_recovery_campaigns(campaign_id),
+ facility_id TEXT NOT NULL, baseline JSONB NOT NULL, evidence JSONB NOT NULL,
+ status TEXT NOT NULL DEFAULT 'unresolved', PRIMARY KEY(campaign_id,facility_id))""",
+"""CREATE TABLE IF NOT EXISTS coordinate_recovery_attempts (
+ campaign_id TEXT NOT NULL, facility_id TEXT NOT NULL, pass_id TEXT NOT NULL, stage TEXT NOT NULL,
+ query_key TEXT NOT NULL, request JSONB NOT NULL, result JSONB,
+ outcome TEXT NOT NULL, reserved_usd NUMERIC NOT NULL, run_url TEXT NOT NULL,
+ started_at TIMESTAMPTZ NOT NULL DEFAULT now(), completed_at TIMESTAMPTZ,
+ PRIMARY KEY(campaign_id,facility_id,pass_id,stage))""",
+"ALTER TABLE coordinate_recovery_rows ADD COLUMN IF NOT EXISTS recovered_address JSONB"
+]
+
+
+def connect():
+    # Keep the pure validation functions importable in lightweight development
+    # environments. The workflow installs the postgres extra before any database
+    # operation; unit tests for matching should not need a database driver.
+    import psycopg
+    from psycopg.rows import dict_row
+    url=next((os.environ[k] for k in ('DATABASE_URL_UNPOOLED','DATABASE_URL') if os.environ.get(k) and os.environ[k].isascii()),'')
+    if not url:raise RuntimeError('No usable database connection')
+    return psycopg.connect(url,row_factory=dict_row,connect_timeout=20,
+                          options='-c statement_timeout=60000 -c lock_timeout=15000')
+
+
+def run_url():
+    return 'https://github.com/'+os.environ.get('GITHUB_REPOSITORY','pcsmith2000/IC_Factory_Database')+'/actions/runs/'+os.environ.get('GITHUB_RUN_ID','local')
+
+
+def ensure_schema():
+    # In its own transaction, committed before any pass starts. ALTER TABLE ... ADD COLUMN IF NOT
+    # EXISTS takes an ACCESS EXCLUSIVE lock even when the column exists, and holding it for the
+    # length of a pass (an Overture pilot reads S3 for many minutes inside one transaction) blocked
+    # every other reader of coordinate_recovery_rows until lock_timeout — a Tako plan failed with
+    # LockNotAvailable while a pilot ran.
+    with connect() as db:
+        for sql in SCHEMA:db.execute(sql)
+        db.execute(cache.DDL)
+
+
+def freeze(db):
+    from psycopg.types.json import Jsonb
+    db.execute('SELECT pg_advisory_xact_lock(73941668)')
+    campaign=db.execute('SELECT * FROM coordinate_recovery_campaigns WHERE campaign_id=%s',(CAMPAIGN,)).fetchone()
+    if campaign:return campaign
+    rows=db.execute("SELECT g.facility_key AS facility_id,g.release_tag,g.name,g.address,g.city,g.state,g.zip,g.website,g.phone,g.email,g.name__source,g.address__source FROM golden_facility g WHERE NULLIF(btrim(g.lat_lon),'') IS NULL ORDER BY g.facility_key").fetchall()
+    if not rows:raise ValueError('No missing-coordinate cohort')
+    db.execute('INSERT INTO coordinate_recovery_campaigns(campaign_id,api_ceiling,frozen_count,freeze_run) VALUES(%s,%s,%s,%s)',(CAMPAIGN,LIMIT,len(rows),run_url()))
+    ids=[r['facility_id'] for r in rows]
+    evidence=db.execute("SELECT a.facility_key,a.field_key,a.value,a.source_key,r.source_url,r.source_document,a.row_hash FROM fact_assertions a JOIN golden_facility g ON g.facility_key=a.facility_key LEFT JOIN ref_source_row r ON r.row_hash=a.row_hash WHERE a.facility_key=ANY(%s) AND a.release_tag=g.release_tag AND a.field_key=ANY(%s)",(ids,['name','address','city','state','zip','website'])).fetchall()
+    grouped={fid:[] for fid in ids}
+    for ev in evidence:grouped[ev['facility_key']].append(ev)
+    for row in rows:
+        db.execute('INSERT INTO coordinate_recovery_rows(campaign_id,facility_id,baseline,evidence) VALUES(%s,%s,%s,%s)',(CAMPAIGN,row['facility_id'],Jsonb(row),Jsonb(grouped[row['facility_id']])))
+    return db.execute('SELECT * FROM coordinate_recovery_campaigns WHERE campaign_id=%s',(CAMPAIGN,)).fetchone()
+
+
+def eligible(row):
+    return bool(row.get('city') and str(row.get('state') or '').upper() in US_STATES and
+                re.match(r'^\d+[a-zA-Z]?\s',str(row.get('address') or '').strip()))
+
+def recovered_source_matches(recovered, required_source):
+    return not required_source or (recovered or {}).get('_source') == required_source
+
+
+def identity_for(frozen, live, recovered):
+    """The identity a row is worked under, or None when it must be skipped as changed_identity.
+
+    The frozen baseline is the rule. But the cohort was frozen from a release whose id registry
+    diverged from the one now published, so some ids name a different plant today. A recovered
+    address that was verified against the LIVE identity (tako_address stores it as _identity) is
+    worked under that identity instead — the address belongs to the plant golden now shows.
+    """
+    if norm(frozen.get('name'))==norm(live.get('name')) and not any(frozen.get(k) and norm(frozen.get(k))!=norm(live.get(k)) for k in ('city','state')):
+        return {'name':frozen.get('name'),'city':frozen.get('city') or live.get('city'),'state':frozen.get('state') or live.get('state')}
+    verified=(recovered or {}).get('_identity') or {}
+    if verified and norm(verified.get('name'))==norm(live.get('name')) and all(norm(verified.get(k))==norm(live.get(k)) for k in ('city','state')):
+        return {'name':live.get('name'),'city':live.get('city'),'state':live.get('state')}
+    return None
+
+
+# Geocodio accuracy types that put a point on the right street without naming the building: an
+# address-range interpolation, the rooftop of the nearest known address, the centre of the street
+# segment. 'place' and 'state' are centroids of a town or a state and are never accepted.
+STREET_LEVEL_ACCURACY=('range_interpolation','nearest_rooftop_match','street_center')
+STREET_SOURCE='geocode:geocodio_street';STREET_BASIS='street_interpolated';STREET_CONFIDENCE=0.3
+
+
+def validate_rooftop(row,result):
+    return _validate(row,result,('rooftop',),'rooftop_verified','not_rooftop')
+
+
+def validate_street_level(row,result):
+    """The rooftop checks with the accuracy requirement relaxed to STREET_LEVEL_ACCURACY. The house
+    number, street, city, state and ZIP must still all agree: the point is on the right street of the
+    right town, and the assertion says so — basis street_interpolated, confidence 0.3."""
+    return _validate(row,result,STREET_LEVEL_ACCURACY,'street_level_verified','not_street_level')
+
+
+def _validate(row,result,accepted,verified,refused):
+    hits=(result.get('response') or {}).get('results') or []
+    if not hits:return None,'no_result'
+    hit=hits[0];parts=hit.get('address_components') or {};loc=hit.get('location') or {}
+    if hit.get('accuracy_type') not in accepted:return None,refused
+    number=re.match(r'^\d+[a-zA-Z]?',row['address'].strip())
+    if not number or norm(parts.get('number'))!=norm(number.group()):return None,'street_number_mismatch'
+    if norm(parts.get('city'))!=norm(row['city']):return None,'city_mismatch'
+    if norm(parts.get('state_province') or parts.get('state'))!=norm(row['state']):return None,'state_mismatch'
+    # The street is judged last, so the parcel rule (see pipeline.recovery.streets) knows whether the
+    # five-digit ZIP was supplied and agrees: only then may a suffix or directional differ.
+    parcel=False
+    if row.get('zip') and re.fullmatch(r'\d{5}(?:-\d{4})?',row['zip'].strip()):
+        returned=str(parts.get('postal_code') or parts.get('zip') or '')
+        if returned and row['zip'][:5]!=returned[:5]:return None,'zip_mismatch'
+        parcel=bool(returned)
+    if not street_matches(row['address'].strip(),parts,parcel=parcel):return None,'street_name_mismatch'
+    lat,lng=loc.get('lat'),loc.get('lng')
+    if not all(isinstance(v,(int,float)) and math.isfinite(v) for v in (lat,lng)) or not -90<=lat<=90 or not -180<=lng<=180:return None,'invalid_coordinate'
+    return hit,verified
+
+
+def select_rows(db, pass_id, row_limit):
+    # Retry flags from other workflows are deliberately not a selection criterion.
+    rows=db.execute("SELECT r.facility_id,r.baseline,r.recovered_address,r.evidence,g.name AS live_name,g.city AS live_city,g.state AS live_state,g.release_tag AS live_release FROM coordinate_recovery_rows r JOIN golden_facility g ON g.facility_key=r.facility_id WHERE r.campaign_id=%s AND r.status='unresolved' AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts a WHERE a.campaign_id=r.campaign_id AND a.facility_id=r.facility_id AND a.pass_id=%s AND a.stage='geocode') ORDER BY r.facility_id",(CAMPAIGN,pass_id)).fetchall()
+    # A row whose current address was already judged by an earlier pass of this campaign is not
+    # re-selected: the ledger would answer it for free, but it would occupy one of the batch's slots
+    # and every later batch would start by re-reading every earlier failure. A recovered address
+    # changes the key and makes the row eligible again.
+    judged={(a['facility_id'],a['query_key']) for a in db.execute("SELECT facility_id,query_key FROM coordinate_recovery_attempts WHERE campaign_id=%s AND stage='geocode' AND outcome NOT IN ('reserved','error')",(CAMPAIGN,)).fetchall()}
+    out=[]; reasons=Counter();eligible_sources=Counter();blocked_sources=Counter();address_origin=Counter();completeness=Counter()
+    required_recovered_source=os.environ.get('RECOVERED_ADDRESS_SOURCE','').strip()
+    completeness_by_source={};evidence_hosts={}
+    for r in rows:
+        frozen=r['baseline']
+        source=frozen.get('name__source') or 'unattributed'
+        recovered=r.get('recovered_address') or {}
+        live={'name':r.get('live_name'),'city':r.get('live_city'),'state':r.get('live_state')}
+        identity=identity_for(frozen,live,recovered)
+        if identity is None:
+            reasons['changed_identity']+=1;blocked_sources[source]+=1;continue
+        if not recovered_source_matches(recovered,required_recovered_source):
+            reasons['recovered_address_source_filter']+=1;continue
+        recovered_fields={k:recovered.get(k) for k in ('address','city','state','zip') if recovered.get(k)}
+        if recovered.get('_evidence'):
+            r['evidence']=list(r.get('evidence') or [])+list(recovered['_evidence'])
+        # frozen keeps the campaign's record; the identity worked under is what the live row says
+        frozen={**frozen,**identity}
+        b={**frozen,**recovered_fields};r['frozen']=frozen;r['baseline']=b
+        fields=[]
+        if not re.match(r'^\d+[a-zA-Z]?\s',str(b.get('address') or '').strip()):fields.append('street')
+        if not str(b.get('city') or '').strip():fields.append('city')
+        if str(b.get('state') or '').upper() not in US_STATES:fields.append('state')
+        if fields:
+            reasons['needs_full_street_city_state']+=1;blocked_sources[source]+=1
+            gap='missing_'+'_'.join(fields);completeness[gap]+=1
+            completeness_by_source.setdefault(source,Counter())[gap]+=1
+            hosts=set()
+            for ev in r.get('evidence') or []:
+                try:
+                    host=urlparse(str(ev.get('source_url') or '')).hostname
+                except ValueError:
+                    host=None
+                if host:hosts.add(host.lower())
+            for host in hosts:evidence_hosts.setdefault(source,Counter())[host]+=1
+            continue
+        if (r['facility_id'],cache.geocode_key(one_line(b))) in judged:
+            reasons['already_judged_this_address']+=1;continue
+        eligible_sources[source]+=1
+        address_origin['recovered_source_detail' if recovered else 'frozen_golden_row']+=1
+        out.append(r)
+    diagnostics={'eligible_by_primary_name_source':dict(eligible_sources),
+                 'blocked_by_primary_name_source':dict(blocked_sources),
+                 'blocked_input_completeness':dict(completeness),
+                 'blocked_inputs_by_primary_name_source':{k:dict(v) for k,v in completeness_by_source.items()},
+                 'blocked_evidence_hosts_by_primary_name_source':{k:dict(v) for k,v in evidence_hosts.items()},
+                 'eligible_address_origin':dict(address_origin)}
+    return out[:row_limit],dict(reasons),len(out),diagnostics
+
+
+def reserve(db,r,pass_id,query,cost):
+    from psycopg.types.json import Jsonb
+    db.execute('SELECT pg_advisory_xact_lock(73941668)')
+    c=db.execute('SELECT * FROM coordinate_recovery_campaigns WHERE campaign_id=%s FOR UPDATE',(CAMPAIGN,)).fetchone()
+    if c['reserved_usd']+cost>c['api_ceiling']:raise RuntimeError('Campaign budget guard stopped before API request')
+    db.execute("INSERT INTO coordinate_recovery_attempts(campaign_id,facility_id,pass_id,stage,query_key,request,outcome,reserved_usd,run_url) VALUES(%s,%s,%s,'geocode',%s,%s,'reserved',%s,%s)",
+               (CAMPAIGN,r['facility_id'],pass_id,cache.geocode_key(query),Jsonb({'address':query}),cost,run_url()))
+    db.execute('UPDATE coordinate_recovery_campaigns SET reserved_usd=reserved_usd+%s WHERE campaign_id=%s',(cost,CAMPAIGN))
+
+
+def append_coordinate(db,r,hit,level='rooftop'):
+    """Write the coordinate assertion. level 'rooftop' is the verified rooftop under source
+    geocode:geocodio, basis rooftop, Geocodio's own accuracy score as confidence. level 'street' is a
+    street-level point (see STREET_LEVEL_ACCURACY) under its own source id so every reader can tell
+    the two apart, basis street_interpolated, confidence 0.3, ranked below every other coordinate by
+    golden._rank; the campaign row stays unresolved so a rooftop can still replace it."""
+    point=hit['location'];b=r['baseline'];workflow=run_url();street=level=='street'
+    document=json.dumps({'campaign_id':CAMPAIGN,'workflow':workflow,'address':one_line(b),'address_evidence':r['evidence'],
+                         'geocodio':hit,'accuracy_type':hit.get('accuracy_type'),
+                         'checks':[('street-level accuracy: '+'/'.join(STREET_LEVEL_ACCURACY)) if street else 'rooftop accuracy','street number','street name','city','state','postal code when available'],
+                         'note':'Point lies on the named street, not on a verified building; a rooftop geocode supersedes it.' if street else None,
+                         'street_match':street_rule(b['address'],hit.get('address_components') or {},parcel=True)[1]},sort_keys=True,default=str)
+    source=STREET_SOURCE if street else 'geocode:geocodio';basis=STREET_BASIS if street else 'rooftop'
+    a=assertion(r['facility_id'],'lat_lon',f"{point['lat']},{point['lng']}",source_id=source,basis=basis,confidence=STREET_CONFIDENCE if street else hit.get('accuracy'),evidence=workflow+' :: '+document)
+    now=datetime.now(timezone.utc).isoformat(timespec='seconds')
+    ev,fact=_rows_for(a,r['live_release'],now[:10],now)
+    db.execute("INSERT INTO dim_source(source_key,source_id,name,class,status) VALUES('geocode:geocodio','geocode:geocodio','Enrichment 10 — Geocodio rooftop geocode','enrichment','active') ON CONFLICT(source_key) DO NOTHING")
+    db.execute("INSERT INTO dim_source(source_key,source_id,name,class,method,status_basis,status) VALUES(%s,%s,'Enrichment 10b — Geocodio street-level geocode (interpolated, not a rooftop)','enrichment','Geocodio range_interpolation / nearest_rooftop_match / street_center result whose house number, street, city, state and ZIP all match the source address','Lowest precedence coordinate; confidence 0.3; superseded by any rooftop','active') ON CONFLICT(source_key) DO NOTHING",(STREET_SOURCE,STREET_SOURCE))
+    db.execute('INSERT INTO ref_source_row(row_hash,source_key,source_url,source_document,retrieved_date,facility_key,match_method,match_confidence,last_seen_release) VALUES('+','.join(['%s']*9)+') ON CONFLICT(row_hash) DO NOTHING',ev)
+    cur=db.execute('INSERT INTO fact_assertions(assertion_id,release_tag,facility_key,source_key,field_key,date_key,value,basis,site_visit,row_hash,confidence,source_class,asserted_at) VALUES('+','.join(['%s']*13)+') ON CONFLICT(assertion_id,release_tag) DO NOTHING RETURNING assertion_id',fact)
+    inserted=len(cur.fetchall())
+    saved=db.execute('SELECT a.value,a.basis,r.source_url FROM fact_assertions a JOIN ref_source_row r ON r.row_hash=a.row_hash WHERE a.assertion_id=%s AND a.release_tag=%s',(fact[0],r['live_release'])).fetchone()
+    if not saved or saved['value']!=a['value'] or saved['basis']!=basis or saved['source_url']!=workflow:raise RuntimeError('Coordinate provenance verification failed')
+    if not street:db.execute("UPDATE coordinate_recovery_rows SET status='rooftop_asserted' WHERE campaign_id=%s AND facility_id=%s",(CAMPAIGN,r['facility_id']))
+    return inserted
+
+
+def historical_cached(db, pass_id):
+    """Recover a rooftop only when one cited historical source row supplies the
+    complete address and that exact address already has a cached rooftop result.
+
+    A facility can have several historical sites. Distinct rooftop coordinates are
+    treated as a conflict and left unresolved; this pass never guesses which site is
+    current and never calls an external service.
+    """
+    from psycopg.types.json import Jsonb
+    rows=db.execute("""SELECT c.facility_id,c.baseline,a.row_hash,a.release_tag,a.field_key,a.value,
+                              a.source_key,r.source_url,r.source_document,r.retrieved_date,
+                              r.source_identifier
+                       FROM coordinate_recovery_rows c
+                       JOIN fact_assertions a ON a.facility_key=c.facility_id
+                       LEFT JOIN ref_source_row r ON r.row_hash=a.row_hash
+                       WHERE c.campaign_id=%s AND c.status='unresolved'
+                         AND a.field_key=ANY(%s)
+                         AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts x
+                           WHERE x.campaign_id=c.campaign_id AND x.facility_id=c.facility_id
+                             AND x.pass_id=%s AND x.stage='historical_cached')
+                       ORDER BY r.retrieved_date DESC NULLS LAST,a.release_tag DESC""",
+                    (CAMPAIGN,['name','address','city','state','zip'],pass_id)).fetchall()
+    grouped={}
+    baselines={}
+    for row in rows:
+        fid=row['facility_id'];baselines[fid]=row['baseline']
+        key=(fid,row['row_hash'],row['release_tag'],row['source_key'])
+        evidence={}
+        for k in ('row_hash','release_tag','source_key','source_url','source_document','retrieved_date','source_identifier'):
+            value=row.get(k)
+            evidence[k]=value.isoformat() if hasattr(value,'isoformat') else value
+        item=grouped.setdefault(key,{'values':{},'evidence':evidence})
+        item['values'][row['field_key']]=row['value']
+    candidates=[]
+    rejected=Counter()
+    for (fid,*_),item in grouped.items():
+        values=item['values'];baseline=baselines[fid]
+        if not eligible(values):rejected['incomplete_historical_source_row']+=1;continue
+        if norm(values.get('name'))!=norm(baseline.get('name')):
+            rejected['historical_name_mismatch']+=1;continue
+        address={**baseline,**{k:values.get(k) or '' for k in ('address','city','state','zip')}}
+        query=one_line(address)
+        candidates.append((fid,address,item['evidence'],query,cache.geocode_key(query)))
+    keys=list(dict.fromkeys(c[4] for c in candidates))
+    saved=db.execute("SELECT * FROM cache_lookup WHERE cache_key=ANY(%s) AND provider='geocodio'",(keys,)).fetchall() if keys else []
+    cached={r['cache_key']:r for r in saved}
+    evaluated={}
+    for fid,address,evidence,query,key in candidates:
+        if key not in cached:continue
+        result=cached[key]['result'];result=json.loads(result) if isinstance(result,str) else result
+        hit,outcome=validate_rooftop(address,result)
+        evaluated.setdefault(fid,[]).append(dict(address=address,evidence=evidence,query=query,key=key,
+                                                  hit=hit,outcome=outcome))
+    inserted=0;outcomes=Counter()
+    for fid,items in evaluated.items():
+        rooftops={f"{i['hit']['location']['lat']},{i['hit']['location']['lng']}":i for i in items if i['hit']}
+        if len(rooftops)>1:
+            outcome='conflicting_historical_rooftops';chosen=None
+        elif len(rooftops)==1:
+            outcome='historical_rooftop_verified';chosen=next(iter(rooftops.values()))
+        else:
+            outcome='historical_cache_not_rooftop';chosen=None
+        with connect() as tx:
+            live=tx.execute("SELECT name,release_tag,lat_lon FROM golden_facility WHERE facility_key=%s FOR SHARE",(fid,)).fetchone()
+            baseline=baselines[fid]
+            if not live or live['release_tag']!=baseline['release_tag'] or norm(live['name'])!=norm(baseline['name']) or str(live.get('lat_lon') or '').strip():
+                outcome='live_row_changed';chosen=None
+            tx.execute("""INSERT INTO coordinate_recovery_attempts
+                       (campaign_id,facility_id,pass_id,stage,query_key,request,result,outcome,reserved_usd,run_url,completed_at)
+                       VALUES(%s,%s,%s,'historical_cached',%s,%s,%s,%s,0,%s,now())
+                       ON CONFLICT(campaign_id,facility_id,pass_id,stage) DO NOTHING""",
+                       (CAMPAIGN,fid,pass_id,hashlib.sha256('|'.join(sorted(i['key'] for i in items)).encode()).hexdigest()[:32],
+                        Jsonb({'queries':[i['query'] for i in items]}),
+                        Jsonb({'outcomes':[i['outcome'] for i in items],'distinct_rooftops':len(rooftops)}),outcome,run_url()))
+            if chosen:
+                record={'facility_id':fid,'baseline':chosen['address'],'evidence':[chosen['evidence']],
+                        'live_release':live['release_tag']}
+                inserted+=append_coordinate(tx,record,chosen['hit'])
+        outcomes[outcome]+=1
+    return dict(historical_source_rows=len(candidates),historical_cached_rows=len(evaluated),
+                historical_rejections=dict(rejected),outcomes=dict(outcomes),
+                coordinate_assertions_inserted=inserted,new_api_calls=0)
+
+
+def ledger_street_level(db, pass_id, row_limit):
+    """The ledger replay with validate_street_level: for a CURRENT golden facility with no
+    coordinate at all whose own address has a cached Geocodio result that is on the right street
+    but not a rooftop, write the street-level point (source geocode:geocodio_street, basis
+    street_interpolated, confidence 0.3). Approved 2026-09-23 so those plants have a pin the map
+    can show and label as approximate; a rooftop found later outranks it."""
+    return ledger_replay(db, pass_id, row_limit, level='street')
+
+
+def ledger_replay(db, pass_id, row_limit, level='rooftop'):
+    """Re-assert a cached rooftop for any CURRENT golden facility whose own address already has a
+    validated Geocodio result in cache_lookup. No API call, no dependence on the campaign cohort
+    or on facility ids: the ledger is keyed by the address, the facility is the one that carries
+    that address in the current release, and the check is the same validate_rooftop the paid pass
+    uses. This is how paid work survives a change of ids — by the question, not the asker."""
+    from psycopg.types.json import Jsonb
+    street=level=='street';stage='ledger_street_level' if street else 'ledger_replay';validate=validate_street_level if street else validate_rooftop
+    # A street-level pin is not a located facility for the rooftop replay: the rooftop outranks it.
+    unlocated="NULLIF(btrim(g.lat_lon),'') IS NULL" if street else "(NULLIF(btrim(g.lat_lon),'') IS NULL OR g.lat_lon__source=%s)"
+    params=(CAMPAIGN,pass_id,row_limit) if street else (STREET_SOURCE,CAMPAIGN,pass_id,row_limit)
+    rows=db.execute(f"""SELECT g.facility_key AS facility_id,g.release_tag AS live_release,g.name,g.address,g.city,g.state,g.zip
+                       FROM golden_facility g
+                       WHERE {unlocated} AND g.address ~ '^[0-9]+[A-Za-z]? '
+                         AND NULLIF(btrim(g.city),'') IS NOT NULL
+                         AND NOT EXISTS (SELECT 1 FROM coordinate_recovery_attempts a WHERE a.campaign_id=%s
+                                         AND a.facility_id=g.facility_key AND a.pass_id=%s AND a.stage='{stage}')
+                       ORDER BY g.facility_key LIMIT %s""",params).fetchall()
+    rows=[r for r in rows if eligible(r)]
+    queries={r['facility_id']:one_line(r) for r in rows}
+    keys={fid:cache.geocode_key(q) for fid,q in queries.items()}
+    saved=db.execute("SELECT * FROM cache_lookup WHERE cache_key=ANY(%s) AND provider='geocodio'",(list(set(keys.values())),)).fetchall() if keys else []
+    cached={c['cache_key']:c for c in saved}
+    outcomes=Counter();inserted=0
+    for r in rows:
+        fid=r['facility_id'];key=keys[fid]
+        if key not in cached:outcomes['not_in_ledger']+=1;continue
+        result=cached[key]['result'];result=json.loads(result) if isinstance(result,str) else result
+        baseline={k:r.get(k) for k in ('name','address','city','state','zip')}
+        hit,outcome=validate(baseline,result)
+        if street and hit and validate_rooftop(baseline,result)[0]:
+            hit,outcome=None,'rooftop_available'                     # the rooftop replay writes this one
+        evidence=db.execute("SELECT a.facility_key,a.field_key,a.value,a.source_key,s.source_url,s.source_document,a.row_hash FROM fact_assertions a LEFT JOIN ref_source_row s ON s.row_hash=a.row_hash WHERE a.facility_key=%s AND a.release_tag=%s AND a.field_key=ANY(%s)",(fid,r['live_release'],['name','address','city','state','zip'])).fetchall()
+        with connect() as tx:
+            tx.execute(f"""INSERT INTO coordinate_recovery_attempts(campaign_id,facility_id,pass_id,stage,query_key,request,result,outcome,reserved_usd,run_url,completed_at)
+                          VALUES(%s,%s,%s,'{stage}',%s,%s,%s,%s,0,%s,now()) ON CONFLICT(campaign_id,facility_id,pass_id,stage) DO NOTHING""",
+                       (CAMPAIGN,fid,pass_id,key,Jsonb({'address':queries[fid],'ledger':'cache_lookup'}),Jsonb(result),outcome,run_url()))
+            if hit:
+                live=tx.execute("SELECT name,city,state,release_tag,lat_lon,lat_lon__source FROM golden_facility WHERE facility_key=%s FOR SHARE",(fid,)).fetchone()
+                located=bool(str(live.get('lat_lon') or '').strip()) and (street or live.get('lat_lon__source')!=STREET_SOURCE) if live else False
+                if not live or live['release_tag']!=r['live_release'] or norm(live['name'])!=norm(r['name']) or located:
+                    outcome='live_row_changed'
+                else:
+                    record={'facility_id':fid,'baseline':baseline,'evidence':[dict(e) for e in evidence]+[{'ledger':'cache_lookup','cache_key':key,'query':queries[fid],'fetched_at':str(cached[key].get('fetched_at'))}],'live_release':r['live_release']}
+                    inserted+=append_coordinate(tx,record,hit,level=level)
+        outcomes[outcome]+=1
+    return dict(scanned=len(rows),ledger_hits=sum(1 for k in keys.values() if k in cached),outcomes=dict(outcomes),
+                coordinate_assertions_inserted=inserted,new_api_calls=0,api_cost_usd=0.0)
+
+
+def execute(mode,pass_id,row_limit):
+    from psycopg.types.json import Jsonb
+    ensure_schema()
+    with connect() as db:
+        campaign=freeze(db)
+        if mode in ('fl_bcis','md_labor','md_labor_crossmatch'):
+            if mode=='fl_bcis':
+                from pipeline.recovery.fl_bcis import recover
+            elif mode=='md_labor':
+                from pipeline.recovery.md_labor import recover
+            else:
+                from pipeline.recovery.md_labor import recover_crossmatch as recover
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
+                         budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(recover(db,CAMPAIGN,pass_id,row_limit,run_url()))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        if mode in ('overture_pilot','overture_rooftop'):
+            selected,blocked,eligible_count,diagnostics=select_rows(db,pass_id,row_limit)
+            from pipeline.recovery.overture_rooftop import run as overture_run
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,
+                         frozen_count=campaign['frozen_count'],eligible_remaining=eligible_count,
+                         blocked=blocked,recovery_input_diagnostics=diagnostics,
+                         budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),
+                         workflow=run_url(),golden_writes=0)
+            summary.update(overture_run(db,CAMPAIGN,selected,row_limit,run_url(),
+                                        write=mode=='overture_rooftop'))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        if mode in ('internal_crossmatch_plan','internal_crossmatch'):
+            from pipeline.recovery.internal_crossmatch import run as internal_run
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,
+                         frozen_count=campaign['frozen_count'],budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(internal_run(db,CAMPAIGN,run_url(),write=mode=='internal_crossmatch',limit=row_limit))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        if mode in ('internal_contact_plan','internal_contact'):
+            from pipeline.recovery.internal_crossmatch import run_contact
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,
+                         frozen_count=campaign['frozen_count'],budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(run_contact(db,CAMPAIGN,run_url(),write=mode=='internal_contact',limit=row_limit))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        if mode in ('internal_name_plan','internal_name'):
+            from pipeline.recovery.internal_crossmatch import run_name_only
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,
+                         frozen_count=campaign['frozen_count'],budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(run_name_only(db,CAMPAIGN,run_url(),write=mode=='internal_name',limit=row_limit))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        if mode in ('internal_address_plan','internal_address'):
+            from pipeline.recovery.internal_crossmatch import run_address
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,
+                         frozen_count=campaign['frozen_count'],budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(run_address(db,CAMPAIGN,run_url(),write=mode=='internal_address',limit=row_limit))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        if mode=='ledger_street_level':
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],workflow=run_url(),golden_writes=0)
+            summary.update(ledger_street_level(db,pass_id,row_limit))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        if mode=='ledger_replay':
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
+                         budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(ledger_replay(db,pass_id,row_limit))
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        if mode=='historical_cached':
+            summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
+                         budget_ceiling_usd=float(campaign['api_ceiling']),
+                         budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0)
+            summary.update(historical_cached(db,pass_id))
+            statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+            summary['campaign_status_counts']={r['status']:r['n'] for r in statuses}
+            out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+            print(json.dumps(summary,indent=2));return
+        selected,blocked,eligible_count,diagnostics=select_rows(db,pass_id,row_limit)
+        queries=[one_line(r['baseline']) for r in selected]
+        keys=[cache.geocode_key(q) for q in queries]
+        saved=db.execute("SELECT * FROM cache_lookup WHERE cache_key=ANY(%s) AND provider='geocodio'",(keys,)).fetchall()
+        cached={r['cache_key']:r for r in saved}
+    scanned=len(selected)
+    if mode=='cached':
+        kept=[(r,q,k) for r,q,k in zip(selected,queries,keys) if k in cached]
+        selected=[x[0] for x in kept];queries=[x[1] for x in kept];keys=[x[2] for x in kept]
+    fresh=len({cache.geocode_key(q) for q in queries}-set(cached))
+    summary=dict(campaign_id=CAMPAIGN,mode=mode,pass_id=pass_id,frozen_count=campaign['frozen_count'],
+                 eligible_remaining=eligible_count,selected=len(selected),blocked=blocked,
+                 scanned_for_cached=scanned if mode=='cached' else None,
+                 cached_unique_queries=len(set(keys)&set(cached)),estimated_new_lookups=fresh,
+                 estimated_api_upper_bound_usd=round(fresh*.001,3),budget_ceiling_usd=float(campaign['api_ceiling']),
+                 budget_reserved_before_usd=float(campaign['reserved_usd']),workflow=run_url(),golden_writes=0,
+                 recovery_input_diagnostics=diagnostics)
+    summary['recovered_address_source_filter']=os.environ.get('RECOVERED_ADDRESS_SOURCE','').strip() or None
+    print(json.dumps(summary),flush=True)
+    outcomes=Counter();inserted=0;calls=0
+    if mode in ('geocode','cached'):
+        if fresh and not os.environ.get('GEOCODIO_API_KEY'):raise RuntimeError('Geocodio key absent; no calls made')
+        for r,q,k in zip(selected,queries,keys):
+            is_cached=k in cached
+            with connect() as db:reserve(db,r,pass_id,q,Decimal('0') if is_cached else Decimal('0.001'))
+            try:
+                if is_cached:
+                    result=cached[k]['result'];result=json.loads(result) if isinstance(result,str) else result
+                else:
+                    calls+=1;response,stopped=_post([q],os.environ['GEOCODIO_API_KEY'])
+                    if stopped or len(response)!=1:raise RuntimeError('Incomplete provider response')
+                    result=response[0]
+                hit,outcome=validate_rooftop(r['baseline'],result)
+                with connect() as db:
+                    # Recheck identity immediately before attaching an assertion to the live release.
+                    live=db.execute('SELECT name,city,state,release_tag FROM golden_facility WHERE facility_key=%s FOR SHARE',(r['facility_id'],)).fetchone()
+                    frozen=r.get('frozen') or r['baseline']
+                    if not live or live['release_tag']!=r['live_release'] or norm(live.get('name'))!=norm(frozen.get('name')) or any(frozen.get(f) and norm(live.get(f))!=norm(frozen.get(f)) for f in ('city','state')):raise RuntimeError('Facility identity/release changed during lookup')
+                    if not is_cached:
+                        db.execute('INSERT INTO cache_lookup(cache_key,kind,input,result,found,provider,fetched_at,hits) VALUES(%s,%s,%s,%s,%s,%s,%s,0) ON CONFLICT(cache_key) DO UPDATE SET result=EXCLUDED.result,found=EXCLUDED.found,provider=EXCLUDED.provider,fetched_at=EXCLUDED.fetched_at',
+                                   (k,'geocode',q,json.dumps(result),int(bool((result.get('response') or {}).get('results'))),'geocodio',datetime.now(timezone.utc).isoformat()))
+                    if hit:inserted+=append_coordinate(db,r,hit)
+                    db.execute("UPDATE coordinate_recovery_attempts SET result=%s,outcome=%s,completed_at=now() WHERE campaign_id=%s AND facility_id=%s AND pass_id=%s AND stage='geocode'",(Jsonb(result),outcome,CAMPAIGN,r['facility_id'],pass_id))
+                cached[k]={'result':result};outcomes[outcome]+=1
+            except Exception as exc:
+                with connect() as db:
+                    db.execute("UPDATE coordinate_recovery_attempts SET outcome='error',result=%s,completed_at=now() WHERE campaign_id=%s AND facility_id=%s AND pass_id=%s AND stage='geocode'",(Jsonb({'error_type':type(exc).__name__}),CAMPAIGN,r['facility_id'],pass_id))
+                outcomes['error']+=1
+            if sum(outcomes.values())%10==0:print(json.dumps({'processed':sum(outcomes.values()),'outcomes':dict(outcomes)}),flush=True)
+    with connect() as db:
+        current=db.execute('SELECT * FROM coordinate_recovery_campaigns WHERE campaign_id=%s',(CAMPAIGN,)).fetchone()
+        statuses=db.execute('SELECT status,count(*) AS n FROM coordinate_recovery_rows WHERE campaign_id=%s GROUP BY status',(CAMPAIGN,)).fetchall()
+    summary.update(outcomes=dict(outcomes),coordinate_assertions_inserted=inserted,new_api_calls=calls,
+                   campaign_budget_reserved_usd=float(current['reserved_usd']),campaign_status_counts={r['status']:r['n'] for r in statuses})
+    out=Path('recovery-summary');out.mkdir(exist_ok=True);(out/'summary.json').write_text(json.dumps(summary,indent=2))
+    print(json.dumps(summary,indent=2))
+    if outcomes.get('error'):raise RuntimeError('Some rows failed; private attempt records retained for diagnosis')
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser();p.add_argument('--mode',choices=['plan','cached','ledger_replay','ledger_street_level','historical_cached','fl_bcis','md_labor','md_labor_crossmatch','internal_crossmatch_plan','internal_crossmatch','internal_contact_plan','internal_contact','internal_name_plan','internal_name','internal_address_plan','internal_address','overture_pilot','overture_rooftop','geocode'],default='plan');p.add_argument('--pass-id',default='1');p.add_argument('--limit',type=int,default=100);a=p.parse_args()
+    # ledger_replay and cached make no API call; a geocode batch is bounded so one run can spend at
+    # most $0.50 (500 lookups at $0.001) against the campaign ceiling the reserve() guard enforces.
+    # fl_bcis reads the public registry a page a row inside one transaction: 300 keeps a run well
+    # inside the job's 30-minute limit, since a timeout would roll the whole batch back.
+    maximum=10000 if a.mode in ('ledger_replay','ledger_street_level') else 2000 if a.mode in ('cached','historical_cached') else 500 if a.mode=='geocode' else 300 if a.mode=='fl_bcis' else 100
+    if not 1<=a.limit<=maximum:raise ValueError(f'{a.mode} batches are limited to {maximum} rows')
+    execute(a.mode,a.pass_id,a.limit)

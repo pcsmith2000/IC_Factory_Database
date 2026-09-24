@@ -180,3 +180,59 @@ def measure(points: list[dict], release: str = DEFAULT_RELEASE,
                                  "footprint", f"{p['lat']:.6f},{p['lon']:.6f}", got, True,
                                  f"overture:{release}")
     return out
+
+
+def containing(points: list[dict], release: str = DEFAULT_RELEASE,
+               cache: Path | None = None, max_files: int | None = None) -> list[dict]:
+    """Return the Overture building(s) that geometrically cover each point.
+
+    This is intentionally stricter than :func:`measure`.  ``measure`` may select a large
+    building up to 30 metres from a trusted rooftop coordinate so it can estimate floor area.
+    A coordinate-recovery pass has the inverse problem: it starts with an untrusted point and may
+    call it rooftop only when the point itself is inside a footprint.  Nearby is not enough.
+    Multiple covering polygons are reported as ambiguous instead of choosing one.
+    """
+    idx = build_index(release, cache)
+    by_file: dict[str, list[dict]] = {}
+    out: list[dict] = []
+    for p in points:
+        f = file_for(idx, p["lat"], p["lon"])
+        if f is None:
+            out.append({**p, "buildings": [], "reason": "outside every Overture file bbox"})
+        else:
+            by_file.setdefault(f, []).append(p)
+    files = list(by_file)
+    if max_files is not None and len(files) > max_files:
+        for f in files[max_files:]:
+            for p in by_file[f]:
+                out.append({**p, "buildings": [], "reason": "deferred: file ceiling reached"})
+        files = files[:max_files]
+    if not files:
+        return out
+    con = _connect()
+    for f in files:
+        ps = by_file[f]
+        where = " OR ".join(
+            f"(bbox.xmin <= {p['lon']} AND bbox.xmax >= {p['lon']} AND "
+            f"bbox.ymin <= {p['lat']} AND bbox.ymax >= {p['lat']})" for p in ps)
+        con.execute(
+            f"CREATE OR REPLACE TEMP TABLE src AS SELECT geometry, bbox, id, height "
+            f"FROM read_parquet('{f}') WHERE {where}")
+        for p in ps:
+            rows = con.execute(
+                "SELECT id, ST_AsText(geometry), height FROM src "
+                "WHERE bbox.xmin <= ? AND bbox.xmax >= ? "
+                "AND bbox.ymin <= ? AND bbox.ymax >= ? "
+                "AND ST_Intersects(geometry, ST_Point(?, ?)) ORDER BY id",
+                [p["lon"], p["lon"], p["lat"], p["lat"], p["lon"], p["lat"]]
+            ).fetchall()
+            buildings = [{"building_id": bid,
+                          "building_sqft": round(wkt_area_m2(wkt) * M2_FT2),
+                          "height_m": height}
+                         for bid, wkt, height in rows]
+            reason = "" if len(buildings) == 1 else (
+                "no containing Overture building" if not buildings
+                else f"ambiguous: {len(buildings)} containing Overture buildings")
+            out.append({**p, "buildings": buildings, "reason": reason,
+                        "overture_release": release})
+    return out

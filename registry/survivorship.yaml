@@ -86,6 +86,14 @@ fields:
   # disagree. A consumer wanting one number should read sq_ft and fall back to building_sqft; a
   # consumer auditing the roster wants both side by side.
   building_sqft:   {order: [adl_employee_feedback, operator, "basis:footprint"], tie: most_recent}
+  # The consumer's one number. A derived field pools the assertions of several fields and ranks
+  # them as one contest, so golden carries the single value most likely to be right and names its
+  # source. floor_area_sqft: a stated plant size (ADL's lists first, then any registry) beats the
+  # measured footprint, which fills the hole when nothing was stated. A value that does not read
+  # as a plausible plant size (below 500 or above 20,000,000 sq ft, or not a number) cannot win.
+  # sq_ft and building_sqft stay side by side for the auditor, as the note above explains.
+derived:
+  floor_area_sqft: {from: [sq_ft, building_sqft], order: [adl_employee_feedback, operator, "class:D", "class:A", "class:B", "class:C", "basis:footprint"], tie: most_recent, min: 500, max: 20000000}
   existence_flag:  {order: [adl_employee_feedback, operator, "basis:advisory"], tie: most_recent}
 
   # Free-text employee observations that do not fit a structured warehouse field.

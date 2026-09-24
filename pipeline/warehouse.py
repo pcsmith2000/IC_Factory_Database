@@ -38,6 +38,10 @@ GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_l
                  "value_basis",
                  # measured/concluded by stages 11-12, and employee_notes from the feedback path
                  "building_sqft", "existence_flag", "employee_notes",
+                 # 2026-09-23: the one square-footage number, chosen across sq_ft (what a source
+                 # states) and building_sqft (what the Overture footprint measures) under the
+                 # `derived` rule in registry/survivorship.yaml. Its __source says which won.
+                 "floor_area_sqft",
                  # stage 15, over registry/taxonomy.yaml. Two columns rather than one because the
                  # two are measured differently: the group carries a real accuracy over ADL's 218
                  # labels and most leaves have too few examples to score at all.

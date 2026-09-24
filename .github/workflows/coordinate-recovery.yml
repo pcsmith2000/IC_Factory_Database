@@ -1,0 +1,62 @@
+name: Budgeted rooftop recovery
+run-name: Rooftop recovery · ${{ inputs.mode || 'plan' }} · pass ${{ inputs.pass_id || '1' }}
+on:
+  push:
+    branches: [feat/coordinate-recovery]
+    paths: [.github/workflows/coordinate-recovery.yml]
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [plan, cached, ledger_replay, ledger_street_level, historical_cached, fl_bcis, md_labor, md_labor_crossmatch, internal_crossmatch_plan, internal_crossmatch, internal_contact_plan, internal_contact, internal_name_plan, internal_name, internal_address_plan, internal_address, overture_pilot, overture_rooftop, geocode]
+        default: plan
+      pass_id:
+        description: 'Pass identifier; repeats resume unfinished rows'
+        default: '1'
+      row_limit:
+        description: 'Maximum rows (100 plan; 500 geocode = at most $0.50; 2000 cached-only; 10000 ledger_replay or ledger_street_level)'
+        default: '100'
+      recovered_address_source:
+        description: 'Optional recovered-address source filter (for example tako_ai_search)'
+        default: ''
+      campaign_id:
+        description: 'Campaign to work (blank = missing-rooftops-2026-09-21); a new id freezes a new cohort from the current golden table'
+        default: ''
+      ceiling_usd:
+        description: 'API ceiling for a NEW campaign only (its share of the $10; ignored for an existing campaign)'
+        default: '9.50'
+permissions:
+  contents: read
+concurrency:
+  group: ic-warehouse-pipeline
+  cancel-in-progress: false
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -e '.[postgres,dev]' duckdb
+      - run: pytest tests/test_coordinate_recovery.py tests/test_fl_bcis_recovery.py tests/test_md_labor_recovery.py -q
+      - name: Frozen-cohort recovery with private provenance and budget tracking
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          GEOCODIO_API_KEY: ${{ secrets.GEOCODIO_API_KEY || secrets.GEOCODIO_API || secrets.IC_DB_GEOCODIO_API_KEY || secrets.GEOCODIO_KEY }}
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN || secrets.IC_DB_PRI_SOURCE_READ_WRITE_TOKEN }}
+          BLOB_STORE_ID: ${{ secrets.BLOB_STORE_ID || secrets.IC_DB_PRI_SOURCE_STORE_ID }}
+          MODE: ${{ inputs.mode || 'plan' }}
+          PASS_ID: ${{ inputs.pass_id || '1' }}
+          ROW_LIMIT: ${{ inputs.row_limit || '100' }}
+          RECOVERED_ADDRESS_SOURCE: ${{ inputs.recovered_address_source }}
+          RECOVERY_CAMPAIGN: ${{ inputs.campaign_id }}
+          RECOVERY_CEILING_USD: ${{ inputs.ceiling_usd || '9.50' }}
+        run: python -m pipeline.recovery.run --mode "$MODE" --pass-id "$PASS_ID" --limit "$ROW_LIMIT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recovery-summary-${{ github.run_id }}
+          path: recovery-summary/summary.json
+          retention-days: 90
