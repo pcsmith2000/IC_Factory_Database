@@ -15,7 +15,9 @@ evidence. In order, first match wins:
                    SAME number: the number always meant this plant
     identity       its identity is shared with exactly one permanent facility (another number)
     unique_name    one of its names belongs to exactly one permanent facility, in the same state,
-                   and one side names no city (a different city is evidence of a second plant)
+                   one side names no city, and one side names no street address or they share one
+                   (a different city or street is evidence of a second plant: TrueNorth Steel's
+                   Fargo plant, "4401 Main Ave." with no city, is not its Mandan plant)
     address        a numbered street address in its state stands at exactly one permanent facility
     unresolved     none of the above: facility_id NULL. The number is retired, never reissued
 
@@ -115,8 +117,11 @@ def resolve(pairs: list[tuple[str, str]], identity_rows: list[dict], current_tag
                     if len(hit) == 1:
                         named |= hit
                 # Same name, different named city: a company's second plant, not this one.
-                if len(named) == 1 and (not cities.get((fid, h)) or not cities.get((next(iter(named)), h0))):
-                    target, method = next(iter(named)), "unique_name"
+                cand = next(iter(named)) if len(named) == 1 else None
+                mine, theirs = addresses.get((fid, h), set()), addresses.get((cand, h0), set())
+                same_street = not mine or not theirs or bool({a for a, _ in mine} & {a for a, _ in theirs})
+                if cand and (not cities.get((fid, h)) or not cities.get((cand, h0))) and same_street:
+                    target, method = cand, "unique_name"
                 else:
                     at = one(by_addr, addresses.get((fid, h), ()))
                     if len(at) == 1:

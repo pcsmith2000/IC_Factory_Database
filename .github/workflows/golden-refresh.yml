@@ -1,0 +1,56 @@
+# Continuous golden (#44, epic #39): recompute the facilities whose assertions changed since golden
+# last saw them. A trigger on fact_assertions fills golden_dirty; this drains it, one batch of
+# facilities at a time, with the same survivorship rules and E10 state gate as promote.
+name: golden-refresh
+run-name: "Golden refresh${{ inputs.all && ' · all' || '' }}${{ inputs.dry_run && ' (dry run)' || '' }}"
+
+concurrency:
+  group: ic-warehouse-pipeline      # never beside an ingestion or enrichment run
+  cancel-in-progress: false
+on:
+  schedule:
+    - cron: "7,22,37,52 * * * *"    # every 15 minutes, off the :00 and :30 marks
+  workflow_dispatch:
+    inputs:
+      all:
+        description: "every registered facility, not just the queue (a full rebuild through the same path)"
+        type: boolean
+        default: false
+      dry_run:
+        description: "compute and report; write nothing, drain nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres]"
+      - name: Resolve the Neon warehouse connection
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
+          python .github/scripts/neon_connection_string.py
+      - name: Refresh
+        env:
+          ALL: ${{ inputs.all }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          # A scheduled run has no inputs: it drains the queue for real.
+          set --
+          [ "$ALL" = "true" ] && set -- "$@" --all
+          [ "$DRY_RUN" = "true" ] && set -- "$@" --dry-run
+          python -m pipeline.golden_refresh "$@" | tee refresh.json
+          { echo '```json'; cat refresh.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
