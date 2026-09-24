@@ -268,9 +268,31 @@ def main(argv=None) -> int:
     # existed. A test points it at a scratch file; a real run leaves it unset.
     id_registry_path = (Path(os.environ["IC_ID_REGISTRY"]) if os.environ.get("IC_ID_REGISTRY")
                         else ROOT / "id_registry.json")
-    rec = reconcile.run(rows, id_registry_path)
+    # The permanent registry (epic #39, #43). Once the warehouse's facility registry is seeded it
+    # is the one place an IC-number is resolved or minted: a known plant keeps its number even when
+    # respelled, and a new one draws from the sequence, so no two runs can issue the same number.
+    # id_registry.json is then only an export. A scratch registry (IC_ID_REGISTRY: tests, and every
+    # run off main, see run.yml) never touches the warehouse registry; nor does an unseeded one.
+    from . import facility_registry
+    db_registry, reg_wh = None, None
+    if not os.environ.get("IC_ID_REGISTRY"):
+        try:
+            reg_wh = warehouse.open_warehouse(cfg, ROOT)
+        except (warehouse.WarehouseNotImplemented, warehouse.WarehouseUnreachable) as e:
+            return halt("layer 5", f"id registry: {e}")
+        if reg_wh is not None and facility_registry.is_seeded(reg_wh):
+            db_registry = facility_registry.DbIdRegistry(reg_wh, actor=f"pipeline.run {started:%Y-%m-%dT%H%M%S}",
+                                                         export_path=id_registry_path)
+    try:
+        rec = reconcile.run(rows, id_registry_path, registry=db_registry)
+    except facility_registry.RegistryConflict as e:
+        return halt("layer 5", f"id registry: {e}")
+    finally:
+        if reg_wh is not None:
+            reg_wh.close()
     facilities = rec["facilities"]
     record["layers"]["5_reconcile"] = {k: v for k, v in rec.items() if k not in {"facilities", "rows"}}
+    record["layers"]["5_reconcile"]["id_registry"] = "warehouse" if db_registry else f"file:{id_registry_path.name}"
     _write_csv(out / "facilities.csv", facilities)
     _write_csv(out / "rows_reconciled.csv", rec["rows"])
 

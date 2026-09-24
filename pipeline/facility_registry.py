@@ -20,6 +20,8 @@ chose to keep as the permanent ones (2026-09-24), and reports its state.
 
     python -m pipeline.facility_registry seed [--dry-run]
     python -m pipeline.facility_registry status
+    python -m pipeline.facility_registry merge IC-00002 --into IC-00001 --actor NAME --reason "..."
+    python -m pipeline.facility_registry retire | repoint KEY --to IC-… | mint  (each --actor, --reason)
 """
 from __future__ import annotations
 import hashlib, json, sys
@@ -138,6 +140,208 @@ def seed(wh, registry_path: Path | None = None, actor: str = "facility_registry.
     return report
 
 
+def _draw(wh, c) -> str:
+    """The next IC-number. Postgres: nextval, so no two writers can ever draw the same number.
+    A number drawn by a run that later fails is burned, never reused: a gap is harmless and a reuse
+    is exactly the fault this registry exists to end."""
+    if wh.engine == "postgres":
+        n = int(wh._rows(c.execute("SELECT nextval('facility_id_seq') AS n"))[0]["n"])
+    else:
+        n = _counter_next(wh, c)
+        c.execute("UPDATE facility_id_counter SET next = ? WHERE name = 'facility_id'", (n + 1,))
+    return f"IC-{n:05d}"
+
+
+def _event(c, kind: str, facility_id: str, actor: str, reason: str, other: str | None = None,
+           match_key: str | None = None, at: str | None = None):
+    at = at or _now()
+    eid = hashlib.sha256(f"{kind}\x1f{facility_id}\x1f{match_key}\x1f{other}\x1f{at}".encode()).hexdigest()[:20]
+    c.execute("INSERT INTO facility_event (event_id, at, kind, facility_id, other_facility_id, match_key, actor, reason) "
+              "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (event_id) DO NOTHING",
+              (eid, at, kind, facility_id, other, match_key, actor, reason))
+
+
+class RegistryConflict(RuntimeError):
+    """A write would re-point an existing key, or act on a facility that is not live."""
+
+
+def _roots(wh, c) -> dict[str, str]:
+    """facility -> the live facility it resolves to (itself unless merged)."""
+    return {r["facility_id"]: (r["merged_into"] or r["facility_id"]) for r in
+            wh._rows(c.execute("SELECT facility_id, merged_into FROM facility"))}
+
+
+class DbIdRegistry:
+    """reconcile's id registry, backed by the warehouse (#43). Drop-in for reconcile.IdRegistry.
+
+    get(sig, alts) resolves a cluster:
+      1. its signature is a known key            -> that facility (following a merge)
+      2. else its other member signatures (alts) name exactly one live facility
+                                                  -> attach: the signature becomes that facility's key
+      3. else id_registry.json already numbered this signature, and that number is unregistered
+                                                  -> adopt: register the plant under its old number
+      4. else                                     -> mint a new IC-number from the sequence
+    Step 3 matters on the first runs after the seed: the seed registered only golden's 6,426
+    plants, while main's file numbers ~90,000 more signatures (T0 leads, excluded rows). Minting
+    for those would renumber every one of them; adopting keeps the number they already carry. The
+    file maps signature to number one to one, so an adopted number can belong to no other plant.
+    A plant that is respelled, or gains an address, keeps its number (step 2); only a plant no key
+    has ever named is minted. Keys are only ever added here, never re-pointed: re-pointing is an
+    operator act with its own event (repoint / merge below). Nothing is written until save().
+    """
+
+    def __init__(self, wh, actor: str = "reconcile", export_path: Path | None = None):
+        self.wh, self.actor, self.export_path = wh, actor, export_path
+        with wh.transaction() as c:
+            self.keys = {r["match_key"]: r["facility_id"] for r in
+                         wh._rows(c.execute("SELECT match_key, facility_id FROM facility_match_key"))}
+            self.root = _roots(wh, c)
+        legacy = (json.loads(export_path.read_text()) if export_path is not None and export_path.exists()
+                  else {"ids": {}})
+        self.legacy: dict[str, str] = legacy.get("ids", {})
+        self.new_keys: list[tuple[str, str, str]] = []      # (key, facility, kind: mint | attach | adopt)
+        self.minted: list[str] = []                          # new facility rows: minted or adopted
+        self.issued_this_run = 0
+        self.adopted_this_run = 0
+        self.attached_this_run = 0
+        self.ambiguous_this_run = 0
+
+    def _live(self, fid: str) -> str:
+        return self.root.get(fid, fid)
+
+    def get(self, sig: str, alts=()) -> str:
+        if sig in self.keys:
+            return self._live(self.keys[sig])
+        known = {self._live(self.keys[a]) for a in alts if a in self.keys}
+        if len(known) == 1:
+            fid = next(iter(known))
+            self.keys[sig] = fid
+            self.new_keys.append((sig, fid, "attach"))
+            self.attached_this_run += 1
+            return fid
+        if len(known) > 1:
+            self.ambiguous_this_run += 1        # two plants claim its rows: mint, never guess a merge
+        old = self.legacy.get(sig)
+        if old and old not in self.root and id_number(old) is not None and id_number(old) < ID_FLOOR:
+            self.keys[sig] = old
+            self.root[old] = old
+            self.minted.append(old)
+            self.new_keys.append((sig, old, "adopt"))
+            self.adopted_this_run += 1
+            return old
+        with self.wh.transaction() as c:
+            fid = _draw(self.wh, c)
+        self.keys[sig] = fid
+        self.root[fid] = fid
+        self.minted.append(fid)
+        self.new_keys.append((sig, fid, "mint"))
+        self.issued_this_run += 1
+        return fid
+
+    def save(self):
+        at = _now()
+        with self.wh.transaction() as c:
+            live = {r["match_key"]: r["facility_id"] for r in wh_rows(self.wh, c,
+                    "SELECT match_key, facility_id FROM facility_match_key")}
+            clash = [(k, live[k], f) for k, f, _ in self.new_keys if k in live and live[k] != f]
+            if clash:
+                raise RegistryConflict(f"{len(clash)} keys already name another facility, e.g. {clash[:3]}")
+            c.executemany("INSERT INTO facility (facility_id, status, merged_into, created_at, created_by) "
+                          "VALUES (?, 'active', NULL, ?, ?) ON CONFLICT (facility_id) DO NOTHING",
+                          [(f, at, self.actor) for f in self.minted])
+            for key, fid, kind in self.new_keys:
+                method, conf = key_method(key)
+                c.execute("INSERT INTO facility_match_key (match_key, facility_id, method, confidence, source, first_seen) "
+                          "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (match_key) DO NOTHING",
+                          (key, fid, method, conf, self.actor, at))
+                _event(c, kind, fid, self.actor, {
+                    "mint": "new plant",
+                    "attach": "signature attached: its rows' other keys name this facility",
+                    "adopt": "registered under the number id_registry.json already gave this signature",
+                }[kind], match_key=key, at=at)
+        if self.export_path is not None:
+            export_json(self.wh, self.export_path)
+
+
+def wh_rows(wh, c, sql, params=()):
+    return wh._rows(c.execute(sql, params))
+
+
+def export_json(wh, path: Path):
+    """id_registry.json as a read-only export for offline and SQLite runs. It is a superset: keys
+    the file already holds are kept (retired numbers stay retired, never reissued), keys the
+    registry added are written, and `next` never falls behind the sequence."""
+    data = json.loads(path.read_text()) if path.exists() else {"next": 1, "ids": {}}
+    with wh.transaction() as c:
+        for r in wh_rows(wh, c, "SELECT match_key, facility_id FROM facility_match_key"):
+            data["ids"][r["match_key"]] = r["facility_id"]
+        data["next"] = max(int(data.get("next") or 1), _counter_next(wh, c))
+    path.write_text(json.dumps(data, indent=1, sort_keys=True))
+
+
+# ---------------------------------------------------------------- operator acts, each an event
+def _require_live(wh, c, fid: str) -> dict:
+    rows = wh_rows(wh, c, "SELECT facility_id, status, merged_into FROM facility WHERE facility_id = ?", (fid,))
+    if not rows:
+        raise RegistryConflict(f"{fid} is not a registered facility")
+    if rows[0]["status"] != "active":
+        raise RegistryConflict(f"{fid} is {rows[0]['status']}" + (f" into {rows[0]['merged_into']}" if rows[0]["merged_into"] else ""))
+    return rows[0]
+
+
+def merge(wh, source: str, into: str, actor: str, reason: str) -> dict:
+    """Two numbers were one plant. `source` becomes merged into `into`; its keys stay where they
+    are and resolve through merged_into. Anything already merged into `source` is re-rooted, so a
+    merge is always one hop and v_assertions_resolved's single join stays exact."""
+    if source == into:
+        raise RegistryConflict("cannot merge a facility into itself")
+    with wh.transaction() as c:
+        _require_live(wh, c, source); _require_live(wh, c, into)
+        c.execute("UPDATE facility SET status = 'merged', merged_into = ? WHERE facility_id = ?", (into, source))
+        c.execute("UPDATE facility SET merged_into = ? WHERE merged_into = ?", (into, source))
+        _event(c, "merge", source, actor, reason, other=into)
+    return {"merged": source, "into": into}
+
+
+def retire(wh, fid: str, actor: str, reason: str) -> dict:
+    """Not a plant (a closed site, a mistake). The number is never reissued."""
+    with wh.transaction() as c:
+        _require_live(wh, c, fid)
+        c.execute("UPDATE facility SET status = 'retired' WHERE facility_id = ?", (fid,))
+        _event(c, "retire", fid, actor, reason)
+    return {"retired": fid}
+
+
+def repoint(wh, key: str, to: str, actor: str, reason: str) -> dict:
+    """A key named the wrong plant. The one sanctioned way to move a key; a split is mint + repoint."""
+    with wh.transaction() as c:
+        _require_live(wh, c, to)
+        was = wh_rows(wh, c, "SELECT facility_id FROM facility_match_key WHERE match_key = ?", (key,))
+        if not was:
+            raise RegistryConflict(f"no such key: {key!r}")
+        c.execute("UPDATE facility_match_key SET facility_id = ? WHERE match_key = ?", (to, key))
+        _event(c, "repoint", to, actor, reason, other=was[0]["facility_id"], match_key=key)
+    return {"key": key, "from": was[0]["facility_id"], "to": to}
+
+
+def mint(wh, actor: str, reason: str) -> dict:
+    """A new plant by hand (the first half of a split)."""
+    at = _now()
+    with wh.transaction() as c:
+        fid = _draw(wh, c)
+        c.execute("INSERT INTO facility (facility_id, status, merged_into, created_at, created_by) "
+                  "VALUES (?, 'active', NULL, ?, ?)", (fid, at, actor))
+        _event(c, "mint", fid, actor, reason, at=at)
+    return {"minted": fid}
+
+
+def is_seeded(wh) -> bool:
+    try:
+        return bool(wh.query("SELECT 1 FROM facility LIMIT 1"))
+    except Exception:
+        return False
+
+
 def status(wh) -> dict:
     with wh.transaction() as c:
         by_status = {r["status"]: int(r["n"]) for r in
@@ -158,15 +362,39 @@ def main(argv=None) -> int:
     s = sub.add_parser("seed", help="register every golden facility under its current number (idempotent)")
     s.add_argument("--dry-run", action="store_true", help="check coverage and collisions; write nothing")
     sub.add_parser("status", help="facilities by status, keys, events, next IC-number")
+    for name, hlp in (("merge", "SOURCE was the same plant as --into"), ("retire", "FACILITY is not a plant"),
+                      ("repoint", "KEY names --to, not the plant it names now"), ("mint", "register a new plant by hand")):
+        p = sub.add_parser(name, help=hlp)
+        if name in ("merge", "retire", "repoint"):
+            p.add_argument("target")
+        if name == "merge":
+            p.add_argument("--into", required=True)
+        if name == "repoint":
+            p.add_argument("--to", required=True)
+        p.add_argument("--actor", required=True, help="who: a person or a named agent")
+        p.add_argument("--reason", required=True, help="why, in a sentence: recorded in facility_event")
     args = ap.parse_args(argv)
     wh = (SqliteWarehouse(Path(args.db)) if args.db
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1
     try:
-        out = seed(wh, dry_run=args.dry_run) if args.cmd == "seed" else status(wh)
+        if args.cmd == "seed":
+            out = seed(wh, dry_run=args.dry_run)
+        elif args.cmd == "merge":
+            out = merge(wh, args.target, args.into, args.actor, args.reason)
+        elif args.cmd == "retire":
+            out = retire(wh, args.target, args.actor, args.reason)
+        elif args.cmd == "repoint":
+            out = repoint(wh, args.target, args.to, args.actor, args.reason)
+        elif args.cmd == "mint":
+            out = mint(wh, args.actor, args.reason)
+        else:
+            out = status(wh)
     except SeedRefused as e:
         print(f"seed refused, nothing written:\n{e}", file=sys.stderr); return 2
+    except RegistryConflict as e:
+        print(f"refused, nothing written: {e}", file=sys.stderr); return 2
     print(json.dumps(out, indent=1, default=str))
     return 0
 
