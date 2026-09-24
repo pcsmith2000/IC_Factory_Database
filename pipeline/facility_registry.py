@@ -300,6 +300,10 @@ def merge(wh, source: str, into: str, actor: str, reason: str) -> dict:
         c.execute("UPDATE facility SET status = 'merged', merged_into = ? WHERE facility_id = ?", (into, source))
         c.execute("UPDATE facility SET merged_into = ? WHERE merged_into = ?", (into, source))
         _event(c, "merge", source, actor, reason, other=into)
+        # Both golden rows change: the source's facts now belong to `into` (#44). An empty
+        # release_tag resolves directly to the permanent facility in golden_refresh.
+        c.executemany("INSERT INTO golden_dirty (facility_key, release_tag, since) VALUES (?, '', ?) "
+                      "ON CONFLICT (facility_key, release_tag) DO NOTHING", [(source, _now()), (into, _now())])
     return {"merged": source, "into": into}
 
 

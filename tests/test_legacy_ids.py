@@ -133,3 +133,15 @@ def test_crosswalk_refuses_before_the_registry_is_seeded(wh):
         c.execute("INSERT INTO golden_facility (facility_key, release_tag) VALUES ('IC-00001', ?)", (NOW,))
     with pytest.raises(RuntimeError, match="seed"):
         L.crosswalk(wh)
+
+
+def test_same_name_at_a_different_street_is_a_second_plant_not_a_match():
+    # TrueNorth Steel: the Fargo plant was recorded with a street but no city or state; the only
+    # live plant of that name is in Mandan at another street. Not the same plant.
+    rows = (ident("IC-00005", NOW, "TrueNorth Steel", "Mandan", "ND", "2522 Memorial Highway")
+            + ident("IC-00006", OLD_B, "TrueNorth Steel", address="4401 Main Ave."))
+    out = L.resolve([("IC-00006", OLD_B)], rows, NOW, {"IC-00005"})[0]
+    assert (out["facility_id"], out["method"]) == (None, "unresolved")
+    # the same record at the same street is the same plant
+    rows2 = rows[:-1] + ident("IC-00006", OLD_B, "TrueNorth Steel", address="2522 Memorial Highway")
+    assert L.resolve([("IC-00006", OLD_B)], rows2, NOW, {"IC-00005"})[0]["facility_id"] == "IC-00005"

@@ -171,6 +171,13 @@ DDL = [
     # Which id registry each release was built from (its tag's `+ids.<hash>`), so a view can join
     # fact_assertions to legacy_id_map in SQL both engines share. Written by pipeline/legacy_ids.py.
     "CREATE TABLE IF NOT EXISTS release_registry (release_tag TEXT PRIMARY KEY, registry_hash TEXT NOT NULL)",
+    # Continuous golden (#44): facilities whose assertions changed since golden last saw them.
+    # Filled by a trigger on fact_assertions (below, per engine) and by facility merges; drained
+    # by pipeline/golden_refresh.py. Raw (facility_key, release_tag): the refresh resolves each
+    # to its permanent facility, so the trigger needs no knowledge of the registry.
+    """CREATE TABLE IF NOT EXISTS golden_dirty (
+        facility_key TEXT NOT NULL, release_tag TEXT NOT NULL, since TEXT NOT NULL,
+        PRIMARY KEY (facility_key, release_tag))""",
 ]
 
 # Views are created after the golden columns are reconciled, not with the tables: they name every
@@ -197,13 +204,17 @@ VIEWS = [
     # Every fact with the permanent facility it meant (#42): through the release's id registry to
     # legacy_id_map, then one hop of merged_into (a merge always points at a live root, #43).
     # NULL permanent_facility_id: the number is unresolved, so the fact belongs to no plant.
+    # A release with no release_registry row was loaded through the permanent registry (#43): its
+    # facility_key already IS the permanent id, so it resolves directly (resolve_method 'direct').
     """CREATE VIEW v_assertions_resolved AS
-        SELECT a.*, rr.registry_hash, m.method AS resolve_method,
-               COALESCE(f.merged_into, m.facility_id) AS permanent_facility_id
+        SELECT a.*, rr.registry_hash,
+               COALESCE(m.method, CASE WHEN fd.facility_id IS NOT NULL THEN 'direct' END) AS resolve_method,
+               COALESCE(fm.merged_into, m.facility_id, fd.merged_into, fd.facility_id) AS permanent_facility_id
         FROM fact_assertions a
         LEFT JOIN release_registry rr ON rr.release_tag = a.release_tag
         LEFT JOIN legacy_id_map m ON m.registry_hash = rr.registry_hash AND m.legacy_id = a.facility_key
-        LEFT JOIN facility f ON f.facility_id = m.facility_id""",
+        LEFT JOIN facility fm ON fm.facility_id = m.facility_id
+        LEFT JOIN facility fd ON rr.release_tag IS NULL AND fd.facility_id = a.facility_key""",
 ]
 
 
@@ -306,9 +317,27 @@ class _Warehouse:
             from .facility_registry import ID_FLOOR
             if self.engine == "postgres":
                 c.execute(f"CREATE SEQUENCE IF NOT EXISTS facility_id_seq START WITH {ID_FLOOR} MINVALUE 1")
+                # One statement-level trigger: a 40,000-row release load enqueues each distinct
+                # (facility, release) once, not once per row.
+                c.execute("""CREATE OR REPLACE FUNCTION golden_mark_dirty() RETURNS trigger LANGUAGE plpgsql AS $fn$
+                    BEGIN
+                      INSERT INTO golden_dirty (facility_key, release_tag, since)
+                      SELECT DISTINCT facility_key, release_tag, to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+                      FROM new_rows ON CONFLICT (facility_key, release_tag) DO NOTHING;
+                      RETURN NULL;
+                    END $fn$""")
+                c.execute("DROP TRIGGER IF EXISTS golden_dirty_on_fact ON fact_assertions")
+                c.execute("""CREATE TRIGGER golden_dirty_on_fact AFTER INSERT ON fact_assertions
+                             REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION golden_mark_dirty()""")
             else:
                 c.execute("CREATE TABLE IF NOT EXISTS facility_id_counter (name TEXT PRIMARY KEY, next INTEGER NOT NULL)")
                 c.execute("INSERT INTO facility_id_counter VALUES ('facility_id', ?) ON CONFLICT (name) DO NOTHING", (ID_FLOOR,))
+                c.execute("""CREATE TRIGGER IF NOT EXISTS golden_dirty_on_fact AFTER INSERT ON fact_assertions
+                             BEGIN
+                               INSERT INTO golden_dirty (facility_key, release_tag, since)
+                               VALUES (NEW.facility_key, NEW.release_tag, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+                               ON CONFLICT (facility_key, release_tag) DO NOTHING;
+                             END""")
             if self.engine == "postgres":
                 # Execute raw: the migration contains Postgres's JSON existence operator '?'.
                 migration = Path(__file__).resolve().parent / "migrations" / "001_employee_feedback.sql"

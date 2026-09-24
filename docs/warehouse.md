@@ -116,6 +116,40 @@ python -m pipeline.facility_registry mint ...                             # a sp
 A merge always points at a live root and re-roots anything merged into its source, so
 `v_assertions_resolved` resolves every fact in a single hop.
 
+## Continuous golden (#44)
+Golden no longer waits for a pipeline run. A statement trigger on `fact_assertions` records every
+(facility_key, release_tag) that gains a fact in **`golden_dirty`**, and so does a facility merge.
+**`python -m pipeline.golden_refresh`** drains it; the `golden-refresh` workflow runs it every 15
+minutes on main. For each queued facility it:
+
+1. resolves it to its **permanent** facility (release registry → `legacy_id_map`, or directly for a
+   release loaded through the registry), following one `merged_into` hop;
+2. reads the **golden basis** through `v_assertions_resolved`: the current release's facts, plus
+   carried enrichment, Tako, ASTRA and employee-feedback facts from any release. That's what
+   promote reads, except that carried facts reach their plant through the registry rather than
+   E11's name-and-address carry;
+3. applies `golden.build_golden` and the E10 state gate, exactly as promote does, and upserts or
+   removes that one golden row.
+
+Guarantees:
+- It only touches **registered** facilities. An unresolvable key, such as an `ADL-*` facility an
+  employee created in ADL_Viz, is left as it is and reported.
+- A facility that would **lose** a field it carries isn't written. It stays queued and is
+  reported, unless E10 withheld the field or a person ruled the plant not IC.
+- Merged and retired numbers leave golden.
+- `--all` (a full rebuild through the same path) and any sequence of incremental refreshes give
+  the same table, and this is tested.
+
+On 2026-09-24 a dry-run `--all` against live golden left 6,390 of 6,426 rows identical, changed 36
+(all gains, or rooftops replacing place-level pins) and lost nothing.
+
+```
+python -m pipeline.golden_refresh --dry-run            # what the queue would change
+python -m pipeline.golden_refresh --all --dry-run      # the whole table, compared with golden now
+```
+Layers 1–8 and promote still replace golden wholesale on their own runs, and their writes enqueue
+every facility they touch, so the next refresh brings golden back onto this path.
+
 ## Loader (Layer 8)
 `build/assertions.csv` → `fact_assertions` (append, tagged with release; `assertion_id` is a hash
 of facility · field · value · source · date · row_hash, so re-loading a release is a no-op);
