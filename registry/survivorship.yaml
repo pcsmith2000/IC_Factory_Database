@@ -19,7 +19,7 @@
 # Tako AI Search is always below the listed AND unlisted sources. golden._rank enforces
 # this source-wide floor, rather than allowing it to tie an unlisted source on recency.
 lowest_priority_sources: [tako_ai_search]
-version: 4
+version: 5
 default_order: [adl_employee_feedback, operator, site_visit, "class:A", "class:D", "class:B", "class:C"]
 fields:
   name:            {order: [adl_employee_feedback, operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
@@ -86,6 +86,11 @@ fields:
   # disagree. A consumer wanting one number should read sq_ft and fall back to building_sqft; a
   # consumer auditing the roster wants both side by side.
   building_sqft:   {order: [adl_employee_feedback, operator, "basis:footprint"], tie: most_recent}
+  existence_flag:  {order: [adl_employee_feedback, operator, "basis:advisory"], tie: most_recent}
+
+  # Free-text employee observations that do not fit a structured warehouse field.
+  employee_notes: {order: [adl_employee_feedback, operator], tie: most_recent}
+
   # The consumer's one number. A derived field pools the assertions of several fields and ranks
   # them as one contest, so golden carries the single value most likely to be right and names its
   # source. floor_area_sqft: a stated plant size (ADL's lists first, then any registry) beats the
@@ -94,7 +99,10 @@ fields:
   # sq_ft and building_sqft stay side by side for the auditor, as the note above explains.
 derived:
   floor_area_sqft: {from: [sq_ft, building_sqft], order: [adl_employee_feedback, operator, "class:D", "class:A", "class:B", "class:C", "basis:footprint"], tie: most_recent, min: 500, max: 20000000}
-  existence_flag:  {order: [adl_employee_feedback, operator, "basis:advisory"], tie: most_recent}
 
-  # Free-text employee observations that do not fit a structured warehouse field.
-  employee_notes: {order: [adl_employee_feedback, operator], tie: most_recent}
+# Operational flags: fields an enrichment stage asserts for its own bookkeeping and that never
+# reach golden. geocode_quality records "Geocodio could not place this address at rooftop" so the
+# next run skips it (pipeline/enrich/geocode.py). They carry no survivorship order, but they are
+# field_keys in fact_assertions, so the loader gives each a dim_field row (order NULL) and a join
+# fact_assertions ⋈ dim_field does not silently drop them. A new flag-only field goes here.
+flag_fields: [geocode_quality]
