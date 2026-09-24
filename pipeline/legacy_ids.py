@@ -45,8 +45,8 @@ def _norm(v) -> str:
     return re.sub(r"[^a-z0-9]", "", str(v or "").lower())
 
 
-def _identity(rows) -> tuple[dict, dict, dict, dict]:
-    """(names, keys, addresses, cities), each keyed by (facility_id, registry hash).
+def _identity(rows) -> tuple[dict, dict, dict, dict, dict]:
+    """(names, keys, addresses, cities, raw street addresses), each keyed by (facility_id, registry hash).
 
     keys: every normalised (name, city, state) combination; addresses: every (numbered street
     address, state). Several sources spell a name or a city differently; each combination is a
@@ -58,9 +58,13 @@ def _identity(rows) -> tuple[dict, dict, dict, dict]:
             continue
         if f == "address" and not re.match(r"^\s*\d", str(r["value"])):
             continue                      # a street with no house number does not name a parcel
-        parts.setdefault((r["facility_id"], registry_hash(r["release_tag"])), {}).setdefault(f, set()).add(v)
+        part = parts.setdefault((r["facility_id"], registry_hash(r["release_tag"])), {})
+        part.setdefault(f, set()).add(v)
+        if f == "address":
+            part.setdefault("raw_address", set()).add(str(r["value"]).strip())
     names, keys, addresses = {}, {}, {}
     cities = {k: p["city"] for k, p in parts.items() if p.get("city")}
+    streets = {k: p["raw_address"] for k, p in parts.items() if p.get("raw_address")}
     for k, p in parts.items():
         states = p.get("state") or {""}
         if "name" in p:
@@ -68,14 +72,22 @@ def _identity(rows) -> tuple[dict, dict, dict, dict]:
             keys[k] = {(n, c, s) for n in p["name"] for c in (p.get("city") or {""}) for s in states}
         if "address" in p:
             addresses[k] = {(a, s) for a in p["address"] for s in states}
-    return names, keys, addresses, cities
+    return names, keys, addresses, cities, streets
+
+
+def _same_parcel(a: str, b: str) -> bool:
+    """Same house number, and the same street once USPS spelling is canonical ("21498 BALTIMORE
+    AVENUE" is "21498 Baltimore Ave"; "4401 Main Ave." is not "2522 Memorial Highway")."""
+    from .recovery.streets import street_equivalent
+    na, nb = re.match(r"\s*(\d+)", a), re.match(r"\s*(\d+)", b)
+    return bool(na and nb and na.group(1) == nb.group(1) and street_equivalent(a, b)[0])
 
 
 def resolve(pairs: list[tuple[str, str]], identity_rows: list[dict], current_tag: str,
             permanent: set[str]) -> list[dict]:
     """One row per (registry hash, legacy id) in `pairs` [(facility_id, release_tag), ...]. Pure."""
     h0 = registry_hash(current_tag)
-    names, keys, addresses, cities = _identity(identity_rows)
+    names, keys, addresses, cities, streets = _identity(identity_rows)
     by_key: dict[tuple, set[str]] = {}
     by_name: dict[str, set[tuple[str, str]]] = {}     # name -> {(state, facility)}
     by_addr: dict[tuple, set[str]] = {}
@@ -118,8 +130,8 @@ def resolve(pairs: list[tuple[str, str]], identity_rows: list[dict], current_tag
                         named |= hit
                 # Same name, different named city: a company's second plant, not this one.
                 cand = next(iter(named)) if len(named) == 1 else None
-                mine, theirs = addresses.get((fid, h), set()), addresses.get((cand, h0), set())
-                same_street = not mine or not theirs or bool({a for a, _ in mine} & {a for a, _ in theirs})
+                mine, theirs = streets.get((fid, h), set()), streets.get((cand, h0), set())
+                same_street = not mine or not theirs or any(_same_parcel(a, b) for a in mine for b in theirs)
                 if cand and (not cities.get((fid, h)) or not cities.get((cand, h0))) and same_street:
                     target, method = cand, "unique_name"
                 else:

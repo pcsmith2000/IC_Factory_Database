@@ -145,3 +145,17 @@ def test_same_name_at_a_different_street_is_a_second_plant_not_a_match():
     # the same record at the same street is the same plant
     rows2 = rows[:-1] + ident("IC-00006", OLD_B, "TrueNorth Steel", address="2522 Memorial Highway")
     assert L.resolve([("IC-00006", OLD_B)], rows2, NOW, {"IC-00005"})[0]["facility_id"] == "IC-00005"
+
+
+def test_the_same_street_in_another_spelling_is_the_same_plant():
+    # Great Outdoor Cottages: "21498 BALTIMORE AVENUE" then, "21498 Baltimore Ave" now.
+    rows = (ident("IC-00007", NOW, "Great Outdoor Cottages LLC", address="21498 Baltimore Ave")
+            + ident("IC-00008", OLD_B, "Great Outdoor Cottages LLC", "Georgetown", "DE", "21498 BALTIMORE AVENUE"))
+    out = L.resolve([("IC-00008", OLD_B)], rows, NOW, {"IC-00007"})[0]
+    assert (out["facility_id"], out["method"]) == ("IC-00007", "unique_name")
+
+
+def test_another_house_number_on_the_same_street_is_another_parcel():
+    rows = (ident("IC-00005", NOW, "TrueNorth Steel", "Mandan", "ND", "2522 Memorial Highway")
+            + ident("IC-00006", OLD_B, "TrueNorth Steel", address="2600 Memorial Hwy"))
+    assert L.resolve([("IC-00006", OLD_B)], rows, NOW, {"IC-00005"})[0]["method"] == "unresolved"
