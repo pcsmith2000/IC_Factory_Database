@@ -46,6 +46,18 @@ GOLDEN_FIELDS = ["name", "legal_name", "address", "city", "state", "zip", "lat_l
                  # two are measured differently: the group carries a real accuracy over ADL's 218
                  # labels and most leaves have too few examples to score at all.
                  "capability_group", "capability_leaf"]
+def dim_field_rows(rules: dict) -> list[tuple]:
+    """dim_field: one row per field_key fact_assertions can hold. A golden field carries the order
+    survivorship actually ranks it by: its `fields:` rule, else its `derived:` rule, else the
+    default. An operational flag (`flag_fields:`, e.g. geocode_quality) never reaches golden and
+    carries NULL — it still needs a row, or a join fact_assertions ⋈ dim_field drops its facts."""
+    version, fields, derived = str(rules.get("version")), rules.get("fields") or {}, rules.get("derived") or {}
+    rows = [(f, f, json.dumps((fields.get(f) or derived.get(f) or {}).get("order", rules.get("default_order", []))), version)
+            for f in GOLDEN_FIELDS]
+    rows += [(f, f, None, version) for f in rules.get("flag_fields") or [] if f not in GOLDEN_FIELDS]
+    return rows
+
+
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "tako_ai_search": {"name": "Tako AI Search", "class": "tako_ai_search"},
     "adl_employee_feedback": {"name": "ADL employee feedback", "class": "human_feedback"},
@@ -327,9 +339,7 @@ class _Warehouse:
             c.executemany("INSERT INTO dim_source VALUES (?,?,?,?,?,?,?) ON CONFLICT (source_key) DO NOTHING",
                           [(sid, sid, meta["name"], meta["class"], None, None, "active") for sid, meta in SYNTHETIC_SOURCES.items()])
             c.execute("DELETE FROM dim_field")
-            c.executemany("INSERT INTO dim_field VALUES (?,?,?,?)",
-                          [(f, f, json.dumps(rules.get("fields", {}).get(f, {}).get("order", rules.get("default_order", []))), str(rules.get("version")))
-                           for f in GOLDEN_FIELDS])
+            c.executemany("INSERT INTO dim_field VALUES (?,?,?,?)", dim_field_rows(rules))
             c.executemany("""INSERT INTO dim_facility VALUES (?,?,?,?,?,?,?,?)
                              ON CONFLICT(facility_key) DO UPDATE SET last_seen_release=excluded.last_seen_release,
                              signature=excluded.signature, name=excluded.name, state=excluded.state, tier=excluded.tier""",

@@ -129,8 +129,9 @@ def e6_rebuilt_golden_loses_nothing(before: dict[str, int], after: dict[str, int
     E4 asks the same question of the stage outputs; this asks it of what actually lands in the
     table, which is the only version a reader ever sees.
     """
-    # allowed_loss names the legitimate shrinkage: what E10 and E11 withheld, and facilities a
-    # person ruled not IC ("__rows" carries how many of those left golden).
+    # allowed_loss names the legitimate shrinkage: what E10 and E11 withheld, facilities a person
+    # ruled not IC ("__rows" carries how many of those left golden), plus any allowance an operator
+    # declared for this one run (promote.parse_allowed_loss), field by field.
     allowed = allowed_loss or {}
     lost = {f: (before[f], after.get(f, 0)) for f in before
             if f != "__rows" and after.get(f, 0) < before[f] - allowed.get(f, 0)}

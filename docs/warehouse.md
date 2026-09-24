@@ -50,6 +50,12 @@ v_provenance           view: golden value → the assertion(s) that carried it �
 The golden table is not a second fact: it is a function of the fact and `dim_field`'s
 survivorship order. Reference tables are small and versioned, not dimensional.
 
+`dim_field` holds a row for every `field_key` `fact_assertions` can carry: each golden field, with
+the order survivorship ranks it by (`fields:`, else `derived:`, else `default_order`), and each
+operational flag listed under `flag_fields:` in `registry/survivorship.yaml` (e.g.
+`geocode_quality`), with `survivorship_order_json` NULL because it never reaches golden. A new
+flag-only field must be listed there; `tests/test_warehouse.py` fails on any orphan `field_key`.
+
 ## Loader (Layer 8)
 `build/assertions.csv` → `fact_assertions` (append, tagged with release; `assertion_id` is a hash
 of facility · field · value · source · date · row_hash, so re-loading a release is a no-op);

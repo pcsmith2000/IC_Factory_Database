@@ -116,6 +116,9 @@ def main(argv=None) -> int:
     ap.add_argument("--cache-restore", default="", help="cache stage: load a ledger from this file")
     ap.add_argument("--release-tag", default=os.environ.get("ENRICH_RELEASE_TAG", ""))
     ap.add_argument("--dry-run", action="store_true", help="plan the stage; make no external call")
+    ap.add_argument("--allowed-loss", default=os.environ.get("PROMOTE_ALLOWED_LOSS", ""),
+                    help="promote stage: coverage gate E6 may excuse this much, as field=count,... "
+                         "(one run only; recorded in the promote report)")
     args = ap.parse_args(argv)
 
     db = _db.connect()
@@ -459,7 +462,8 @@ def main(argv=None) -> int:
 
     if args.stage == "promote":
         from . import promote
-        rep = promote.run(db, tag, dry_run=args.dry_run)
+        rep = promote.run(db, tag, dry_run=args.dry_run,
+                          allowed_loss=promote.parse_allowed_loss(args.allowed_loss))
         for g in rep["gates"]:
             print(f"  {g}")
         if rep.get("halted"):

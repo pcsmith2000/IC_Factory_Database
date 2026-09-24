@@ -229,3 +229,20 @@ class _Sql:
         import re
         order = [int(m.group(1)) for m in re.finditer(r"\$(\d+)", sql)]
         return self.wh.query(re.sub(r"\$\d+", "?", sql), tuple(params[i - 1] for i in order))
+
+
+def test_every_fact_field_key_has_a_dim_field_row(wh, tmp_path: Path):
+    """geocode_quality is a flag enrichment writes and reads back, never a golden field. dim_field is
+    rebuilt from the survivorship rules each load, so without `flag_fields:` its facts had no row and
+    fell out of every fact_assertions ⋈ dim_field join (#32)."""
+    rec, rules, asserts, gold, conflicts, record = _build(tmp_path, "v-test+1")
+    fid = rec["facilities"][0]["facility_id"]
+    asserts = asserts + [dict(asserts[0], facility_id=fid, field="geocode_quality", value="street_center",
+                              source_id="geocode:geocodio", source_class="enrichment", basis="not_rooftop", row_hash="")]
+    wh.load_release(record, assertions=asserts, golden=gold, conflicts=conflicts, facilities=rec["facilities"], rows=rec["rows"],
+                    registry=REGISTRY, registry_text="version: 1", rules=rules, control_rows=[], control_sha=None,
+                    known_gaps={}, survivorship_hash="s")
+    orphans = wh.query("SELECT a.field_key FROM fact_assertions a LEFT JOIN dim_field d ON d.field_key = a.field_key "
+                       "WHERE d.field_key IS NULL")
+    assert orphans == []
+    assert wh.query("SELECT survivorship_order_json FROM dim_field WHERE field_key='geocode_quality'") == [{"survivorship_order_json": None}]
