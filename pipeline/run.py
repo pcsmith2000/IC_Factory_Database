@@ -278,12 +278,14 @@ def main(argv=None) -> int:
     rules = load_yaml(ROOT / "registry" / "survivorship.yaml")
     src_class = {s["id"]: s["class"] for s in reg["sources"]}
     asserts = golden.assertions_from_rows(rec["rows"], src_class) + golden.load_operator_assertions(ROOT / "control" / "operator_assertions.csv")
-    gold, conflicts = golden.build_golden(asserts, rules)
+    gold, conflicts = golden.build_golden(asserts, rules, keep_excluded=True)
+    gold, conflicts, excluded = golden.split_excluded(gold, conflicts)
     _write_csv(out / "assertions.csv", asserts)
     _write_csv(out / "golden.csv", gold)
     _write_csv(out / "conflicts.csv", conflicts)
     record["layers"]["5b_golden"] = {"assertions": len(asserts), "golden_rows": len(gold), "conflicts": len(conflicts),
-                                     "survivorship_version": rules.get("version"), "operator_assertions": sum(1 for a in asserts if a["source_id"] == "operator")}
+                                     "survivorship_version": rules.get("version"), "operator_assertions": sum(1 for a in asserts if a["source_id"] == "operator"),
+                                     "excluded_not_ic": sorted(g["facility_id"] for g in excluded)}
 
     # ---- Layer 6
     if 6 not in layers:
@@ -425,11 +427,16 @@ def main(argv=None) -> int:
     # rather than a guess — 511 of the 1,457 T0 in v1.0.0+reg.22389a4 had a city.
     t0_with_city = sum(1 for f in facilities if f.get("tier") == "T0" and f.get("city_norm"))
     located = len(facilities) - t0
+    # A facility a person ruled not IC is in `facilities` (its id is kept) but not in golden, so it
+    # is not a published facility either. T0 are already uncounted, so only located ones come off.
+    ruled_out = set(record["layers"]["5b_golden"]["excluded_not_ic"])
+    excluded_located = sum(1 for f in facilities if f["facility_id"] in ruled_out and f.get("tier") != "T0")
+    located -= excluded_located
     dup_removed = len(facilities) - g1.get("corrected_count", len(facilities))
     record["release"] = {
         "published_count": max(located - dup_removed, 0), "raw_count": len(facilities),
         "located_count": located, "t0_leads": t0, "t0_leads_with_city": t0_with_city,
-        "dedupe_removed": dup_removed,
+        "dedupe_removed": dup_removed, "excluded_not_ic": excluded_located,
         "tag": f"v{__version__}+reg.{record['registry_version']}+ids.{sha256_file(id_registry_path)[:8]}+ctl.{(record['control_sha'] or 'none')[:8]}+surv.{sha256_file(ROOT / 'registry' / 'survivorship.yaml')[:8]}"
                + (f"+prompt.{cls_meta['prompt_hash']}+model.{cls_meta['model']}" if cls_meta else ""),
         "finished": datetime.now(timezone.utc).isoformat(),

@@ -93,8 +93,31 @@ def _recency(a: dict) -> tuple[str, str, str]:
     return (str(a.get("retrieved_date") or ""), str(a.get("asserted_at") or ""), tie)
 
 
-def build_golden(assertions: list[dict], rules: dict) -> tuple[list[dict], list[dict]]:
-    """Returns (golden rows, conflicts). A conflict is a field with >1 distinct value on a facility."""
+# A person ruling a facility out of scope: existence_flag = not_ic, asserted by a human source.
+# The facility keeps its IC-number and its assertions (ids are never renumbered, facts are never
+# deleted); it just does not reach golden, so nothing that reads golden publishes it. Only a human
+# source can do this: stage 12 may assert existence_flag = review and nothing else (gate E5).
+NOT_IC = "not_ic"
+HUMAN_SOURCES = ("adl_employee_feedback", "operator")
+
+
+def is_excluded(g: dict) -> bool:
+    return g.get("existence_flag") == NOT_IC and g.get("existence_flag__source") in HUMAN_SOURCES
+
+
+def split_excluded(golden: list[dict], conflicts: list[dict]) -> tuple[list[dict], list[dict], list[dict]]:
+    """(kept golden rows, their conflicts, the excluded golden rows)."""
+    dropped = [g for g in golden if is_excluded(g)]
+    ids = {g["facility_id"] for g in dropped}
+    return ([g for g in golden if g["facility_id"] not in ids],
+            [c for c in conflicts if c["facility_id"] not in ids], dropped)
+
+
+def build_golden(assertions: list[dict], rules: dict, *, keep_excluded: bool = False) -> tuple[list[dict], list[dict]]:
+    """Returns (golden rows, conflicts). A conflict is a field with >1 distinct value on a facility.
+
+    A facility a person has ruled not IC is left out unless `keep_excluded` — a caller that has to
+    account for what was dropped builds with it and splits with split_excluded."""
     by_fac: dict[str, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
     for a in assertions:
         by_fac[a["facility_id"]][a["field"]].append(a)
@@ -124,6 +147,8 @@ def build_golden(assertions: list[dict], rules: dict) -> tuple[list[dict], list[
         g["n_assertions"] = sum(len(v) for v in fields.values())
         g["n_sources"] = len({a["source_id"] for v in fields.values() for a in v})
         golden.append(g)
+    if not keep_excluded:
+        golden, conflicts, _ = split_excluded(golden, conflicts)
     return golden, conflicts
 
 

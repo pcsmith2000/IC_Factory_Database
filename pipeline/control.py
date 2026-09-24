@@ -141,10 +141,14 @@ def check(cfg: dict, fix: bool = False) -> list[str]:
     hdr, rows = _read(c / "operator_assertions.csv")
     if hdr[:5] != ["facility_id", "field", "value", "retrieved_date", "note"]:
         problems.append(f"operator_assertions.csv: columns must be facility_id,field,value,retrieved_date,note, got {hdr}")
-    golden_fields = set(FIELD_MAP) | {"lat_lon", "legal_name", "product_type"}
+    golden_fields = set(FIELD_MAP) | {"lat_lon", "legal_name", "product_type", "existence_flag"}
     for i, r in enumerate(rows, 2):
         if r.get("field") not in golden_fields:
             problems.append(f"operator_assertions.csv line {i}: field {r.get('field')!r} not a golden field {sorted(golden_fields)}")
+        # existence_flag from a person is a decision, so it takes one of two words: not_ic takes the
+        # facility out of golden, review puts it back in the queue. A typo must not silently do neither.
+        if r.get("field") == "existence_flag" and r.get("value") not in ("not_ic", "review"):
+            problems.append(f"operator_assertions.csv line {i}: existence_flag must be not_ic or review, got {r.get('value')!r}")
         if not re.match(r"^IC-\d{5}$", r.get("facility_id") or ""):
             problems.append(f"operator_assertions.csv line {i}: facility_id {r.get('facility_id')!r} is not an IC-number")
 
