@@ -58,4 +58,4 @@ def test_e6_tolerates_exactly_the_ruled_out_rows():
 def test_the_committed_rulings_load_as_operator_assertions():
     ops = load_operator_assertions(ROOT / "control" / "operator_assertions.csv")
     ruled = {o["facility_id"] for o in ops if o["field"] == "existence_flag" and o["value"] == "not_ic"}
-    assert {"IC-95860", "IC-70761", "IC-94220"} <= ruled
+    assert {"IC-95860", "IC-70761", "IC-94220", "IC-10222"} <= ruled
