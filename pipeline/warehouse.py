@@ -178,6 +178,12 @@ DDL = [
     """CREATE TABLE IF NOT EXISTS golden_dirty (
         facility_key TEXT NOT NULL, release_tag TEXT NOT NULL, since TEXT NOT NULL,
         PRIMARY KEY (facility_key, release_tag))""",
+    # A release, frozen (#49). golden_facility is live and keeps moving between releases; this is
+    # what a published release said, one JSON row per facility (a golden column added later needs
+    # no migration here). Written by golden_refresh.snapshot at the end of every main release load.
+    """CREATE TABLE IF NOT EXISTS golden_release (
+        release_tag TEXT NOT NULL, facility_key TEXT NOT NULL, snapshot_at TEXT NOT NULL, row_json TEXT NOT NULL,
+        PRIMARY KEY (release_tag, facility_key))""",
 ]
 
 # Views are created after the golden columns are reconciled, not with the tables: they name every
@@ -474,8 +480,21 @@ class _Warehouse:
             c.executemany("INSERT INTO ref_known_gaps VALUES (?,?,?,?) ON CONFLICT (release_tag, state) DO UPDATE SET cause=excluded.cause, as_of=excluded.as_of",
                           [(tag, st, cause, run_ts) for st, cause in (known_gaps.get("states") or {}).items()])
             total = self.query("SELECT count(*) AS n FROM fact_assertions")[0]["n"]
-        return {"engine": self.engine, "path": str(self.path), "release_tag": tag, "assertions_appended": n_facts,
-                "golden_rows": len(golden), "conflicts": len(conflicts), "source_rows": len(rows), "assertions_total": total}
+        out = {"engine": self.engine, "path": str(self.path), "release_tag": tag, "assertions_appended": n_facts,
+               "golden_rows": len(golden), "conflicts": len(conflicts), "source_rows": len(rows), "assertions_total": total}
+        # The golden written above is built from this run's rows alone, so it has none of the
+        # enrichment earlier releases paid for. Once the permanent registry is live (#39), golden is
+        # rebuilt at once through it, the carried facts restored, and the release frozen (#49), so
+        # no reader sees the un-enriched table for longer than this call. Unseeded (a laptop SQLite
+        # warehouse): the golden above stands, as it always has.
+        from .facility_registry import is_seeded
+        if is_seeded(self):
+            from . import golden_refresh
+            rep = golden_refresh.refresh(self, all_facilities=True, rules=rules, release_tag=tag)
+            out["golden_refresh"] = {k: rep[k] for k in ("facilities", "written", "removed", "unchanged",
+                                                         "coordinates_withheld", "held_for_loss")}
+            out["golden_release"] = golden_refresh.snapshot(self, tag)
+        return out
 
     # ---- reads
     def provenance(self, facility_id: str, field: str | None = None) -> list[dict]:

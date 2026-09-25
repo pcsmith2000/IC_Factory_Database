@@ -467,13 +467,13 @@ def main(argv=None) -> int:
         for g in rep["gates"]:
             print(f"  {g}")
         if rep.get("halted"):
+            why = rep.get("reason") or "gate E6 failed"
             _emit(args.out, "promote", rep,
-                  [("HALTED", "gate E6 failed"), *[("gate", g) for g in rep["gates"]]])
-            print("\nHALT: the rebuilt golden covered less than the one it would replace; "
-                  "nothing was written", file=sys.stderr)
+                  [("HALTED", why), *[("gate", g) for g in rep["gates"]]])
+            print(f"\nHALT: {why}; nothing was written", file=sys.stderr)
             return 1
         _emit(args.out, "promote", rep,
-              [("assertions read", rep["assertions_read"]),
+              [("facilities registered", rep["facilities_registered"]),
                ("golden rows built", rep["golden_rows"]),
                ("golden rows written", rep.get("would_write", rep["written"])),
                ("conflicts", rep["conflicts"]),

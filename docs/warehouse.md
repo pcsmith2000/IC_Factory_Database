@@ -125,9 +125,9 @@ minutes on main. For each queued facility it:
 1. resolves it to its **permanent** facility (release registry → `legacy_id_map`, or directly for a
    release loaded through the registry), following one `merged_into` hop;
 2. reads the **golden basis** through `v_assertions_resolved`: the current release's facts, plus
-   carried enrichment, Tako, ASTRA and employee-feedback facts from any release. That's what
-   promote reads, except that carried facts reach their plant through the registry rather than
-   E11's name-and-address carry;
+   carried enrichment, Tako, ASTRA and employee-feedback facts from any release, but only for a
+   plant the current release still asserts something about, so a dropped plant stays dropped.
+   Promote reads exactly this basis through the same function (`compute_full`, #49);
 3. applies `golden.build_golden` and the E10 state gate, exactly as promote does, and upserts or
    removes that one golden row.
 
@@ -147,8 +147,19 @@ On 2026-09-24 a dry-run `--all` against live golden left 6,390 of 6,426 rows ide
 python -m pipeline.golden_refresh --dry-run            # what the queue would change
 python -m pipeline.golden_refresh --all --dry-run      # the whole table, compared with golden now
 ```
-Layers 1–8 and promote still replace golden wholesale on their own runs, and their writes enqueue
-every facility they touch, so the next refresh brings golden back onto this path.
+**Every writer now goes through one path (#49):**
+- **Promote** builds golden with `compute_full`, so it can't disagree with the refresh. A dry run on
+  2026-09-25 matched live golden exactly.
+- **Layer 8** still writes golden from the run's own rows inside the load transaction. Once the
+  registry is seeded, `load_release` immediately runs a full refresh for the new release, so
+  carried enrichment is restored in the same call and the un-enriched table is never left standing.
+
+**Release snapshots.** Golden is live, so a release is a frozen copy: **`golden_release`**
+(release_tag, facility_key, snapshot_at, row_json). `load_release` writes one for every release on
+`main`. To freeze golden by hand:
+```
+python -m pipeline.golden_refresh --snapshot    # golden as it stands, under its release tag
+```
 
 ## Loader (Layer 8)
 `build/assertions.csv` → `fact_assertions` (append, tagged with release; `assertion_id` is a hash

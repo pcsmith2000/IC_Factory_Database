@@ -26,9 +26,11 @@ Safety:
   * A full refresh (--all) and a sequence of incremental refreshes give the same table (tested).
 
     python -m pipeline.golden_refresh [--all] [--batch 500] [--max-batches N] [--dry-run]
+    python -m pipeline.golden_refresh --snapshot       # freeze golden into golden_release (#49)
 """
 from __future__ import annotations
 import json, sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import golden as golden_mod
@@ -76,15 +78,27 @@ def current_release(wh) -> str:
     return tags[0]
 
 
-def compute(wh, facility_ids: list[str], release_tag: str, rules: dict) -> tuple[dict, list[dict], set[str]]:
-    """(golden row per facility, coordinates E10 withheld, facilities ruled not IC). Pure given the
-    database: it reads and writes nothing else."""
+def compute_full(wh, facility_ids: list[str], release_tag: str, rules: dict) -> dict:
+    """Golden for these facilities, as data: rows (after E10 and the not-IC split), unfiltered rows
+    (before E10, which promote's E6 measures against), E10's withheld coordinates, the facilities
+    ruled not IC, and conflicts. Reads the database, writes nothing.
+
+    A facility is in golden only while the current release asserts something about it. Carried
+    facts (enrichment, Tako, ASTRA, employee feedback) keep a plant's paid-for detail, but they must
+    not resurrect a plant a later release dropped: that is the scope promote's EXISTS clause kept
+    before the registry, and it is kept here."""
+    empty = {"rows": {}, "unfiltered": [], "quarantined": [], "excluded": set(), "conflicts": []}
     if not facility_ids:
-        return {}, [], set()
+        return empty
     asserts = wh.query(_basis_sql(len(facility_ids)), (*facility_ids, release_tag))
+    present = {a["facility_id"] for a in asserts if a["release_tag"] == release_tag}
+    asserts = [a for a in asserts if a["facility_id"] in present]
+    if not asserts:
+        return empty
     for a in asserts:
         a["source_class"] = a["source_class"] or "?"     # golden.py's unknown-class sentinel
     rows, conflicts = build(asserts, rules)
+    unfiltered = [dict(r) for r in rows]
     quarantined = []
     for _ in range(5):                                   # E10, exactly as promote applies it
         bad = geo.out_of_state(rows)
@@ -95,7 +109,33 @@ def compute(wh, facility_ids: list[str], release_tag: str, rules: dict) -> tuple
         asserts = [a for a in asserts if not (a["field"] == "lat_lon" and (a["facility_id"], a["value"]) in withheld)]
         rows, conflicts = build(asserts, rules)
     rows, conflicts, excluded = golden_mod.split_excluded(rows, conflicts)
-    return {r["facility_id"]: r for r in rows}, quarantined, {g["facility_id"] for g in excluded}
+    return {"rows": {r["facility_id"]: r for r in rows}, "unfiltered": unfiltered, "quarantined": quarantined,
+            "excluded": {g["facility_id"] for g in excluded}, "conflicts": conflicts}
+
+
+def compute(wh, facility_ids: list[str], release_tag: str, rules: dict) -> tuple[dict, list[dict], set[str]]:
+    """(golden row per facility, coordinates E10 withheld, facilities ruled not IC)."""
+    out = compute_full(wh, facility_ids, release_tag, rules)
+    return out["rows"], out["quarantined"], out["excluded"]
+
+
+def active_facilities(wh) -> list[str]:
+    return sorted(r["facility_id"] for r in wh.query("SELECT facility_id FROM facility WHERE status = 'active'"))
+
+
+def snapshot(wh, release_tag: str | None = None) -> dict:
+    """Freeze golden as it stands into golden_release under its release tag (#49). Golden is live now,
+    so a release is this copy: what the release said, kept after golden moves on. Re-snapshotting a
+    tag replaces that tag's copy. Rows are stored as JSON so a golden column added later needs no
+    migration here."""
+    tag = release_tag or current_release(wh)
+    rows = wh.query("SELECT * FROM golden_facility")
+    at = datetime.now(timezone.utc).isoformat()
+    with wh.transaction() as c:
+        c.execute("DELETE FROM golden_release WHERE release_tag = ?", (tag,))
+        c.executemany("INSERT INTO golden_release (release_tag, facility_key, snapshot_at, row_json) VALUES (?, ?, ?, ?)",
+                      [(tag, r["facility_key"], at, json.dumps(r, default=str, sort_keys=True)) for r in rows])
+    return {"release_tag": tag, "rows": len(rows), "snapshot_at": at}
 
 
 def _columns() -> list[str]:
@@ -116,12 +156,12 @@ def _losses(before: dict | None, after: dict | None, withheld_ll: bool, excluded
 
 
 def refresh(wh, *, all_facilities: bool = False, batch: int = 500, max_batches: int | None = None,
-            dry_run: bool = False, rules: dict | None = None) -> dict:
+            dry_run: bool = False, rules: dict | None = None, release_tag: str | None = None) -> dict:
     rules = rules or load_yaml(ROOT / "registry" / "survivorship.yaml")
-    tag = current_release(wh)
+    tag = release_tag or current_release(wh)
     if all_facilities:
         # Every registered live facility, plus whatever golden holds that the registry knows.
-        work = {r["facility_id"]: [] for r in wh.query("SELECT facility_id FROM facility WHERE status = 'active'")}
+        work = {f: [] for f in active_facilities(wh)}
         queued = []
     else:
         queued = wh.query(RESOLVE_QUEUE)
@@ -210,13 +250,15 @@ def main(argv=None) -> int:
     ap.add_argument("--batch", type=int, default=500)
     ap.add_argument("--max-batches", type=int, default=None)
     ap.add_argument("--dry-run", action="store_true", help="compute and report; write nothing, drain nothing")
+    ap.add_argument("--snapshot", action="store_true", help="freeze golden as it stands into golden_release; no refresh")
     args = ap.parse_args(argv)
     wh = (SqliteWarehouse(Path(args.db)) if args.db
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1
     try:
-        rep = refresh(wh, all_facilities=args.all, batch=args.batch, max_batches=args.max_batches, dry_run=args.dry_run)
+        rep = (snapshot(wh) if args.snapshot else
+               refresh(wh, all_facilities=args.all, batch=args.batch, max_batches=args.max_batches, dry_run=args.dry_run))
     except RuntimeError as e:
         print(f"refresh refused, nothing written: {e}", file=sys.stderr); return 2
     print(json.dumps(rep, indent=1, default=str))
