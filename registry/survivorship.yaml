@@ -18,8 +18,8 @@
 #            publishes one, and is worth less than any registry that does.
 # Tako AI Search is always below the listed AND unlisted sources. golden._rank enforces
 # this source-wide floor, rather than allowing it to tie an unlisted source on recency.
-lowest_priority_sources: [tako_ai_search]
-version: 5
+lowest_priority_sources: [tako_ai_search, astra_manual_web_lookup, web_research]
+version: 6
 default_order: [adl_employee_feedback, operator, site_visit, "class:A", "class:D", "class:B", "class:C"]
 fields:
   name:            {order: [adl_employee_feedback, operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
@@ -86,7 +86,9 @@ fields:
   # disagree. A consumer wanting one number should read sq_ft and fall back to building_sqft; a
   # consumer auditing the roster wants both side by side.
   building_sqft:   {order: [adl_employee_feedback, operator, "basis:footprint"], tie: most_recent}
-  existence_flag:  {order: [adl_employee_feedback, operator, "basis:advisory"], tie: most_recent}
+  # A web-research verdict (not_ic / closed, with a cited source) outranks stage 12's advisory
+  # `review`, and a person outranks both: an employee's `active` undoes an agent's `closed`.
+  existence_flag:  {order: [adl_employee_feedback, operator, "basis:web_verdict", "basis:advisory"], tie: most_recent}
 
   # Free-text employee observations that do not fit a structured warehouse field.
   employee_notes: {order: [adl_employee_feedback, operator], tie: most_recent}
@@ -105,4 +107,6 @@ derived:
 # next run skips it (pipeline/enrich/geocode.py). They carry no survivorship order, but they are
 # field_keys in fact_assertions, so the loader gives each a dim_field row (order NULL) and a join
 # fact_assertions ⋈ dim_field does not silently drop them. A new flag-only field goes here.
-flag_fields: [geocode_quality]
+# research_source: one per document the web-research agent cited for a facility (value = the URL,
+# its ref_source_row = who found it and when), so every source is itself on the record.
+flag_fields: [geocode_quality, research_source]
