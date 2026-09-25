@@ -20,7 +20,7 @@ from pathlib import Path
 from .. import golden as golden_mod
 from ..registry import load_yaml
 from ..warehouse import GOLDEN_FIELDS, SYNTHETIC_SOURCES
-from . import _db, geo, identity
+from . import _db
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -78,7 +78,23 @@ def parse_allowed_loss(text: str) -> dict[str, int]:
     return out
 
 
-def run(db, release_tag: str, dry_run: bool = False, allowed_loss: dict[str, int] | None = None) -> dict:
+class _Numbered:
+    """The warehouse-dialect reader golden_refresh.compute expects ('?' placeholders), over the
+    enrichment database, which binds Postgres' numbered ones ($1, $2, ...)."""
+    engine = "postgres"
+
+    def __init__(self, db):
+        self.db = db
+
+    def query(self, sql: str, params=()):
+        import re
+        n = iter(range(1, len(params) + 1))
+        return self.db.query(re.sub(r"\?", lambda _: f"${next(n)}", sql), tuple(params))
+
+
+def run(db, release_tag: str, dry_run: bool = False, allowed_loss: dict[str, int] | None = None,
+        batch: int = 400) -> dict:
+    from .. import golden_refresh
     rules = load_yaml(ROOT / "registry" / "survivorship.yaml")
     operator_loss = dict(allowed_loss or {})
     # Widening comes first: the before-coverage below counts every golden column, and a column this
@@ -90,48 +106,36 @@ def run(db, release_tag: str, dry_run: bool = False, allowed_loss: dict[str, int
     measurable = [f for f in GOLDEN_FIELDS if f not in missing] if dry_run else GOLDEN_FIELDS
     cov_before = _db.golden_coverage(db, measurable)
 
-    asserts = _db.fetch_assertions(db, release_tag)
-    unfiltered_rows, _ = build([dict(a) for a in asserts], rules)
-    # Gate E11: cross-release carry-over is by IDENTITY, not by id. An assertion from an earlier
-    # release is read under the current facility that has the (name, city, state) its own release
-    # gave its id — the plant it was about — and withheld when no current facility has it.
-    # See pipeline/enrich/identity.py.
-    other_tags = {a.get("release_tag") for a in asserts if a.get("release_tag") and a.get("release_tag") != release_tag}
-    identity_rows = _db.fetch_identity_rows(db, other_tags) if other_tags else []
-    asserts, carried_withheld, carry_counts = identity.carry_by_identity(asserts, release_tag, identity_rows)
-    unjudged = sum(1 for w in carried_withheld if w.get('reason') == 'no_identity_in_that_release')
-    rows, conflicts = build(asserts, rules)
-    # Gate E10: a coordinate carried onto a facility must lie in that facility's state. Assertions
-    # travel across releases by facility id, and when ids were issued by diverging registries the
-    # same number named different plants; the rooftop then lands on the wrong one. Such a
-    # coordinate is withheld from golden (the assertion itself is untouched) and survivorship is
-    # rerun so the next-ranked coordinate, if any, can win. Repeats until no winner is out of state.
-    quarantined = []
-    for _ in range(5):
-        bad = geo.out_of_state(rows)
-        if not bad:
-            break
-        quarantined.extend(bad)
-        withheld = {(b['facility_id'], b['lat_lon']) for b in bad}
-        asserts = [a for a in asserts if not (a['field'] == 'lat_lon' and (a['facility_id'], a['value']) in withheld)]
-        rows, conflicts = build(asserts, rules)
-    # A facility a person ruled not IC leaves golden here. It is a third legitimate shrinkage, and
-    # like E10's and E11's it is measured rather than assumed: E6 tolerates exactly these rows.
-    rows, conflicts, excluded = golden_mod.split_excluded(rows, conflicts)
+    # The golden basis comes through the permanent registry (#39, #49): each fact reaches the plant
+    # its own release meant (v_assertions_resolved), so the name-and-address carry E11 used to make
+    # is gone, and with it the carried assertions it had to withhold. golden_refresh.compute_full is
+    # the one implementation both this stage and the continuous refresh use.
+    reader = _Numbered(db)
+    ids = golden_refresh.active_facilities(reader)
+    if not ids:
+        return {"release_tag": release_tag, "halted": True, "written": 0, "columns_added": added,
+                "columns_missing": missing, "allowed_loss_operator": operator_loss, "gates": [],
+                "reason": "the permanent facility registry is empty: run `python -m pipeline.facility_registry seed`"}
+    rows, unfiltered_rows, quarantined, excluded, conflicts = [], [], [], [], []
+    for i in range(0, len(ids), batch):
+        part = golden_refresh.compute_full(reader, ids[i:i + batch], release_tag, rules)
+        rows.extend(part["rows"].values())
+        unfiltered_rows.extend(part["unfiltered"])
+        quarantined.extend(part["quarantined"])
+        excluded.extend(sorted(part["excluded"]))
+        conflicts.extend(part["conflicts"])
     cov_after = coverage(rows, measurable)
     from . import gates
-    # E6 must tolerate exactly what E10 and E11 withheld and nothing else: the difference between
-    # the rebuild with every assertion and the rebuild after the two gates, field by field.
+    # E6 must tolerate exactly what E10 withheld and the facilities a person ruled not IC, and
+    # nothing else: the difference between the rebuild before and after those, field by field.
     cov_unfiltered = coverage(unfiltered_rows, measurable)
     # An operator may add a declared allowance on top (parse_allowed_loss); the larger of the two
     # applies per field, and both are reported so a reader can see what was excused and by whom.
-    # "__rows" is measured the same way, so facilities a person ruled not IC may leave and nothing else.
     allowed_loss = {f: max(0, cov_unfiltered[f] - cov_after[f], operator_loss.get(f, 0)) for f in [*measurable, "__rows"]}
     results = gates.run_promote(cov_before, cov_after, allowed_loss=allowed_loss)
-    results.append(gates.e11_carried_assertions_name_the_same_plant(carried_withheld, unjudged))
     results.append(gates.e10_no_coordinate_outside_its_state(quarantined))
 
-    out = {"release_tag": release_tag, "assertions_read": len(asserts),
+    out = {"release_tag": release_tag, "facilities_registered": len(ids),
            "golden_rows": len(rows), "conflicts": len(conflicts),
            "survivorship_version": rules.get("version"),
            "coverage_before": cov_before, "coverage_after": cov_after,
@@ -140,14 +144,7 @@ def run(db, release_tag: str, dry_run: bool = False, allowed_loss: dict[str, int
            "gates": [str(r) for r in results], "written": 0,
            "allowed_loss": {f: n for f, n in allowed_loss.items() if n},
            "allowed_loss_operator": operator_loss,
-           "carried_withheld_other_plant": len(carried_withheld),
-           "carried_withheld_by_field": _count_by(carried_withheld, 'field'),
-           "carried_withheld_by_source": _count_by(carried_withheld, 'source'),
-           "carried_unjudged_no_name_in_release": unjudged,
-           "carried_withheld_by_reason": _count_by(carried_withheld, 'reason'),
-           **carry_counts,
-           "carried_withheld": carried_withheld,
-           "excluded_not_ic": sorted(g["facility_id"] for g in excluded),
+           "excluded_not_ic": excluded,
            "coordinates_withheld_out_of_state": len(quarantined),
            "coordinates_withheld_by_source": _count_by(quarantined, 'source'),
            "coordinates_withheld": quarantined,

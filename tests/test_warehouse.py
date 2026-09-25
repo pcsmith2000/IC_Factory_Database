@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import pytest
@@ -18,7 +19,8 @@ def wh(request, tmp_path):
             pytest.skip("TEST_DATABASE_URL not set")
         w = warehouse.PostgresWarehouse(PG_URL)
         with w.transaction() as c:   # each test starts from an empty warehouse
-            for t in ("fact_assertions", "dim_facility", "dim_source", "dim_field", "dim_date", "golden_facility", "conflicts",
+            for t in ("golden_dirty", "golden_release", "facility_event", "facility_match_key", "legacy_id_map",
+                      "release_registry", "facility", "fact_assertions", "dim_facility", "dim_source", "dim_field", "dim_date", "golden_facility", "conflicts",
                       "fact_release_metrics", "ref_control", "ref_source_registry", "ref_known_gaps", "ref_source_row"):
                 c.execute(f"DELETE FROM {t}")
     yield w
@@ -186,21 +188,21 @@ def test_the_loader_stamps_asserted_at_so_a_reload_can_be_ordered(wh, tmp_path: 
     assert rows and all(r["asserted_at"] for r in rows), "the loader left asserted_at empty"
 
 
-def test_promote_carries_enrichment_across_a_release_but_not_dropped_facilities(wh, tmp_path: Path):
-    """Enrichment writes under whatever tag is current when it runs. Scoping promote to one tag
-    alone meant that the moment layers 1-8 published, every enrichment assertion fell out of scope
-    and re-running promote could not recover it — on the release database that stranded 3,223
-    assertions, including 1,408 Geocodio lookups that had been paid for.
-
-    Carrying them forward must not resurrect facilities the new release dropped, which is the
-    reason the scope existed in the first place. Both halves are checked here.
+def test_golden_carries_enrichment_across_a_release_but_not_dropped_facilities(wh, tmp_path: Path):
+    """Enrichment writes under whatever tag is current when it runs, so the moment layers 1-8
+    publish, every enrichment assertion is under an old tag. Golden must still carry it (on the
+    release database, dropping it stranded 3,223 assertions, 1,408 of them paid Geocodio lookups),
+    and it must not resurrect a facility the new release dropped. Both halves, through the registry
+    path that replaced promote's EXISTS scope (#49).
     """
-    from pipeline.enrich import _db
+    from pipeline import golden_refresh
     _load(wh, tmp_path, "v-old")
     kept, dropped = [r["facility_id"] for r in wh.query(
-        "SELECT DISTINCT facility_key AS facility_id FROM fact_assertions WHERE release_tag = ?",
+        "SELECT DISTINCT facility_key AS facility_id FROM fact_assertions WHERE release_tag = ? ORDER BY 1",
         ("v-old",))][:2]
-
+    with wh.transaction() as c:
+        c.executemany("INSERT INTO facility (facility_id, status, merged_into, created_at, created_by) "
+                      "VALUES (?, 'active', NULL, 't', 't')", [(kept,), (dropped,)])
     # enrichment runs against v-old and asserts on both facilities
     for fid in (kept, dropped):
         wh.query("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -211,24 +213,28 @@ def test_promote_carries_enrichment_across_a_release_but_not_dropped_facilities(
     wh.query("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
              ("new|1", "v-new", kept, "pa_dced", "name", "2026-09-20", "Acme", "none", 0,
               "hn", 1.0, "A", "2026-09-20T00:00:00+00:00"))
+    out = golden_refresh.compute_full(wh, [kept, dropped], "v-new", load_yaml(ROOT / "registry" / "survivorship.yaml"))
+    assert out["rows"][kept]["lat_lon"] == "33.0,-84.0", "paid enrichment on a surviving facility must carry forward"
+    assert dropped not in out["rows"], "a dropped facility must stay dropped"
 
-    got = {(r["facility_id"], r["field"]) for r in _db.fetch_assertions(_Sql(wh), "v-new")}
-    assert (kept, "lat_lon") in got, "paid enrichment on a surviving facility must carry forward"
-    assert not any(f == dropped for f, _ in got), "a dropped facility must stay dropped"
 
-
-class _Sql:
-    """Runs fetch_assertions' Postgres-numbered SQL against the sqlite test warehouse.
-
-    Postgres reuses $1 wherever it appears; sqlite's ? needs one binding per occurrence. The
-    production path sends $N straight to Postgres, so this expansion exists only here.
-    """
-    def __init__(self, wh):
-        self.wh = wh
-    def query(self, sql, params=()):
-        import re
-        order = [int(m.group(1)) for m in re.finditer(r"\$(\d+)", sql)]
-        return self.wh.query(re.sub(r"\$\d+", "?", sql), tuple(params[i - 1] for i in order))
+def test_a_release_load_rebuilds_golden_through_the_registry_and_freezes_it(wh, tmp_path: Path):
+    """Once the registry is seeded, load_release restores carried enrichment at once and snapshots
+    the release (#49): the un-enriched golden built from the run's own rows is never left standing."""
+    from pipeline import facility_registry
+    first, _, gold = _load(wh, tmp_path, "v-1")
+    facility_registry.seed(wh, tmp_path / "ids.json")
+    fid = gold[0]["facility_id"]
+    wh.query("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+             (f"enrich|{fid}", "v-1", fid, "overture:place", "website", "2026-09-17",
+              "https://plant.example", "overture", 0, None, 0.8, "enrichment", "2026-09-17T06:00:00+00:00"))
+    second, _, _ = _load(wh, tmp_path, "v-2")
+    assert "golden_refresh" not in first and second["golden_refresh"]["facilities"] == len(gold)
+    row = wh.query("SELECT website, release_tag FROM golden_facility WHERE facility_key = ?", (fid,))[0]
+    assert row == {"website": "https://plant.example", "release_tag": "v-2"}      # carried, not lost
+    frozen = wh.query("SELECT facility_key, row_json FROM golden_release WHERE release_tag = 'v-2'")
+    assert len(frozen) == len(gold) and second["golden_release"]["rows"] == len(gold)
+    assert json.loads(next(r["row_json"] for r in frozen if r["facility_key"] == fid))["website"] == "https://plant.example"
 
 
 def test_every_fact_field_key_has_a_dim_field_row(wh, tmp_path: Path):

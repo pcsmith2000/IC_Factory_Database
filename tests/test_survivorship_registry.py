@@ -7,7 +7,6 @@ nothing failed. These tests make that shape a CI failure.
 import json
 from pathlib import Path
 
-from pipeline.enrich.identity import ADDRESS_BOUND_FIELDS
 from pipeline.golden import build_golden
 from pipeline.registry import load_yaml
 from pipeline.warehouse import GOLDEN_FIELDS, dim_field_rows
@@ -39,11 +38,6 @@ def test_existence_flag_keeps_its_advisory_rule():
 def test_flag_fields_are_not_golden_fields():
     assert "geocode_quality" in RULES["flag_fields"]
     assert not set(RULES["flag_fields"]) & set(GOLDEN_FIELDS)
-
-
-def test_every_address_bound_field_has_a_dim_field_row():
-    keys = {r[0] for r in dim_field_rows(RULES)}
-    assert set(ADDRESS_BOUND_FIELDS) <= keys
 
 
 def test_dim_field_carries_the_order_survivorship_ranks_by():

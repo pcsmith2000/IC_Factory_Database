@@ -568,7 +568,10 @@ destroy a release rather than merely fail to improve it, so it compares per-fiel
 in the database — not in the eight-column snapshot the stages use, which would read zero for every
 field it does not select and wave the rebuild through.
 
-E6 excuses on its own exactly what gates E10 and E11 withheld. A loss that a rule change moves
+Promote reads its basis through the permanent registry (`golden_refresh.compute_full`, #49). A
+carried fact reaches the plant its own release meant through `v_assertions_resolved`, so the old E11
+name-and-address carry, and the gate that checked it, no longer exist. E6 excuses on its own exactly
+what E10 withheld and the plants a person ruled not IC. A loss that a rule change moves
 rather than withholds — a carried fact now read under the plant it belongs to, which already held
 one, so its duplicate row goes empty — is excused only by an operator, for that one run, through
 the `allowed_loss` input (`field=count,...`). The allowance is never stored; the promote report
