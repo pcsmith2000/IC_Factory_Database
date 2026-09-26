@@ -111,3 +111,6 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
     become rarer and safe, and V2 still counts them as held.
 24. **Provider content filters**: Alibaba refused one facility's pages (HTTP 400 DataInspectionFailed). The
     judge now retries a content refusal once on gpt-oss-120b.
+25. **User ruling (2026-09-26): steel-framed greenhouses are out of scope** (Conley, IC-14222). The reference
+    had it in scope; the scorer now applies a person's rulings from `adjudications.json` (the ruling only,
+    no reference content) and reports which labels it changed. Re-scored, b-v8 has S1 0.

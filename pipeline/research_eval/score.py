@@ -251,9 +251,26 @@ def _ratio(n, d):
     return round(n / d, 4) if d else None
 
 
-def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, seed: int = 20260926) -> dict:
+def apply_overrides(labels: dict, overrides: dict) -> list[str]:
+    """A person's ruling replaces the reference verdict (research/pipeline-eval/adjudications.json). The file
+    holds only the ruling, never reference content. Returns the facility ids it changed."""
+    changed = []
+    for fid, o in (overrides or {}).items():
+        lab = labels["facilities"].get(fid)
+        if lab is None or not o.get("verdict"):
+            continue
+        lab["verdict"] = o["verdict"]
+        lab["removal_strength"] = "strong" if o["verdict"] in REMOVALS else None
+        lab["overridden_by"] = o.get("by", "user")
+        changed.append(fid)
+    return changed
+
+
+def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, seed: int = 20260926,
+          overrides: dict | None = None) -> dict:
     inputs = json.loads((bench / "inputs.json").read_text())
     labels = json.loads((bench / "labels.json").read_text())
+    overridden = apply_overrides(labels, overrides or {})
     summary = json.loads((pass_dir / "summary.json").read_text())
     anchors = set(labels["anchors"])
     got = load_pass(pass_dir, set(inputs["active"]))
@@ -380,6 +397,7 @@ def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, se
         gates[k] = None if v is None else (v == th if op == "==" else v <= th if op == "<=" else v >= th)
     sample_pool = [c for c in adjudicated + novel_cases if c.get("answer")]
     rng2 = random.Random(seed + 1)
+    counts["overridden_labels"] = overridden
     return {"pass": summary, "metrics": metrics, "counts": counts, "gates": gates,
             "gate_pass": all(v is not False for v in gates.values()) and all(v is not None for k, v in gates.items() if k.startswith("S")),
             "adjudication": {"cost": adj.meter.summary(), "model": adj.model, "skipped": adj.skipped,
@@ -414,12 +432,15 @@ def main(argv=None) -> int:
     ap.add_argument("--novel-cap", type=int, default=40)
     ap.add_argument("--catalog", default=None)
     ap.add_argument("--fetch-cache", default="eval-cache/adjudication")
+    ap.add_argument("--overrides", default="research/pipeline-eval/adjudications.json",
+                    help="a person's rulings that replace reference verdicts")
     a = ap.parse_args(argv)
     if a.judge_max_usd > 0.25:
         print("judge budget is capped at $0.25 per pass", file=sys.stderr); return 2
     catalog = gw.load_catalog(a.catalog) if a.judge_max_usd > 0 else None
     adj = Adjudicator(a.judge_model, a.judge_max_usd, catalog, Path(a.fetch_cache))
-    sc = score(Path(a.pass_dir), Path(a.benchmark), adj, a.novel_cap)
+    overrides = json.loads(Path(a.overrides).read_text()) if a.overrides and Path(a.overrides).exists() else {}
+    sc = score(Path(a.pass_dir), Path(a.benchmark), adj, a.novel_cap, overrides=overrides)
     Path(a.pass_dir, "scorecard.json").write_text(json.dumps(sc, indent=1, default=str))
     Path(a.pass_dir, "adjudication-responses.json").write_text(json.dumps(adj.responses, indent=1, default=str))
     md = markdown(sc)

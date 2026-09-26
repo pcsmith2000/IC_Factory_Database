@@ -514,3 +514,9 @@ def test_a_content_filter_refusal_is_retried_on_the_fallback_judge(tmp_path, mon
     meter = gw.Meter(0.10, {m: PRICES["cheap/model"] for m in ("alibaba/qwen3.7-flash", "openai/gpt-oss-120b")})
     out = P.judge({"facility_id": "IC-1", "name": "x"}, [], [{"id": "P1", "url": "https://a", "text": "t"}], cfg, meter, tmp_path)
     assert seen == ["alibaba/qwen3.7-flash", "openai/gpt-oss-120b"] and out["verdict"]["status"] == "not_found"
+
+
+def test_a_persons_ruling_replaces_the_reference_verdict():
+    labels = {"facilities": {"IC-1": {"verdict": "in_scope", "removal_strength": None}, "IC-2": {"verdict": "closed"}}}
+    changed = S.apply_overrides(labels, {"IC-1": {"verdict": "not_ic", "by": "user"}, "IC-9": {"verdict": "not_ic"}})
+    assert changed == ["IC-1"] and labels["facilities"]["IC-1"] == {"verdict": "not_ic", "removal_strength": "strong", "overridden_by": "user"}
