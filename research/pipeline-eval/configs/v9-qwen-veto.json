@@ -1,0 +1,34 @@
+{
+ "search": {
+  "provider": "tako",
+  "when": "unanchored",
+  "model": "google/gemini-3.1-flash-lite",
+  "fallback_model": "google/gemini-3.1-flash-lite"
+ },
+ "regex": {
+  "email_same_domain": true
+ },
+ "extract": {
+  "website_from_site": true,
+  "prevalidate": true
+ },
+ "name": "v9-qwen-veto",
+ "hypothesis": "v8 plus the user's keyword veto after c-v8's Panelmatic removal: a not_ic is held as not_found whenever the passages name an in-scope product (taxonomy signals and aliases, less generic words, plus the scope list). Replay on past passes: it holds Panelmatic and also some correct removals (Champion sales centers, Plycraft), so V2 removing will fall while V2 held stays. Also a fallback judge (gpt-oss-120b) when Alibaba's content filter refuses a facility. Expect S1 0 on A, B and C.",
+ "judge": {
+  "model": "alibaba/qwen3.7-flash",
+  "passage_budget_tokens": 6000,
+  "reasoning_effort": "low",
+  "confirm_fields": true,
+  "strict_site": true,
+  "fallback_model": "openai/gpt-oss-120b"
+ },
+ "policy": {
+  "removal_second_look": true,
+  "address_guard": true,
+  "not_ic_second_opinion": "openai/gpt-oss-120b",
+  "not_ic_keyword_veto": true
+ },
+ "crawl": {
+  "sibling_websites": true
+ }
+}

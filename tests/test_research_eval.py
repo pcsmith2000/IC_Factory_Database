@@ -483,3 +483,34 @@ def test_scope_names_the_products_c_v6_wrongly_removed():
     for words in ("insulated sandwich building panels", "log and\ntimber homes", "modular steel buildings"):
         assert words in P.JUDGE_PROMPT
     assert "lists this address as an office" in P.STRICT_SITE and "model village, office" not in P.STRICT_SITE
+
+
+def test_keyword_veto_holds_not_ic_when_the_pages_name_in_scope_products():
+    assert {"control houses", "modular"} <= set(P.keyword_veto(["Panelmatic builds modular control houses in Conroe"]))
+    assert P.keyword_veto(["Plycraft makes office furniture, home decor and furniture hardware"]) == []
+    assert P.keyword_veto(["Kaolin processing plant in Sandersville, Mississippi"]) == []   # no 'sip' inside Mississippi
+    rec = {"facility_id": "IC-93858", "name": "Panelmatic", "city": "Conroe", "state": "TX"}
+    url1, url2 = "https://www.panelmatic.com/facility-capabilities/", "https://hoodline.com/2026/03/panelmatic"
+    pages = [{"url": url1, "text": "Panelmatic Conroe fabricates electrical control panels and control houses", "fetched_at": "2026-09-26"},
+             {"url": url2, "text": "Panelmatic, a producer of electrical control panels, bought a Conroe plant", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url1, "text": pages[0]["text"]}, {"id": "P2", "url": url2, "text": pages[1]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "The plant makes electrical control panels, not construction components.",
+                          "evidence": [{"passage": "P1", "quote": "electrical control panels"}, {"passage": "P2", "quote": "a producer of electrical control panels"}]}}
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"not_ic_keyword_veto": True, "capability_removal_guard": False}})
+    payload, trace = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-93858"}, [], "panelmatic.com")
+    assert payload["verdict"]["status"] == "not_found" and "keyword veto" in trace["downgraded"]["why"]
+
+
+def test_a_content_filter_refusal_is_retried_on_the_fallback_judge(tmp_path, monkeypatch):
+    seen = []
+
+    def chat(payload, **kw):
+        seen.append(payload["model"])
+        if payload["model"] == "alibaba/qwen3.7-flash":
+            raise gw.GatewayError(400, '{"error":{"message":"<400> InternalError.Algo.DataInspectionFailed: Input text data may contain inappropriate content."}}')
+        return {"choices": [{"message": {"content": '{"verdict": {"status": "not_found"}}'}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1, "cost": 0}}
+    monkeypatch.setattr(gw, "chat", chat)
+    cfg = P.merge(P.DEFAULT_CONFIG, {"judge": {"model": "alibaba/qwen3.7-flash", "fallback_model": "openai/gpt-oss-120b"}})
+    meter = gw.Meter(0.10, {m: PRICES["cheap/model"] for m in ("alibaba/qwen3.7-flash", "openai/gpt-oss-120b")})
+    out = P.judge({"facility_id": "IC-1", "name": "x"}, [], [{"id": "P1", "url": "https://a", "text": "t"}], cfg, meter, tmp_path)
+    assert seen == ["alibaba/qwen3.7-flash", "openai/gpt-oss-120b"] and out["verdict"]["status"] == "not_found"

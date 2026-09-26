@@ -47,9 +47,9 @@ DEFAULT_CONFIG = {
     "extract": {"website_from_site": False, "prevalidate": False},
     "judge": {"model": "deepseek/deepseek-v4-flash-0731", "passage_budget_tokens": 6000, "passage_chars": 600,
               "max_output_tokens": 3000, "reasoning_effort": "low", "temperature": 0, "endpoint": None,
-              "confirm_fields": False, "removal_two_sources": False, "strict_site": False},
+              "confirm_fields": False, "removal_two_sources": False, "strict_site": False, "fallback_model": None},
     "policy": {"removal_needs_ingest_rule": True, "duplicate": True, "not_found_sources": 5, "address_guard": False,
-               "removal_second_look": False, "not_ic_second_opinion": None},
+               "removal_second_look": False, "not_ic_second_opinion": None, "not_ic_keyword_veto": False},
     # Worst-case tokens per call, for the ceiling: a search call's input carries the tool results.
     "worst_case": {"search_input_tokens": 20000, "judge_overhead_tokens": 2500},
 }
@@ -492,9 +492,18 @@ def judge(rec: dict, cands: list[dict], psg: list[dict], cfg: dict, meter: gw.Me
     if j.get("reasoning_effort"):
         payload["reasoning"] = {"effort": j["reasoning_effort"]}
     (folder / "judge-request.json").write_text(json.dumps(payload, indent=1))
-    raw = gw.chat(payload)
+    try:
+        raw = gw.chat(payload)
+    except gw.GatewayError as e:
+        # c-v8: Alibaba's input filter refused one facility's pages (HTTP 400 DataInspectionFailed). A refusal
+        # of the content, not of the request, is retried once on the fallback judge.
+        if e.status != 400 or not j.get("fallback_model") or "inspection" not in str(e).lower() and "inappropriate" not in str(e).lower():
+            raise
+        payload = dict(payload, model=j["fallback_model"])
+        (folder / "judge-fallback.json").write_text(json.dumps({"refused_by": j["model"], "error": str(e)[:300]}, indent=1))
+        raw = gw.chat(payload)
     (folder / "judge-response.json").write_text(json.dumps(raw, indent=1))
-    meter.record("judge", j["model"], raw.get("usage") or {}, rec["facility_id"])
+    meter.record("judge", payload["model"], raw.get("usage") or {}, rec["facility_id"])
     m = re.search(r"\{.*\}", gw.content(raw), re.S)
     try:
         return json.loads(m.group()) if m else {}
@@ -727,6 +736,11 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
     reason = ws(v.get("reason"))[:900]
     verdict = {"status": status, "reason": reason, "source_refs": [ref(u) for u in ev_urls], "confidence": 0.7}
     policy = cfg["policy"]
+    if status == "not_ic" and policy.get("not_ic_keyword_veto"):
+        hits = keyword_veto([p["text"] for p in psg])
+        if hits:
+            trace["downgraded"] = {"from": "not_ic", "why": f"keyword veto: the passages name in-scope products {hits[:6]}"}
+            verdict["status"] = status = "not_found"
     if status in ("not_ic", "closed") and policy.get("capability_removal_guard", True) and len(ev_urls) < 2 and (
             rec.get("capability_group") or rec.get("capability_leaf") or rec.get("product_type")):
         # A record that already carries an IC capability is removed only on two different pages.
@@ -769,6 +783,32 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
 
 
 _TAXONOMY = None
+_VETO = None
+# Too generic to show an in-scope product on their own.
+_VETO_SKIP = {"pod", "hybrid", "container", "shipping container", "envelope", "mixed material", "composite structural",
+              "steel and wood", "facade", "joist", "plywood", "osb", "girt", "purlin", "hud", "volumetric"}
+_VETO_EXTRA = ("panel", "panels", "modular", "control house", "control houses", "e-house", "ehouse", "log home", "log homes",
+               "timber home", "timber homes", "sandwich panel", "insulated panel", "manufactured home", "manufactured homes",
+               "truss", "trusses", "precast", "glulam", "clt", "sips", "prefab", "prefabricated")
+
+
+def veto_terms() -> list[str]:
+    """In-scope product words: the taxonomy's signals and aliases, less the generic ones, plus the scope list's."""
+    global _VETO
+    if _VETO is None:
+        from ..registry import load_yaml
+        t = load_yaml(ROOT / "registry" / "taxonomy.yaml")
+        words = {w.lower() for g in t["groups"] for l in g.get("leaves", []) for w in (l.get("signals") or []) + (l.get("aliases") or [])}
+        words |= set(_VETO_EXTRA)
+        _VETO = sorted((w for w in words if w not in _VETO_SKIP and "(" not in w and len(w) >= 3), key=lambda w: (-len(w), w))
+    return _VETO
+
+
+def keyword_veto(texts: list[str]) -> list[str]:
+    """In-scope product words found (word-bounded) in these texts. c-v8: two models called Panelmatic's modular
+    control houses 'electrical control panels' though its pages said 'control house' and 'modular' 20 times."""
+    blob = " ".join(texts).lower()
+    return [w for w in veto_terms() if re.search(rf"(?<![a-z0-9]){re.escape(w)}(?![a-z0-9])", blob)]
 
 
 def prevalidate(field: str, value: str, quote: str, url: str) -> tuple[str, str | None]:
@@ -896,7 +936,8 @@ def run(benchmark: Path, batch: str, cfg: dict, out: Path, cache: Path, max_cost
     ids = manifest["splits"][batch] if batch in manifest["splits"] else [i.strip() for i in batch.split(",") if i.strip()]
     ids = ids[:limit] if limit else ids
     models = sorted({cfg["judge"]["model"], cfg["search"]["model"], cfg["search"].get("fallback_model") or cfg["search"]["model"]}
-                    | ({cfg["policy"]["not_ic_second_opinion"]} if cfg["policy"].get("not_ic_second_opinion") else set()))
+                    | ({cfg["policy"]["not_ic_second_opinion"]} if cfg["policy"].get("not_ic_second_opinion") else set())
+                    | ({cfg["judge"]["fallback_model"]} if cfg["judge"].get("fallback_model") else set()))
     cat = gw.load_catalog(catalog)
     model_prices = gw.prices(cat, models)
     for m, p in model_prices.items():

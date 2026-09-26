@@ -102,3 +102,12 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
     asked independently from the same passages, also answers not_ic; otherwise it is held as not_found with
     both readings in the audit. The scope list names the products c-v6 wrongly removed, and an office
     listing is no longer a reason to remove. Closures and duplicates are unchanged.
+22. **The second opinion is not enough on its own** (c-v8). It fixed three of c-v6's four wrong removals,
+    but Qwen and gpt-oss-120b agreed that Panelmatic's modular control houses are "electrical control
+    panels". Two models sharing one blind spot is not independence.
+23. **User decision (2026-09-26): keyword veto on not_ic.** A not_ic is held whenever the passages name an
+    in-scope product word. Replayed on past passes, it holds Panelmatic and also some correct removals
+    (Champion sales centers mention manufactured homes; Plycraft mentions a panel): removals via not_ic
+    become rarer and safe, and V2 still counts them as held.
+24. **Provider content filters**: Alibaba refused one facility's pages (HTTP 400 DataInspectionFailed). The
+    judge now retries a content refusal once on gpt-oss-120b.
