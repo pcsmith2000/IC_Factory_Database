@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .heartbeat import Heartbeat
-from . import __version__, ai_enabled, ai_client_and_model, acquire, audit, validate, classify, resolve, reconcile, golden, gates, measure, warehouse
+from . import __version__, ai_enabled, ai_client_and_model, acquire, audit, validate, classify, resolve, reconcile, golden, gates, measure, monitor_fix, warehouse
 from .registry import load_yaml, active_sources, sha256_file, registry_version
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -299,7 +299,9 @@ def main(argv=None) -> int:
     # ---- Layer 5b: assertions → golden table (pure function of assertions + ids + survivorship rules)
     rules = load_yaml(ROOT / "registry" / "survivorship.yaml")
     src_class = {s["id"]: s["class"] for s in reg["sources"]}
-    asserts = golden.assertions_from_rows(rec["rows"], src_class) + golden.load_operator_assertions(ROOT / "control" / "operator_assertions.csv")
+    asserts = (golden.assertions_from_rows(rec["rows"], src_class)
+               + golden.load_operator_assertions(ROOT / "control" / "operator_assertions.csv")
+               + monitor_fix.load(ROOT / "control" / "monitor_fix_assertions.csv"))
     gold, conflicts = golden.build_golden(asserts, rules, keep_excluded=True)
     gold, conflicts, excluded = golden.split_excluded(gold, conflicts)
     _write_csv(out / "assertions.csv", asserts)
