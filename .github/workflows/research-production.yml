@@ -1,0 +1,187 @@
+# Production web research in growing batches (docs/web-research-production-loop.md).
+# select (read-only) -> research shards (no database credentials) -> health gates -> submit.
+# Submit inserts pending rows into web_research_submission only; the web-research-ingest workflow
+# validates and writes them into the assertion table. Submit runs only from main, only in mode
+# `submit`, and only when the batch's health decision is `grow`.
+name: research-production
+run-name: "Research production · ${{ inputs.run_id }} · ${{ inputs.batch_size }} · ${{ inputs.mode }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "batch id, wr-prod-NNN (tags every submission; one batch can be excluded or reversed as a unit)"
+        required: true
+      batch_size:
+        description: "facilities in this batch (1..2000)"
+        default: "25"
+      mode:
+        description: "dry = research and gates only; submit = also queue the submissions for ingest"
+        type: choice
+        options: [dry, submit]
+        default: dry
+      max_cost_usd:
+        description: "list-price ceiling for the whole batch (split across shards)"
+        default: "0.40"
+      config:
+        description: "pipeline configuration"
+        default: pipeline/research_eval/configs/production.json
+      seed:
+        description: "selection seed (keep it fixed so batches do not overlap by chance)"
+        default: "20260927"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-production       # one batch at a time
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      shards: ${{ steps.shards.outputs.shards }}
+      per_shard_cost: ${{ steps.shards.outputs.per_shard_cost }}
+    steps:
+      - name: Check the inputs
+        env: { RUN_ID: "${{ inputs.run_id }}", SIZE: "${{ inputs.batch_size }}", COST: "${{ inputs.max_cost_usd }}" }
+        run: |
+          [[ "$RUN_ID" =~ ^wr-prod-[0-9]{3}$ ]] || { echo "::error::run_id must look like wr-prod-001"; exit 1; }
+          python3 -c "import os,sys; s=int(os.environ['SIZE']); c=float(os.environ['COST']); sys.exit(0 if 1<=s<=2000 and 0<c<=12 else 1)" \
+            || { echo "::error::batch_size 1..2000 and max_cost_usd in (0, 12]"; exit 1; }
+      - name: No other workflow is spending the shared gateway key
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          busy=""
+          for wf in tako-basic-search.yml tako-campaign.yml tako-coordinate-recovery.yml capability.yml bakeoff.yml enrich.yml enrich-stage.yml run.yml research-eval.yml; do
+            for st in in_progress queued; do
+              n=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --status "$st" --json databaseId --jq length 2>/dev/null || echo 0)
+              [ "$n" != "0" ] && busy="$busy $wf($st)"
+            done
+          done
+          if [ -n "$busy" ]; then echo "::error::the shared AI_GATEWAY_API_KEY is in use by:$busy"; exit 1; fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres,dev]"
+      - name: Resolve the Neon warehouse connection
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
+          python .github/scripts/neon_connection_string.py
+      - name: Select the batch (database-enforced read-only session)
+        env: { RUN_ID: "${{ inputs.run_id }}", SIZE: "${{ inputs.batch_size }}", SEED: "${{ inputs.seed }}" }
+        run: python -m pipeline.web_research.production select --run-id "$RUN_ID" --size "$SIZE" --seed "$SEED" --out batch
+      - name: Plan the shards (200 facilities each)
+        id: shards
+        env: { COST: "${{ inputs.max_cost_usd }}" }
+        run: |
+          python3 - >> "$GITHUB_OUTPUT" <<'PY'
+          import json, os
+          n = json.load(open("batch/manifest.json"))["selected"]
+          k = max(1, -(-n // 200))
+          print("shards=" + json.dumps([f"batch[{i*200}:{(i+1)*200}]" for i in range(k)]))
+          print(f"per_shard_cost={float(os.environ['COST'])/k:.4f}")
+          PY
+      - uses: actions/upload-artifact@v4
+        with: { name: "batch-${{ inputs.run_id }}", path: batch/, retention-days: 90 }
+
+  research:
+    needs: select
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        shard: ${{ fromJSON(needs.select.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[dev]"
+      - uses: actions/download-artifact@v4
+        with: { name: "batch-${{ inputs.run_id }}", path: batch }
+      - name: Research the shard (no database credentials)
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+          SHARD: ${{ matrix.shard }}
+          CONFIG: ${{ inputs.config }}
+          COST: ${{ needs.select.outputs.per_shard_cost }}
+        run: |
+          python -m pipeline.research_eval.pipeline --benchmark batch --batch "$SHARD" --config "$CONFIG" \
+            --out pass --cache eval-cache --max-cost-usd "$COST"
+          sed -n '1,/^### /p' pass/audit.md | head -n -1 >> "$GITHUB_STEP_SUMMARY"
+      - name: Name the shard's artifact
+        if: always()
+        env: { SHARD: "${{ matrix.shard }}" }
+        run: echo "SHARD_NAME=$(echo "$SHARD" | tr -c 'a-z0-9' '-')" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: "pass-${{ inputs.run_id }}-${{ env.SHARD_NAME }}", path: pass/, retention-days: 90 }
+
+  health:
+    needs: [select, research]
+    if: always() && needs.select.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      decision: ${{ steps.health.outputs.decision }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[dev]"
+      - uses: actions/download-artifact@v4
+        with: { name: "batch-${{ inputs.run_id }}", path: batch }
+      - uses: actions/download-artifact@v4
+        with: { pattern: "pass-${{ inputs.run_id }}-*", path: passes }
+      - name: Health gates and the judge's sample
+        id: health
+        env: { AI_GATEWAY_API_KEY: "${{ secrets.AI_GATEWAY_API_KEY }}" }
+        run: |
+          set -- ; for d in passes/*/; do set -- "$@" --pass "$d"; done
+          python -m pipeline.web_research.production health --batch batch "$@" --out health.json
+          echo "decision=$(python3 -c "import json; print(json.load(open('health.json'))['decision'])")" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: "health-${{ inputs.run_id }}", path: health.json, retention-days: 90 }
+
+  submit:
+    needs: [health]
+    if: inputs.mode == 'submit' && needs.health.outputs.decision == 'grow' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres,dev]"
+      - uses: actions/download-artifact@v4
+        with: { pattern: "pass-${{ inputs.run_id }}-*", path: passes }
+      - uses: actions/download-artifact@v4
+        with: { name: "health-${{ inputs.run_id }}", path: . }
+      - name: Resolve the Neon warehouse connection
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
+          python .github/scripts/neon_connection_string.py
+      - name: Queue the submissions for ingest (pending, tagged with the run id)
+        env: { RUN_ID: "${{ inputs.run_id }}" }
+        run: |
+          set -- ; for d in passes/*/; do set -- "$@" --pass "$d"; done
+          python -m pipeline.web_research.production submit --run-id "$RUN_ID" "$@" --health health.json | tee -a "$GITHUB_STEP_SUMMARY"
