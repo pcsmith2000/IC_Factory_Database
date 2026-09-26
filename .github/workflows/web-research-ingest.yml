@@ -25,6 +25,11 @@ on:
 permissions:
   contents: read
 
+# bash -eo pipefail: without it `python ... | tee out.json` reports success when python fails.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   ingest:
     if: github.ref == 'refs/heads/main'
