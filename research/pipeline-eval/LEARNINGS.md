@@ -92,3 +92,9 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
     in-scope reference. Brocca (garages at another address) should have been not_found.
 19. **Dev B generalises** (b-v2c): F2 0.76 (Dev A 0.81), V3 0.75, novel precision 0.95, C1 $0.0089 with
     fresh searches. V1 0.56 is lower than Dev A.
+20. **not_ic is the unsafe verdict** (c-v6, S1 = 4 on a fresh batch). Every wrong removal so far is a
+    `not_ic` scope or site judgement with enough pages to pass every guard: insulated sandwich panels,
+    handcrafted log homes built for shipment, modular steel control buildings, and an ADL anchor whose
+    address the company site calls "corporate offices" (the strict-site rule). Guards on evidence count
+    cannot fix a judgement about what counts as off-site construction; closures and duplicates have not
+    produced a wrong removal.
