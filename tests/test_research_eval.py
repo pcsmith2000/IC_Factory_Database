@@ -439,3 +439,16 @@ def test_a_glulam_plant_is_not_removed_on_one_government_permit():
     payload, trace = P.build_submission(rec, answer, psg, pages, {}, P.DEFAULT_CONFIG, {"IC-48445"}, [], "")
     assert payload["verdict"]["status"] == "not_found"
     assert "glulam" in P.JUDGE_PROMPT
+
+
+def test_address_guard_also_holds_a_removal_about_another_address():
+    rec = {"facility_id": "IC-76000", "name": "BROCCA MANUFACTURING CO INC", "address": "200 Brocca Dr", "city": "Kingston", "state": "PA"}
+    url1, url2 = "https://a.example.com/x", "https://b.example.com/y"
+    pages = [{"url": url1, "text": "Brocca Garages Inc., 4 Curran St, Pittston PA builds garages", "fetched_at": "2026-09-26"},
+             {"url": url2, "text": "Brocca Garages at 4 Curran St sells sheds", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url1, "text": pages[0]["text"]}, {"id": "P2", "url": url2, "text": pages[1]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "Brocca Garages at 4 Curran St builds garages, a different address.",
+                          "evidence": [{"passage": "P1", "quote": "Brocca Garages Inc., 4 Curran St"}, {"passage": "P2", "quote": "Brocca Garages at 4 Curran St"}]}}
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"address_guard": True}})
+    payload, trace = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-76000"}, [], "")
+    assert payload["verdict"]["status"] == "not_found" and trace["downgraded"]["from"] == "not_ic"

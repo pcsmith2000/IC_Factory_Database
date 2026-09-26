@@ -692,7 +692,9 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
             verdict["status"] = status = "not_found"
         else:
             verdict["duplicate_of"] = other
-    if status == "in_scope" and policy.get("address_guard"):
+    if status in ("in_scope", "not_ic", "closed") and policy.get("address_guard"):
+        # a-v5: Brocca was removed as not_ic because the pages described "a different address and company";
+        # evidence about another address is about another plant, whichever way the verdict points.
         # Pass a-v2a: the judge called Jensen in_scope while its own reason named 3853 Losee Rd, not the
         # record's 3840 N Bruce St. When the record has a house number, in_scope evidence that quotes a
         # different street address and never this number is another plant of the same company.
@@ -700,7 +702,7 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
         ev_text = " ".join(ws(e.get("quote")) for e in (v.get("evidence") or []) if isinstance(e, dict)) + " " + reason
         other = [m.group(1) for m in STREET.finditer(ev_text) if num and not m.group(1).startswith(num.group(1) + " ")]
         if num and other and not re.search(rf"\b{num.group(1)}\b", ev_text):
-            trace["downgraded"] = {"from": "in_scope", "why": f"evidence names {other[0]!r}, not the record's {num.group(1)}"}
+            trace["downgraded"] = {"from": status, "why": f"evidence names {other[0]!r}, not the record's {num.group(1)}"}
             verdict["status"] = status = "not_found"
     if status in ("in_scope", "not_found") and not ev_urls:
         verdict["source_refs"] = []
