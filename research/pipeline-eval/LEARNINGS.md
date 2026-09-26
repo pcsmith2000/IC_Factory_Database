@@ -77,3 +77,8 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
 15. **Removals are found, then held.** Qwen proposes the reference's removals (Eklof = docks, Amcor =
     closed, Champion McMinnville = retail) but each on one page, and the ingest rule (two pages or a
     registry) holds them as not_found. Next: a token-only second look over the other fetched pages.
+16. **Free website discovery from sibling rows** (prepared, not yet measured). 20 of 61 Dev A-C facilities
+    with no website belong to a firm whose other golden rows carry one (Champion, UFP, Canam, Fabcon,
+    Schult). Crawling that site first, and skipping the paid search when a page there names this plant's
+    city, is free. Matching needs every distinctive name word, excluding place names: first-word matching
+    mapped "Phoenix Haus" to phoenix-truss.com and "All American Homes of Colorado" to bldr.com.

@@ -35,6 +35,7 @@ VERDICTS = ("in_scope", "not_ic", "closed", "not_found", "duplicate")
 DEFAULT_CONFIG = {
     "name": "v0",
     "crawl": {"enabled": True, "max_pages": 8, "timeout": 20, "max_bytes": 2_000_000, "workers": 6,
+              "sibling_websites": False,
               "keywords": ["contact", "about", "location", "plant", "facility", "facilities", "capabilit",
                            "product", "manufactur", "our-company", "who-we-are"]},
     "search": {"provider": "tako", "when": "unanchored", "max_searches": 1, "results": 8, "fetch_top": 4,
@@ -196,6 +197,29 @@ def crawl_links(page: dict, keywords: list[str], limit: int) -> list[str]:
         if score:
             scored[u] = max(scored.get(u, 0), score)
     return sorted(scored, key=lambda u: (-scored[u], len(u)))[:limit]
+
+
+def sibling_sites(rec: dict, golden_index: list[dict], limit: int = 2) -> list[str]:
+    """Free website discovery: the websites other rows of the same company carry. A row with no website
+    is often one plant of a firm whose other plants have one (Champion, Clayton, Cavco ...)."""
+    from ..contract import _US_NAMES
+    places = {w for n in _US_NAMES for w in n.split()} | {"north", "south", "east", "west", "city", "plant"}
+    toks = [t for t in name_tokens(rec.get("name")) if len(t) >= 4 and t not in places][:2]
+    if not toks:
+        return []
+    hosts: dict[str, int] = {}
+    for g in golden_index:
+        w = str(g.get("website") or "").strip()
+        if g["facility_id"] == rec["facility_id"] or not w:
+            continue
+        h = host(w)
+        if not h or any(x in h for x in SOCIAL + DIRECTORIES):
+            continue
+        gt = set(name_tokens(g.get("name")))
+        if all(t in gt for t in toks):          # every distinctive word, not just the first (Phoenix Haus != Phoenix Truss)
+            score = sum(1 for t in toks if t in gt) + (1 if str(g.get("state") or "") == str(rec.get("state") or "") else 0)
+            hosts[h] = max(hosts.get(h, 0), score)
+    return [f"https://{h}" for h in sorted(hosts, key=lambda h: (-hosts[h], h))[:limit]]
 
 
 def anchored(page: dict, rec: dict) -> bool:
@@ -737,6 +761,17 @@ def research(rec: dict, cfg: dict, fetcher: Fetcher, cache: Path, meter: gw.Mete
         pages += crawl(site, c["max_pages"])
     live = [p for p in pages if p.get("text")]
     is_anchored = any(anchored(p, rec) for p in live)
+    siblings_tried = []
+    if not is_anchored and c.get("sibling_websites"):
+        for sib in sibling_sites(rec, golden_index):
+            siblings_tried.append(sib)
+            got = [p for p in crawl(sib, c["max_pages"]) if p["url"] not in {q["url"] for q in pages}]
+            pages += got
+            if any(anchored(p, rec) for p in got if p.get("text")):
+                site_host = site_host or host(sib)
+                is_anchored = True
+                break
+        live = [p for p in pages if p.get("text")]
     need = {"always": True, "never": False, "unanchored": not is_anchored, "no_website": not live}[s["when"]]
     results = []
     if need:
@@ -767,7 +802,7 @@ def research(rec: dict, cfg: dict, fetcher: Fetcher, cache: Path, meter: gw.Mete
     submitted = len(payload["assertions"])
     refused = [r for r in planned["rejected"] if str(r.get("item", "")).startswith("assertions[")]
     out = {"facility_id": rec["facility_id"], "verdict": payload["verdict"]["status"],
-           "duplicate_of": payload["verdict"].get("duplicate_of"), "searched": bool(need),
+           "duplicate_of": payload["verdict"].get("duplicate_of"), "searched": bool(need), "sibling_sites": siblings_tried,
            "search_results": len(results), "pages": len(pages), "pages_live": len(live), "anchored": is_anchored,
            "passages": len(psg), "findings_submitted": submitted, "findings_refused": len(refused),
            "contract_rejected": planned["rejected"], "seconds": round(time.time() - t0, 1)}

@@ -407,3 +407,12 @@ def test_second_look_adds_evidence_from_another_page_so_the_ingest_rule_can_pass
     payload, trace = P.build_submission(rec, out, psg, pages, {}, cfg, {"IC-1"}, [], "")
     assert payload["verdict"]["status"] == "closed" and not trace.get("downgraded")
     assert not [r for r in P.contract(payload, "IC-1", {"IC-1"})["rejected"] if r["item"] == "verdict"]
+
+
+def test_sibling_sites_come_from_other_rows_of_the_same_company():
+    rec = {"facility_id": "IC-1", "name": "CHAMPION HOME BUILDERS #261", "state": "FL"}
+    index = [{"facility_id": "IC-2", "name": "Champion Home Builders - Lake City", "state": "FL", "website": "https://www.championhomes.com/x"},
+             {"facility_id": "IC-3", "name": "Champion Homes", "state": "OR", "website": "www.yelp.com/biz/champion"},
+             {"facility_id": "IC-1", "name": "Champion", "state": "FL", "website": "https://self.example.com"},
+             {"facility_id": "IC-4", "name": "Clayton Homes", "state": "FL", "website": "https://claytonhomes.com"}]
+    assert P.sibling_sites(rec, index) == ["https://championhomes.com"]
