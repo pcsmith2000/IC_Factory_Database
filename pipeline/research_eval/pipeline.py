@@ -46,7 +46,7 @@ DEFAULT_CONFIG = {
     "extract": {"website_from_site": False},
     "judge": {"model": "deepseek/deepseek-v4-flash-0731", "passage_budget_tokens": 6000, "passage_chars": 600,
               "max_output_tokens": 3000, "reasoning_effort": "low", "temperature": 0, "endpoint": None,
-              "confirm_fields": False},
+              "confirm_fields": False, "removal_two_sources": False},
     "policy": {"removal_needs_ingest_rule": True, "duplicate": True, "not_found_sources": 5},
     # Worst-case tokens per call, for the ceiling: a search call's input carries the tool results.
     "worst_case": {"search_input_tokens": 20000, "judge_overhead_tokens": 2500},
@@ -430,22 +430,24 @@ def taxonomy_text() -> str:
     return "; ".join(f"{g['name']}: " + ", ".join(l["name"] for l in g.get("leaves", [])) for g in t["groups"])
 
 
+REMOVAL = ("For not_ic or closed, cite evidence from TWO DIFFERENT pages (different URLs), or one government\n"
+           "registry, filing or certification body page; with only one page, answer not_found and say what you saw.\n\n")
 CONFIRM = ("Report every one of these fields a passage states for this plant, INCLUDING values that are the same as\n"
            "the record: a confirmed value is worth as much as a new one.\n\n")
 
 
-def judge_prompt(rec: dict, cands: list[dict], psg: list[dict], confirm: bool = False) -> str:
+def judge_prompt(rec: dict, cands: list[dict], psg: list[dict], confirm: bool = False, removal: bool = False) -> str:
     public = {k: v for k, v in rec.items() if k in ("facility_id", "name", "legal_name", "address", "city", "state", "zip",
                                                     "phone", "email", "website", "product_type", "capability_group",
                                                     "capability_leaf", "material", "naics")}
     body = "\n".join(f"[{p['id']}] ({p['url']}) {p['text']}" for p in psg)
-    return JUDGE_PROMPT.format(taxonomy=taxonomy_text(), record=json.dumps(public), confirm=CONFIRM if confirm else "",
+    return JUDGE_PROMPT.format(taxonomy=taxonomy_text(), record=json.dumps(public), confirm=(CONFIRM if confirm else "") + (REMOVAL if removal else ""),
                                candidates=json.dumps(cands), passages=body or "(none)")
 
 
 def judge(rec: dict, cands: list[dict], psg: list[dict], cfg: dict, meter: gw.Meter, folder: Path) -> dict:
     j = cfg["judge"]
-    prompt = judge_prompt(rec, cands, psg, j.get("confirm_fields", False))
+    prompt = judge_prompt(rec, cands, psg, j.get("confirm_fields", False), j.get("removal_two_sources", False))
     payload = {"model": j["model"], "messages": [{"role": "user", "content": prompt}],
                "max_tokens": j["max_output_tokens"], "temperature": j["temperature"],
                "response_format": {"type": "json_object"}}
