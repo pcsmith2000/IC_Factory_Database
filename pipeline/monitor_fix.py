@@ -10,8 +10,8 @@ each correction as one line of control/monitor_fix_assertions.csv:
 (for example "ZIP 77020 and city Houston are Texas"). A monitor fix is not a human decision, so:
 
   * it is its own source, `monitor_fix`, never `operator`: people outrank it (adl_employee_feedback,
-    operator), and so does a web-research fact read from a registry or the company's own site;
-    it outranks every automated source;
+    operator); it outranks a site visit, web-research overrides and every automated source. When a
+    later source disagrees, the monitor reviews the conflict and updates or removes its line;
   * it may only correct the location and contact fields in FIELDS. It never rules a facility out
     (existence_flag), never moves a pin (lat_lon), never renames or reclassifies a plant.
 

@@ -60,16 +60,17 @@ def test_apply_corrects_golden_and_is_idempotent(wh, tmp_path):
     assert other["state"] == "VT"
 
 
-def test_rank_people_and_web_overrides_beat_a_monitor_fix_rosters_do_not():
-    rules = {"default_order": [], "fields": {"state": {"order": ["adl_employee_feedback", "operator", "class:A", "class:B"]}}}
+def test_rank_only_people_beat_a_monitor_fix():
+    rules = {"default_order": [], "fields": {"state": {"order": ["adl_employee_feedback", "operator", "site_visit", "class:A", "class:B"]}}}
     base = {"facility_id": "IC-1", "field": "state", "row_hash": "", "site_visit": False, "confidence": 1.0}
     roster = {**base, "value": "NJ", "source_id": "src", "source_class": "A", "basis": "on_current_list", "retrieved_date": "2026-09-30"}
     fix = {**base, "value": "NV", "source_id": "monitor_fix", "source_class": "monitor_fix", "basis": "monitor_fix", "retrieved_date": "2026-09-26"}
     person = {**base, "value": "CA", "source_id": "operator", "source_class": "operator", "basis": "operator", "retrieved_date": "2026-09-01"}
     web = {**base, "value": "AZ", "source_id": "web_research", "source_class": "web_research", "basis": "web_verified",
            "confidence": 0.8, "retrieved_date": "2026-09-01"}
+    visit = {**roster, "value": "NM", "site_visit": True}
     assert golden.build_golden([roster, fix], rules)[0][0]["state"] == "NV"
-    assert golden.build_golden([roster, fix, web], rules)[0][0]["state"] == "AZ"
+    assert golden.build_golden([roster, visit, fix, web], rules)[0][0]["state"] == "NV"
     assert golden.build_golden([roster, fix, web, person], rules)[0][0]["state"] == "CA"
 
 

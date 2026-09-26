@@ -44,7 +44,8 @@ IC-95437,state,NV,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/
 - Every line names the GitHub issue that describes the defect and the evidence for the value.
 - Only `address, city, state, zip, website, phone, email` may be fixed. Never `existence_flag`,
   `lat_lon`, names or capabilities: those need a person (`control/operator_assertions.csv`).
-- Source `monitor_fix` ranks below people and web-research overrides, and above every automated source.
+- Source `monitor_fix` ranks directly below people (`adl_employee_feedback`, `operator`) and above every other
+  source, site visits and web-research overrides included. Check `conflicts` for fixes a newer source disputes.
 - `python -m pipeline.monitor_fix --check` validates the file, and CI's tests do too. When the file
   changes on main, `monitor-fix.yml` appends the lines to `fact_assertions` (idempotently), and the
   next `golden-refresh` brings them into golden. To undo a fix, add a line with the right value and a later date.
