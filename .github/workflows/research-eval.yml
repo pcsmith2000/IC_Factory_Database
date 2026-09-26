@@ -134,8 +134,11 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: eval-cache
-          key: research-eval-cache-${{ github.run_id }}
-          restore-keys: research-eval-cache-
+          key: research-eval-cache-${{ inputs.batch }}-${{ github.run_id }}
+          # Its own batch's newest cache first (parallel passes on other batches must not shadow it).
+          restore-keys: |
+            research-eval-cache-${{ inputs.batch }}-
+            research-eval-cache-
       - name: Run the pipeline (no database credentials)
         env:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
@@ -149,7 +152,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: eval-cache
-          key: research-eval-cache-${{ github.run_id }}
+          key: research-eval-cache-${{ inputs.batch }}-${{ github.run_id }}
       - name: Score against the reference
         if: always()
         env:
