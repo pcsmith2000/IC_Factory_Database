@@ -122,3 +122,9 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
     The in-scope plants v9 misses are held not_ic cases (Panelmatic by the veto; BiltWise, where the second
     opinion answered in_scope) and a same-address duplicate. Next: when the second opinion answers in_scope,
     adopt in_scope rather than not_found (safe: it can only keep a plant).
+28. **Gate 1 failed on the verdicts, not the facts or the safety.** Holdout: S1 0 (and 0 on the anchors),
+    F1 0.98, F2 0.73, C1 $0.0078 list per facility, 4.8 literal facts per facility against the
+    reference's 2.4. V1 0.72 and V2 0.68 fail. The two pull against each other: V2 misses are in_scope calls
+    on sites the reference found closed, sold or re-tenanted through historic inventories and news the
+    pipeline's one search did not surface; V1 misses are cautious not_found calls (stores, a page marked
+    "Closed") and same-address duplicates. See gate1.md.
