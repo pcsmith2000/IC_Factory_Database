@@ -55,7 +55,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           busy=""
-          for wf in tako-basic-search.yml tako-campaign.yml tako-coordinate-recovery.yml capability.yml bakeoff.yml enrich.yml enrich-stage.yml run.yml research-eval.yml; do
+          for wf in tako-basic-search.yml tako-campaign.yml tako-coordinate-recovery.yml capability.yml bakeoff.yml enrich.yml enrich-stage.yml run.yml research-eval.yml research-production.yml; do
             for st in in_progress queued; do
               n=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --status "$st" --json databaseId --jq length 2>/dev/null || echo 0)
               [ "$n" != "0" ] && busy="$busy $wf($st)"
