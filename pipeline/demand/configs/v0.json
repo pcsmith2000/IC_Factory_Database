@@ -1,0 +1,4 @@
+{
+  "name": "v0",
+  "hypothesis": "Baseline: crawl the manufacturer's site two levels deep, two searches naming the company, Sonnet 5 extracts projects page by page with verbatim quotes, one merge call per manufacturer."
+}
