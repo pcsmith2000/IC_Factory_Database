@@ -62,3 +62,12 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
     in_scope. A two-source removal instruction did not add removals and cost V1 and F2 (reverted).
     Next: deterministic guards (an in_scope whose evidence names another street address is held as
     not_found) rather than more prompt text.
+11. **The reference misses duplicates the pipeline finds** (a-v2c). IC-58495 and IC-95450 are identical
+    golden rows (FABCON Grandville, same address and phone); the reference kept IC-58495 in scope.
+    Scoring a disagreement against the reference as an error is wrong here, so the scorer adds
+    V1_adjudicated: a pipeline duplicate whose target shares the record's phone or street address
+    counts as correct.
+12. **Two-source instruction: dropped** (hurt F2 and precision on both gpt-oss-120b and Qwen).
+13. **Speed**: gpt-oss ~3 s per facility, Qwen ~16 s, DeepSeek V4 Flash > 45 s (a-v1-deepseek still
+    running after 20 minutes on cached pages). Runner time is free, but a 4,500-facility run at DeepSeek's
+    pace would need ~56 hours of jobs.

@@ -376,3 +376,10 @@ def test_address_guard_holds_in_scope_on_another_street_address():
     rec["address"] = "3853 Losee Rd"                      # the same address: kept
     payload, _ = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-1"}, [], "")
     assert payload["verdict"]["status"] == "in_scope"
+
+
+def test_same_plant_by_phone_or_street():
+    a = {"phone": "(623) 386-4495", "address": "231 N. Apache Rd", "city": "Buckeye"}
+    assert S.same_plant(a, {"phone": "6233864495", "address": "201 N Apache Rd", "city": "BUCKEYE"})
+    assert S.same_plant({"address": "3373 Busch Dr. SW", "city": "Grandville"}, {"address": "3373 Busch Dr SW", "city": "GRANDVILLE"})
+    assert not S.same_plant({"address": "3373 Busch Dr SW", "city": "Grandville"}, {"address": "3373 Busch Dr SW", "city": "Wyoming"})

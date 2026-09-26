@@ -102,6 +102,17 @@ def page_states(field: str, value: str, text: str) -> bool:
     return _alnum(value) in _alnum(text)
 
 
+def same_plant(a: dict, b: dict) -> bool:
+    """Two rows for one plant: the same ten-digit phone, or the same house number and street in the same city."""
+    if not a or not b:
+        return False
+    pa, pb = normalise("phone", a.get("phone")), normalise("phone", b.get("phone"))
+    if len(pa) == 10 and pa == pb:
+        return True
+    return bool(a.get("address") and b.get("address") and _alnum(a.get("city")) == _alnum(b.get("city"))
+                and same("address", a["address"], b["address"]))
+
+
 # --- loading ------------------------------------------------------------------------------------
 
 def load_pass(folder: Path, active: set[str]) -> dict[str, dict]:
@@ -274,6 +285,14 @@ def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, se
     ins = vlist(lambda r: r.get("verdict") == "in_scope")
     v1 = [f for f in ins if got[f]["verdict"] == "in_scope"]
     failures["V1"] = [{"facility_id": f, "pipeline": got[f]["verdict"], "reason": got[f]["verdict_reason"]} for f in ins if f not in v1]
+    # Pass a-v2c: two V1 "misses" were duplicates the reference missed (IC-58495 and IC-95450 are identical
+    # rows). A pipeline duplicate whose target shares the record's phone, or its house number, street and
+    # city, is adjudicated correct deterministically and counted in V1_adjudicated.
+    index = {g["facility_id"]: g for g in inputs.get("golden_index", [])}
+    v1_dup_ok = [f for f in ins if f not in v1 and got[f]["verdict"] == "duplicate"
+                 and same_plant(inputs["facilities"].get(f, {}), index.get(got[f]["duplicate_of"] or "", {}))]
+    for x in failures["V1"]:
+        x["adjudicated"] = "pipeline" if x["facility_id"] in v1_dup_ok else None
     strong = vlist(lambda r: r.get("verdict") in REMOVALS and r.get("removal_strength") == "strong")
     weak = vlist(lambda r: r.get("verdict") in REMOVALS and r.get("removal_strength") == "weak")
     v2_hold = [f for f in strong if got[f]["verdict"] in REMOVALS + ("not_found",)]
@@ -339,7 +358,7 @@ def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, se
     f2 = _ratio(ref_covered, ref_total)
     metrics = {
         "S1": len(s1), "S2": _ratio(refused, submitted), "S3": len(failures["S3"]),
-        "V1": _ratio(len(v1), len(ins)), "V2": _ratio(len(v2_hold), len(strong)), "V2_removing": _ratio(len(v2_rem), len(strong)),
+        "V1": _ratio(len(v1), len(ins)), "V1_adjudicated": _ratio(len(v1) + len(v1_dup_ok), len(ins)), "V2": _ratio(len(v2_hold), len(strong)), "V2_removing": _ratio(len(v2_rem), len(strong)),
         "V2_weak": _ratio(sum(1 for f in weak if got[f]["verdict"] in REMOVALS + ("not_found",)), len(weak)),
         "V3": _ratio(len(v3), len(dups)),
         "F1": f1_adj, "F1_raw": f1_raw, "F2": f2,
