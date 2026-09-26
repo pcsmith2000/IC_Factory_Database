@@ -10,7 +10,7 @@ from pipeline.web_research import ingest as I
 
 PG_URL = os.environ.get("TEST_DATABASE_URL")
 NOW = "v1+reg.a+ids.00000000+ctl.x"
-TABLES = ("web_research_submission", "golden_dirty", "facility_event", "facility_match_key", "legacy_id_map",
+TABLES = ("web_research_submission", "facility_duplicate_candidate", "golden_dirty", "facility_event", "facility_match_key", "legacy_id_map",
           "release_registry", "golden_facility", "fact_assertions", "ref_source_row", "facility")
 FIELDS, TAX = set(I.assertable_fields()), I._taxonomy()
 
@@ -207,3 +207,13 @@ def test_partial_rejected_dry_run_and_idempotence(wh):
     assert len(wh.query("SELECT 1 FROM fact_assertions WHERE source_key = 'web_research'")) == n
     report = json.loads(wh.query("SELECT report FROM web_research_submission WHERE submission_id = 'bad'")[0]["report"])
     assert "not an active" in report["rejected"][0]["reason"]
+
+
+def test_a_duplicate_verdict_is_queued_for_review_never_merged(wh):
+    submit(wh, payload(fid="IC-00002", verdict={"status": "duplicate", "duplicate_of": "IC-00001",
+                                                "reason": "Same plant at the same address", "source_refs": ["s1"]}))
+    rep = I.ingest(wh)
+    assert (rep["ingested"], rep["duplicates"]) == (1, 1)
+    row = wh.query("SELECT * FROM facility_duplicate_candidate")[0]
+    assert (row["facility_id"], row["duplicate_of"], row["source"], row["status"]) == ("IC-00002", "IC-00001", "web_research", "pending")
+    assert {r["status"] for r in wh.query("SELECT status FROM facility")} == {"active"}
