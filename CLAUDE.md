@@ -7,15 +7,22 @@ agent, the hourly monitor, and ADL_Viz developers. This section is the goal they
 and this section disagree, stop and ask; don't trade the intent for the task.
 
 ### What we are building
-A trustworthy census of every **industrialized-construction manufacturing plant in the United States**
-(modular, volumetric, panelised, precast, mass timber, truss and component plants; not integrated
-circuits). For each plant it records where it is, what it makes and how much it can make. ADL Ventures
-uses it to reason about national, regional and local IC capacity, through the ADL_Viz map and the
-golden table.
+An **authoritative database of every manufacturing facility in the United States that has capacity
+for industrialized construction**. That includes plants that do IC today (modular, volumetric,
+panelised, precast, mass timber, truss and component plants; not integrated circuits) and plants
+whose lines could make IC products. On top of it we are building two things:
 
-**The product is the golden table** (`golden_facility`), and every number quoted from it carries a
-release tag. Everything else (sources, assertions, enrichment, web research, the monitor) exists to
-make that table more correct, more complete and more current, in that order.
+- **Supply: industrial capacity, estimated at a granular level.** For each plant: what it can make,
+  how much, and how much of that is free, rolled up by capability, region and state. This gives ADL
+  Ventures' owners good intelligence on **what can actually be built**, where and how fast.
+- **Demand: what uses that capacity.** Which private projects are drawing on which plants today, and
+  what future demand is coming, so capacity can be read against need.
+
+**The golden table** (`golden_facility`) is the authoritative supply record, and every number quoted
+from it carries a release tag. Capacity estimates and demand are built on it, never around it: a
+capacity figure or a project links to an IC-number, and carries the same provenance as any other
+assertion. Everything else (sources, assertions, enrichment, web research, the monitor) exists to
+make that record more correct, more complete and more current, in that order.
 
 ### Priorities, in order: when two conflict, the higher one wins
 1. **Never publish a false fact.** An empty cell is better than a plausible wrong one: don't fabricate
@@ -30,8 +37,10 @@ make that table more correct, more complete and more current, in that order.
 4. **People outrank machines.** ADL employee feedback and operator corrections beat every automated
    source. The monitor, web research, classifiers and enrichment fill and correct, and they never
    overrule a person.
-5. **Coverage.** Find the plants we are missing, measured honestly against the Census frame and the
-   control list. Never steer the measurement.
+5. **Coverage and capacity.** Find the plants we are missing, and every plant's capability and
+   capacity, measured honestly against the Census frame and the control list. Never steer the
+   measurement. An estimate says it is an estimate, and states its basis and range. A capacity
+   figure nobody measured is not presented as a fact.
 6. **Freshness.** A new fact should reach golden within minutes (golden-refresh), not at the next
    quarterly run.
 7. **Convenience.** Speed, cost and neatness of the automation come last.
@@ -68,9 +77,11 @@ publishing a capability, identity disputes (#58), removing a source, and anythin
 headline counts in the README.
 
 <!-- OPEN QUESTIONS for the owner, remove once answered:
-  1. Is "US only" right, or should Canadian/Mexican plants that ship into the US be kept (ca_hcd has some)?
-  2. Is capacity (throughput, utilisation, vacancy) a goal of the golden table, or only of the ADL_Viz vendor feed?
-  3. Who besides ADL Ventures consumes the data, and does anything outside ADL_Viz read it?
+  1. Plants outside the US that ship into it (ca_hcd has Canadian/Swedish ones): keep them as supply, or exclude?
+  2. "Capacity for IC": how wide is the net for plants that could make IC but don't yet (e.g. general
+     structural steel, millwork, metal fabricators)? That is also the NAICS 332312 / PEMB scope question.
+  3. Demand side: which sources are in view (permits, project databases, owner pipelines), and does it
+     live in this warehouse or its own?
   4. The freshness target: minutes, hourly or daily?
 -->
 
