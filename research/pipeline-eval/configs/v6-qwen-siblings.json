@@ -1,0 +1,30 @@
+{
+ "search": {
+  "provider": "tako",
+  "when": "unanchored",
+  "model": "google/gemini-3.1-flash-lite",
+  "fallback_model": "google/gemini-3.1-flash-lite"
+ },
+ "regex": {
+  "email_same_domain": true
+ },
+ "extract": {
+  "website_from_site": true,
+  "prevalidate": true
+ },
+ "name": "v6-qwen-siblings",
+ "hypothesis": "v5 plus free website discovery from other golden rows of the same company: when a sibling site anchors the plant, the paid search is skipped. Measure searches per facility (C1) on a fresh batch, with F2/V1 held.",
+ "judge": {
+  "model": "alibaba/qwen3.7-flash",
+  "passage_budget_tokens": 6000,
+  "reasoning_effort": "low",
+  "confirm_fields": true,
+  "strict_site": true
+ },
+ "policy": {
+  "removal_second_look": true
+ },
+ "crawl": {
+  "sibling_websites": true
+ }
+}
