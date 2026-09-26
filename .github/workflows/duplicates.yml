@@ -23,6 +23,18 @@ on:
         description: "apply: merge at most N (blank = all)"
         type: string
         default: ""
+      sources:
+        description: "apply: comma-separated proposing sources to include (parcel_scan · web_research · operator; blank = all)"
+        type: string
+        default: ""
+      only:
+        description: "apply: comma-separated facility ids to merge, a reviewed list (blank = all in the tiers)"
+        type: string
+        default: ""
+      skip:
+        description: "apply: comma-separated facility ids to leave pending for a person"
+        type: string
+        default: ""
       dry_run:
         description: "report, write nothing"
         type: boolean
@@ -55,6 +67,9 @@ jobs:
           COMMAND: ${{ inputs.command }}
           TIERS: ${{ inputs.tiers }}
           LIMIT: ${{ inputs.limit }}
+          SOURCES: ${{ inputs.sources }}
+          ONLY: ${{ inputs.only }}
+          SKIP: ${{ inputs.skip }}
           DRY_RUN: ${{ inputs.dry_run }}
           ACTOR: "github:${{ github.actor }}"
         run: |
@@ -63,6 +78,9 @@ jobs:
             for t in $(echo "$TIERS" | tr ',' ' '); do set -- "$@" --tier "$t"; done
             set -- "$@" --actor "$ACTOR"
             if [ -n "$LIMIT" ]; then set -- "$@" --limit "$LIMIT"; fi
+            for x in $(echo "$SOURCES" | tr ',' ' '); do set -- "$@" --source "$x"; done
+            if [ -n "$ONLY" ]; then set -- "$@" --only "$ONLY"; fi
+            if [ -n "$SKIP" ]; then set -- "$@" --skip "$SKIP"; fi
           fi
           if [ "$DRY_RUN" = "true" ]; then set -- "$@" --dry-run; fi
           python -m pipeline.duplicates "$@" | tee duplicates.json

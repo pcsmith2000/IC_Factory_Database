@@ -306,12 +306,17 @@ def _mark(wh, facility_id: str, duplicate_of: str, status: str, actor: str):
                   "WHERE facility_id = ? AND duplicate_of = ?", (status, _now(), actor, facility_id, duplicate_of))
 
 
-def apply(wh, tiers=("certain",), actor: str = "", dry_run: bool = True, limit: int | None = None) -> dict:
+def apply(wh, tiers=("certain",), actor: str = "", dry_run: bool = True, limit: int | None = None,
+          sources: tuple[str, ...] = (), only: tuple[str, ...] = (), skip: tuple[str, ...] = ()) -> dict:
     """Merge pending candidates of the given tiers through facility_registry.merge, strongest
     tier first. A pair whose source is already merged into its target (an earlier run died between
     the merge and the mark, or a person merged it by hand) is marked merged; a pair either side of
     which is no longer active is skipped and reported, and stays pending. Idempotent. A dry run
-    simulates the merges in memory, so its skips are the ones a real run would make."""
+    simulates the merges in memory, so its skips are the ones a real run would make.
+
+    `sources` limits it to candidates one source proposed (e.g. web_research, reviewed apart from
+    the parcel scan's pairs of the same tier); `only` to these facility ids (a reviewed list);
+    `skip` leaves these facility ids pending for a person."""
     from .facility_registry import merge
     if not actor:
         raise ValueError("apply needs an actor")
@@ -321,6 +326,8 @@ def apply(wh, tiers=("certain",), actor: str = "", dry_run: bool = True, limit: 
     ph = ",".join("?" * len(tiers))
     todo = wh.query(f"SELECT facility_id, duplicate_of, tier, source, evidence FROM facility_duplicate_candidate "
                     f"WHERE status = 'pending' AND tier IN ({ph})", tuple(tiers))
+    todo = [r for r in todo if (not sources or r["source"] in sources)
+            and (not only or r["facility_id"] in only) and r["facility_id"] not in skip]
     todo.sort(key=lambda r: (RANK[r["tier"]], r["duplicate_of"], r["facility_id"]))
     state = _registry_state(wh)
     merged, skipped, marked = [], [], []
@@ -347,7 +354,8 @@ def apply(wh, tiers=("certain",), actor: str = "", dry_run: bool = True, limit: 
         state = {k: (("merged", into) if v == ("merged", f) else v) for k, v in state.items()}
         state[f] = ("merged", into)
         merged.append({"facility_id": f, "into": into, "tier": r["tier"]})
-    return {"tiers": list(tiers), "pending_in_tiers": len(todo), "merged": len(merged),
+    return {"tiers": list(tiers), "sources": list(sources), "only": len(only), "skip": list(skip),
+            "pending_in_tiers": len(todo), "merged": len(merged),
             "marked_already_merged": len(marked), "skipped": len(skipped), "dry_run": dry_run,
             "merges": merged[:50], "skips": skipped[:50]}
 
@@ -394,6 +402,9 @@ def main(argv=None) -> int:
     a.add_argument("--actor", required=True, help="who: a person or a named agent")
     a.add_argument("--dry-run", action="store_true", help="report what would merge; write nothing")
     a.add_argument("--limit", type=int, default=None, help="merge at most N")
+    a.add_argument("--source", action="append", default=[], help="repeatable: only candidates this source proposed")
+    a.add_argument("--only", default="", help="comma-separated facility ids: merge only these (a reviewed list)")
+    a.add_argument("--skip", default="", help="comma-separated facility ids to leave pending for a person")
     d = sub.add_parser("decide", parents=[db], help="record a person's ruling on one pair")
     d.add_argument("target")
     d.add_argument("--of", required=True, dest="duplicate_of")
@@ -410,7 +421,9 @@ def main(argv=None) -> int:
         if args.cmd == "candidates":
             out = candidates(wh, dry_run=args.dry_run)
         elif args.cmd == "apply":
-            out = apply(wh, tuple(args.tier or ("certain",)), args.actor, dry_run=args.dry_run, limit=args.limit)
+            ids = lambda v: tuple(x.strip() for x in v.split(",") if x.strip())
+            out = apply(wh, tuple(args.tier or ("certain",)), args.actor, dry_run=args.dry_run, limit=args.limit,
+                        sources=tuple(args.source), only=ids(args.only), skip=ids(args.skip))
         else:
             out = decide(wh, args.target, args.duplicate_of, args.status, args.actor, args.reason)
     except (RuntimeError, ValueError, RegistryConflict) as e:
