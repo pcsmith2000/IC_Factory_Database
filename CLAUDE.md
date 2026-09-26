@@ -1,89 +1,15 @@
 # IC Factory Database — notes for Claude
 
-## Intent (DRAFT: owner to confirm; read this before any change)
+## Intent
 
-Several agents work on this repository and on ADL_Viz at once: pipeline developers, the web-research
-agent, the hourly monitor, and ADL_Viz developers. This section is the goal they share. When a task
-and this section disagree, stop and ask; don't trade the intent for the task.
-
-### What we are building
-An **authoritative database of every manufacturing facility in the United States that has capacity
-for industrialized construction**. That includes plants that do IC today (modular, volumetric,
-panelised, precast, mass timber, truss and component plants; not integrated circuits) and plants
-whose lines could make IC products. On top of it we are building two things:
-
-- **Supply: industrial capacity, estimated at a granular level.** For each plant: what it can make,
-  how much, and how much of that is free, rolled up by capability, region and state. This gives ADL
-  Ventures' owners good intelligence on **what can actually be built**, where and how fast.
-- **Demand: what uses that capacity.** Which private projects are drawing on which plants today, and
-  what future demand is coming, so capacity can be read against need.
-
-**The golden table** (`golden_facility`) is the authoritative supply record, and every number quoted
-from it carries a release tag. Capacity estimates and demand are built on it, never around it: a
-capacity figure or a project links to an IC-number, and carries the same provenance as any other
-assertion. Everything else (sources, assertions, enrichment, web research, the monitor) exists to
-make that record more correct, more complete and more current, in that order.
-
-### Priorities, in order: when two conflict, the higher one wins
-1. **Never publish a false fact.** An empty cell is better than a plausible wrong one: don't fabricate
-   or guess a value. A plant leaves golden only on evidence (a person, or two sources, or one
-   registry-grade source). Losing a real plant is as bad as adding a fake one.
-2. **Every value is traceable.** A golden value names the assertion that won, the assertion names its
-   source and document row, and that row names its URL, retrieval date and position. Work that
-   breaks this chain is not done, however good the data looks.
-3. **Identity is permanent.** An IC-number means one plant forever. Merges and retirements go
-   through `facility_event`; a number is never re-pointed or reused, and assertions are never
-   rewritten, only appended.
-4. **People outrank machines.** ADL employee feedback and operator corrections beat every automated
-   source. The monitor, web research, classifiers and enrichment fill and correct, and they never
-   overrule a person.
-5. **Coverage and capacity.** Find the plants we are missing, and every plant's capability and
-   capacity, measured honestly against the Census frame and the control list. Never steer the
-   measurement. An estimate says it is an estimate, and states its basis and range. A capacity
-   figure nobody measured is not presented as a fact.
-6. **Freshness.** A new fact should reach golden within minutes (golden-refresh), not at the next
-   quarterly run.
-7. **Convenience.** Speed, cost and neatness of the automation come last.
-
-### Red lines: no agent crosses these without the owner's written go-ahead
-- Writing to `golden_facility` or `golden_release` directly. Golden is computed, never edited.
-- Changing an IC-number's meaning: re-pointing, reusing or renumbering one, or editing `id_registry.json`.
-- Deleting or rewriting assertions, source rows or events. Correct a value by appending a new assertion.
-- `DROP` / `TRUNCATE` / `ALTER` or bulk `DELETE` / `UPDATE` on the live warehouse.
-- Changing survivorship order (`registry/survivorship.yaml`, `golden._rank`), gate thresholds, the
-  frozen prompts, or the control list, except in a PR that states the before/after effect on golden.
-- Ruling a plant out of scope (`existence_flag = not_ic` or `closed`) without cited evidence.
-- Publishing credentials, or sending warehouse data anywhere outside Neon, GitHub, Vercel and the
-  ADL_Viz deployment.
-
-### How agents work together
-- **GitHub issues are the shared memory.** Before starting, search the open issues and branches for
-  the same work; after finishing, leave the outcome on the issue. One issue per problem.
-- **Every data correction goes through a versioned path**, never ad-hoc SQL:
-  - a person's correction: `control/operator_assertions.csv` or ADL_Viz feedback;
-  - a monitor fix: `control/monitor_fix_assertions.csv` (see below);
-  - web research: `web_research_submission`;
-  - merges: the `duplicates` workflow.
-- **Small, reversible changes may merge on green CI** after an issue describes them: a monitor fix,
-  a workflow bug, a doc. Anything that changes identity, survivorship, scope or the schema is
-  proposed in a PR and waits for the owner.
-- **Measure before and after.** A PR that changes what golden contains states how many rows and
-  fields it moves, checked read-only against the live warehouse or on a Neon branch.
-- **Say what you did not do.** Skipped, ambiguous or unverified items are listed, not dropped.
-
-### Decisions reserved for the owner
-Scope boundaries (for example NAICS 332312 structural steel, PEMB), the confidence floor for
-publishing a capability, identity disputes (#58), removing a source, and anything that changes the
-headline counts in the README.
-
-<!-- OPEN QUESTIONS for the owner, remove once answered:
-  1. Plants outside the US that ship into it (ca_hcd has Canadian/Swedish ones): keep them as supply, or exclude?
-  2. "Capacity for IC": how wide is the net for plants that could make IC but don't yet (e.g. general
-     structural steel, millwork, metal fabricators)? That is also the NAICS 332312 / PEMB scope question.
-  3. Demand side: which sources are in view (permits, project databases, owner pipelines), and does it
-     live in this warehouse or its own?
-  4. The freshness target: minutes, hourly or daily?
--->
+We are building the authoritative database of every manufacturing facility in the United States with
+capacity for industrialized construction, so that ADL Ventures' owners know, plant by plant and in
+aggregate, what can actually be built, and what demand, from today's private projects to what is
+coming, will draw on it. Two things make it worth having, and every agent's work must serve both
+without trading one for the other. **Veracity:** every fact is true, traceable to its source, and
+never guessed; an empty cell beats a plausible wrong one. **Comprehensiveness:** no real plant, and
+no real capability, is missing. When a task would cost either one, stop and raise it as an issue
+rather than proceed.
 
 ## Querying the Neon warehouse
 
