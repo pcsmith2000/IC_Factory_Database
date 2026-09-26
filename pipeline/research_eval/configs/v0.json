@@ -1,5 +1,6 @@
 {
  "name": "v0",
- "search": {"provider": "tako", "when": "unanchored", "model": "alibaba/qwen3.7-flash"},
+ "search": {"provider": "tako", "when": "unanchored", "model": "google/gemini-3.1-flash-lite",
+            "fallback_model": "google/gemini-3.1-flash-lite"},
  "judge": {"model": "deepseek/deepseek-v4-flash-0731", "passage_budget_tokens": 6000}
 }
