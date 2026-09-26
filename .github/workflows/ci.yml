@@ -1,7 +1,9 @@
 name: ci
 on:
   push:
+    branches: [main]                   # a PR branch is tested once, by pull_request, not twice
   pull_request:
+  workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest

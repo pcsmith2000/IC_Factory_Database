@@ -13,7 +13,8 @@ Use the connection string you were given. If it is the restricted `web_research_
 - **Read:** `SELECT` only, from `golden_facility`, `facility`, `dim_field` and `web_research_submission`. Run reads inside `BEGIN READ ONLY; … COMMIT;`.
 - **Write:** only `INSERT INTO web_research_submission …` (template in §6). Nothing else, ever.
 - **Never** run `UPDATE` (except the draft re-submit in §6), `DELETE`, `TRUNCATE`, `ALTER`, `DROP` or `CREATE`. Never write to `fact_assertions`, `golden_facility`, `facility` or any other table.
-- Our ingest job validates submissions every 15 minutes and writes the facts. If you think you need any other write, stop and report it.
+- Our ingest job validates submissions hourly and writes the facts. If you think you need any other write, stop and report it.
+- **Never dispatch the `web-research-ingest` or `golden-refresh` workflows yourself**, and never ask for them to be run after each batch. Insert your submissions and keep researching; the hourly ingest picks them all up in one run, and the feedback in §7 appears after it.
 
 ## 2. The team
 

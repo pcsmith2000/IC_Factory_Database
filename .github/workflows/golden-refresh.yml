@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 on:
   schedule:
-    - cron: "7,22,37,52 * * * *"    # every 15 minutes, off the :00 and :30 marks
+    - cron: "7 * * * *"             # hourly, off the :00 mark; dispatch it when a change cannot wait
   workflow_dispatch:
     inputs:
       all:

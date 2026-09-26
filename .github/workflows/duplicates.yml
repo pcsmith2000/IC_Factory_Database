@@ -1,6 +1,6 @@
 # Duplicate facilities (#52): propose same-parcel numbers as merge candidates, or merge them.
 # Main only: a merge changes the permanent registry, and a branch must never write to it.
-# Merges queue golden_dirty; the golden-refresh workflow folds them into golden within 15 minutes.
+# Merges queue golden_dirty; the golden-refresh workflow folds them into golden within the hour.
 name: duplicates
 run-name: "Duplicates · ${{ inputs.command }}${{ inputs.command == 'apply' && format(' ({0})', inputs.tiers) || '' }}${{ inputs.dry_run && ' (dry run)' || '' }}"
 

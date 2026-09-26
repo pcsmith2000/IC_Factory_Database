@@ -1,7 +1,7 @@
 # Web research ingestion: the external research agent inserts one cited JSON document per facility
 # into web_research_submission; this validates each against docs/web-research-agent.md and writes
 # what passes into fact_assertions + ref_source_row (source web_research). The trigger on
-# fact_assertions queues the facility and golden-refresh (five minutes later) brings it into golden.
+# fact_assertions queues the facility and golden-refresh (five minutes later, hourly) brings it into golden.
 name: web-research-ingest
 run-name: "Web research ingest${{ inputs.dry_run && ' (dry run)' || '' }}"
 
@@ -10,7 +10,8 @@ concurrency:
   cancel-in-progress: false
 on:
   schedule:
-    - cron: "2,17,32,47 * * * *"    # every 15 minutes, five minutes before golden-refresh
+    - cron: "2 * * * *"             # hourly, five minutes before golden-refresh. Agents submit
+                                    # rows and wait for this; they never dispatch it (docs/web-research-agent.md §1)
   workflow_dispatch:
     inputs:
       limit:

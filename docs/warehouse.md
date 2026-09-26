@@ -146,8 +146,8 @@ re-run. A rejected pair is never proposed again. Research or an operator can add
 ## Continuous golden (#44)
 Golden no longer waits for a pipeline run. A statement trigger on `fact_assertions` records every
 (facility_key, release_tag) that gains a fact in **`golden_dirty`**, and so does a facility merge.
-**`python -m pipeline.golden_refresh`** drains it; the `golden-refresh` workflow runs it every 15
-minutes on main. For each queued facility it:
+**`python -m pipeline.golden_refresh`** drains it; the `golden-refresh` workflow runs it hourly
+on main (dispatch it by hand when a change cannot wait). For each queued facility it:
 
 1. resolves it to its **permanent** facility (release registry → `legacy_id_map`, or directly for a
    release loaded through the registry), following one `merged_into` hop;
