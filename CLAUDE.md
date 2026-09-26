@@ -19,6 +19,20 @@ python -m pipeline.neon_sql --write "UPDATE ..."                    # writes: se
 say so rather than trusting results from another project. Under the hood it POSTs to
 `https://<host>/sql` with the `Neon-Connection-String` header and `Neon-Batch-Read-Only: true`.
 
+**If neither `DATABASE_URL` nor `NEON_API_KEY` is set** (the script exits with "no DATABASE_URL and
+no NEON_API_KEY in the environment"), check whether the session's egress proxy injects
+`Neon-Connection-String` for `*.neon.tech`. If it does, POST to the endpoint directly and let the proxy
+add the credential; do not set the header yourself:
+
+```bash
+curl -sS -X POST https://ep-fragrant-snow-awfbmy0k.c-12.us-east-1.aws.neon.tech/sql \
+  -H 'Content-Type: application/json' -H 'Neon-Batch-Read-Only: true' \
+  -d '{"queries":[{"query":"SELECT count(*) FROM golden_facility","params":[]}]}'
+```
+
+The response is `{"results":[{"rows":[...], ...}]}`. Keep `Neon-Batch-Read-Only: true` for reads; the
+write rules below still apply to anything sent this way.
+
 ### Rules
 
 - **Reads:** Claude may run read-only queries at any time. They run in a read-only transaction.
