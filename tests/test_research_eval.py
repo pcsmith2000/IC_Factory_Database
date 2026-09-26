@@ -271,7 +271,9 @@ def test_offline_pass_scores_end_to_end(tmp_path, monkeypatch):
         prompt = payload["messages"][0]["content"]
         assert "9705222464" not in prompt or "PASSAGES" in prompt      # never a reference answer
         if payload.get("tools"):
-            body = {"results": []}
+            return {"choices": [{"message": {"content": json.dumps({"results": []}),
+                                             "provider_metadata": {"gateway": {"gatewayToolCalls": {"tako_search": 1}}}}}],
+                    "usage": {"prompt_tokens": 1000, "completion_tokens": 100, "cost": 0.00001}}
         elif "Acme" in prompt:
             pid = re.search(r"\[(P\d+)\] \(https://acmetruss.com/contact\)", prompt).group(1)
             body = {"verdict": {"status": "in_scope", "reason": "Acme Truss builds roof trusses in Sterling.",
@@ -285,7 +287,8 @@ def test_offline_pass_scores_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(gw, "chat", fake_chat)
     catalog = tmp_path / "catalog.json"
     catalog.write_text(json.dumps({"data": [{"id": m, "pricing": {"input": "0.0000001", "output": "0.0000002"}}
-                                            for m in ("alibaba/qwen3.7-flash", "deepseek/deepseek-v4-flash-0731")]}))
+                                            for m in ("alibaba/qwen3.7-flash", "deepseek/deepseek-v4-flash-0731",
+                                                      "google/gemini-3.1-flash-lite")]}))
     out = tmp_path / "pass"
     summary = P.run(pipe_bench, "smoke", P.DEFAULT_CONFIG, out, tmp_path / "cache", 0.10, catalog=str(catalog))
     assert summary["facilities_done"] == 2 and summary["cost"]["searches"] == 1   # only the unanchored plant searched
@@ -304,3 +307,21 @@ def test_offline_pass_scores_end_to_end(tmp_path, monkeypatch):
     again = P.run(pipe_bench, "smoke", P.DEFAULT_CONFIG, tmp_path / "pass2", tmp_path / "cache", 0.10, catalog=str(catalog))
     assert again["cost"]["searches"] == 0 and again["cost"]["cached_searches"] == 1
     assert not any(c.get("tools") for c in calls)
+
+
+def test_a_search_the_gateway_did_not_run_is_retried_then_refused_and_never_cached(tmp_path, monkeypatch):
+    models = []
+
+    def no_tool(payload, **kw):                     # smoke pass 1: the model answered without searching
+        models.append(payload["model"])
+        return {"choices": [{"message": {"content": '{"results": [{"url": "https://www.example.com"}]}'}}],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 10, "cost": 0.000001}}
+    monkeypatch.setattr(gw, "chat", no_tool)
+    prices = {m: PRICES["cheap/model"] for m in ("alibaba/qwen3.7-flash", "google/gemini-3.1-flash-lite")}
+    meter = gw.Meter(0.10, prices)
+    rec = {"facility_id": "IC-1", "name": "Acme", "city": "X", "state": "CO"}
+    with pytest.raises(P.SearchNotRun):
+        P.search(rec, P.DEFAULT_CONFIG, tmp_path, meter, tmp_path)
+    assert models == ["alibaba/qwen3.7-flash", "google/gemini-3.1-flash-lite"]
+    assert not list((tmp_path / "search").glob("*.json"))
+    assert meter.searches == 2                      # still counted at list price, conservatively

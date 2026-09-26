@@ -38,7 +38,8 @@ DEFAULT_CONFIG = {
               "keywords": ["contact", "about", "location", "plant", "facility", "facilities", "capabilit",
                            "product", "manufactur", "our-company", "who-we-are"]},
     "search": {"provider": "tako", "when": "unanchored", "max_searches": 1, "results": 8, "fetch_top": 4,
-               "follow_site": True, "model": "alibaba/qwen3.7-flash", "max_output_tokens": 1500,
+               "follow_site": True, "model": "alibaba/qwen3.7-flash", "fallback_model": "google/gemini-3.1-flash-lite",
+               "max_output_tokens": 1500,
                "query": "{name} {city} {state} manufacturing plant address phone"},
     "regex": {"fill": True},
     "judge": {"model": "deepseek/deepseek-v4-flash-0731", "passage_budget_tokens": 6000, "passage_chars": 600,
@@ -222,25 +223,38 @@ def search_query(rec: dict, cfg: dict) -> str:
     return re.sub(r"\s+", " ", q).strip()
 
 
+class SearchNotRun(RuntimeError):
+    """The gateway did not confirm a search: the model answered without calling the tool."""
+
+
 def search(rec: dict, cfg: dict, cache: Path, meter: gw.Meter, folder: Path) -> list[dict]:
     s = cfg["search"]
     provider, query = s["provider"], search_query(rec, cfg)
     f = cache / "search" / f"{_cache_key(rec['facility_id'], provider, query, s['results'])}.json"
     f.parent.mkdir(parents=True, exist_ok=True)
     if f.exists():
-        meter.cached_searches += 1
         hit = json.loads(f.read_text())
-        (folder / "search.json").write_text(json.dumps(dict(hit, cache_hit=True), indent=1))
-        return hit["results"]
+        if hit.get("gateway_reported_searches"):            # only a search the gateway confirmed is reused
+            meter.cached_searches += 1
+            (folder / "search.json").write_text(json.dumps(dict(hit, cache_hit=True), indent=1))
+            return hit["results"]
     tool, build = gw.SEARCH_TOOLS[provider]
-    payload = {"model": s["model"], "messages": [{"role": "user", "content": SEARCH_PROMPT}],
-               "tools": [{"type": tool, "config": build(query, s["results"])}], "tool_choice": "required",
-               "max_tokens": s["max_output_tokens"], "temperature": 0}
-    raw = gw.chat(payload)
-    reported = gw.gateway_searches(raw, tool)
-    # A search the gateway ran but did not report is still counted: list price, at least one.
-    rec_cost = meter.record("search", s["model"], raw.get("usage") or {}, rec["facility_id"],
-                            searches=max(1, reported), provider=provider)
+    # Smoke pass 1: qwen3.7-flash answered without calling the tool and invented example.com. A
+    # search counts only when the gateway reports it ran; otherwise the fallback model tries once.
+    for n, model in enumerate(dict.fromkeys([s["model"], s.get("fallback_model") or s["model"]])):
+        payload = {"model": model, "messages": [{"role": "user", "content": SEARCH_PROMPT}],
+                   "tools": [{"type": tool, "config": build(query, s["results"])}], "tool_choice": "required",
+                   "max_tokens": s["max_output_tokens"], "temperature": 0}
+        raw = gw.chat(payload)
+        reported = gw.gateway_searches(raw, tool)
+        # A search the gateway ran but did not report is still counted: list price, at least one.
+        rec_cost = meter.record("search", model, raw.get("usage") or {}, rec["facility_id"],
+                                searches=max(1, reported), provider=provider)
+        (folder / f"search-response-{n}.json").write_text(json.dumps(raw, indent=1))
+        if reported:
+            break
+    if not reported:
+        raise SearchNotRun(f"no confirmed {provider} search for {rec['facility_id']}")
     results = []
     m = re.search(r"\{.*\}", gw.content(raw), re.S)
     try:
@@ -250,11 +264,10 @@ def search(rec: dict, cfg: dict, cache: Path, meter: gw.Meter, folder: Path) -> 
                                 "snippet": str(r.get("snippet") or "")[:600]})
     except (json.JSONDecodeError, AttributeError):
         pass
-    hit = {"facility_id": rec["facility_id"], "provider": provider, "query": query, "results": results,
+    hit = {"facility_id": rec["facility_id"], "provider": provider, "query": query, "model": model, "results": results,
            "gateway_reported_searches": reported, "cost": rec_cost, "at": datetime.now(timezone.utc).isoformat()}
     f.write_text(json.dumps(hit))
     (folder / "search.json").write_text(json.dumps(hit, indent=1))
-    (folder / "search-response.json").write_text(json.dumps(raw, indent=1))
     return results
 
 
@@ -555,8 +568,9 @@ def plan_worst_case(cfg: dict) -> dict:
     calls = [(j["model"], j["passage_budget_tokens"] + w["judge_overhead_tokens"], j["max_output_tokens"], 1)]
     searches = s["max_searches"] if s["when"] != "never" else 0
     if searches:
-        calls.append((s["model"], w["search_input_tokens"], s["max_output_tokens"], searches))
-    return {"searches": searches, "calls": calls}
+        for m in dict.fromkeys([s["model"], s.get("fallback_model") or s["model"]]):   # a retry is a second call
+            calls.append((m, w["search_input_tokens"], s["max_output_tokens"], searches))
+    return {"searches": searches * (2 if s.get("fallback_model") and s["fallback_model"] != s["model"] else 1), "calls": calls}
 
 
 def research(rec: dict, cfg: dict, fetcher: Fetcher, cache: Path, meter: gw.Meter, folder: Path,
@@ -628,7 +642,7 @@ def run(benchmark: Path, batch: str, cfg: dict, out: Path, cache: Path, max_cost
     inputs = json.loads((benchmark / "inputs.json").read_text())
     ids = manifest["splits"][batch] if batch in manifest["splits"] else [i.strip() for i in batch.split(",") if i.strip()]
     ids = ids[:limit] if limit else ids
-    models = sorted({cfg["judge"]["model"], cfg["search"]["model"]})
+    models = sorted({cfg["judge"]["model"], cfg["search"]["model"], cfg["search"].get("fallback_model") or cfg["search"]["model"]})
     cat = gw.load_catalog(catalog)
     model_prices = gw.prices(cat, models)
     for m, p in model_prices.items():
@@ -651,6 +665,9 @@ def run(benchmark: Path, batch: str, cfg: dict, out: Path, cache: Path, max_cost
         rec = inputs["facilities"][fid]
         try:
             r = research(rec, cfg, fetcher, cache, meter, out / "facilities" / fid, active, golden_index)
+        except SearchNotRun as e:
+            outcomes.append({"facility_id": fid, "error": str(e)})
+            continue
         except gw.GatewayError as e:
             outcomes.append({"facility_id": fid, "error": str(e)[:300]})
             if e.status in (401, 402, 403):
