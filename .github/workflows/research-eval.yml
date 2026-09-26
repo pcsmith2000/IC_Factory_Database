@@ -1,0 +1,162 @@
+# Low-cost web research pipeline: evaluation passes (docs/web-research-pipeline-eval.md).
+# Dispatch only. Writes nothing to the warehouse: `export` reads it in a read-only session, and a
+# `pass` never has database credentials at all. Everything a pass fetched, asked and decided is the
+# run artifact. The benchmark is an artifact too and is never committed (the repository is public).
+name: research-eval
+run-name: "Research eval · ${{ inputs.mode }} · ${{ inputs.batch }} · ${{ inputs.config }} · cap $${{ inputs.max_cost_usd }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "export = freeze the benchmark (read-only); pass = run and score a configuration"
+        type: choice
+        options: [pass, export]
+        default: pass
+      benchmark_run:
+        description: "run id of the export whose benchmark artifact this pass uses"
+        default: ""
+      benchmark_sha256:
+        description: "the benchmark hash that export printed; the pass refuses any other"
+        default: ""
+      batch:
+        description: "dev_a .. dev_f, holdout, anchor, or comma-separated facility ids"
+        default: dev_a
+      config:
+        description: "pipeline configuration JSON in the repository"
+        default: pipeline/research_eval/configs/v0.json
+      max_cost_usd:
+        description: "list-price ceiling for this pass (at most 1.00)"
+        default: "0.10"
+      limit:
+        description: "only the first N facilities of the batch (blank = all)"
+        default: ""
+      judge_max_usd:
+        description: "adjudication judge budget (at most 0.25)"
+        default: "0.25"
+      holdout_gate:
+        description: "type 'gate' to run the holdout (at most twice in the whole evaluation)"
+        default: ""
+
+permissions:
+  contents: read
+  actions: read          # download the benchmark artifact from its export run; see other runs
+
+concurrency:
+  group: research-eval   # its own group: one pass at a time, never cancelled half-way
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  export:
+    if: inputs.mode == 'export'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres,dev]"
+      - name: Resolve the Neon warehouse connection
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
+          python .github/scripts/neon_connection_string.py
+      - name: Export the benchmark (database-enforced read-only session)
+        run: python -m pipeline.research_eval.benchmark --out benchmark
+      - uses: actions/upload-artifact@v4
+        with:
+          name: research-eval-benchmark
+          path: benchmark/
+          retention-days: 90
+
+  pass:
+    if: inputs.mode == 'pass'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      BATCH: ${{ inputs.batch }}
+      CONFIG: ${{ inputs.config }}
+      MAX_COST: ${{ inputs.max_cost_usd }}
+      JUDGE_MAX: ${{ inputs.judge_max_usd }}
+      LIMIT: ${{ inputs.limit }}
+    steps:
+      - name: Check the inputs
+        env:
+          GATE: ${{ inputs.holdout_gate }}
+          BENCH_RUN: ${{ inputs.benchmark_run }}
+          BENCH_SHA: ${{ inputs.benchmark_sha256 }}
+        run: |
+          [ -n "$BENCH_RUN" ] && [ -n "$BENCH_SHA" ] || { echo "::error::benchmark_run and benchmark_sha256 are required"; exit 1; }
+          python3 -c "import os, sys; c=float(os.environ['MAX_COST']); j=float(os.environ['JUDGE_MAX']); sys.exit(0 if 0 < c <= 1.0 and 0 <= j <= 0.25 else 1)" \
+            || { echo "::error::max_cost_usd must be in (0, 1.00] and judge_max_usd in [0, 0.25]"; exit 1; }
+          if [ "$BATCH" = "holdout" ] && [ "$GATE" != "gate" ]; then echo "::error::the holdout runs only at a gate (holdout_gate=gate)"; exit 1; fi
+      - name: No other workflow is spending the shared gateway key
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          busy=""
+          for wf in tako-basic-search.yml tako-campaign.yml tako-coordinate-recovery.yml capability.yml bakeoff.yml enrich.yml enrich-stage.yml run.yml; do
+            for st in in_progress queued; do
+              n=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --status "$st" --json databaseId --jq length 2>/dev/null || echo 0)
+              [ "$n" != "0" ] && busy="$busy $wf($st)"
+            done
+          done
+          if [ -n "$busy" ]; then echo "::error::the shared AI_GATEWAY_API_KEY is in use by:$busy"; exit 1; fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[dev]"
+      - name: Test the harness protections
+        run: pytest tests/test_research_eval.py -q
+      - uses: actions/download-artifact@v4
+        with:
+          name: research-eval-benchmark
+          path: benchmark-all
+          run-id: ${{ inputs.benchmark_run }}
+          github-token: ${{ github.token }}
+      - name: Verify the benchmark; give the pipeline only its inputs
+        env:
+          BENCH_SHA: ${{ inputs.benchmark_sha256 }}
+        run: |
+          python -c "import os; from pathlib import Path; from pipeline.research_eval.benchmark import verify; print(verify(Path('benchmark-all'), os.environ['BENCH_SHA'])['benchmark_sha256'])"
+          mkdir -p benchmark && cp benchmark-all/inputs.json benchmark-all/manifest.json benchmark/
+      - name: Restore the evaluation's search and page cache
+        uses: actions/cache/restore@v4
+        with:
+          path: eval-cache
+          key: research-eval-cache-${{ github.run_id }}
+          restore-keys: research-eval-cache-
+      - name: Run the pipeline (no database credentials)
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+        run: |
+          set -- --benchmark benchmark --batch "$BATCH" --config "$CONFIG" --out pass --cache eval-cache --max-cost-usd "$MAX_COST"
+          [ -n "$LIMIT" ] && set -- "$@" --limit "$LIMIT"
+          python -m pipeline.research_eval.pipeline "$@"
+      - name: Save the cache for later passes
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: eval-cache
+          key: research-eval-cache-${{ github.run_id }}
+      - name: Score against the reference
+        if: always()
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+        run: |
+          [ -f pass/summary.json ] || { echo "no pass to score"; exit 1; }
+          python -m pipeline.research_eval.score --pass pass --benchmark benchmark-all --judge-max-usd "$JUDGE_MAX"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research-eval-pass-${{ github.run_id }}
+          path: pass/
+          retention-days: 30
