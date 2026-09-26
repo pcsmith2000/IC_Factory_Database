@@ -12,8 +12,8 @@
   "website_from_site": true,
   "prevalidate": true
  },
- "name": "production-v9",
- "hypothesis": "Production configuration: the evaluation's v9 (holdout: S1 0, F1 0.98, F2 0.73, C1 $0.0078 list), plus two production rules: not_ic is never applied (submitted as not_found and listed for review), and ADL-validated plants are never removed.",
+ "name": "production-v9.1",
+ "hypothesis": "Production configuration: the evaluation's v9 (holdout: S1 0, F1 0.98, F2 0.73, C1 $0.0078 list), plus two production rules: not_ic is never applied (submitted as not_found and listed for review), and ADL-validated plants are never removed. v9.1 (wr-prod-001): facts are withheld for records sent to review, downgraded for another street, or whose found address shares no number or street with the record's.",
  "judge": {
   "model": "alibaba/qwen3.7-flash",
   "passage_budget_tokens": 6000,
@@ -28,7 +28,8 @@
   "not_ic_second_opinion": "openai/gpt-oss-120b",
   "not_ic_keyword_veto": true,
   "not_ic_to_review": true,
-  "never_remove_validated": true
+  "never_remove_validated": true,
+  "withhold_other_entity": true
  },
  "crawl": {
   "sibling_websites": true

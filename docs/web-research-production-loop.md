@@ -58,7 +58,7 @@ once it grows.
 | Closed verdicts | <= 10% of the batch | hold |
 | not_ic applied | 0 (always review) | **stop** |
 | ADL-validated plant removed | 0 | **stop** |
-| Duplicate verdicts | <= 15% of the batch | hold |
+| Duplicate verdicts | <= 30% of the batch (the backlog holds many real duplicates) | hold |
 | Judge precision on 20 new facts | >= 0.85 | hold |
 | After ingest: submissions refused | <= 2% of the run | hold |
 
