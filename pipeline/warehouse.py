@@ -65,8 +65,8 @@ SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "web_research": {"name": "Web research agent (cited documents)", "class": "web_research"},
     "adl_employee_feedback": {"name": "ADL employee feedback", "class": "human_feedback"},
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},
-    # The warehouse monitor's evidenced corrections (pipeline/monitor_fix.py): below people and
-    # web-research overrides, above every automated source, and limited to location/contact fields.
+    # The warehouse monitor's evidenced corrections (pipeline/monitor_fix.py): directly below people,
+    # above every other source, and limited to location/contact fields.
     "monitor_fix": {"name": "Monitor fix (control/monitor_fix_assertions.csv)", "class": "monitor_fix"},
     "lookup": {"name": "Layer 4 entity resolution", "class": "lookup"},
     "classifier": {"name": "Layer 3 classifier (IC product type)", "class": "classifier"},

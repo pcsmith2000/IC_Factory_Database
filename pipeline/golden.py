@@ -80,10 +80,11 @@ def _rank(a: dict, order: list[str]) -> float:
             conf = float(a.get("confidence") or 0)
             return first_auto - 0.5 + 0.25 * WEB_OVERRIDE_BASES.index(a["basis"]) - 0.1 * conf
         return len(order) + 1
-    # A monitor fix (pipeline/monitor_fix.py) sits just above the first automated source: people
-    # and web-research overrides (first_auto - 0.6 .. - 0.25) outrank it, every roster does not.
+    # A monitor fix (pipeline/monitor_fix.py) sits directly below people: above a site visit and
+    # above web-research overrides (first_auto - 0.6 .. - 0.25). Each line is a deliberate,
+    # issue-linked correction reviewed in git; a site visit says nothing about a ZIP's format.
     if a["source_id"] == MONITOR_FIX and MONITOR_FIX not in order:
-        return next((i for i, p in enumerate(order) if p not in HUMAN_SOURCES + ("site_visit",)), len(order)) - 0.2
+        return next((i for i, p in enumerate(order) if p not in HUMAN_SOURCES), len(order)) - 0.7
     # A street-level geocode (on the right street, not a verified building; confidence 0.3) sits
     # below everything, reviewed lookups included: it fills an empty map pin and nothing else.
     if a.get("basis") == "street_interpolated":
