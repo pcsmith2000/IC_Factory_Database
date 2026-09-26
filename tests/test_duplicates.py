@@ -224,3 +224,30 @@ def test_cli(wh, tmp_path, capsys):
     assert json.loads(capsys.readouterr().out)["merged"] == 2
     assert dup.main(["decide", "IC-00001", "--of", "IC-00002", "--status", "rejected", "--actor", "cli", "--db", db]) == 0
     assert json.loads(capsys.readouterr().out)["status"] == "rejected"
+
+
+def test_apply_can_take_one_sources_reviewed_list_and_leave_the_rest(wh):
+    dup.candidates(wh)                                   # parcel_scan: 2 certain, 1 review
+    with wh.transaction() as c:                          # two web_research pairs, same tier as a scan pair
+        c.execute("DELETE FROM facility_duplicate_candidate WHERE facility_id = 'IC-95267' AND source = 'parcel_scan'")
+        c.executemany("INSERT INTO facility_duplicate_candidate (facility_id, duplicate_of, source, tier, evidence, "
+                      "created_at) VALUES (?, ?, 'web_research', 'likely', '{}', 't')",
+                      [("IC-00002", "IC-00001"), ("IC-95267", "IC-09911")])
+    rep = dup.apply(wh, ("likely", "certain", "review"), actor="t", dry_run=False,
+                    sources=("web_research",), skip=("IC-00002",))
+    assert [m["facility_id"] for m in rep["merges"]] == ["IC-95267"] and rep["skip"] == ["IC-00002"]
+    rows = cand_rows(wh)
+    assert rows[("IC-00002", "IC-00001")]["status"] == "pending"          # held for a person
+    assert rows[("IC-93656", "IC-09911")]["status"] == "pending"          # another source: untouched
+    rep = dup.apply(wh, ("certain",), actor="t", dry_run=True, only=("IC-93656",))
+    assert [m["facility_id"] for m in rep["merges"]] == ["IC-93656"]
+
+
+def test_cli_filters(wh, capsys):
+    if wh.engine != "sqlite":
+        pytest.skip("the CLI's --db is sqlite")
+    dup.candidates(wh)
+    assert dup.main(["apply", "--db", str(wh.path), "--actor", "t", "--dry-run", "--source", "web_research",
+                     "--only", "IC-93656,IC-95267", "--skip", "IC-95267"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert (out["sources"], out["only"], out["skip"], out["merged"]) == (["web_research"], 2, ["IC-95267"], 0)
