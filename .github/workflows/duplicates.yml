@@ -1,0 +1,69 @@
+# Duplicate facilities (#52): propose same-parcel numbers as merge candidates, or merge them.
+# Main only: a merge changes the permanent registry, and a branch must never write to it.
+# Merges queue golden_dirty; the golden-refresh workflow folds them into golden within 15 minutes.
+name: duplicates
+run-name: "Duplicates · ${{ inputs.command }}${{ inputs.command == 'apply' && format(' ({0})', inputs.tiers) || '' }}${{ inputs.dry_run && ' (dry run)' || '' }}"
+
+concurrency:
+  group: ic-warehouse-pipeline      # never beside an ingestion run that is reconciling ids
+  cancel-in-progress: false
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "candidates = scan golden for same-parcel numbers · apply = merge pending candidates of the tiers below"
+        type: choice
+        options: ["candidates", "apply"]
+        default: "candidates"
+      tiers:
+        description: "apply: comma-separated tiers to merge (certain · likely · review)"
+        type: string
+        default: "certain"
+      limit:
+        description: "apply: merge at most N (blank = all)"
+        type: string
+        default: ""
+      dry_run:
+        description: "report, write nothing"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  duplicates:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres]"
+      - name: Resolve the Neon warehouse connection
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
+          python .github/scripts/neon_connection_string.py
+      - name: Run
+        env:
+          COMMAND: ${{ inputs.command }}
+          TIERS: ${{ inputs.tiers }}
+          LIMIT: ${{ inputs.limit }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          ACTOR: "github:${{ github.actor }}"
+        run: |
+          set -- "$COMMAND"
+          if [ "$COMMAND" = "apply" ]; then
+            for t in $(echo "$TIERS" | tr ',' ' '); do set -- "$@" --tier "$t"; done
+            set -- "$@" --actor "$ACTOR"
+            if [ -n "$LIMIT" ]; then set -- "$@" --limit "$LIMIT"; fi
+          fi
+          if [ "$DRY_RUN" = "true" ]; then set -- "$@" --dry-run; fi
+          python -m pipeline.duplicates "$@" | tee duplicates.json
+          { echo '```json'; cat duplicates.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
