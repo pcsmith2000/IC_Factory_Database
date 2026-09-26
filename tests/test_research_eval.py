@@ -293,6 +293,8 @@ def test_offline_pass_scores_end_to_end(tmp_path, monkeypatch):
     summary = P.run(pipe_bench, "smoke", P.DEFAULT_CONFIG, out, tmp_path / "cache", 0.10, catalog=str(catalog))
     assert summary["facilities_done"] == 2 and summary["cost"]["searches"] == 1   # only the unanchored plant searched
     assert summary["cost"]["list_usd"] <= 0.10
+    audit = (out / "audit.md").read_text()                     # the per-facility audit, pipeline-side only
+    assert "IC-00001" in audit and "Phone (970) 522-2464" in audit and "9705222464" not in audit.split("## Facilities")[0]
     subs = [json.loads(line) for line in (out / "submissions.jsonl").read_text().splitlines()]
     assert subs[1]["verdict"]["status"] == "not_found"          # an uncited removal never survives
     for s in subs:                                               # every submission passes the contract offline
@@ -332,3 +334,19 @@ def test_search_results_survive_a_reply_cut_off_at_max_tokens():
     assert [r["url"] for r in P.parse_results(cut)] == ["https://a.com/x", "https://b.com"]
     whole = '{"results": [{"url": "https://a.com/x", "title": "A"}, {"url": "ftp://no"}]}'
     assert P.parse_results(whole) == [{"url": "https://a.com/x", "title": "A"}]
+
+
+def test_website_from_an_anchored_company_page_and_only_same_domain_regex_emails():
+    rec = {"facility_id": "IC-1", "name": "Acme Truss", "city": "Sterling", "state": "CO"}
+    pages = [{"url": "https://acmetruss.com/contact", "final_url": "https://acmetruss.com/contact", "title": "Acme Truss",
+              "fetched_at": "2026-09-26", "text": "Acme Truss, Sterling CO. Write to sales@acmetruss.com"},
+             {"url": "https://news.example.org/a", "title": "News", "fetched_at": "2026-09-26",
+              "text": "Acme Truss in Sterling expands. circulation@paper.org"}]
+    regex = P.regex_candidates(pages, rec)
+    regex["email"] = regex["email"][1:]                   # only the newspaper's address is left
+    cfg = P.merge(P.DEFAULT_CONFIG, {"regex": {"email_same_domain": True}, "extract": {"website_from_site": True}})
+    payload, _ = P.build_submission(rec, {}, [], pages, regex, cfg, {"IC-1"}, [], "acmetruss.com")
+    got = {a["field"]: a["value"] for a in payload["assertions"]}
+    assert got == {"website": "https://acmetruss.com"}
+    assert not P.contract(payload, "IC-1", {"IC-1"})["rejected"][:1] or all(
+        not r["item"].startswith("assertions") for r in P.contract(payload, "IC-1", {"IC-1"})["rejected"])

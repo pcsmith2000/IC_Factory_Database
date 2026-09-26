@@ -41,9 +41,12 @@ DEFAULT_CONFIG = {
                "follow_site": True, "model": "alibaba/qwen3.7-flash", "fallback_model": "google/gemini-3.1-flash-lite",
                "max_output_tokens": 1200, "reasoning_effort": "low",
                "query": "{name} {city} {state} manufacturing plant address phone"},
-    "regex": {"fill": True},
+    "regex": {"fill": True, "email_same_domain": False},
+    # Assert the company site's homepage as `website` when a company page anchors the plant (free).
+    "extract": {"website_from_site": False},
     "judge": {"model": "deepseek/deepseek-v4-flash-0731", "passage_budget_tokens": 6000, "passage_chars": 600,
-              "max_output_tokens": 3000, "reasoning_effort": "low", "temperature": 0, "endpoint": None},
+              "max_output_tokens": 3000, "reasoning_effort": "low", "temperature": 0, "endpoint": None,
+              "confirm_fields": False},
     "policy": {"removal_needs_ingest_rule": True, "duplicate": True, "not_found_sources": 5},
     # Worst-case tokens per call, for the ceiling: a search call's input carries the tool results.
     "worst_case": {"search_input_tokens": 20000, "judge_overhead_tokens": 2500},
@@ -404,7 +407,7 @@ Then report values the passages state for THIS plant (not a head office or anoth
 name, address (street line only), city, state (two letters), zip, phone, email, website (homepage URL),
 and capability_group / capability_leaf from the taxonomy below, and material (wood, steel, concrete, ...).
 
-Every value needs the passage id and a quote: the exact words copied from that passage that contain
+{confirm}Every value needs the passage id and a quote: the exact words copied from that passage that contain
 the value. Copy the quote character for character; do not fix typos, expand abbreviations or join
 text from two places. Leave a field out rather than guess.
 
@@ -427,18 +430,22 @@ def taxonomy_text() -> str:
     return "; ".join(f"{g['name']}: " + ", ".join(l["name"] for l in g.get("leaves", [])) for g in t["groups"])
 
 
-def judge_prompt(rec: dict, cands: list[dict], psg: list[dict]) -> str:
+CONFIRM = ("Report every one of these fields a passage states for this plant, INCLUDING values that are the same as\n"
+           "the record: a confirmed value is worth as much as a new one.\n\n")
+
+
+def judge_prompt(rec: dict, cands: list[dict], psg: list[dict], confirm: bool = False) -> str:
     public = {k: v for k, v in rec.items() if k in ("facility_id", "name", "legal_name", "address", "city", "state", "zip",
                                                     "phone", "email", "website", "product_type", "capability_group",
                                                     "capability_leaf", "material", "naics")}
     body = "\n".join(f"[{p['id']}] ({p['url']}) {p['text']}" for p in psg)
-    return JUDGE_PROMPT.format(taxonomy=taxonomy_text(), record=json.dumps(public),
+    return JUDGE_PROMPT.format(taxonomy=taxonomy_text(), record=json.dumps(public), confirm=CONFIRM if confirm else "",
                                candidates=json.dumps(cands), passages=body or "(none)")
 
 
 def judge(rec: dict, cands: list[dict], psg: list[dict], cfg: dict, meter: gw.Meter, folder: Path) -> dict:
     j = cfg["judge"]
-    prompt = judge_prompt(rec, cands, psg)
+    prompt = judge_prompt(rec, cands, psg, j.get("confirm_fields", False))
     payload = {"model": j["model"], "messages": [{"role": "user", "content": prompt}],
                "max_tokens": j["max_output_tokens"], "temperature": j["temperature"],
                "response_format": {"type": "json_object"}}
@@ -530,11 +537,24 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
         have = {a["field"] for a in assertions}
         for field in ("phone", "zip", "address", "email"):
             c = regex.get(field) or []
+            if field == "email" and cfg["regex"].get("email_same_domain"):
+                # Baseline pass: regex emails from directories and newspapers were most of the wrong
+                # novel findings. Only an address on the company's own domain is taken.
+                c = [x for x in c if site_host and x["value"].split("@")[-1].lower().removeprefix("www.").endswith(site_host)]
             # Only an unambiguous candidate fills a blank: one distinct value on the anchored pages.
             if field not in have and len(c) == 1 and quote_ok(c[0]["quote"], text_of.get(c[0]["url"], "")):
                 a = {"field": field, "value": c[0]["value"], "source_ref": ref(c[0]["url"]), "quote": c[0]["quote"],
                      "confidence": 0.7}
                 assertions.append(a); trace["kept"].append(dict(a, by="regex"))
+    if cfg.get("extract", {}).get("website_from_site") and site_host and "website" not in {a["field"] for a in assertions}:
+        site_pages = [p for p in pages if p.get("text") and host(p.get("final_url") or p["url"]) == site_host and anchored(p, rec)]
+        if site_pages:
+            p = site_pages[0]
+            q = next((x for x in [p.get("title") or ""] + [str(rec.get("name") or "")] if len(ws(x)) >= 3 and quote_ok(x, p["text"])), None)
+            if q:
+                a = {"field": "website", "value": f"https://{site_host}", "source_ref": ref(p["url"]), "quote": ws(q),
+                     "confidence": 0.7}
+                assertions.append(a); trace["kept"].append(dict(a, by="site"))
     v = answer.get("verdict") if isinstance(answer.get("verdict"), dict) else {}
     status = v.get("status") if v.get("status") in VERDICTS else "not_found"
     ev_urls = []
@@ -704,7 +724,76 @@ def run(benchmark: Path, batch: str, cfg: dict, out: Path, cache: Path, max_cost
                "run_id": os.environ.get("GITHUB_RUN_ID"), "commit": os.environ.get("GITHUB_SHA")}
     (out / "outcomes.json").write_text(json.dumps(outcomes, indent=1, default=str))
     (out / "summary.json").write_text(json.dumps(summary, indent=1))
+    (out / "audit.md").write_text(audit(out, cfg, summary, inputs, model_prices))
     return summary
+
+
+def _cell(v, n: int = 90) -> str:
+    return ws(str(v if v is not None else "")).replace("|", "/")[:n]
+
+
+def audit(out: Path, cfg: dict, summary: dict, inputs: dict, model_prices: dict) -> str:
+    """A human-readable account of the pass, per facility: what was searched and fetched, what the
+    model decided and why, every finding with its source and quote, what was dropped and why, and
+    what it cost. Pipeline-side only: reference answers never appear here."""
+    c = summary["cost"]
+    lines = [f"# Pass audit: {cfg['name']} on {summary['batch']}", "",
+             f"- **Hypothesis:** {cfg.get('hypothesis') or '(none stated)'}",
+             f"- **Run:** {summary.get('run_id')} at commit {str(summary.get('commit'))[:10]}; benchmark `{summary['benchmark_sha256'][:16]}`",
+             f"- **Models:** judge `{cfg['judge']['model']}` (reasoning {cfg['judge'].get('reasoning_effort')}), "
+             f"search `{cfg['search']['model']}` via {cfg['search']['provider']} (when {cfg['search']['when']})",
+             f"- **Prices used (per 1M in/out):** " + ", ".join(f"`{m}` {p['per_million']['input']}/{p['per_million']['output']}"
+                                                       for m, p in model_prices.items()),
+             f"- **Cost:** list ${c['list_usd']:.4f}, billed ${c['billed_usd']:.4f}, cap ${c['max_cost_usd']}; "
+             f"{c['searches']} paid searches, {c['cached_searches']} from cache; {summary['runner_seconds']}s on the runner",
+             f"- **Facilities:** {summary['facilities_done']} of {summary['facilities_planned']} done; stopped: {summary['stopped']}; "
+             f"errors: {len(summary['errors'])}", "", "## Facilities", "",
+             "| Facility | Name, city | Verdict | Findings (refused) | Searched | Pages live | $ list |",
+             "| --- | --- | --- | --- | --- | --- | --- |"]
+    costs: dict[str, float] = {}
+    for r in [json.loads(x) for x in (out / "costs.jsonl").read_text().splitlines() if x.strip()]:
+        costs[r["facility_id"]] = costs.get(r["facility_id"], 0) + r["list_usd"]
+    outcomes = json.loads((out / "outcomes.json").read_text())
+    for o in outcomes:
+        rec = inputs["facilities"].get(o["facility_id"], {})
+        lines.append(f"| {o['facility_id']} | {_cell(rec.get('name'), 40)}, {_cell(rec.get('city'), 20)} {rec.get('state', '')} | "
+                     f"{o.get('verdict', 'ERROR')} | {o.get('findings_submitted', 0)} ({o.get('findings_refused', 0)}) | "
+                     f"{'yes' if o.get('searched') else 'no'} | {o.get('pages_live', 0)} | {costs.get(o['facility_id'], 0):.4f} |")
+    for o in outcomes:
+        fid = o["facility_id"]
+        folder = out / "facilities" / fid
+        rec = inputs["facilities"].get(fid, {})
+        lines += ["", f"### {fid}: {_cell(rec.get('name'), 60)}",
+                  f"Record: {_cell(', '.join(str(rec.get(k)) for k in ('address', 'city', 'state', 'zip', 'phone', 'website') if rec.get(k)), 200)}"]
+        if "error" in o:
+            lines.append(f"**Error:** {o['error']}"); continue
+        sub = json.loads((folder / "submission.json").read_text())
+        trace = json.loads((folder / "trace.json").read_text())
+        srcs = {x["source_ref"]: x for x in sub["sources"]}
+        search = folder / "search.json"
+        if search.exists():
+            sj = json.loads(search.read_text())
+            lines.append(f"Search ({'cache' if sj.get('cache_hit') else 'paid'}): `{_cell(sj['query'], 120)}` → "
+                         f"{len(sj['results'])} results")
+        v = sub["verdict"]
+        lines.append(f"**Verdict: {v['status']}**" + (f" (duplicate of {v.get('duplicate_of')})" if v.get("duplicate_of") else "")
+                     + f". {_cell(v.get('reason'), 400)}")
+        if trace.get("downgraded"):
+            lines.append(f"Downgraded from {trace['downgraded']['from']}: {trace['downgraded']['why']}")
+        for r in v.get("source_refs") or []:
+            lines.append(f"- verdict source [{srcs[r]['kind']}]({srcs[r]['url']})")
+        if sub["assertions"]:
+            lines += ["", "| Field | Value | By | Source | Quote |", "| --- | --- | --- | --- | --- |"]
+            by = {(k["field"], k["value"]): k.get("by") for k in trace.get("kept", [])}
+            for a in sub["assertions"]:
+                s_ = srcs[a["source_ref"]]
+                lines.append(f"| {a['field']} | {_cell(a['value'], 60)} | {by.get((a['field'], a['value']), '')} | "
+                             f"[{s_['kind']}]({s_['url']}) | {_cell(a['quote'], 100)} |")
+        for d in trace.get("dropped", []):
+            lines.append(f"- dropped {d.get('field')} {_cell(d.get('value'), 50)}: {d['reason']}")
+        for r in o.get("contract_rejected") or []:
+            lines.append(f"- contract refused {r.get('item')} {r.get('field', '')}: {r['reason']}")
+    return "\n".join(lines) + "\n"
 
 
 def main(argv=None) -> int:

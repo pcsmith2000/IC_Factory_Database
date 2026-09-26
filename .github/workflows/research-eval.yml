@@ -42,8 +42,10 @@ permissions:
   contents: read
   actions: read          # download the benchmark artifact from its export run; see other runs
 
+# Passes run side by side (each is capped; the ledger sums them). Each run is its own group, so
+# nothing is ever cancelled half-way. They share the search/page cache read-only at start.
 concurrency:
-  group: research-eval   # its own group: one pass at a time, never cancelled half-way
+  group: research-eval-${{ github.run_id }}
   cancel-in-progress: false
 
 defaults:
@@ -141,6 +143,7 @@ jobs:
           set -- --benchmark benchmark --batch "$BATCH" --config "$CONFIG" --out pass --cache eval-cache --max-cost-usd "$MAX_COST"
           [ -n "$LIMIT" ] && set -- "$@" --limit "$LIMIT"
           python -m pipeline.research_eval.pipeline "$@"
+          sed -n '1,/^### /p' pass/audit.md | head -n -1 >> "$GITHUB_STEP_SUMMARY"
       - name: Save the cache for later passes
         if: always()
         uses: actions/cache/save@v4
@@ -153,7 +156,7 @@ jobs:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         run: |
           [ -f pass/summary.json ] || { echo "no pass to score"; exit 1; }
-          python -m pipeline.research_eval.score --pass pass --benchmark benchmark-all --judge-max-usd "$JUDGE_MAX"
+          python -m pipeline.research_eval.score --pass pass --benchmark benchmark-all --judge-max-usd "$JUDGE_MAX" > pass/scorecard.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:
