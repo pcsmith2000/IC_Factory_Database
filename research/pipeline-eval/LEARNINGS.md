@@ -41,3 +41,15 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
    - The reference found several plants in registry PDFs (MHI plant list, Missouri PSC); one Tako search
      did not surface them.
    - The pipeline flagged two duplicates by same phone / same address that the reference kept in scope.
+5. **Extraction options plus an open-weight judge lift F2 sharply** (a-v1-*, cached evidence, tokens only).
+   gpt-oss-120b: primary 79.2 (F2 0.79, V1 0.875, V3 0.5, 5.7 literal facts per facility, novel precision
+   0.92) at $0.0008 per facility in tokens. gpt-oss-20b: primary 62.5 at $0.0002 but 11.6% contract
+   refusals. Open-weight models are competitive here; the judge is not the cost driver, search is.
+6. **Company versus site** (a-v1-gptoss120b V2 0.29). A capable judge credits the company's products to
+   this address: a plant that moved (Phoenix Haus to Colorado), a site now another business (Canam,
+   Lafayette), a retail center (Champion, McMinnville), a different plant of the same firm (Jensen), or
+   only historical records (All American Homes, 2014). These are in_scope errors, not removals (S1 stays
+   0), but they are the opposite failure and V2 counts them. Tested next: a strict-site rule.
+7. **Refusals are mechanical** (S2): scheme-less websites, state names, off-taxonomy leaves and quotes
+   that do not contain the value. Running the contract's own checks before submission repairs the first
+   two and drops the rest, at no cost.
