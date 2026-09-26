@@ -1,5 +1,5 @@
 # Production web research in growing batches (docs/web-research-production-loop.md).
-# select (read-only) -> research shards (no database credentials) -> health gates -> submit.
+# select (read-only) -> research shards of 50 (no database credentials) -> health gates -> submit.
 # Submit inserts pending rows into web_research_submission only; the web-research-ingest workflow
 # validates and writes them into the assertion table. Submit runs only from main, only in mode
 # `submit`, and only when the batch's health decision is `grow`.
@@ -85,15 +85,16 @@ jobs:
       - name: Select the batch (database-enforced read-only session)
         env: { RUN_ID: "${{ inputs.run_id }}", SIZE: "${{ inputs.batch_size }}", SEED: "${{ inputs.seed }}", OFFSET: "${{ inputs.offset }}" }
         run: python -m pipeline.web_research.production select --run-id "$RUN_ID" --size "$SIZE" --seed "$SEED" --offset "$OFFSET" --out batch
-      - name: Plan the shards (200 facilities each)
+      - name: Plan the shards (50 facilities each)
         id: shards
         env: { COST: "${{ inputs.max_cost_usd }}" }
         run: |
           python3 - >> "$GITHUB_OUTPUT" <<'PY'
           import json, os
           n = json.load(open("batch/manifest.json"))["selected"]
-          k = max(1, -(-n // 200))
-          print("shards=" + json.dumps([f"batch[{i*200}:{(i+1)*200}]" for i in range(k)]))
+          # wr-prod-003: one facility takes ~30 s, so a 200-facility shard would run ~100 min. 50 per shard, 10 at once.
+          k = max(1, -(-n // 50))
+          print("shards=" + json.dumps([f"batch[{i*50}:{(i+1)*50}]" for i in range(k)]))
           print(f"per_shard_cost={float(os.environ['COST'])/k:.4f}")
           PY
       - uses: actions/upload-artifact@v4
@@ -105,7 +106,7 @@ jobs:
     timeout-minutes: 300
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 10
       matrix:
         shard: ${{ fromJSON(needs.select.outputs.shards) }}
     steps:
