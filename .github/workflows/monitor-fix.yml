@@ -11,7 +11,7 @@ concurrency:
 on:
   push:
     branches: [main]
-    paths: [control/monitor_fix_assertions.csv, pipeline/monitor_fix.py]
+    paths: [control/monitor_fix_assertions.csv, pipeline/monitor_fix.py, .github/workflows/monitor-fix.yml]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -21,6 +21,11 @@ on:
 
 permissions:
   contents: read
+
+# bash -eo pipefail: without it `python ... | tee out.json` reports success when python fails.
+defaults:
+  run:
+    shell: bash
 
 jobs:
   apply:

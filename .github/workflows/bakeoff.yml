@@ -15,6 +15,11 @@ on:
         description: "seconds between calls, to pace ourselves rather than collect 429s and call them results"
         default: "20"
 
+# bash -eo pipefail: without it `python ... | tee out.json` reports success when python fails.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   bakeoff:
     runs-on: ubuntu-latest
