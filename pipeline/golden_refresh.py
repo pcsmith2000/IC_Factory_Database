@@ -40,7 +40,7 @@ from .registry import load_yaml
 from .warehouse import GOLDEN_FIELDS
 
 ROOT = Path(__file__).resolve().parent.parent
-CARRIED_CLASSES = ("enrichment", "tako_ai_search", "astra_manual_web_lookup", "human_feedback")
+CARRIED_CLASSES = ("enrichment", "tako_ai_search", "astra_manual_web_lookup", "human_feedback", "web_research")
 
 # Each queued (facility_key, release_tag) resolves to a permanent facility the way
 # v_assertions_resolved does: through its release's registry and legacy_id_map, or directly when
@@ -201,8 +201,7 @@ def refresh(wh, *, all_facilities: bool = False, batch: int = 500, max_batches: 
                 continue
             vals = [fid, tag] + [_text(after.get(x)) for f in GOLDEN_FIELDS for x in (f, f"{f}__source")] + \
                    [after.get("n_assertions"), after.get("n_sources")]
-            if before is not None and all(_text(before.get(c)) == _text(v) for c, v in zip(cols, vals)
-                                          if c not in ("n_assertions", "n_sources")):
+            if before is not None and all(_text(before.get(c)) == _text(v) for c, v in zip(cols, vals)):
                 report["unchanged"] += 1
                 continue
             for f in GOLDEN_FIELDS:

@@ -60,6 +60,9 @@ def dim_field_rows(rules: dict) -> list[tuple]:
 
 SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     "tako_ai_search": {"name": "Tako AI Search", "class": "tako_ai_search"},
+    # The external web-research agent (pipeline/web_research/ingest.py). One source id for every
+    # agent and model; which agent found which document is on each ref_source_row.
+    "web_research": {"name": "Web research agent (cited documents)", "class": "web_research"},
     "adl_employee_feedback": {"name": "ADL employee feedback", "class": "human_feedback"},
     "operator": {"name": "Human correction (control/operator_assertions.csv)", "class": "operator"},
     "lookup": {"name": "Layer 4 entity resolution", "class": "lookup"},
@@ -181,9 +184,31 @@ DDL = [
     # A release, frozen (#49). golden_facility is live and keeps moving between releases; this is
     # what a published release said, one JSON row per facility (a golden column added later needs
     # no migration here). Written by golden_refresh.snapshot at the end of every main release load.
+    # The external web-research agent's inbox (pipeline/web_research/ingest.py). The agent inserts
+    # one JSON document per facility researched and nothing else: it never writes a fact table.
+    # The ingest job validates each document, writes what passes into fact_assertions and
+    # ref_source_row, and records the outcome here (status, report).
+    """CREATE TABLE IF NOT EXISTS web_research_submission (
+        submission_id TEXT PRIMARY KEY, facility_id TEXT NOT NULL, run_id TEXT, agent TEXT,
+        submitted_at TEXT NOT NULL, payload TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending'
+            CHECK (status IN ('pending', 'ingested', 'partial', 'rejected')),
+        processed_at TEXT, report TEXT)""",
+    "CREATE INDEX IF NOT EXISTS ix_web_research_status ON web_research_submission (status)",
     """CREATE TABLE IF NOT EXISTS golden_release (
         release_tag TEXT NOT NULL, facility_key TEXT NOT NULL, snapshot_at TEXT NOT NULL, row_json TEXT NOT NULL,
         PRIMARY KEY (release_tag, facility_key))""",
+    # Two live numbers that may be one plant (#52), proposed by pipeline/duplicates.py (parcel_scan)
+    # or by research/an operator, and decided by a merge through the registry or a rejection. A
+    # rejected pair is never proposed again; a pending one is re-tiered by each scan.
+    """CREATE TABLE IF NOT EXISTS facility_duplicate_candidate (
+        facility_id TEXT NOT NULL, duplicate_of TEXT NOT NULL,
+        source TEXT NOT NULL,            -- 'parcel_scan' | 'web_research' | 'operator'
+        tier TEXT NOT NULL,              -- 'certain' | 'likely' | 'review'
+        evidence TEXT,                   -- JSON: names, addresses, reason, urls
+        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','merged','rejected')),
+        created_at TEXT NOT NULL, decided_at TEXT, decided_by TEXT,
+        PRIMARY KEY (facility_id, duplicate_of))""",
 ]
 
 # Views are created after the golden columns are reconciled, not with the tables: they name every

@@ -116,6 +116,33 @@ python -m pipeline.facility_registry mint ...                             # a sp
 A merge always points at a live root and re-roots anything merged into its source, so
 `v_assertions_resolved` resolves every fact in a single hop.
 
+**Duplicates (#52).** Some plants still carry two or more live numbers: on 2026-09-26 golden held
+~360 groups (584 pairs) at the same parcel, like Cavco at 2502 W Durango St, Phoenix (IC-09911,
+IC-93656, IC-95267). `pipeline/duplicates.py` finds them and proposes merges in
+**`facility_duplicate_candidate`** (facility_id → duplicate_of, source, tier, evidence JSON, status
+pending | merged | rejected). Same parcel means same state, city, house number and
+`street_equivalent` street. Each pair gets a tier:
+- **certain**: the names agree once normalised (legal suffixes, "the", d/b/a, "- Shelby", "Plant #2"
+  stripped), or one name's words are a subset of the other's and include a distinctive word, or
+  the two share a phone number or website domain.
+- **likely**: the names share a distinctive word (not homes, industries, building, systems and so on).
+- **review**: the names are unrelated, so it may be a successor firm or a campus with two operators.
+  A person decides these.
+
+Each group gets one survivor: the most assertions, then the lowest number. A member that reaches
+the survivor only through a `review` pair, but is `certain` with a neighbour, also gets a row
+pointing at its certain cluster's survivor, so merging only certain rows still folds that part of the group.
+```
+python -m pipeline.duplicates candidates [--dry-run]            # scan; re-tiers pending rows only
+python -m pipeline.duplicates apply --tier certain --actor NAME [--dry-run] [--limit N]
+python -m pipeline.duplicates decide IC-x --of IC-y --status rejected --actor NAME [--reason ...]
+```
+(or the `duplicates` workflow, which is dry-run by default). `apply` merges through
+`facility_registry.merge`, strongest tier first, so every merge writes a `facility_event` and
+queues both golden rows. It skips a pair when either side is no longer active and is safe to
+re-run. A rejected pair is never proposed again. Research or an operator can add rows with source
+`web_research` / `operator`, and a scan never touches those.
+
 ## Continuous golden (#44)
 Golden no longer waits for a pipeline run. A statement trigger on `fact_assertions` records every
 (facility_key, release_tag) that gains a fact in **`golden_dirty`**, and so does a facility merge.

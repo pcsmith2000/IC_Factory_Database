@@ -54,10 +54,30 @@ def assertions_from_rows(rows: list[dict], source_class: dict[str, str]) -> list
     return out
 
 
-def _rank(a: dict, order: list[str]) -> int:
-    # Reviewed web lookups (Tako search, a manual ASTRA lookup) are below even an unlisted source;
-    # recency must never elevate them. They fill a hole and never displace a roster or a geocode.
-    if a["source_id"] in ("tako_ai_search", "astra_manual_web_lookup"):
+# Web research: Tako search, a manual ASTRA lookup, and the web-research agent (pipeline/web_research/
+# ingest.py). Below even an unlisted source, and recency never elevates them: they fill a hole and
+# never displace a roster or a geocode. A field's rule may still name one of them outright, by
+# source or by basis (existence_flag names `basis:web_verdict`); that explicit rank then applies.
+WEB_RESEARCH_SOURCES = ("tako_ai_search", "astra_manual_web_lookup", "web_research")
+
+
+# Web research a document states literally, from a document that can vouch for it
+# (pipeline/web_research/ingest.py): a registry or filing (web_verified) outranks the company's own
+# site (web_primary), and both outrank every automated source. People still outrank both.
+WEB_OVERRIDE_BASES = ("web_verified", "web_primary")
+
+
+def _rank(a: dict, order: list[str]) -> float:
+    if a["source_id"] in WEB_RESEARCH_SOURCES:
+        for i, pref in enumerate(order):
+            if pref == a["source_id"] or (a["source_id"] == "web_research" and pref.startswith("basis:")
+                                          and a.get("basis") == pref[6:]):
+                return i
+        if a["source_id"] == "web_research" and a.get("basis") in WEB_OVERRIDE_BASES:
+            first_auto = next((i for i, p in enumerate(order) if p not in HUMAN_SOURCES + ("site_visit",)), len(order))
+            # Within a basis the more veracious document wins (0.8 before 0.7), then recency.
+            conf = float(a.get("confidence") or 0)
+            return first_auto - 0.5 + 0.25 * WEB_OVERRIDE_BASES.index(a["basis"]) - 0.1 * conf
         return len(order) + 1
     # A street-level geocode (on the right street, not a verified building; confidence 0.3) sits
     # below everything, reviewed lookups included: it fills an empty map pin and nothing else.
@@ -93,16 +113,22 @@ def _recency(a: dict) -> tuple[str, str, str]:
     return (str(a.get("retrieved_date") or ""), str(a.get("asserted_at") or ""), tie)
 
 
-# A person ruling a facility out of scope: existence_flag = not_ic, asserted by a human source.
-# The facility keeps its IC-number and its assertions (ids are never renumbered, facts are never
-# deleted); it just does not reach golden, so nothing that reads golden publishes it. Only a human
-# source can do this: stage 12 may assert existence_flag = review and nothing else (gate E5).
+# Ruling a facility out of golden: existence_flag = not_ic (not an industrialized-construction plant)
+# or closed (no longer operating). The facility keeps its IC-number and its assertions (ids are never
+# renumbered, facts are never deleted); it just does not reach golden, so nothing that reads golden
+# publishes it. A person may rule so, and so may the web-research agent with a cited source
+# (pipeline/web_research/ingest.py requires one). A person outranks the agent on existence_flag, so an
+# employee asserting existence_flag = active through ADL_Viz brings the plant straight back. Stage
+# 12 may assert existence_flag = review and nothing else (gate E5), and review never excludes.
 NOT_IC = "not_ic"
+CLOSED = "closed"
+EXCLUDING_FLAGS = (NOT_IC, CLOSED)
 HUMAN_SOURCES = ("adl_employee_feedback", "operator")
+EXCLUDING_SOURCES = HUMAN_SOURCES + ("web_research",)
 
 
 def is_excluded(g: dict) -> bool:
-    return g.get("existence_flag") == NOT_IC and g.get("existence_flag__source") in HUMAN_SOURCES
+    return g.get("existence_flag") in EXCLUDING_FLAGS and g.get("existence_flag__source") in EXCLUDING_SOURCES
 
 
 def split_excluded(golden: list[dict], conflicts: list[dict]) -> tuple[list[dict], list[dict], list[dict]]:
