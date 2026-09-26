@@ -82,3 +82,13 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
     Schult). Crawling that site first, and skipping the paid search when a page there names this plant's
     city, is free. Matching needs every distinctive name word, excluding place names: first-word matching
     mapped "Phoenix Haus" to phoenix-truss.com and "All American Homes of Colorado" to bldr.com.
+17. **First wrong removal** (b-v2c, IC-48445, Boise Cascade Homedale glulam plant). The judge ruled glulam
+    "not off-site construction", and one Idaho DEQ air-permit PDF, typed as government_registry because it
+    was .gov, met ingest's one-registry-source rule on its own. Fixes agreed with the user: structural wood
+    of every kind is named in scope; only listing and licensing .gov pages are registry-grade; a record
+    that already carries an IC capability is removed only on two different pages.
+18. **Second look works on Dev A** (a-v4): five single-page removals confirmed from other fetched pages
+    (Plycraft = furniture, Imerys = kaolin, two Champion sales centers, Brocca), none contradicting an
+    in-scope reference. Brocca (garages at another address) should have been not_found.
+19. **Dev B generalises** (b-v2c): F2 0.76 (Dev A 0.81), V3 0.75, novel precision 0.95, C1 $0.0089 with
+    fresh searches. V1 0.56 is lower than Dev A.

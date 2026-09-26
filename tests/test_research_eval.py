@@ -416,3 +416,26 @@ def test_sibling_sites_come_from_other_rows_of_the_same_company():
              {"facility_id": "IC-1", "name": "Champion", "state": "FL", "website": "https://self.example.com"},
              {"facility_id": "IC-4", "name": "Clayton Homes", "state": "FL", "website": "https://claytonhomes.com"}]
     assert P.sibling_sites(rec, index) == ["https://championhomes.com"]
+
+
+@pytest.mark.parametrize("url,kind", [
+    ("https://www2.deq.idaho.gov/admin/LEIA/api/document/download/9137", "other"),      # b-v2c: an air permit
+    ("https://www.osha.gov/ords/imis/establishment.inspection_detail?id=1", "other"),
+    ("https://psc.mo.gov/CMSInternetData/ManufacturedHousing/Manufacturer/ACTIVE%20MOD.pdf", "government_registry"),
+    ("https://sos.state.xx.us/business/entity/123", "filing"),
+])
+def test_only_listing_and_licensing_government_pages_are_registry_grade(url, kind):
+    assert P.source_kind(url, {"name": "Acme"}, "") == kind
+
+
+def test_a_glulam_plant_is_not_removed_on_one_government_permit():
+    rec = {"facility_id": "IC-48445", "name": "HOMEDALE ENGINEERED WOOD PLANT", "city": "Homedale", "state": "ID",
+           "capability_group": "Other", "capability_leaf": "Wood Structural Components (Trusses, etc.)"}
+    url = "https://www2.deq.idaho.gov/admin/LEIA/api/document/download/9137"
+    pages = [{"url": url, "text": "Facility Location 4318 Pioneer Road Homedale. laminated beams and decking", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url, "text": pages[0]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "Glulam is not off-site construction.",
+                          "evidence": [{"passage": "P1", "quote": "laminated beams and decking"}]}}
+    payload, trace = P.build_submission(rec, answer, psg, pages, {}, P.DEFAULT_CONFIG, {"IC-48445"}, [], "")
+    assert payload["verdict"]["status"] == "not_found"
+    assert "glulam" in P.JUDGE_PROMPT

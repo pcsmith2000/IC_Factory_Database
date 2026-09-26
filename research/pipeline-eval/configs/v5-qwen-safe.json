@@ -1,0 +1,27 @@
+{
+ "search": {
+  "provider": "tako",
+  "when": "unanchored",
+  "model": "google/gemini-3.1-flash-lite",
+  "fallback_model": "google/gemini-3.1-flash-lite"
+ },
+ "regex": {
+  "email_same_domain": true
+ },
+ "extract": {
+  "website_from_site": true,
+  "prevalidate": true
+ },
+ "name": "v5-qwen-safe",
+ "hypothesis": "v4 (Qwen, strict-site, prevalidate, second look) plus the S1 fixes agreed with the user after b-v2c's wrong removal of the Homedale glulam plant: structural wood (glulam, engineered wood, CLT, SIPs, decking) is explicitly in scope; only listing and licensing .gov pages are registry-grade (permits and environmental filings are not); and a record with an IC capability is removed only on two different pages. Expect S1 0 on both batches; V2 removing may fall.",
+ "judge": {
+  "model": "alibaba/qwen3.7-flash",
+  "passage_budget_tokens": 6000,
+  "reasoning_effort": "low",
+  "confirm_fields": true,
+  "strict_site": true
+ },
+ "policy": {
+  "removal_second_look": true
+ }
+}
