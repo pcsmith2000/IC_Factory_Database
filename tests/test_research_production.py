@@ -30,7 +30,9 @@ def test_select_skips_researched_facilities_reads_only_and_is_a_valid_pipeline_i
     r = Reader()
     m = W.select(r, "wr-prod-001", 25, 7, tmp_path)
     assert m["selected"] == 1 and m["splits"]["batch"] == ["IC-00001"] and m["database_writes"] == 0
-    assert "NOT EXISTS (SELECT 1 FROM web_research_submission" in r.sql[0] and "LIMIT 25" in r.sql[0]
+    assert "NOT EXISTS (SELECT 1 FROM web_research_submission" in r.sql[0] and "LIMIT 25 OFFSET 0" in r.sql[0]
+    m = W.select(r, "wr-prod-003", 50, 7, tmp_path, offset=25)           # the next dry batch skips the first 25
+    assert "LIMIT 50 OFFSET 25" in r.sql[-3] and m["offset"] == 25
     assert B.verify(tmp_path)["benchmark_sha256"] == m["benchmark_sha256"]        # the pipeline accepts it
     with pytest.raises(ValueError):
         W.select(r, "prod-1", 25, 7, tmp_path)
