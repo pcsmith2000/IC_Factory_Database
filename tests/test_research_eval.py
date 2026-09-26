@@ -350,3 +350,15 @@ def test_website_from_an_anchored_company_page_and_only_same_domain_regex_emails
     assert got == {"website": "https://acmetruss.com"}
     assert not P.contract(payload, "IC-1", {"IC-1"})["rejected"][:1] or all(
         not r["item"].startswith("assertions") for r in P.contract(payload, "IC-1", {"IC-1"})["rejected"])
+
+
+@pytest.mark.parametrize("field,value,quote,expect_value,ok", [
+    ("website", "www.acme.com", "Acme", "https://www.acme.com", True),
+    ("state", "Oregon", "Eugene, Oregon 97402", "OR", True),
+    ("state", "OR", "Eugene 97402", "OR", False),                       # the quote does not state it
+    ("capability_leaf", "Roof Trusses", "roof trusses", "Roof Trusses", False),   # not a taxonomy leaf
+    ("email", "sales at acme", "sales at acme", "sales at acme", False),
+])
+def test_prevalidate_repairs_what_is_mechanical_and_refuses_the_rest(field, value, quote, expect_value, ok):
+    got, why = P.prevalidate(field, value, quote, "https://www.acme.com/contact")
+    assert got == expect_value and (why is None) is ok

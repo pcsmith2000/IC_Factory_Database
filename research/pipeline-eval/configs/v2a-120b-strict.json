@@ -1,0 +1,24 @@
+{
+ "search": {
+  "provider": "tako",
+  "when": "unanchored",
+  "model": "google/gemini-3.1-flash-lite",
+  "fallback_model": "google/gemini-3.1-flash-lite"
+ },
+ "regex": {
+  "email_same_domain": true
+ },
+ "extract": {
+  "website_from_site": true,
+  "prevalidate": true
+ },
+ "name": "v2a-120b-strict",
+ "hypothesis": "Against a-v1-gptoss120b (primary 79.2, V2 0.29, S2 5.5%): a strict-site rule (in_scope needs current manufacturing tied to this address or town; retail/office sites are not_ic; moved or only-historical plants are closed/not_found) should restore V2 without losing V1, and running the contract's own checks before submission (repair scheme-less websites and state names; drop off-taxonomy leaves and unstated quotes) should bring S2 under 5%. Token cost only.",
+ "judge": {
+  "model": "openai/gpt-oss-120b",
+  "passage_budget_tokens": 6000,
+  "reasoning_effort": "low",
+  "confirm_fields": true,
+  "strict_site": true
+ }
+}

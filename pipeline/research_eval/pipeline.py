@@ -43,10 +43,10 @@ DEFAULT_CONFIG = {
                "query": "{name} {city} {state} manufacturing plant address phone"},
     "regex": {"fill": True, "email_same_domain": False},
     # Assert the company site's homepage as `website` when a company page anchors the plant (free).
-    "extract": {"website_from_site": False},
+    "extract": {"website_from_site": False, "prevalidate": False},
     "judge": {"model": "deepseek/deepseek-v4-flash-0731", "passage_budget_tokens": 6000, "passage_chars": 600,
               "max_output_tokens": 3000, "reasoning_effort": "low", "temperature": 0, "endpoint": None,
-              "confirm_fields": False, "removal_two_sources": False},
+              "confirm_fields": False, "removal_two_sources": False, "strict_site": False},
     "policy": {"removal_needs_ingest_rule": True, "duplicate": True, "not_found_sources": 5},
     # Worst-case tokens per call, for the ceiling: a search call's input carries the tool results.
     "worst_case": {"search_input_tokens": 20000, "judge_overhead_tokens": 2500},
@@ -430,24 +430,31 @@ def taxonomy_text() -> str:
     return "; ".join(f"{g['name']}: " + ", ".join(l["name"] for l in g.get("leaves", [])) for g in t["groups"])
 
 
+STRICT_SITE = ("in_scope needs a passage that ties CURRENT manufacturing to this plant's address or town. The company\n"
+               "making the product somewhere else does not count. A sales center, retailer, model village, office or\n"
+               "yard at this address is not a plant: not_ic. A plant that moved away, or evidence that is only\n"
+               "historical (old permits, OSHA records, a later tenant at the address): closed if a passage says so,\n"
+               "otherwise not_found.\n\n")
 REMOVAL = ("For not_ic or closed, cite evidence from TWO DIFFERENT pages (different URLs), or one government\n"
            "registry, filing or certification body page; with only one page, answer not_found and say what you saw.\n\n")
 CONFIRM = ("Report every one of these fields a passage states for this plant, INCLUDING values that are the same as\n"
            "the record: a confirmed value is worth as much as a new one.\n\n")
 
 
-def judge_prompt(rec: dict, cands: list[dict], psg: list[dict], confirm: bool = False, removal: bool = False) -> str:
+def judge_prompt(rec: dict, cands: list[dict], psg: list[dict], confirm: bool = False, removal: bool = False,
+                 strict: bool = False) -> str:
     public = {k: v for k, v in rec.items() if k in ("facility_id", "name", "legal_name", "address", "city", "state", "zip",
                                                     "phone", "email", "website", "product_type", "capability_group",
                                                     "capability_leaf", "material", "naics")}
     body = "\n".join(f"[{p['id']}] ({p['url']}) {p['text']}" for p in psg)
-    return JUDGE_PROMPT.format(taxonomy=taxonomy_text(), record=json.dumps(public), confirm=(CONFIRM if confirm else "") + (REMOVAL if removal else ""),
+    return JUDGE_PROMPT.format(taxonomy=taxonomy_text(), record=json.dumps(public), confirm=(STRICT_SITE if strict else "") + (CONFIRM if confirm else "") + (REMOVAL if removal else ""),
                                candidates=json.dumps(cands), passages=body or "(none)")
 
 
 def judge(rec: dict, cands: list[dict], psg: list[dict], cfg: dict, meter: gw.Meter, folder: Path) -> dict:
     j = cfg["judge"]
-    prompt = judge_prompt(rec, cands, psg, j.get("confirm_fields", False), j.get("removal_two_sources", False))
+    prompt = judge_prompt(rec, cands, psg, j.get("confirm_fields", False), j.get("removal_two_sources", False),
+                          j.get("strict_site", False))
     payload = {"model": j["model"], "messages": [{"role": "user", "content": prompt}],
                "max_tokens": j["max_output_tokens"], "temperature": j["temperature"],
                "response_format": {"type": "json_object"}}
@@ -532,7 +539,13 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
         if not url:
             trace["dropped"].append({"field": field, "value": item.get("value"), "reason": why, "by": "model"})
             continue
-        a = {"field": field, "value": str(item["value"]).strip(), "source_ref": ref(url), "quote": ws(item["quote"]),
+        value = str(item["value"]).strip()
+        if cfg.get("extract", {}).get("prevalidate"):
+            value, why = prevalidate(field, value, ws(item["quote"]), url)
+            if why:
+                trace["dropped"].append({"field": field, "value": item.get("value"), "reason": f"pre-contract: {why}", "by": "model"})
+                continue
+        a = {"field": field, "value": value, "source_ref": ref(url), "quote": ws(item["quote"]),
              "confidence": 0.8 if field in LITERAL else 0.6}
         assertions.append(a); trace["kept"].append(dict(a, by="model"))
     if cfg["regex"]["fill"]:
@@ -593,6 +606,28 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
     payload = {"facility_id": rec["facility_id"], "agent": f"research_eval {cfg['name']}", "run_id": cfg["name"],
                "verdict": verdict, "sources": list(sources.values()), "assertions": assertions}
     return payload, trace
+
+
+_TAXONOMY = None
+
+
+def prevalidate(field: str, value: str, quote: str, url: str) -> tuple[str, str | None]:
+    """The contract's own checks, run before submission (pass a-v1-gptoss120b: websites without a
+    scheme, off-taxonomy leaves and quotes that do not state their value were refused). Returns the
+    value, repaired where the repair is mechanical, and why it would still be refused."""
+    global _TAXONOMY
+    from ..web_research import ingest as I
+    if _TAXONOMY is None:
+        _TAXONOMY = I._taxonomy()
+    if field == "website" and "://" not in value and "." in value:
+        value = "https://" + value.strip("/")
+    if field == "state" and len(value) > 2:
+        from ..contract import _US_NAMES
+        value = _US_NAMES.get(value.lower(), value)
+    why = I.check_value(field, value, _TAXONOMY)
+    if not why and field in I.LITERAL and not I.stated(field, I.homepage(value) if field == "website" else value, quote, url):
+        why = "the quote does not state this value"
+    return value, why
 
 
 def contract(payload: dict, fid: str, active: set[str]) -> dict:
