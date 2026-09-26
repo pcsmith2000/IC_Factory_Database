@@ -520,3 +520,13 @@ def test_a_persons_ruling_replaces_the_reference_verdict():
     labels = {"facilities": {"IC-1": {"verdict": "in_scope", "removal_strength": None}, "IC-2": {"verdict": "closed"}}}
     changed = S.apply_overrides(labels, {"IC-1": {"verdict": "not_ic", "by": "user"}, "IC-9": {"verdict": "not_ic"}})
     assert changed == ["IC-1"] and labels["facilities"]["IC-1"] == {"verdict": "not_ic", "removal_strength": "strong", "overridden_by": "user"}
+
+
+def test_score_merges_holdout_halves_and_reports_but_does_not_judge_a_waived_gate():
+    a = {"batch": "holdout[0:50]", "run_id": 1, "config": "v9", "benchmark_sha256": "x", "facilities_planned": 50, "facilities_done": 50,
+         "runner_seconds": 10, "errors": [], "cost": {"max_cost_usd": 0.6, "billed_usd": 0.1, "list_usd": 0.4, "calls": 5, "searches": 40,
+                                                        "cached_searches": 0, "responses_missing_cost": 0, "tokens": {}}}
+    b = dict(a, batch="holdout[50:100]", run_id=2, errors=[{"facility_id": "IC-9"}])
+    m = S.merge_summaries([a, b])
+    assert m["facilities_done"] == 100 and m["cost"]["list_usd"] == 0.8 and m["batch"] == "holdout[0:50]+holdout[50:100]"
+    assert len(m["errors"]) == 1

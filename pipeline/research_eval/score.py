@@ -266,14 +266,34 @@ def apply_overrides(labels: dict, overrides: dict) -> list[str]:
     return changed
 
 
-def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, seed: int = 20260926,
-          overrides: dict | None = None) -> dict:
+def merge_summaries(summaries: list[dict]) -> dict:
+    """One summary for passes scored together (the holdout runs as capped halves)."""
+    if len(summaries) == 1:
+        return summaries[0]
+    out = dict(summaries[0])
+    out["batch"] = "+".join(x["batch"] for x in summaries)
+    out["run_id"] = "+".join(str(x.get("run_id")) for x in summaries)
+    for k in ("facilities_planned", "facilities_done", "runner_seconds"):
+        out[k] = sum(x[k] for x in summaries)
+    out["errors"] = [e for x in summaries for e in x["errors"]]
+    cost = dict(summaries[0]["cost"])
+    for k in ("max_cost_usd", "billed_usd", "list_usd", "calls", "searches", "cached_searches", "responses_missing_cost"):
+        cost[k] = round(sum(x["cost"][k] for x in summaries), 6)
+    out["cost"] = cost
+    return out
+
+
+def score(pass_dir, bench: Path, adj: Adjudicator, novel_cap: int = 40, seed: int = 20260926,
+          overrides: dict | None = None, waive: tuple[str, ...] = ()) -> dict:
+    dirs = [Path(d) for d in (pass_dir if isinstance(pass_dir, (list, tuple)) else [pass_dir])]
     inputs = json.loads((bench / "inputs.json").read_text())
     labels = json.loads((bench / "labels.json").read_text())
     overridden = apply_overrides(labels, overrides or {})
-    summary = json.loads((pass_dir / "summary.json").read_text())
+    summary = merge_summaries([json.loads((d / "summary.json").read_text()) for d in dirs])
     anchors = set(labels["anchors"])
-    got = load_pass(pass_dir, set(inputs["active"]))
+    got = {}
+    for d in dirs:
+        got.update(load_pass(d, set(inputs["active"])))
     lab = labels["facilities"]
     fids = sorted(got)
     failures: dict[str, list] = {"S1": [], "S3": [], "V1": [], "V2": [], "V3": [], "F1": [], "F2": []}
@@ -395,11 +415,15 @@ def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, se
     for k, (op, th) in GATES.items():
         v = metrics.get(k)
         gates[k] = None if v is None else (v == th if op == "==" else v <= th if op == "<=" else v >= th)
+    # A gate the user waived is reported but does not decide the verdict (V2_removing: removals by not_ic
+    # were made human-review by the user's decisions of 2026-09-26).
+    judged = {k: v for k, v in gates.items() if k not in waive}
     sample_pool = [c for c in adjudicated + novel_cases if c.get("answer")]
     rng2 = random.Random(seed + 1)
     counts["overridden_labels"] = overridden
     return {"pass": summary, "metrics": metrics, "counts": counts, "gates": gates,
-            "gate_pass": all(v is not False for v in gates.values()) and all(v is not None for k, v in gates.items() if k.startswith("S")),
+            "gate_pass": all(v is not False for v in judged.values()) and all(v is not None for k, v in judged.items() if k.startswith("S")),
+            "waived": list(waive),
             "adjudication": {"cost": adj.meter.summary(), "model": adj.model, "skipped": adj.skipped,
                              "disagreements": adjudicated, "novel": novel_cases},
             "adjudication_sample": rng2.sample(sample_pool, min(10, len(sample_pool))),
@@ -411,7 +435,8 @@ def markdown(sc: dict) -> str:
     rows = ["| Metric | Value | Gate |", "| --- | --- | --- |"]
     for k, v in m.items():
         gate = GATES.get(k)
-        mark = "" if gate is None else f"{gate[0]} {gate[1]} {'✅' if g.get(k) else '❌' if g.get(k) is False else '–'}"
+        mark = "" if gate is None else f"{gate[0]} {gate[1]} {'✅' if g.get(k) else '❌' if g.get(k) is False else '–'}" + \
+            (" (waived)" if k in sc.get("waived", []) else "")
         rows.append(f"| {k} | {v} | {mark} |")
     c = sc["pass"]["cost"]
     head = (f"## Scorecard: {sc['pass']['config']} on {sc['pass']['batch']}\n\n"
@@ -419,13 +444,15 @@ def markdown(sc: dict) -> str:
             f"list ${c['list_usd']:.4f} (billed ${c['billed_usd']:.4f}) of ${c['max_cost_usd']}; "
             f"adjudication ${sc['adjudication']['cost']['list_usd']:.4f}. Database writes: 0.\n\n")
     s1 = "".join(f"\n- **S1** {x['facility_id']}: pipeline {x['pipeline']} vs reference {x['reference']}" for x in sc["failures"]["S1"])
+    head += f"**Gate: {'PASS' if sc.get('gate_pass') else 'FAIL'}**\n\n"
     return head + "\n".join(rows) + "\n" + (f"\n### Wrong removals{s1}\n" if s1 else "") + \
         f"\n```json\n{json.dumps(sc['counts'])}\n```\n"
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m pipeline.research_eval.score")
-    ap.add_argument("--pass", dest="pass_dir", required=True)
+    ap.add_argument("--pass", dest="pass_dir", required=True, action="append", help="repeat to score passes together")
+    ap.add_argument("--waive", default="", help="comma-separated gates the user waived (reported, not judged)")
     ap.add_argument("--benchmark", required=True)
     ap.add_argument("--judge-model", default="google/gemini-3-flash")
     ap.add_argument("--judge-max-usd", type=float, default=0.25)
@@ -440,9 +467,10 @@ def main(argv=None) -> int:
     catalog = gw.load_catalog(a.catalog) if a.judge_max_usd > 0 else None
     adj = Adjudicator(a.judge_model, a.judge_max_usd, catalog, Path(a.fetch_cache))
     overrides = json.loads(Path(a.overrides).read_text()) if a.overrides and Path(a.overrides).exists() else {}
-    sc = score(Path(a.pass_dir), Path(a.benchmark), adj, a.novel_cap, overrides=overrides)
-    Path(a.pass_dir, "scorecard.json").write_text(json.dumps(sc, indent=1, default=str))
-    Path(a.pass_dir, "adjudication-responses.json").write_text(json.dumps(adj.responses, indent=1, default=str))
+    waive = tuple(w.strip() for w in a.waive.split(",") if w.strip())
+    sc = score([Path(d) for d in a.pass_dir], Path(a.benchmark), adj, a.novel_cap, overrides=overrides, waive=waive)
+    Path(a.pass_dir[0], "scorecard.json").write_text(json.dumps(sc, indent=1, default=str))
+    Path(a.pass_dir[0], "adjudication-responses.json").write_text(json.dumps(adj.responses, indent=1, default=str))
     md = markdown(sc)
     print(md)
     if os.environ.get("GITHUB_STEP_SUMMARY"):

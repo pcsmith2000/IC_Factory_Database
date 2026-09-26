@@ -89,6 +89,7 @@ jobs:
       MAX_COST: ${{ inputs.max_cost_usd }}
       JUDGE_MAX: ${{ inputs.judge_max_usd }}
       LIMIT: ${{ inputs.limit }}
+      WAIVE: V2_removing       # waived by the user on 2026-09-26: not_ic removals became human-review
     steps:
       - name: Check the inputs
         env:
@@ -99,7 +100,7 @@ jobs:
           [ -n "$BENCH_RUN" ] && [ -n "$BENCH_SHA" ] || { echo "::error::benchmark_run and benchmark_sha256 are required"; exit 1; }
           python3 -c "import os, sys; c=float(os.environ['MAX_COST']); j=float(os.environ['JUDGE_MAX']); sys.exit(0 if 0 < c <= 1.0 and 0 <= j <= 0.25 else 1)" \
             || { echo "::error::max_cost_usd must be in (0, 1.00] and judge_max_usd in [0, 0.25]"; exit 1; }
-          if [ "$BATCH" = "holdout" ] && [ "$GATE" != "gate" ]; then echo "::error::the holdout runs only at a gate (holdout_gate=gate)"; exit 1; fi
+          case "$BATCH" in holdout*) [ "$GATE" = "gate" ] || { echo "::error::the holdout runs only at a gate (holdout_gate=gate)"; exit 1; };; esac
       - name: No other workflow is spending the shared gateway key
         env:
           GH_TOKEN: ${{ github.token }}
@@ -159,7 +160,7 @@ jobs:
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         run: |
           [ -f pass/summary.json ] || { echo "no pass to score"; exit 1; }
-          python -m pipeline.research_eval.score --pass pass --benchmark benchmark-all --judge-max-usd "$JUDGE_MAX" > pass/scorecard.md
+          python -m pipeline.research_eval.score --pass pass --benchmark benchmark-all --judge-max-usd "$JUDGE_MAX" --waive "$WAIVE" > pass/scorecard.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:

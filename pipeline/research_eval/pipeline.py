@@ -933,7 +933,11 @@ def run(benchmark: Path, batch: str, cfg: dict, out: Path, cache: Path, max_cost
     from .benchmark import verify
     manifest = verify(benchmark)
     inputs = json.loads((benchmark / "inputs.json").read_text())
-    ids = manifest["splits"][batch] if batch in manifest["splits"] else [i.strip() for i in batch.split(",") if i.strip()]
+    m = re.fullmatch(r"(\w+)\[(\d*):(\d*)\]", batch)          # a slice of a split: holdout[0:50]
+    if m and m.group(1) in manifest["splits"]:
+        ids = manifest["splits"][m.group(1)][int(m.group(2) or 0):int(m.group(3)) if m.group(3) else None]
+    else:
+        ids = manifest["splits"][batch] if batch in manifest["splits"] else [i.strip() for i in batch.split(",") if i.strip()]
     ids = ids[:limit] if limit else ids
     models = sorted({cfg["judge"]["model"], cfg["search"]["model"], cfg["search"].get("fallback_model") or cfg["search"]["model"]}
                     | ({cfg["policy"]["not_ic_second_opinion"]} if cfg["policy"].get("not_ic_second_opinion") else set())

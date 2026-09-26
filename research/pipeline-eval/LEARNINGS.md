@@ -114,3 +114,7 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
 25. **User ruling (2026-09-26): steel-framed greenhouses are out of scope** (Conley, IC-14222). The reference
     had it in scope; the scorer now applies a person's rulings from `adjudications.json` (the ruling only,
     no reference content) and reports which labels it changed. Re-scored, b-v8 has S1 0.
+26. **Gate 1 (2026-09-26), user's decision:** run v9 on the holdout now, with V2 "removing >= 50%" waived
+    (not_ic removals became human-review by the user's decisions); every other gate judged as written.
+    The holdout runs as two capped halves (holdout[0:50], holdout[50:100]) plus the 50 anchors, scored
+    together. Preview on Dev B + C combined: every judged gate passes except V1 (0.71 vs 0.85).
