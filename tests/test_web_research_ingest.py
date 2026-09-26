@@ -217,3 +217,31 @@ def test_a_duplicate_verdict_is_queued_for_review_never_merged(wh):
     row = wh.query("SELECT * FROM facility_duplicate_candidate")[0]
     assert (row["facility_id"], row["duplicate_of"], row["source"], row["status"]) == ("IC-00002", "IC-00001", "web_research", "pending")
     assert {r["status"] for r in wh.query("SELECT status FROM facility")} == {"active"}
+
+
+NEWS = {"source_ref": "s4", "url": "https://news.example.com/plant-closes", "title": "Plant closes", "kind": "news",
+        "found_by": "subagent via web search", "retrieved_at": "2026-09-26"}
+
+
+def test_a_removal_needs_two_pages_or_one_registry_grade_source():
+    one_weak = plan(payload(verdict={"status": "closed", "reason": "Listing says permanently closed",
+                                     "source_refs": ["s3"]}))
+    assert not [f for f in one_weak["facts"] if f["field"] == "existence_flag"]
+    assert "two cited sources" in one_weak["rejected"][0]["reason"]
+    two_weak = plan(payload(sources=(REGISTRY, SITE, MAPS, NEWS),
+                            verdict={"status": "closed", "reason": "Listing and news both report the closure",
+                                     "source_refs": ["s3", "s4"]}))
+    assert [f["value"] for f in two_weak["facts"] if f["field"] == "existence_flag"] == ["closed"]
+    one_registry = plan(payload(verdict={"status": "not_ic", "reason": "Registry lists a sales office only",
+                                         "source_refs": ["s1"]}))
+    assert [f["value"] for f in one_registry["facts"] if f["field"] == "existence_flag"] == ["not_ic"]
+
+
+def test_a_submission_with_no_sources_is_refused_and_not_found_records_what_it_checked(wh):
+    submit(wh, payload(fid="IC-00002", sources=(), verdict={"status": "not_found", "reason": "Nothing found"}), "empty")
+    submit(wh, payload(fid="IC-00001", sources=(MAPS,), verdict={"status": "not_found", "reason": "Only a map pin"}), "nf")
+    rep = I.ingest(wh)
+    st = {r["submission_id"]: r["status"] for r in wh.query("SELECT submission_id, status FROM web_research_submission")}
+    assert st == {"empty": "rejected", "nf": "ingested"} and rep["sources_written"] == 1
+    tag = wh.query("SELECT value FROM fact_assertions WHERE source_key = 'web_research' AND field_key = 'research_source'")
+    assert [t["value"] for t in tag] == [MAPS["url"]]

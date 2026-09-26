@@ -49,6 +49,7 @@ LITERAL = {"name", "legal_name", "address", "city", "state", "zip", "phone", "em
            "sq_ft", "building_sqft", "expiry_date", "lat_lon"}
 OVERRIDE_AT = 0.7
 OVERRIDING = ("web_verified", "web_primary")        # pipeline/golden.py ranks these above automation
+REMOVAL_GRADE = ("government_registry", "filing", "certification_body")   # one of these can remove a plant alone
 
 # Fields the agent may assert. Everything golden carries except what a person or the pipeline owns:
 # existence_flag comes only from the verdict, adl_validated and employee_notes are ADL's own, and
@@ -216,8 +217,15 @@ def plan(payload: dict, facility_id: str, active: set[str], fields: set[str], ta
     elif status in ("not_ic", "closed"):
         cited = [sources[r] for r in verdict.get("source_refs") or [] if r in sources]
         reason = str(verdict.get("reason") or "").strip()
+        strong = [c for c in cited if c["kind"] in REMOVAL_GRADE]
         if not cited or len(reason) < 10:
             rejected.append({"item": "verdict", "reason": "not_ic / closed needs a reason and at least one cited source"})
+        elif len({c["url"] for c in cited}) < 2 and not strong:
+            # Taking a plant out of golden on one directory or map listing proved too easy: 160+
+            # removals in one batch, each on a single citation. Two independent pages, or one
+            # registry / filing / certification body, are required; the facility stays meanwhile.
+            rejected.append({"item": "verdict", "reason": "not_ic / closed needs two cited sources (different pages) "
+                             "or one government_registry, filing or certification_body source"})
         else:
             best = max(cited, key=lambda x: VERACITY[x["kind"]])
             facts.append({"field": "existence_flag", "value": status, "basis": "web_verdict",
@@ -234,8 +242,16 @@ def plan(payload: dict, facility_id: str, active: set[str], fields: set[str], ta
             rejected.append({"item": "verdict", "reason": why})
         else:
             duplicate = {"duplicate_of": other, "reason": reason[:1000], "urls": [c["url"] for c in cited]}
+    # A submission must show its research: with no valid source at all there is nothing to record,
+    # so it is refused and the facility goes back into the queue.
+    if not sources:
+        rejected.append({"item": "sources", "reason": "no sources cited: cite at least the pages you checked, "
+                         "even for not_found"})
     # One research_source assertion per document actually used, so each source is itself on record.
+    # A not_found verdict records the pages it checked, so the search itself is on file.
     used = {f["source"]["ref"] for f in facts}
+    if status == "not_found":
+        used |= set(sources)
     for ref in sorted(used):
         s = sources[ref]
         facts.append({"field": "research_source", "value": s["url"], "basis": f"source:{s['kind']}",
