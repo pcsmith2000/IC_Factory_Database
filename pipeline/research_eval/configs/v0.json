@@ -1,0 +1,5 @@
+{
+ "name": "v0",
+ "search": {"provider": "tako", "when": "unanchored", "model": "alibaba/qwen3.7-flash"},
+ "judge": {"model": "deepseek/deepseek-v4-flash-0731", "passage_budget_tokens": 6000}
+}
