@@ -383,3 +383,27 @@ def test_same_plant_by_phone_or_street():
     assert S.same_plant(a, {"phone": "6233864495", "address": "201 N Apache Rd", "city": "BUCKEYE"})
     assert S.same_plant({"address": "3373 Busch Dr. SW", "city": "Grandville"}, {"address": "3373 Busch Dr SW", "city": "GRANDVILLE"})
     assert not S.same_plant({"address": "3373 Busch Dr SW", "city": "Grandville"}, {"address": "3373 Busch Dr SW", "city": "Wyoming"})
+
+
+def test_second_look_adds_evidence_from_another_page_so_the_ingest_rule_can_pass(tmp_path, monkeypatch):
+    rec = {"facility_id": "IC-1", "name": "Amcor Precast", "city": "Idaho Falls", "state": "ID"}
+    pages = [{"url": "https://mapquest.com/a", "text": "Amcor Precast Closed. 2240 S Yellowstone Hwy", "fetched_at": "2026-09-26"},
+             {"url": "https://news.example.com/b", "text": "Amcor Precast shut its Idaho Falls plant in 2019.", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": pages[0]["url"], "text": pages[0]["text"]}, {"id": "P2", "url": pages[1]["url"], "text": pages[1]["text"]}]
+    answer = {"verdict": {"status": "closed", "reason": "MapQuest lists Amcor Precast as closed.",
+                          "evidence": [{"passage": "P1", "quote": "Amcor Precast Closed"}]}}
+    sent = []
+
+    def fake_chat(payload, **kw):
+        sent.append(payload["messages"][0]["content"])
+        return {"choices": [{"message": {"content": json.dumps({"supports": True, "why": "news says shut",
+                "evidence": [{"passage": "P2", "quote": "shut its Idaho Falls plant in 2019"}]})}}],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 20, "cost": 0.000001}}
+    monkeypatch.setattr(gw, "chat", fake_chat)
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"removal_second_look": True}})
+    meter = gw.Meter(0.10, {cfg["judge"]["model"]: PRICES["cheap/model"]})
+    out = P.second_look(rec, answer, psg, pages, cfg, meter, tmp_path)
+    assert "P1" not in sent[0] and "P2" in sent[0]           # only the other page's passages are shown
+    payload, trace = P.build_submission(rec, out, psg, pages, {}, cfg, {"IC-1"}, [], "")
+    assert payload["verdict"]["status"] == "closed" and not trace.get("downgraded")
+    assert not [r for r in P.contract(payload, "IC-1", {"IC-1"})["rejected"] if r["item"] == "verdict"]

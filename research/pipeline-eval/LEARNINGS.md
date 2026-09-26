@@ -71,3 +71,9 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
 13. **Speed**: gpt-oss ~3 s per facility, Qwen ~16 s, DeepSeek V4 Flash > 45 s (a-v1-deepseek still
     running after 20 minutes on cached pages). Runner time is free, but a 4,500-facility run at DeepSeek's
     pace would need ~56 hours of jobs.
+14. **Noise floor**: identical verdicts, different primary (79.4 vs 77.1) between two runs of the same
+    judge at temperature 0 (a-v2c, a-v3). On 25 facilities, primary differences under ~4 points are noise;
+    confirm on a second batch before keeping a change for its primary alone.
+15. **Removals are found, then held.** Qwen proposes the reference's removals (Eklof = docks, Amcor =
+    closed, Champion McMinnville = retail) but each on one page, and the ingest rule (two pages or a
+    registry) holds them as not_found. Next: a token-only second look over the other fetched pages.
