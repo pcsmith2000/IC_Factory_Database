@@ -43,6 +43,11 @@ on:
 permissions:
   contents: read
 
+# An explicit bash shell runs with -o pipefail, so `python ... | tee` fails the step when python fails.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   duplicates:
     if: github.ref == 'refs/heads/main'

@@ -15,6 +15,11 @@ on:
         description: "seconds between calls, to pace ourselves rather than collect 429s and call them results"
         default: "20"
 
+# An explicit bash shell runs with -o pipefail, so `python ... | tee` fails the step when python fails.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   bakeoff:
     runs-on: ubuntu-latest
