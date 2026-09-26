@@ -452,3 +452,34 @@ def test_address_guard_also_holds_a_removal_about_another_address():
     cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"address_guard": True}})
     payload, trace = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-76000"}, [], "")
     assert payload["verdict"]["status"] == "not_found" and trace["downgraded"]["from"] == "not_ic"
+
+
+@pytest.mark.parametrize("second,expect", [("unsure", "not_found"), ("in_scope", "not_found"), ("not_ic", "not_ic")])
+def test_not_ic_stands_only_when_a_second_model_agrees(tmp_path, monkeypatch, second, expect):
+    rec = {"facility_id": "IC-94090", "name": "BiltWise Structures", "city": "Greenwood", "state": "SC"}
+    url1, url2 = "https://biltwisestructures.com/", "https://biltwisestructures.com/?page_id=4828"
+    pages = [{"url": url1, "text": "BiltWise Structures Corporate Offices (By Appointment Only) Greenwood SC", "fetched_at": "2026-09-26"},
+             {"url": url2, "text": "BiltWise Structures Greenwood SC corporate administration", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url1, "text": pages[0]["text"]}, {"id": "P2", "url": url2, "text": pages[1]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "The Greenwood address is corporate offices only.",
+                          "evidence": [{"passage": "P1", "quote": "Corporate Offices (By Appointment Only)"},
+                                       {"passage": "P2", "quote": "corporate administration"}]}}
+    models = []
+
+    def fake_chat(payload, **kw):
+        models.append(payload["model"])
+        return {"choices": [{"message": {"content": json.dumps({"answer": second, "why": "w"})}}],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 20, "cost": 0.000001}}
+    monkeypatch.setattr(gw, "chat", fake_chat)
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"not_ic_second_opinion": "openai/gpt-oss-120b", "capability_removal_guard": False}})
+    meter = gw.Meter(0.10, {"openai/gpt-oss-120b": PRICES["cheap/model"]})
+    out = P.second_opinion(rec, answer, psg, cfg, meter, tmp_path)
+    payload, trace = P.build_submission(rec, out, psg, pages, {}, cfg, {"IC-94090"}, [], "biltwisestructures.com")
+    assert models == ["openai/gpt-oss-120b"] and payload["verdict"]["status"] == expect
+    assert trace["second_opinion"]["held"] is (expect == "not_found")
+
+
+def test_scope_names_the_products_c_v6_wrongly_removed():
+    for words in ("insulated sandwich building panels", "log and\ntimber homes", "modular steel buildings"):
+        assert words in P.JUDGE_PROMPT
+    assert "lists this address as an office" in P.STRICT_SITE and "model village, office" not in P.STRICT_SITE

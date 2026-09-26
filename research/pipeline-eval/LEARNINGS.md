@@ -98,3 +98,7 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
     address the company site calls "corporate offices" (the strict-site rule). Guards on evidence count
     cannot fix a judgement about what counts as off-site construction; closures and duplicates have not
     produced a wrong removal.
+21. **User decision (2026-09-26): second opinion on not_ic.** A not_ic now stands only when gpt-oss-120b,
+    asked independently from the same passages, also answers not_ic; otherwise it is held as not_found with
+    both readings in the audit. The scope list names the products c-v6 wrongly removed, and an office
+    listing is no longer a reason to remove. Closures and duplicates are unchanged.
