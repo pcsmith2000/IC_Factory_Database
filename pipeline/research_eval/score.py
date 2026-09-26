@@ -102,6 +102,17 @@ def page_states(field: str, value: str, text: str) -> bool:
     return _alnum(value) in _alnum(text)
 
 
+def same_plant(a: dict, b: dict) -> bool:
+    """Two rows for one plant: the same ten-digit phone, or the same house number and street in the same city."""
+    if not a or not b:
+        return False
+    pa, pb = normalise("phone", a.get("phone")), normalise("phone", b.get("phone"))
+    if len(pa) == 10 and pa == pb:
+        return True
+    return bool(a.get("address") and b.get("address") and _alnum(a.get("city")) == _alnum(b.get("city"))
+                and same("address", a["address"], b["address"]))
+
+
 # --- loading ------------------------------------------------------------------------------------
 
 def load_pass(folder: Path, active: set[str]) -> dict[str, dict]:
@@ -178,6 +189,7 @@ class Adjudicator:
             from .pipeline import Fetcher
             self.fetcher = Fetcher(fetch_dir)
         self.skipped = 0
+        self.responses: list[dict] = []
 
     def fresh(self, url: str) -> str:
         if not self.fetcher or not url:
@@ -185,16 +197,18 @@ class Adjudicator:
         return self.fetcher.get(url).get("text") or ""
 
     def _ask(self, prompt: str, fid: str) -> dict | None:
-        if not self.model or not self.meter.can_start({"calls": [(self.model, 3000, 200, 1)]}):
+        if not self.model or not self.meter.can_start({"calls": [(self.model, 3500, 1200, 1)]}):
             self.skipped += 1
             return None
         try:
-            raw = gw.chat({"model": self.model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 200,
-                           "temperature": 0, "response_format": {"type": "json_object"}})
+            # Smoke pass 3: at 200 tokens the judge's reasoning left no room for the answer.
+            raw = gw.chat({"model": self.model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 1200,
+                           "temperature": 0, "response_format": {"type": "json_object"}, "reasoning": {"effort": "low"}})
         except gw.GatewayError:
             self.skipped += 1
             return None
         self.meter.record("adjudicate", self.model, raw.get("usage") or {}, fid)
+        self.responses.append({"facility_id": fid, "prompt": prompt, "response": raw})
         m = re.search(r"\{.*\}", gw.content(raw), re.S)
         try:
             return json.loads(m.group()) if m else None
@@ -237,12 +251,49 @@ def _ratio(n, d):
     return round(n / d, 4) if d else None
 
 
-def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, seed: int = 20260926) -> dict:
+def apply_overrides(labels: dict, overrides: dict) -> list[str]:
+    """A person's ruling replaces the reference verdict (research/pipeline-eval/adjudications.json). The file
+    holds only the ruling, never reference content. Returns the facility ids it changed."""
+    changed = []
+    for fid, o in (overrides or {}).items():
+        lab = labels["facilities"].get(fid)
+        if lab is None or not o.get("verdict"):
+            continue
+        lab["verdict"] = o["verdict"]
+        lab["removal_strength"] = "strong" if o["verdict"] in REMOVALS else None
+        lab["overridden_by"] = o.get("by", "user")
+        changed.append(fid)
+    return changed
+
+
+def merge_summaries(summaries: list[dict]) -> dict:
+    """One summary for passes scored together (the holdout runs as capped halves)."""
+    if len(summaries) == 1:
+        return summaries[0]
+    out = dict(summaries[0])
+    out["batch"] = "+".join(x["batch"] for x in summaries)
+    out["run_id"] = "+".join(str(x.get("run_id")) for x in summaries)
+    for k in ("facilities_planned", "facilities_done", "runner_seconds"):
+        out[k] = sum(x[k] for x in summaries)
+    out["errors"] = [e for x in summaries for e in x["errors"]]
+    cost = dict(summaries[0]["cost"])
+    for k in ("max_cost_usd", "billed_usd", "list_usd", "calls", "searches", "cached_searches", "responses_missing_cost"):
+        cost[k] = round(sum(x["cost"][k] for x in summaries), 6)
+    out["cost"] = cost
+    return out
+
+
+def score(pass_dir, bench: Path, adj: Adjudicator, novel_cap: int = 40, seed: int = 20260926,
+          overrides: dict | None = None, waive: tuple[str, ...] = ()) -> dict:
+    dirs = [Path(d) for d in (pass_dir if isinstance(pass_dir, (list, tuple)) else [pass_dir])]
     inputs = json.loads((bench / "inputs.json").read_text())
     labels = json.loads((bench / "labels.json").read_text())
-    summary = json.loads((pass_dir / "summary.json").read_text())
+    overridden = apply_overrides(labels, overrides or {})
+    summary = merge_summaries([json.loads((d / "summary.json").read_text()) for d in dirs])
     anchors = set(labels["anchors"])
-    got = load_pass(pass_dir, set(inputs["active"]))
+    got = {}
+    for d in dirs:
+        got.update(load_pass(d, set(inputs["active"])))
     lab = labels["facilities"]
     fids = sorted(got)
     failures: dict[str, list] = {"S1": [], "S3": [], "V1": [], "V2": [], "V3": [], "F1": [], "F2": []}
@@ -271,6 +322,14 @@ def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, se
     ins = vlist(lambda r: r.get("verdict") == "in_scope")
     v1 = [f for f in ins if got[f]["verdict"] == "in_scope"]
     failures["V1"] = [{"facility_id": f, "pipeline": got[f]["verdict"], "reason": got[f]["verdict_reason"]} for f in ins if f not in v1]
+    # Pass a-v2c: two V1 "misses" were duplicates the reference missed (IC-58495 and IC-95450 are identical
+    # rows). A pipeline duplicate whose target shares the record's phone, or its house number, street and
+    # city, is adjudicated correct deterministically and counted in V1_adjudicated.
+    index = {g["facility_id"]: g for g in inputs.get("golden_index", [])}
+    v1_dup_ok = [f for f in ins if f not in v1 and got[f]["verdict"] == "duplicate"
+                 and same_plant(inputs["facilities"].get(f, {}), index.get(got[f]["duplicate_of"] or "", {}))]
+    for x in failures["V1"]:
+        x["adjudicated"] = "pipeline" if x["facility_id"] in v1_dup_ok else None
     strong = vlist(lambda r: r.get("verdict") in REMOVALS and r.get("removal_strength") == "strong")
     weak = vlist(lambda r: r.get("verdict") in REMOVALS and r.get("removal_strength") == "weak")
     v2_hold = [f for f in strong if got[f]["verdict"] in REMOVALS + ("not_found",)]
@@ -336,7 +395,7 @@ def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, se
     f2 = _ratio(ref_covered, ref_total)
     metrics = {
         "S1": len(s1), "S2": _ratio(refused, submitted), "S3": len(failures["S3"]),
-        "V1": _ratio(len(v1), len(ins)), "V2": _ratio(len(v2_hold), len(strong)), "V2_removing": _ratio(len(v2_rem), len(strong)),
+        "V1": _ratio(len(v1), len(ins)), "V1_adjudicated": _ratio(len(v1) + len(v1_dup_ok), len(ins)), "V2": _ratio(len(v2_hold), len(strong)), "V2_removing": _ratio(len(v2_rem), len(strong)),
         "V2_weak": _ratio(sum(1 for f in weak if got[f]["verdict"] in REMOVALS + ("not_found",)), len(weak)),
         "V3": _ratio(len(v3), len(dups)),
         "F1": f1_adj, "F1_raw": f1_raw, "F2": f2,
@@ -356,10 +415,15 @@ def score(pass_dir: Path, bench: Path, adj: Adjudicator, novel_cap: int = 40, se
     for k, (op, th) in GATES.items():
         v = metrics.get(k)
         gates[k] = None if v is None else (v == th if op == "==" else v <= th if op == "<=" else v >= th)
+    # A gate the user waived is reported but does not decide the verdict (V2_removing: removals by not_ic
+    # were made human-review by the user's decisions of 2026-09-26).
+    judged = {k: v for k, v in gates.items() if k not in waive}
     sample_pool = [c for c in adjudicated + novel_cases if c.get("answer")]
     rng2 = random.Random(seed + 1)
+    counts["overridden_labels"] = overridden
     return {"pass": summary, "metrics": metrics, "counts": counts, "gates": gates,
-            "gate_pass": all(v is not False for v in gates.values()) and all(v is not None for k, v in gates.items() if k.startswith("S")),
+            "gate_pass": all(v is not False for v in judged.values()) and all(v is not None for k, v in judged.items() if k.startswith("S")),
+            "waived": list(waive),
             "adjudication": {"cost": adj.meter.summary(), "model": adj.model, "skipped": adj.skipped,
                              "disagreements": adjudicated, "novel": novel_cases},
             "adjudication_sample": rng2.sample(sample_pool, min(10, len(sample_pool))),
@@ -371,7 +435,8 @@ def markdown(sc: dict) -> str:
     rows = ["| Metric | Value | Gate |", "| --- | --- | --- |"]
     for k, v in m.items():
         gate = GATES.get(k)
-        mark = "" if gate is None else f"{gate[0]} {gate[1]} {'✅' if g.get(k) else '❌' if g.get(k) is False else '–'}"
+        mark = "" if gate is None else f"{gate[0]} {gate[1]} {'✅' if g.get(k) else '❌' if g.get(k) is False else '–'}" + \
+            (" (waived)" if k in sc.get("waived", []) else "")
         rows.append(f"| {k} | {v} | {mark} |")
     c = sc["pass"]["cost"]
     head = (f"## Scorecard: {sc['pass']['config']} on {sc['pass']['batch']}\n\n"
@@ -379,26 +444,33 @@ def markdown(sc: dict) -> str:
             f"list ${c['list_usd']:.4f} (billed ${c['billed_usd']:.4f}) of ${c['max_cost_usd']}; "
             f"adjudication ${sc['adjudication']['cost']['list_usd']:.4f}. Database writes: 0.\n\n")
     s1 = "".join(f"\n- **S1** {x['facility_id']}: pipeline {x['pipeline']} vs reference {x['reference']}" for x in sc["failures"]["S1"])
+    head += f"**Gate: {'PASS' if sc.get('gate_pass') else 'FAIL'}**\n\n"
     return head + "\n".join(rows) + "\n" + (f"\n### Wrong removals{s1}\n" if s1 else "") + \
         f"\n```json\n{json.dumps(sc['counts'])}\n```\n"
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m pipeline.research_eval.score")
-    ap.add_argument("--pass", dest="pass_dir", required=True)
+    ap.add_argument("--pass", dest="pass_dir", required=True, action="append", help="repeat to score passes together")
+    ap.add_argument("--waive", default="", help="comma-separated gates the user waived (reported, not judged)")
     ap.add_argument("--benchmark", required=True)
     ap.add_argument("--judge-model", default="google/gemini-3-flash")
     ap.add_argument("--judge-max-usd", type=float, default=0.25)
     ap.add_argument("--novel-cap", type=int, default=40)
     ap.add_argument("--catalog", default=None)
     ap.add_argument("--fetch-cache", default="eval-cache/adjudication")
+    ap.add_argument("--overrides", default="research/pipeline-eval/adjudications.json",
+                    help="a person's rulings that replace reference verdicts")
     a = ap.parse_args(argv)
     if a.judge_max_usd > 0.25:
         print("judge budget is capped at $0.25 per pass", file=sys.stderr); return 2
     catalog = gw.load_catalog(a.catalog) if a.judge_max_usd > 0 else None
     adj = Adjudicator(a.judge_model, a.judge_max_usd, catalog, Path(a.fetch_cache))
-    sc = score(Path(a.pass_dir), Path(a.benchmark), adj, a.novel_cap)
-    Path(a.pass_dir, "scorecard.json").write_text(json.dumps(sc, indent=1, default=str))
+    overrides = json.loads(Path(a.overrides).read_text()) if a.overrides and Path(a.overrides).exists() else {}
+    waive = tuple(w.strip() for w in a.waive.split(",") if w.strip())
+    sc = score([Path(d) for d in a.pass_dir], Path(a.benchmark), adj, a.novel_cap, overrides=overrides, waive=waive)
+    Path(a.pass_dir[0], "scorecard.json").write_text(json.dumps(sc, indent=1, default=str))
+    Path(a.pass_dir[0], "adjudication-responses.json").write_text(json.dumps(adj.responses, indent=1, default=str))
     md = markdown(sc)
     print(md)
     if os.environ.get("GITHUB_STEP_SUMMARY"):

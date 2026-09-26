@@ -271,7 +271,9 @@ def test_offline_pass_scores_end_to_end(tmp_path, monkeypatch):
         prompt = payload["messages"][0]["content"]
         assert "9705222464" not in prompt or "PASSAGES" in prompt      # never a reference answer
         if payload.get("tools"):
-            body = {"results": []}
+            return {"choices": [{"message": {"content": json.dumps({"results": []}),
+                                             "provider_metadata": {"gateway": {"gatewayToolCalls": {"tako_search": 1}}}}}],
+                    "usage": {"prompt_tokens": 1000, "completion_tokens": 100, "cost": 0.00001}}
         elif "Acme" in prompt:
             pid = re.search(r"\[(P\d+)\] \(https://acmetruss.com/contact\)", prompt).group(1)
             body = {"verdict": {"status": "in_scope", "reason": "Acme Truss builds roof trusses in Sterling.",
@@ -285,11 +287,14 @@ def test_offline_pass_scores_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(gw, "chat", fake_chat)
     catalog = tmp_path / "catalog.json"
     catalog.write_text(json.dumps({"data": [{"id": m, "pricing": {"input": "0.0000001", "output": "0.0000002"}}
-                                            for m in ("alibaba/qwen3.7-flash", "deepseek/deepseek-v4-flash-0731")]}))
+                                            for m in ("alibaba/qwen3.7-flash", "deepseek/deepseek-v4-flash-0731",
+                                                      "google/gemini-3.1-flash-lite")]}))
     out = tmp_path / "pass"
     summary = P.run(pipe_bench, "smoke", P.DEFAULT_CONFIG, out, tmp_path / "cache", 0.10, catalog=str(catalog))
     assert summary["facilities_done"] == 2 and summary["cost"]["searches"] == 1   # only the unanchored plant searched
     assert summary["cost"]["list_usd"] <= 0.10
+    audit = (out / "audit.md").read_text()                     # the per-facility audit, pipeline-side only
+    assert "IC-00001" in audit and "Phone (970) 522-2464" in audit and "9705222464" not in audit.split("## Facilities")[0]
     subs = [json.loads(line) for line in (out / "submissions.jsonl").read_text().splitlines()]
     assert subs[1]["verdict"]["status"] == "not_found"          # an uncited removal never survives
     for s in subs:                                               # every submission passes the contract offline
@@ -304,3 +309,264 @@ def test_offline_pass_scores_end_to_end(tmp_path, monkeypatch):
     again = P.run(pipe_bench, "smoke", P.DEFAULT_CONFIG, tmp_path / "pass2", tmp_path / "cache", 0.10, catalog=str(catalog))
     assert again["cost"]["searches"] == 0 and again["cost"]["cached_searches"] == 1
     assert not any(c.get("tools") for c in calls)
+
+
+def test_a_search_the_gateway_did_not_run_is_retried_then_refused_and_never_cached(tmp_path, monkeypatch):
+    models = []
+
+    def no_tool(payload, **kw):                     # smoke pass 1: the model answered without searching
+        models.append(payload["model"])
+        return {"choices": [{"message": {"content": '{"results": [{"url": "https://www.example.com"}]}'}}],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 10, "cost": 0.000001}}
+    monkeypatch.setattr(gw, "chat", no_tool)
+    prices = {m: PRICES["cheap/model"] for m in ("alibaba/qwen3.7-flash", "google/gemini-3.1-flash-lite")}
+    meter = gw.Meter(0.10, prices)
+    rec = {"facility_id": "IC-1", "name": "Acme", "city": "X", "state": "CO"}
+    with pytest.raises(P.SearchNotRun):
+        P.search(rec, P.DEFAULT_CONFIG, tmp_path, meter, tmp_path)
+    assert models == ["alibaba/qwen3.7-flash", "google/gemini-3.1-flash-lite"]
+    assert not list((tmp_path / "search").glob("*.json"))
+    assert meter.searches == 2                      # still counted at list price, conservatively
+
+
+def test_search_results_survive_a_reply_cut_off_at_max_tokens():
+    cut = '```json\n{"results": [{"url": "https://a.com/x", "title": "A"}, {"url": "https://b.com", "title": "B"}, {"url": "https://c.co'
+    assert [r["url"] for r in P.parse_results(cut)] == ["https://a.com/x", "https://b.com"]
+    whole = '{"results": [{"url": "https://a.com/x", "title": "A"}, {"url": "ftp://no"}]}'
+    assert P.parse_results(whole) == [{"url": "https://a.com/x", "title": "A"}]
+
+
+def test_website_from_an_anchored_company_page_and_only_same_domain_regex_emails():
+    rec = {"facility_id": "IC-1", "name": "Acme Truss", "city": "Sterling", "state": "CO"}
+    pages = [{"url": "https://acmetruss.com/contact", "final_url": "https://acmetruss.com/contact", "title": "Acme Truss",
+              "fetched_at": "2026-09-26", "text": "Acme Truss, Sterling CO. Write to sales@acmetruss.com"},
+             {"url": "https://news.example.org/a", "title": "News", "fetched_at": "2026-09-26",
+              "text": "Acme Truss in Sterling expands. circulation@paper.org"}]
+    regex = P.regex_candidates(pages, rec)
+    regex["email"] = regex["email"][1:]                   # only the newspaper's address is left
+    cfg = P.merge(P.DEFAULT_CONFIG, {"regex": {"email_same_domain": True}, "extract": {"website_from_site": True}})
+    payload, _ = P.build_submission(rec, {}, [], pages, regex, cfg, {"IC-1"}, [], "acmetruss.com")
+    got = {a["field"]: a["value"] for a in payload["assertions"]}
+    assert got == {"website": "https://acmetruss.com"}
+    assert not P.contract(payload, "IC-1", {"IC-1"})["rejected"][:1] or all(
+        not r["item"].startswith("assertions") for r in P.contract(payload, "IC-1", {"IC-1"})["rejected"])
+
+
+@pytest.mark.parametrize("field,value,quote,expect_value,ok", [
+    ("website", "www.acme.com", "Acme", "https://www.acme.com", True),
+    ("state", "Oregon", "Eugene, Oregon 97402", "OR", True),
+    ("state", "OR", "Eugene 97402", "OR", False),                       # the quote does not state it
+    ("capability_leaf", "Roof Trusses", "roof trusses", "Roof Trusses", False),   # not a taxonomy leaf
+    ("email", "sales at acme", "sales at acme", "sales at acme", False),
+])
+def test_prevalidate_repairs_what_is_mechanical_and_refuses_the_rest(field, value, quote, expect_value, ok):
+    got, why = P.prevalidate(field, value, quote, "https://www.acme.com/contact")
+    assert got == expect_value and (why is None) is ok
+
+
+def test_address_guard_holds_in_scope_on_another_street_address():
+    rec = {"facility_id": "IC-1", "name": "Jensen Precast", "address": "3840 N Bruce St", "city": "North Las Vegas", "state": "NV"}
+    pages = [{"url": "https://mapquest.com/j", "text": "Jensen Precast 3853 Losee Rd North Las Vegas NV", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": pages[0]["url"], "text": pages[0]["text"]}]
+    answer = {"verdict": {"status": "in_scope", "reason": "Jensen Precast makes precast at 3853 Losee Rd.",
+                          "evidence": [{"passage": "P1", "quote": "Jensen Precast 3853 Losee Rd"}]}}
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"address_guard": True}})
+    payload, trace = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-1"}, [], "")
+    assert payload["verdict"]["status"] == "not_found" and trace["downgraded"]["from"] == "in_scope"
+    rec["address"] = "3853 Losee Rd"                      # the same address: kept
+    payload, _ = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-1"}, [], "")
+    assert payload["verdict"]["status"] == "in_scope"
+
+
+def test_same_plant_by_phone_or_street():
+    a = {"phone": "(623) 386-4495", "address": "231 N. Apache Rd", "city": "Buckeye"}
+    assert S.same_plant(a, {"phone": "6233864495", "address": "201 N Apache Rd", "city": "BUCKEYE"})
+    assert S.same_plant({"address": "3373 Busch Dr. SW", "city": "Grandville"}, {"address": "3373 Busch Dr SW", "city": "GRANDVILLE"})
+    assert not S.same_plant({"address": "3373 Busch Dr SW", "city": "Grandville"}, {"address": "3373 Busch Dr SW", "city": "Wyoming"})
+
+
+def test_second_look_adds_evidence_from_another_page_so_the_ingest_rule_can_pass(tmp_path, monkeypatch):
+    rec = {"facility_id": "IC-1", "name": "Amcor Precast", "city": "Idaho Falls", "state": "ID"}
+    pages = [{"url": "https://mapquest.com/a", "text": "Amcor Precast Closed. 2240 S Yellowstone Hwy", "fetched_at": "2026-09-26"},
+             {"url": "https://news.example.com/b", "text": "Amcor Precast shut its Idaho Falls plant in 2019.", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": pages[0]["url"], "text": pages[0]["text"]}, {"id": "P2", "url": pages[1]["url"], "text": pages[1]["text"]}]
+    answer = {"verdict": {"status": "closed", "reason": "MapQuest lists Amcor Precast as closed.",
+                          "evidence": [{"passage": "P1", "quote": "Amcor Precast Closed"}]}}
+    sent = []
+
+    def fake_chat(payload, **kw):
+        sent.append(payload["messages"][0]["content"])
+        return {"choices": [{"message": {"content": json.dumps({"supports": True, "why": "news says shut",
+                "evidence": [{"passage": "P2", "quote": "shut its Idaho Falls plant in 2019"}]})}}],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 20, "cost": 0.000001}}
+    monkeypatch.setattr(gw, "chat", fake_chat)
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"removal_second_look": True}})
+    meter = gw.Meter(0.10, {cfg["judge"]["model"]: PRICES["cheap/model"]})
+    out = P.second_look(rec, answer, psg, pages, cfg, meter, tmp_path)
+    assert "P1" not in sent[0] and "P2" in sent[0]           # only the other page's passages are shown
+    payload, trace = P.build_submission(rec, out, psg, pages, {}, cfg, {"IC-1"}, [], "")
+    assert payload["verdict"]["status"] == "closed" and not trace.get("downgraded")
+    assert not [r for r in P.contract(payload, "IC-1", {"IC-1"})["rejected"] if r["item"] == "verdict"]
+
+
+def test_sibling_sites_come_from_other_rows_of_the_same_company():
+    rec = {"facility_id": "IC-1", "name": "CHAMPION HOME BUILDERS #261", "state": "FL"}
+    index = [{"facility_id": "IC-2", "name": "Champion Home Builders - Lake City", "state": "FL", "website": "https://www.championhomes.com/x"},
+             {"facility_id": "IC-3", "name": "Champion Homes", "state": "OR", "website": "www.yelp.com/biz/champion"},
+             {"facility_id": "IC-1", "name": "Champion", "state": "FL", "website": "https://self.example.com"},
+             {"facility_id": "IC-4", "name": "Clayton Homes", "state": "FL", "website": "https://claytonhomes.com"}]
+    assert P.sibling_sites(rec, index) == ["https://championhomes.com"]
+
+
+@pytest.mark.parametrize("url,kind", [
+    ("https://www2.deq.idaho.gov/admin/LEIA/api/document/download/9137", "other"),      # b-v2c: an air permit
+    ("https://www.osha.gov/ords/imis/establishment.inspection_detail?id=1", "other"),
+    ("https://psc.mo.gov/CMSInternetData/ManufacturedHousing/Manufacturer/ACTIVE%20MOD.pdf", "government_registry"),
+    ("https://sos.state.xx.us/business/entity/123", "filing"),
+])
+def test_only_listing_and_licensing_government_pages_are_registry_grade(url, kind):
+    assert P.source_kind(url, {"name": "Acme"}, "") == kind
+
+
+def test_a_glulam_plant_is_not_removed_on_one_government_permit():
+    rec = {"facility_id": "IC-48445", "name": "HOMEDALE ENGINEERED WOOD PLANT", "city": "Homedale", "state": "ID",
+           "capability_group": "Other", "capability_leaf": "Wood Structural Components (Trusses, etc.)"}
+    url = "https://www2.deq.idaho.gov/admin/LEIA/api/document/download/9137"
+    pages = [{"url": url, "text": "Facility Location 4318 Pioneer Road Homedale. laminated beams and decking", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url, "text": pages[0]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "Glulam is not off-site construction.",
+                          "evidence": [{"passage": "P1", "quote": "laminated beams and decking"}]}}
+    payload, trace = P.build_submission(rec, answer, psg, pages, {}, P.DEFAULT_CONFIG, {"IC-48445"}, [], "")
+    assert payload["verdict"]["status"] == "not_found"
+    assert "glulam" in P.JUDGE_PROMPT
+
+
+def test_address_guard_also_holds_a_removal_about_another_address():
+    rec = {"facility_id": "IC-76000", "name": "BROCCA MANUFACTURING CO INC", "address": "200 Brocca Dr", "city": "Kingston", "state": "PA"}
+    url1, url2 = "https://a.example.com/x", "https://b.example.com/y"
+    pages = [{"url": url1, "text": "Brocca Garages Inc., 4 Curran St, Pittston PA builds garages", "fetched_at": "2026-09-26"},
+             {"url": url2, "text": "Brocca Garages at 4 Curran St sells sheds", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url1, "text": pages[0]["text"]}, {"id": "P2", "url": url2, "text": pages[1]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "Brocca Garages at 4 Curran St builds garages, a different address.",
+                          "evidence": [{"passage": "P1", "quote": "Brocca Garages Inc., 4 Curran St"}, {"passage": "P2", "quote": "Brocca Garages at 4 Curran St"}]}}
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"address_guard": True}})
+    payload, trace = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-76000"}, [], "")
+    assert payload["verdict"]["status"] == "not_found" and trace["downgraded"]["from"] == "not_ic"
+
+
+@pytest.mark.parametrize("second,expect", [("unsure", "not_found"), ("in_scope", "not_found"), ("not_ic", "not_ic")])
+def test_not_ic_stands_only_when_a_second_model_agrees(tmp_path, monkeypatch, second, expect):
+    rec = {"facility_id": "IC-94090", "name": "BiltWise Structures", "city": "Greenwood", "state": "SC"}
+    url1, url2 = "https://biltwisestructures.com/", "https://biltwisestructures.com/?page_id=4828"
+    pages = [{"url": url1, "text": "BiltWise Structures Corporate Offices (By Appointment Only) Greenwood SC", "fetched_at": "2026-09-26"},
+             {"url": url2, "text": "BiltWise Structures Greenwood SC corporate administration", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url1, "text": pages[0]["text"]}, {"id": "P2", "url": url2, "text": pages[1]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "The Greenwood address is corporate offices only.",
+                          "evidence": [{"passage": "P1", "quote": "Corporate Offices (By Appointment Only)"},
+                                       {"passage": "P2", "quote": "corporate administration"}]}}
+    models = []
+
+    def fake_chat(payload, **kw):
+        models.append(payload["model"])
+        return {"choices": [{"message": {"content": json.dumps({"answer": second, "why": "w"})}}],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 20, "cost": 0.000001}}
+    monkeypatch.setattr(gw, "chat", fake_chat)
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"not_ic_second_opinion": "openai/gpt-oss-120b", "capability_removal_guard": False}})
+    meter = gw.Meter(0.10, {"openai/gpt-oss-120b": PRICES["cheap/model"]})
+    out = P.second_opinion(rec, answer, psg, cfg, meter, tmp_path)
+    payload, trace = P.build_submission(rec, out, psg, pages, {}, cfg, {"IC-94090"}, [], "biltwisestructures.com")
+    assert models == ["openai/gpt-oss-120b"] and payload["verdict"]["status"] == expect
+    assert trace["second_opinion"]["held"] is (expect == "not_found")
+
+
+def test_scope_names_the_products_c_v6_wrongly_removed():
+    for words in ("insulated sandwich building panels", "log and\ntimber homes", "modular steel buildings"):
+        assert words in P.JUDGE_PROMPT
+    assert "lists this address as an office" in P.STRICT_SITE and "model village, office" not in P.STRICT_SITE
+
+
+def test_keyword_veto_holds_not_ic_when_the_pages_name_in_scope_products():
+    assert {"control houses", "modular"} <= set(P.keyword_veto(["Panelmatic builds modular control houses in Conroe"]))
+    assert P.keyword_veto(["Plycraft makes office furniture, home decor and furniture hardware"]) == []
+    assert P.keyword_veto(["Kaolin processing plant in Sandersville, Mississippi"]) == []   # no 'sip' inside Mississippi
+    rec = {"facility_id": "IC-93858", "name": "Panelmatic", "city": "Conroe", "state": "TX"}
+    url1, url2 = "https://www.panelmatic.com/facility-capabilities/", "https://hoodline.com/2026/03/panelmatic"
+    pages = [{"url": url1, "text": "Panelmatic Conroe fabricates electrical control panels and control houses", "fetched_at": "2026-09-26"},
+             {"url": url2, "text": "Panelmatic, a producer of electrical control panels, bought a Conroe plant", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url1, "text": pages[0]["text"]}, {"id": "P2", "url": url2, "text": pages[1]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "The plant makes electrical control panels, not construction components.",
+                          "evidence": [{"passage": "P1", "quote": "electrical control panels"}, {"passage": "P2", "quote": "a producer of electrical control panels"}]}}
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"not_ic_keyword_veto": True, "capability_removal_guard": False}})
+    payload, trace = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-93858"}, [], "panelmatic.com")
+    assert payload["verdict"]["status"] == "not_found" and "keyword veto" in trace["downgraded"]["why"]
+
+
+def test_a_content_filter_refusal_is_retried_on_the_fallback_judge(tmp_path, monkeypatch):
+    seen = []
+
+    def chat(payload, **kw):
+        seen.append(payload["model"])
+        if payload["model"] == "alibaba/qwen3.7-flash":
+            raise gw.GatewayError(400, '{"error":{"message":"<400> InternalError.Algo.DataInspectionFailed: Input text data may contain inappropriate content."}}')
+        return {"choices": [{"message": {"content": '{"verdict": {"status": "not_found"}}'}}], "usage": {"prompt_tokens": 1, "completion_tokens": 1, "cost": 0}}
+    monkeypatch.setattr(gw, "chat", chat)
+    cfg = P.merge(P.DEFAULT_CONFIG, {"judge": {"model": "alibaba/qwen3.7-flash", "fallback_model": "openai/gpt-oss-120b"}})
+    meter = gw.Meter(0.10, {m: PRICES["cheap/model"] for m in ("alibaba/qwen3.7-flash", "openai/gpt-oss-120b")})
+    out = P.judge({"facility_id": "IC-1", "name": "x"}, [], [{"id": "P1", "url": "https://a", "text": "t"}], cfg, meter, tmp_path)
+    assert seen == ["alibaba/qwen3.7-flash", "openai/gpt-oss-120b"] and out["verdict"]["status"] == "not_found"
+
+
+def test_a_persons_ruling_replaces_the_reference_verdict():
+    labels = {"facilities": {"IC-1": {"verdict": "in_scope", "removal_strength": None}, "IC-2": {"verdict": "closed"}}}
+    changed = S.apply_overrides(labels, {"IC-1": {"verdict": "not_ic", "by": "user"}, "IC-9": {"verdict": "not_ic"}})
+    assert changed == ["IC-1"] and labels["facilities"]["IC-1"] == {"verdict": "not_ic", "removal_strength": "strong", "overridden_by": "user"}
+
+
+def test_score_merges_holdout_halves_and_reports_but_does_not_judge_a_waived_gate():
+    a = {"batch": "holdout[0:50]", "run_id": 1, "config": "v9", "benchmark_sha256": "x", "facilities_planned": 50, "facilities_done": 50,
+         "runner_seconds": 10, "errors": [], "cost": {"max_cost_usd": 0.6, "billed_usd": 0.1, "list_usd": 0.4, "calls": 5, "searches": 40,
+                                                        "cached_searches": 0, "responses_missing_cost": 0, "tokens": {}}}
+    b = dict(a, batch="holdout[50:100]", run_id=2, errors=[{"facility_id": "IC-9"}])
+    m = S.merge_summaries([a, b])
+    assert m["facilities_done"] == 100 and m["cost"]["list_usd"] == 0.8 and m["batch"] == "holdout[0:50]+holdout[50:100]"
+    assert len(m["errors"]) == 1
+
+
+def test_second_opinion_in_scope_with_a_verbatim_quote_becomes_the_verdict(tmp_path, monkeypatch):
+    rec = {"facility_id": "IC-94090", "name": "BiltWise Structures", "city": "Greenwood", "state": "SC"}
+    url = "https://biltwisestructures.com/greenwood-sc/"
+    pages = [{"url": url, "text": "BiltWise Structures builds modular homes in our 240,000 sq ft Greenwood facility.", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url, "text": pages[0]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "Only corporate offices are listed here.", "evidence": []}}
+
+    def chat(payload, **kw):
+        return {"choices": [{"message": {"content": json.dumps({"answer": "in_scope", "why": "modular homes plant",
+                "quote": "builds modular homes in our 240,000 sq ft Greenwood facility"})}}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5, "cost": 0}}
+    monkeypatch.setattr(gw, "chat", chat)
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"not_ic_second_opinion": "openai/gpt-oss-120b", "adopt_second_opinion_in_scope": True}})
+    meter = gw.Meter(0.10, {"openai/gpt-oss-120b": PRICES["cheap/model"]})
+    out = P.second_opinion(rec, answer, psg, cfg, meter, tmp_path)
+    payload, _ = P.build_submission(rec, out, psg, pages, {}, cfg, {"IC-94090"}, [], "biltwisestructures.com")
+    assert payload["verdict"]["status"] == "in_scope" and payload["verdict"]["source_refs"]
+    cfg["policy"]["adopt_second_opinion_in_scope"] = False
+    assert P.second_opinion(rec, answer, psg, cfg, meter, tmp_path)["verdict"]["status"] == "not_found"
+
+
+def test_production_never_applies_not_ic_and_never_removes_a_validated_plant():
+    rec = {"facility_id": "IC-1", "name": "Acme", "city": "X", "state": "CO"}
+    u1, u2 = "https://a.example.com/1", "https://b.example.com/2"
+    pages = [{"url": u1, "text": "Acme makes furniture only", "fetched_at": "2026-09-26"},
+             {"url": u2, "text": "Acme furniture factory closed in 2019", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": u1, "text": pages[0]["text"]}, {"id": "P2", "url": u2, "text": pages[1]["text"]}]
+    cfg = P.merge(P.DEFAULT_CONFIG, json.loads((PKG / "configs" / "production.json").read_text()))
+    cfg["policy"]["capability_removal_guard"] = False
+    nic = {"verdict": {"status": "not_ic", "reason": "Acme makes furniture, not building components.",
+                       "evidence": [{"passage": "P1", "quote": "Acme makes furniture only"}, {"passage": "P2", "quote": "Acme furniture factory"}]}}
+    payload, trace = P.build_submission(rec, nic, psg, pages, {}, cfg, {"IC-1"}, [], "")
+    assert payload["verdict"]["status"] == "not_found" and payload["verdict"]["reason"].startswith("REVIEW") and trace["review"]
+    closed = {"verdict": {"status": "closed", "reason": "The Acme factory closed in 2019.",
+                          "evidence": [{"passage": "P2", "quote": "Acme furniture factory closed in 2019"}, {"passage": "P1", "quote": "Acme makes furniture only"}]}}
+    assert P.build_submission(rec, closed, psg, pages, {}, cfg, {"IC-1"}, [], "")[0]["verdict"]["status"] == "closed"
+    payload, trace = P.build_submission(dict(rec, adl_validated="1"), closed, psg, pages, {}, cfg, {"IC-1"}, [], "")
+    assert payload["verdict"]["status"] == "not_found" and "ADL-validated" in trace["downgraded"]["why"]
