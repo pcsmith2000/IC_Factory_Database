@@ -128,3 +128,7 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
     on sites the reference found closed, sold or re-tenanted through historic inventories and news the
     pipeline's one search did not surface; V1 misses are cautious not_found calls (stores, a page marked
     "Closed") and same-address duplicates. See gate1.md.
+29. **Adopting the second opinion's in_scope does not lift V1** (v11 on A, B, C: V1 flat on average,
+    V2 worse on A). The verdict metrics now move within run-to-run noise; what is left is evidence the
+    pipeline does not find (closures and re-tenanting reported in historic inventories and local news) and
+    genuine disagreement with the reference (stores, same-address duplicates).
