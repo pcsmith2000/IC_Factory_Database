@@ -530,3 +530,24 @@ def test_score_merges_holdout_halves_and_reports_but_does_not_judge_a_waived_gat
     m = S.merge_summaries([a, b])
     assert m["facilities_done"] == 100 and m["cost"]["list_usd"] == 0.8 and m["batch"] == "holdout[0:50]+holdout[50:100]"
     assert len(m["errors"]) == 1
+
+
+def test_second_opinion_in_scope_with_a_verbatim_quote_becomes_the_verdict(tmp_path, monkeypatch):
+    rec = {"facility_id": "IC-94090", "name": "BiltWise Structures", "city": "Greenwood", "state": "SC"}
+    url = "https://biltwisestructures.com/greenwood-sc/"
+    pages = [{"url": url, "text": "BiltWise Structures builds modular homes in our 240,000 sq ft Greenwood facility.", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": url, "text": pages[0]["text"]}]
+    answer = {"verdict": {"status": "not_ic", "reason": "Only corporate offices are listed here.", "evidence": []}}
+
+    def chat(payload, **kw):
+        return {"choices": [{"message": {"content": json.dumps({"answer": "in_scope", "why": "modular homes plant",
+                "quote": "builds modular homes in our 240,000 sq ft Greenwood facility"})}}],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5, "cost": 0}}
+    monkeypatch.setattr(gw, "chat", chat)
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"not_ic_second_opinion": "openai/gpt-oss-120b", "adopt_second_opinion_in_scope": True}})
+    meter = gw.Meter(0.10, {"openai/gpt-oss-120b": PRICES["cheap/model"]})
+    out = P.second_opinion(rec, answer, psg, cfg, meter, tmp_path)
+    payload, _ = P.build_submission(rec, out, psg, pages, {}, cfg, {"IC-94090"}, [], "biltwisestructures.com")
+    assert payload["verdict"]["status"] == "in_scope" and payload["verdict"]["source_refs"]
+    cfg["policy"]["adopt_second_opinion_in_scope"] = False
+    assert P.second_opinion(rec, answer, psg, cfg, meter, tmp_path)["verdict"]["status"] == "not_found"

@@ -1,0 +1,35 @@
+{
+ "search": {
+  "provider": "tako",
+  "when": "unanchored",
+  "model": "google/gemini-3.1-flash-lite",
+  "fallback_model": "google/gemini-3.1-flash-lite"
+ },
+ "regex": {
+  "email_same_domain": true
+ },
+ "extract": {
+  "website_from_site": true,
+  "prevalidate": true
+ },
+ "name": "v11-qwen-adopt",
+ "hypothesis": "v9 plus: when the not_ic second opinion answers in_scope with a quote found verbatim in a passage, the verdict is in_scope (BiltWise-type holds). Safe for S1 by construction; should lift V1. Candidate for the return to tuning if gate 1 fails on V1.",
+ "judge": {
+  "model": "alibaba/qwen3.7-flash",
+  "passage_budget_tokens": 6000,
+  "reasoning_effort": "low",
+  "confirm_fields": true,
+  "strict_site": true,
+  "fallback_model": "openai/gpt-oss-120b"
+ },
+ "policy": {
+  "removal_second_look": true,
+  "address_guard": true,
+  "not_ic_second_opinion": "openai/gpt-oss-120b",
+  "not_ic_keyword_veto": true,
+  "adopt_second_opinion_in_scope": true
+ },
+ "crawl": {
+  "sibling_websites": true
+ }
+}

@@ -49,7 +49,8 @@ DEFAULT_CONFIG = {
               "max_output_tokens": 3000, "reasoning_effort": "low", "temperature": 0, "endpoint": None,
               "confirm_fields": False, "removal_two_sources": False, "strict_site": False, "fallback_model": None},
     "policy": {"removal_needs_ingest_rule": True, "duplicate": True, "not_found_sources": 5, "address_guard": False,
-               "removal_second_look": False, "not_ic_second_opinion": None, "not_ic_keyword_veto": False},
+               "removal_second_look": False, "not_ic_second_opinion": None, "not_ic_keyword_veto": False,
+               "adopt_second_opinion_in_scope": False},
     # Worst-case tokens per call, for the ceiling: a search call's input carries the tool results.
     "worst_case": {"search_input_tokens": 20000, "judge_overhead_tokens": 2500},
 }
@@ -608,6 +609,15 @@ def second_opinion(rec: dict, answer: dict, psg: list[dict], cfg: dict, meter: g
         got = {}
     if got.get("answer") == "not_ic":
         return dict(answer, second_opinion=got)
+    if got.get("answer") == "in_scope" and cfg["policy"].get("adopt_second_opinion_in_scope"):
+        # v10: the in-scope plants v9 missed were mostly holds like BiltWise, where the second reading said
+        # in_scope. A verbatim quote from a passage makes that the verdict; it can only keep a plant.
+        hit = next((p for p in psg if quote_ok(str(got.get("quote") or ""), p["text"])), None)
+        if hit:
+            kept = {"status": "in_scope", "reason": f"Second reading: {ws(got.get('why'))[:300]} "
+                    f"(first reading was not_ic: {ws(v.get('reason'))[:200]})",
+                    "evidence": [{"passage": hit["id"], "quote": got["quote"]}]}
+            return dict(answer, verdict=kept, second_opinion=got, held_not_ic=True)
     held = dict(v, status="not_found", reason=f"Held: the first reading was not_ic ({ws(v.get('reason'))[:300]}); "
                 f"a second reading answered {got.get('answer') or 'nothing'}: {ws(got.get('why'))[:200]}")
     return dict(answer, verdict=held, second_opinion=got, held_not_ic=True)
