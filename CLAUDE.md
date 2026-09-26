@@ -29,4 +29,7 @@ say so rather than trusting results from another project. Under the hood it POST
 - **Bulk operations** (golden refresh, duplicate merges, web-research ingest) run through the
   GitHub Actions workflows (`golden-refresh.yml`, `duplicates.yml`, `web-research-ingest.yml`),
   not ad-hoc SQL. For anything risky, test on a Neon branch first.
+- Agent sessions should connect as `agent_read_write_non_gold` (`docs/roles/agent_read_write_non_gold.sql`):
+  it reads everything and can write only the non-golden tables above, so the database enforces
+  these rules too. The owner role belongs in the GitHub Actions secrets, not in agent environments.
 - Never print, log or commit connection strings, passwords or API keys.
