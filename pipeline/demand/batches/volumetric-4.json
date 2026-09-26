@@ -1,0 +1,14 @@
+{
+  "name": "volumetric-4",
+  "note": "First demand batch: four well-known volumetric manufacturers. facility_ids are golden ids; website is where the crawl starts.",
+  "manufacturers": [
+    {"key": "vbc", "company": "Volumetric Building Companies", "aliases": ["VBC"],
+     "facility_ids": ["IC-94954"], "website": "https://www.vbc.co/"},
+    {"key": "autovol", "company": "Autovol", "aliases": [],
+     "facility_ids": ["IC-94463"], "website": "https://autovol.com/"},
+    {"key": "guerdon", "company": "Guerdon", "aliases": ["Guerdon Modular Buildings", "Guerdon LLC"],
+     "facility_ids": ["IC-48555"], "website": "https://guerdon.com/"},
+    {"key": "zmodular", "company": "Z Modular", "aliases": ["ZModular"],
+     "facility_ids": ["IC-83927"], "website": "https://www.zmodular.com/"}
+  ]
+}

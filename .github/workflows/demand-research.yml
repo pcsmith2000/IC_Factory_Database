@@ -1,0 +1,127 @@
+# Demand research (docs/demand-research.md): the projects a batch of manufacturers' modules went into.
+# Dispatch only. The pass job has the gateway key and no database credentials; everything it fetched,
+# asked and decided is the run artifact. The load job (load=yes) writes the pass's projects to the
+# demand tables as 'proposed' and touches nothing else.
+name: demand-research
+run-name: "Demand research · ${{ inputs.batch }} · ${{ inputs.config }} · cap $${{ inputs.max_cost_usd }}${{ inputs.load == 'yes' && ' · load' || '' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch:
+        description: "batch file of manufacturers"
+        default: pipeline/demand/batches/volumetric-4.json
+      config:
+        description: "pipeline configuration JSON in the repository"
+        default: pipeline/demand/configs/v0.json
+      only:
+        description: "only these manufacturer keys, comma-separated (blank = the whole batch)"
+        default: ""
+      max_cost_usd:
+        description: "list-price ceiling for this pass (at most 10.00)"
+        default: "3.00"
+      load:
+        description: "type 'yes' to write the projects to the warehouse's demand tables (as proposed)"
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: demand-research   # one pass at a time, never cancelled half-way
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash -eo pipefail {0}
+
+jobs:
+  pass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      BATCH: ${{ inputs.batch }}
+      CONFIG: ${{ inputs.config }}
+      ONLY: ${{ inputs.only }}
+      MAX_COST: ${{ inputs.max_cost_usd }}
+    steps:
+      - name: Check the inputs
+        run: |
+          python3 -c "import os, sys; c=float(os.environ['MAX_COST']); sys.exit(0 if 0 < c <= 10.0 else 1)" \
+            || { echo "::error::max_cost_usd must be in (0, 10.00]"; exit 1; }
+      - name: No other workflow is spending the shared gateway key
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          busy=""
+          for wf in tako-basic-search.yml tako-campaign.yml tako-coordinate-recovery.yml capability.yml bakeoff.yml enrich.yml enrich-stage.yml run.yml research-eval.yml; do
+            for st in in_progress queued; do
+              n=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --status "$st" --json databaseId --jq length 2>/dev/null || echo 0)
+              [ "$n" != "0" ] && busy="$busy $wf($st)"
+            done
+          done
+          if [ -n "$busy" ]; then echo "::error::the shared AI_GATEWAY_API_KEY is in use by:$busy"; exit 1; fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[dev]"
+      - name: Test the verification rules
+        run: pytest tests/test_demand.py -q
+      - name: Restore the search and page cache
+        uses: actions/cache/restore@v4
+        with:
+          path: demand-cache
+          key: demand-cache-${{ github.run_id }}
+          restore-keys: demand-cache-
+      - name: Run the pipeline (no database credentials)
+        env:
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
+        run: |
+          set -- --batch "$BATCH" --config "$CONFIG" --out pass --cache demand-cache --max-cost-usd "$MAX_COST"
+          [ -n "$ONLY" ] && set -- "$@" --only "$ONLY"
+          python -m pipeline.demand.pipeline "$@"
+      - name: Save the cache for later passes
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: demand-cache
+          key: demand-cache-${{ github.run_id }}
+      - name: Job summary
+        if: always()
+        run: |
+          [ -f pass/audit.md ] && head -c 60000 pass/audit.md >> "$GITHUB_STEP_SUMMARY" || echo "no audit" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: demand-pass-${{ github.run_id }}
+          path: pass/
+          retention-days: 30
+
+  load:
+    needs: pass
+    if: inputs.load == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres,dev]"
+      - uses: actions/download-artifact@v4
+        with:
+          name: demand-pass-${{ github.run_id }}
+          path: pass
+      - name: Resolve the Neon warehouse connection
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
+          python .github/scripts/neon_connection_string.py
+      - name: Load the projects (proposed)
+        run: |
+          [ -n "$DATABASE_URL" ] || { echo "::error::no warehouse connection"; exit 1; }
+          python -m pipeline.demand.load --pass pass --run-id "${{ github.run_id }}" --write | tee -a "$GITHUB_STEP_SUMMARY"
