@@ -178,6 +178,7 @@ class Adjudicator:
             from .pipeline import Fetcher
             self.fetcher = Fetcher(fetch_dir)
         self.skipped = 0
+        self.responses: list[dict] = []
 
     def fresh(self, url: str) -> str:
         if not self.fetcher or not url:
@@ -185,16 +186,18 @@ class Adjudicator:
         return self.fetcher.get(url).get("text") or ""
 
     def _ask(self, prompt: str, fid: str) -> dict | None:
-        if not self.model or not self.meter.can_start({"calls": [(self.model, 3000, 200, 1)]}):
+        if not self.model or not self.meter.can_start({"calls": [(self.model, 3500, 1200, 1)]}):
             self.skipped += 1
             return None
         try:
-            raw = gw.chat({"model": self.model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 200,
-                           "temperature": 0, "response_format": {"type": "json_object"}})
+            # Smoke pass 3: at 200 tokens the judge's reasoning left no room for the answer.
+            raw = gw.chat({"model": self.model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 1200,
+                           "temperature": 0, "response_format": {"type": "json_object"}, "reasoning": {"effort": "low"}})
         except gw.GatewayError:
             self.skipped += 1
             return None
         self.meter.record("adjudicate", self.model, raw.get("usage") or {}, fid)
+        self.responses.append({"facility_id": fid, "prompt": prompt, "response": raw})
         m = re.search(r"\{.*\}", gw.content(raw), re.S)
         try:
             return json.loads(m.group()) if m else None
@@ -399,6 +402,7 @@ def main(argv=None) -> int:
     adj = Adjudicator(a.judge_model, a.judge_max_usd, catalog, Path(a.fetch_cache))
     sc = score(Path(a.pass_dir), Path(a.benchmark), adj, a.novel_cap)
     Path(a.pass_dir, "scorecard.json").write_text(json.dumps(sc, indent=1, default=str))
+    Path(a.pass_dir, "adjudication-responses.json").write_text(json.dumps(adj.responses, indent=1, default=str))
     md = markdown(sc)
     print(md)
     if os.environ.get("GITHUB_STEP_SUMMARY"):

@@ -39,11 +39,11 @@ DEFAULT_CONFIG = {
                            "product", "manufactur", "our-company", "who-we-are"]},
     "search": {"provider": "tako", "when": "unanchored", "max_searches": 1, "results": 8, "fetch_top": 4,
                "follow_site": True, "model": "alibaba/qwen3.7-flash", "fallback_model": "google/gemini-3.1-flash-lite",
-               "max_output_tokens": 1200,
+               "max_output_tokens": 1200, "reasoning_effort": "low",
                "query": "{name} {city} {state} manufacturing plant address phone"},
     "regex": {"fill": True},
     "judge": {"model": "deepseek/deepseek-v4-flash-0731", "passage_budget_tokens": 6000, "passage_chars": 600,
-              "max_output_tokens": 1500, "temperature": 0, "endpoint": None},
+              "max_output_tokens": 3000, "reasoning_effort": "low", "temperature": 0, "endpoint": None},
     "policy": {"removal_needs_ingest_rule": True, "duplicate": True, "not_found_sources": 5},
     # Worst-case tokens per call, for the ceiling: a search call's input carries the tool results.
     "worst_case": {"search_input_tokens": 20000, "judge_overhead_tokens": 2500},
@@ -264,6 +264,8 @@ def search(rec: dict, cfg: dict, cache: Path, meter: gw.Meter, folder: Path) -> 
         payload = {"model": model, "messages": [{"role": "user", "content": SEARCH_PROMPT}],
                    "tools": [{"type": tool, "config": build(query, s["results"])}], "tool_choice": "required",
                    "max_tokens": s["max_output_tokens"], "temperature": 0}
+        if s.get("reasoning_effort"):
+            payload["reasoning"] = {"effort": s["reasoning_effort"]}
         raw = gw.chat(payload)
         reported = gw.gateway_searches(raw, tool)
         # A search the gateway ran but did not report is still counted: list price, at least one.
@@ -440,6 +442,9 @@ def judge(rec: dict, cands: list[dict], psg: list[dict], cfg: dict, meter: gw.Me
     payload = {"model": j["model"], "messages": [{"role": "user", "content": prompt}],
                "max_tokens": j["max_output_tokens"], "temperature": j["temperature"],
                "response_format": {"type": "json_object"}}
+    # Smoke pass 3: DeepSeek spent all 1,500 output tokens reasoning and returned nothing.
+    if j.get("reasoning_effort"):
+        payload["reasoning"] = {"effort": j["reasoning_effort"]}
     (folder / "judge-request.json").write_text(json.dumps(payload, indent=1))
     raw = gw.chat(payload)
     (folder / "judge-response.json").write_text(json.dumps(raw, indent=1))
