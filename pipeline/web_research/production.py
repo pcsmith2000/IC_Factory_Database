@@ -36,7 +36,9 @@ GATES = {
     "closed_share": ("<=", 0.10),         # removals are rare; a spike means something is wrong
     "not_ic_applied": ("==", 0),          # not_ic always goes to review in production
     "validated_removed": ("==", 0),       # an ADL-validated plant is never removed
-    "duplicate_share": ("<=", 0.15),
+    # wr-prod-001: 5 of 25 were duplicates, all real (same address or phone as an active record). The backlog
+    # holds more duplicates than the benchmark; only a spike beyond this suggests the matcher is overreaching.
+    "duplicate_share": ("<=", 0.30),
     "judge_precision": (">=", 0.85),      # new literal facts the judge found correct, on a random sample
 }
 

@@ -798,9 +798,58 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
             ref(p["url"])
     if not verdict["reason"]:
         verdict["reason"] = "No passage confirmed this plant." if status == "not_found" else status
+    if policy.get("withhold_other_entity"):
+        assertions = withhold_other_entity(rec, assertions, trace)
     payload = {"facility_id": rec["facility_id"], "agent": f"research_eval {cfg['name']}", "run_id": cfg["name"],
                "verdict": verdict, "sources": list(sources.values()), "assertions": assertions}
     return payload, trace
+
+
+_STREET_WORDS = {"street", "st", "avenue", "ave", "road", "rd", "drive", "dr", "boulevard", "blvd", "highway", "hwy",
+                 "lane", "ln", "way", "parkway", "pkwy", "court", "ct", "place", "pl", "circle", "cir", "trail", "trl",
+                 "pike", "route", "rte", "loop", "terrace", "n", "s", "e", "w", "north", "south", "east", "west",
+                 "ne", "nw", "se", "sw", "us", "state", "county", "industrial", "park"}
+CONTACT = ("address", "city", "state", "zip", "phone", "email")
+
+
+def _street_words(address: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z]+", address.lower()) if w not in _STREET_WORDS and len(w) > 1}
+
+
+def withhold_other_entity(rec: dict, assertions: list[dict], trace: dict) -> list[dict]:
+    """Facts about another company or another plant never reach the record.
+
+    wr-prod-001: CMH Manufacturing #927 (Clayton Homes, White Pine TN) was matched to a Lubbock foundry-equipment
+    maker. not_ic went to review, but the Lubbock address, city, ZIP and phone were still submitted. The verdict
+    guards change verdicts, never facts. Two rules:
+    - a record sent to review (proposed not_ic), or downgraded because its evidence names another street, keeps
+      no facts at all: the pages may describe a different business;
+    - an address that shares neither the house number nor a street name with the record's is another plant (or
+      another company): its address, city, state, ZIP, phone and email are withheld. The website is kept.
+      A record whose address is a PO box is exempt: the street address is exactly what research should add.
+    """
+    why = None
+    if trace.get("review"):
+        why = "sent to review (proposed not_ic): the pages may describe another business"
+    elif "evidence names" in str((trace.get("downgraded") or {}).get("why") or ""):
+        why = "verdict evidence names another street address"
+    if why:
+        drop = list(assertions)
+    else:
+        rec_addr = str(rec.get("address") or "")
+        new = next((a for a in assertions if a["field"] == "address"), None)
+        drop = []
+        if rec_addr.strip() and new and not re.search(r"\bp\.?\s*o\.?\s*box\b", rec_addr, re.I):
+            num_r = re.match(r"\s*(\d+)", rec_addr)
+            num_n = re.match(r"\s*(\d+)", new["value"])
+            same_num = bool(num_r and num_n and num_r.group(1) == num_n.group(1))
+            if not same_num and not (_street_words(rec_addr) & _street_words(new["value"])):
+                why = f"address {new['value']!r} shares no number or street with the record's {rec_addr!r}"
+                drop = [a for a in assertions if a["field"] in CONTACT]
+    for a in drop:
+        trace["dropped"].append({"field": a["field"], "value": a["value"], "reason": f"withheld: {why}", "by": "guard"})
+        trace["kept"] = [k for k in trace["kept"] if not (k["field"] == a["field"] and k["value"] == a["value"])]
+    return [a for a in assertions if a not in drop]
 
 
 _TAXONOMY = None
