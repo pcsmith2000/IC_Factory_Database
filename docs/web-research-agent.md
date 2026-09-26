@@ -37,7 +37,8 @@ BEGIN READ ONLY;
 SELECT g.*
   FROM golden_facility g
  WHERE NOT EXISTS (SELECT 1 FROM web_research_submission s
-                    WHERE s.facility_id = g.facility_key AND s.run_id = 'wr-full-1')
+                    WHERE s.facility_id = g.facility_key AND s.run_id = 'wr-full-1'
+                      AND s.status <> 'rejected')        -- a refused submission puts the facility back
  ORDER BY (CASE WHEN g.address IS NULL THEN 1 ELSE 0 END + CASE WHEN g.website IS NULL THEN 1 ELSE 0 END
          + CASE WHEN g.phone IS NULL THEN 1 ELSE 0 END + CASE WHEN g.capability_leaf IS NULL THEN 1 ELSE 0 END
          + CASE WHEN g.sq_ft IS NULL THEN 1 ELSE 0 END) DESC, g.facility_key
@@ -191,6 +192,8 @@ Rules:
 - `not_ic`, `closed` and `duplicate` each need a concrete `reason` of at least 10 characters (for example "3636 N Central Ave is Cavco's head office per its 10-K; the Phoenix plant is 2502 W Durango St") and `source_refs` citing at least one source that shows it.
 - These verdicts are reversible: an ADL employee marking the plant active overrides you. Still, use them only with evidence. If you're unsure, use `not_found`.
 - For a relocation, use `closed` on this row and mention the new address in `reason`. Do **not** assert the new address on this row.
+- **A removal (`not_ic` or `closed`) needs two cited sources on different pages, or one `government_registry`, `filing` or `certification_body` source.** A single directory, map listing, news item or social page is not enough; the verdict is refused and the facility stays.
+- **Every submission needs at least one source.** For `not_found`, cite the pages you checked; they are recorded as the search. A submission with no sources is refused and the facility goes back into the queue.
 - A removal needs no assertions: the verdict and its sources are enough.
 
 ## 6. Submitter: checklist and insert
@@ -213,7 +216,7 @@ ON CONFLICT (submission_id) DO UPDATE
  WHERE web_research_submission.status = 'pending';
 ```
 
-Re-inserting before ingest replaces the draft. After ingest it is locked. To correct an ingested row, submit a new row with `submission_id = 'wr-full-1:IC-22053:2'`.
+Re-inserting before ingest replaces the draft. After ingest it is locked. To correct an ingested row, or to redo a refused one, submit a new row with `submission_id = 'wr-full-1:IC-22053:2'`.
 
 ## 7. Feedback loop (coordinator, after every few batches)
 
