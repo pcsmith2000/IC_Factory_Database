@@ -10,7 +10,7 @@ Run id for this pass: **`wr-full-1`**. Reuse it every time you resume.
 
 Use the connection string you were given. If it is the restricted `web_research_agent` login, the database enforces the rules below. If it is an owner login, you must enforce them yourself:
 
-- **Read:** `SELECT` only, from `golden_facility`, `facility`, `dim_field`, `facility_duplicate_candidate` and `web_research_submission`. Run reads inside `BEGIN READ ONLY; … COMMIT;`.
+- **Read:** `SELECT` only, from `golden_facility`, `facility`, `dim_field` and `web_research_submission`. Run reads inside `BEGIN READ ONLY; … COMMIT;`.
 - **Write:** only `INSERT INTO web_research_submission …` (template in §6). Nothing else, ever.
 - **Never** run `UPDATE` (except the draft re-submit in §6), `DELETE`, `TRUNCATE`, `ALTER`, `DROP` or `CREATE`. Never write to `fact_assertions`, `golden_facility`, `facility` or any other table.
 - Our ingest job validates submissions every 15 minutes and writes the facts. If you think you need any other write, stop and report it.
