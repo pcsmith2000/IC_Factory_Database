@@ -325,3 +325,10 @@ def test_a_search_the_gateway_did_not_run_is_retried_then_refused_and_never_cach
     assert models == ["alibaba/qwen3.7-flash", "google/gemini-3.1-flash-lite"]
     assert not list((tmp_path / "search").glob("*.json"))
     assert meter.searches == 2                      # still counted at list price, conservatively
+
+
+def test_search_results_survive_a_reply_cut_off_at_max_tokens():
+    cut = '```json\n{"results": [{"url": "https://a.com/x", "title": "A"}, {"url": "https://b.com", "title": "B"}, {"url": "https://c.co'
+    assert [r["url"] for r in P.parse_results(cut)] == ["https://a.com/x", "https://b.com"]
+    whole = '{"results": [{"url": "https://a.com/x", "title": "A"}, {"url": "ftp://no"}]}'
+    assert P.parse_results(whole) == [{"url": "https://a.com/x", "title": "A"}]
