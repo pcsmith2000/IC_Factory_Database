@@ -53,3 +53,12 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
 7. **Refusals are mechanical** (S2): scheme-less websites, state names, off-taxonomy leaves and quotes
    that do not contain the value. Running the contract's own checks before submission repairs the first
    two and drops the rest, at no cost.
+8. **Qwen 3.7 Flash is the best judge so far** (a-v1-qwen37): primary 81.25, V2 0.71, V3 0.5, novel
+   precision 0.95, $0.0004 per facility, open weight. gpt-oss-120b with prevalidate and strict-site
+   (a-v2a) reaches primary 83.3 with S2 0 and V1 1.0, but V2 only 0.43.
+9. **Prevalidation takes S2 to 0** (a-v2a, a-v2b), with no loss of coverage.
+10. **Prompt rules do not fix the company-versus-site error.** The evidence is in the pages (Phoenix Haus's
+    relocation to Grand Junction; Jensen's plant at a different address) and the judge still says
+    in_scope. A two-source removal instruction did not add removals and cost V1 and F2 (reverted).
+    Next: deterministic guards (an in_scope whose evidence names another street address is held as
+    not_found) rather than more prompt text.

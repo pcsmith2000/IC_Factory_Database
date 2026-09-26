@@ -362,3 +362,17 @@ def test_website_from_an_anchored_company_page_and_only_same_domain_regex_emails
 def test_prevalidate_repairs_what_is_mechanical_and_refuses_the_rest(field, value, quote, expect_value, ok):
     got, why = P.prevalidate(field, value, quote, "https://www.acme.com/contact")
     assert got == expect_value and (why is None) is ok
+
+
+def test_address_guard_holds_in_scope_on_another_street_address():
+    rec = {"facility_id": "IC-1", "name": "Jensen Precast", "address": "3840 N Bruce St", "city": "North Las Vegas", "state": "NV"}
+    pages = [{"url": "https://mapquest.com/j", "text": "Jensen Precast 3853 Losee Rd North Las Vegas NV", "fetched_at": "2026-09-26"}]
+    psg = [{"id": "P1", "url": pages[0]["url"], "text": pages[0]["text"]}]
+    answer = {"verdict": {"status": "in_scope", "reason": "Jensen Precast makes precast at 3853 Losee Rd.",
+                          "evidence": [{"passage": "P1", "quote": "Jensen Precast 3853 Losee Rd"}]}}
+    cfg = P.merge(P.DEFAULT_CONFIG, {"policy": {"address_guard": True}})
+    payload, trace = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-1"}, [], "")
+    assert payload["verdict"]["status"] == "not_found" and trace["downgraded"]["from"] == "in_scope"
+    rec["address"] = "3853 Losee Rd"                      # the same address: kept
+    payload, _ = P.build_submission(rec, answer, psg, pages, {}, cfg, {"IC-1"}, [], "")
+    assert payload["verdict"]["status"] == "in_scope"

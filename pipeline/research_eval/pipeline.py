@@ -47,7 +47,7 @@ DEFAULT_CONFIG = {
     "judge": {"model": "deepseek/deepseek-v4-flash-0731", "passage_budget_tokens": 6000, "passage_chars": 600,
               "max_output_tokens": 3000, "reasoning_effort": "low", "temperature": 0, "endpoint": None,
               "confirm_fields": False, "removal_two_sources": False, "strict_site": False},
-    "policy": {"removal_needs_ingest_rule": True, "duplicate": True, "not_found_sources": 5},
+    "policy": {"removal_needs_ingest_rule": True, "duplicate": True, "not_found_sources": 5, "address_guard": False},
     # Worst-case tokens per call, for the ceiling: a search call's input carries the tool results.
     "worst_case": {"search_input_tokens": 20000, "judge_overhead_tokens": 2500},
 }
@@ -596,6 +596,16 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
             verdict["status"] = status = "not_found"
         else:
             verdict["duplicate_of"] = other
+    if status == "in_scope" and policy.get("address_guard"):
+        # Pass a-v2a: the judge called Jensen in_scope while its own reason named 3853 Losee Rd, not the
+        # record's 3840 N Bruce St. When the record has a house number, in_scope evidence that quotes a
+        # different street address and never this number is another plant of the same company.
+        num = re.match(r"\s*(\d+)\s", str(rec.get("address") or ""))
+        ev_text = " ".join(ws(e.get("quote")) for e in (v.get("evidence") or []) if isinstance(e, dict)) + " " + reason
+        other = [m.group(1) for m in STREET.finditer(ev_text) if num and not m.group(1).startswith(num.group(1) + " ")]
+        if num and other and not re.search(rf"\b{num.group(1)}\b", ev_text):
+            trace["downgraded"] = {"from": "in_scope", "why": f"evidence names {other[0]!r}, not the record's {num.group(1)}"}
+            verdict["status"] = status = "not_found"
     if status in ("in_scope", "not_found") and not ev_urls:
         verdict["source_refs"] = []
     if status == "not_found":                              # record the pages checked
