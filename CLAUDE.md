@@ -1,5 +1,16 @@
 # IC Factory Database — notes for Claude
 
+## Intent
+
+We are building the authoritative database of every manufacturing facility in the United States with
+capacity for industrialized construction, so that ADL Ventures' owners know, plant by plant and in
+aggregate, what can actually be built, and what demand, from today's private projects to what is
+coming, will draw on it. Two things make it worth having, and every agent's work must serve both
+without trading one for the other. **Veracity:** every fact is true, traceable to its source, and
+never guessed; an empty cell beats a plausible wrong one. **Comprehensiveness:** no real plant, and
+no real capability, is missing. When a task would cost either one, stop and raise it as an issue
+rather than proceed.
+
 ## Querying the Neon warehouse
 
 The live warehouse is Neon Postgres, endpoint `ep-fragrant-snow-awfbmy0k.c-12.us-east-1.aws.neon.tech`,
