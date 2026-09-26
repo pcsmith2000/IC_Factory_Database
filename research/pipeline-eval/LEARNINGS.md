@@ -118,3 +118,7 @@ every finding with its source and quote, what was dropped and why, cost) and `sc
     (not_ic removals became human-review by the user's decisions); every other gate judged as written.
     The holdout runs as two capped halves (holdout[0:50], holdout[50:100]) plus the 50 anchors, scored
     together. Preview on Dev B + C combined: every judged gate passes except V1 (0.71 vs 0.85).
+27. **V1 is now capped by the safety holds, not the evidence** (v10 = v9 + 12k passages: no change on B or C).
+    The in-scope plants v9 misses are held not_ic cases (Panelmatic by the veto; BiltWise, where the second
+    opinion answered in_scope) and a same-address duplicate. Next: when the second opinion answers in_scope,
+    adopt in_scope rather than not_found (safe: it can only keep a plant).
