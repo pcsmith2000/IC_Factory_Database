@@ -21,3 +21,11 @@ cumulative $3.46 list. Production budget $20, stop at $18 billed.
    from the 6 review records, CMH's included. Duplicate gate raised to 30%. Next: wr-prod-002, 25, dry.
 5. Replaying a guard on finished passes (trace.json + submissions.jsonl) costs nothing and is exact when the
    guard only drops facts; use it before spending on Dev A–C.
+
+## wr-prod-002 (25, dry, v9.1, same facilities as 001): grow
+
+6. The fix held: the 6 review records submitted no facts; judge precision 0.94 (the one miss: Nucor's website
+   given as metlspan.com, a subsidiary brand). Facts per facility fell 5.6 → 3.9, mostly the withheld review records.
+7. **Verdicts are not stable at the margin.** 6 of 25 changed between two identical runs (in_scope ↔ duplicate or
+   not_found). The checked duplicates are defensible (same address or phone), but a verdict seen once is weak
+   evidence. Worth measuring on the next batches before any fix: agreement between two runs costs a batch.
