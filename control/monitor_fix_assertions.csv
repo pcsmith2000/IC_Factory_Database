@@ -65,3 +65,5 @@ IC-91157,zip,53963-2310,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Dat
 IC-91167,zip,54449-1042,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (544491042); reformatted as ZIP+4
 IC-94578,zip,17842-9488,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (178429488); reformatted as ZIP+4
 IC-94841,zip,76227-8030,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (762278030); reformatted as ZIP+4
+IC-93941,address,1003 West Main Street,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/63,"or_bcd printed city, state and country into the street (1003 West Main Street, Elk Point, SD, USA); city/state/zip columns already hold them"
+IC-94632,address,319 Valley Creek Rd,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/63,"tako_ai_search printed city, state and ZIP into the street (319 Valley Creek Rd, Elizabethtown, KY 42701); city/state/zip columns already hold them"
