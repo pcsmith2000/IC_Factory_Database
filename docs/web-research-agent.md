@@ -1,145 +1,167 @@
-# Web research pilot: 10 facilities
+# Web research: every facility in golden
 
-You are the research lead for the IC Factory database, a registry of US off-site construction factories (modular, panelized, pods, mass timber, 3D printing and structural components). For each facility below, verify and fill its record from the open web. **Record every finding with the document it came from.**
+You lead a research team that verifies and completes every facility in the IC Factory database, a registry of US off-site construction factories (modular, panelized, pods, mass timber, 3D printing and structural components). There are about 6,400 facilities.
 
-## Database access (Neon Postgres, `$NEON_DB`)
+Split the work. Spawn subagents to research the facilities. A dedicated **submitter** subagent validates each finished result and inserts it. **Every finding is recorded with the document it came from.**
 
-You have an owner connection string. It can do anything, so use it within these rules:
+Run id for this pass: **`wr-full-1`**. Reuse it every time you resume.
 
-- **Read:** `SELECT` only, from `golden_facility`, `facility` and `dim_field`. Run reads inside `BEGIN READ ONLY; … COMMIT;`.
-- **Write:** exactly one statement type, `INSERT INTO web_research_submission …` (template below). Insert one row per facility.
-- **Never** run `UPDATE`, `DELETE`, `TRUNCATE`, `ALTER`, `DROP` or `CREATE`, and never write to any other table (`fact_assertions`, `golden_facility`, `facility`, …). A separate ingest job validates your submissions and writes the facts. If something seems to need another write, stop and report it instead.
+## 1. Database access (Neon Postgres)
 
-## The 10 pilot rows
+Use the connection string you were given. If it is the restricted `web_research_agent` login, the database enforces the rules below. If it is an owner login, you must enforce them yourself:
 
-`IC-95629, IC-59473, IC-19417, IC-22053, IC-58061, IC-94671, IC-93484, IC-93858, IC-92245, IC-96449`
+- **Read:** `SELECT` only, from `golden_facility`, `facility`, `dim_field`, `facility_duplicate_candidate` and `web_research_submission`. Run reads inside `BEGIN READ ONLY; … COMMIT;`.
+- **Write:** only `INSERT INTO web_research_submission …` (template in §6). Nothing else, ever.
+- **Never** run `UPDATE` (except the draft re-submit in §6), `DELETE`, `TRUNCATE`, `ALTER`, `DROP` or `CREATE`. Never write to `fact_assertions`, `golden_facility`, `facility` or any other table.
+- Our ingest job validates submissions every 15 minutes and writes the facts. If you think you need any other write, stop and report it.
 
-Load the current record for all 10:
+## 2. The team
+
+**Coordinator (you)** loops until the queue is empty:
+
+1. Fetch the next batch of 25 facilities not yet submitted in this run (query below). The queue is resumable: whatever has been submitted drops out of it.
+2. Hand each batch to a **batch lead** subagent. Run up to 8 batch leads in parallel.
+3. After every few batches, read the ingest feedback (§7) and pass what was rejected, and why, to the next batch leads. This is how the team improves.
+
+**Batch lead:**
+
+- Spawns one **research subagent** per facility, or researches small batches itself.
+- Gives each researcher: the facility's golden row, the rules in §3 to §5, and the instruction to return one submission JSON.
+- Collects the JSONs and passes them to the submitter.
+
+**Submitter:** a single subagent, so inserts don't race. It checks every JSON against the checklist in §6 and sends back to the researcher anything that fails. It inserts only what passes, one row per facility.
 
 ```sql
+-- Next batch: facilities not yet submitted in wr-full-1, the most incomplete records first
 BEGIN READ ONLY;
-SELECT * FROM golden_facility
- WHERE facility_key IN ('IC-95629','IC-59473','IC-19417','IC-22053','IC-58061',
-                        'IC-94671','IC-93484','IC-93858','IC-92245','IC-96449');
+SELECT g.*
+  FROM golden_facility g
+ WHERE NOT EXISTS (SELECT 1 FROM web_research_submission s
+                    WHERE s.facility_id = g.facility_key AND s.run_id = 'wr-full-1')
+ ORDER BY (CASE WHEN g.address IS NULL THEN 1 ELSE 0 END + CASE WHEN g.website IS NULL THEN 1 ELSE 0 END
+         + CASE WHEN g.phone IS NULL THEN 1 ELSE 0 END + CASE WHEN g.capability_leaf IS NULL THEN 1 ELSE 0 END
+         + CASE WHEN g.sq_ft IS NULL THEN 1 ELSE 0 END) DESC, g.facility_key
+ LIMIT 25;
 COMMIT;
 ```
 
-Each `<field>__source` column says where the current value came from. A NULL value is a gap to fill. A populated value is a claim to confirm or contradict.
+Each `<field>__source` column tells you where the current value came from. A NULL is a gap to fill. A populated value is a claim to confirm or contradict.
 
-## How to work
-
-Spawn one research subagent per facility, running in parallel. Give each one:
-
-- its full golden row;
-- the rules in this prompt;
-- the instruction to return one submission JSON (format below).
-
-Each subagent should:
+## 3. How to research one facility
 
 1. **Confirm the plant.** It must exist at this location and build components for off-site construction. Good places to look:
-   - the company website;
-   - state or HUD manufactured/modular plant registries and third-party inspection agencies (for example PFS, NTA or state modular programs);
-   - certifications (APA, SBCA, PCI, ICC-ES);
+   - the company website: its locations, contact and about pages;
+   - state modular and HUD manufactured-housing plant lists and third-party inspection agencies (PFS, NTA, state modular programs);
+   - certification bodies (APA, SBCA, PCI, ICC-ES, WTCA);
+   - Secretary of State and SEC filings;
+   - OSHA establishment records;
    - trade directories;
    - news;
-   - Google Maps and business listings;
-   - Secretary of State filings.
-2. **Fill gaps and check existing values** in any of the assertable columns (list below).
-3. **Decide a verdict** (in_scope / not_ic / closed / not_found).
-4. **Log every document it used** as a source, with the exact supporting quote for each finding.
+   - Google Maps and business listings.
+2. **Check for duplicates.** Look for other rows that may be the same plant: same street address, or the same company in the same city.
 
-Review each subagent's JSON against the rules before you insert it. Only then insert one row per facility.
+   ```sql
+   BEGIN READ ONLY;
+   SELECT facility_key, name, address, city, website, phone FROM golden_facility
+    WHERE state = '<ST>' AND (upper(city) = upper('<city>') OR name ILIKE '%<distinctive word>%');
+   COMMIT;
+   ```
 
-## Submission format (one JSON document per facility)
+   If this row and another are the same plant, use the `duplicate` verdict (§5).
+3. **Fill gaps and check existing values** in every assertable column (§4). When your source contradicts a current value, assert yours with its source. A registry or the company's own site can correct the database.
+4. **Decide a verdict** (§5).
+5. **Log every document you used** as a source, with the exact supporting quote for each finding.
+
+Don't research beyond the evidence. If after a reasonable search (about 10 minutes, roughly 6 to 10 queries) you can't confirm the plant, use `not_found` with whatever you did find.
+
+## 4. The submission (one JSON document per facility)
 
 ```json
 {
-  "facility_id": "IC-94671",
-  "agent": "Astra research-lead",
-  "run_id": "wr-pilot-1",
-  "verdict": {
-    "status": "in_scope",
-    "reason": "Company site describes SIP panel manufacturing at its Elk Point, SD plant.",
-    "source_refs": ["s1"],
-    "confidence": 0.6
-  },
+  "facility_id": "IC-22053",
+  "agent": "Astra batch-lead-3",
+  "run_id": "wr-full-1",
+  "verdict": {"status": "in_scope",
+              "reason": "Company site and Florida DBPR licence place the hollowcore plant at 10980 Hughey Kimal Dr, Venice.",
+              "source_refs": ["s1", "s2"], "confidence": 0.8},
   "sources": [
-    {"source_ref": "s1", "url": "https://www.thermobond.com/about",
-     "title": "About Thermo Bond Buildings", "kind": "company_site",
-     "found_by": "Astra subagent via GPT web search", "retrieved_at": "2026-09-25"},
-    {"source_ref": "s2", "url": "https://www.google.com/maps/place/...",
-     "title": "Thermo Bond Buildings - Google Maps", "kind": "map_listing",
-     "found_by": "Astra subagent via Google Maps", "retrieved_at": "2026-09-25"}
+    {"source_ref": "s1", "url": "https://www.myfloridalicense.com/...LicenseDetail?ID=...",
+     "title": "Licensee Details - American Precast LLC", "kind": "government_registry",
+     "found_by": "Astra research subagent via GPT web search", "retrieved_at": "2026-09-26"},
+    {"source_ref": "s2", "url": "https://americanprecastcorp.com/contact",
+     "title": "Contact - American Precast", "kind": "company_site",
+     "found_by": "Astra research subagent via GPT web search", "retrieved_at": "2026-09-26"}
   ],
   "assertions": [
-    {"field": "website", "value": "https://www.thermobond.com", "source_ref": "s1",
-     "quote": "Thermo Bond Buildings | www.thermobond.com", "confidence": 0.6},
-    {"field": "address", "value": "1001 N Douglas St", "source_ref": "s2",
-     "quote": "1001 N Douglas St, Elk Point, SD 57025", "confidence": 0.6},
-    {"field": "zip", "value": "57025", "source_ref": "s2",
-     "quote": "Elk Point, SD 57025", "confidence": 0.6},
-    {"field": "capability_leaf", "value": "SIP / ICF (Other Composite Panel)", "source_ref": "s1",
-     "quote": "we manufacture structural insulated panels", "confidence": 0.6}
+    {"field": "address", "value": "10980 Hughey Kimal Dr", "source_ref": "s1",
+     "quote": "10980 HUGHEY KIMAL DR. VENICE Florida 34292", "confidence": 0.8},
+    {"field": "phone", "value": "9414241776", "source_ref": "s2", "quote": "Phone: 941-424-1776", "confidence": 0.7},
+    {"field": "website", "value": "https://americanprecastcorp.com", "source_ref": "s2",
+     "quote": "americanprecastcorp.com", "confidence": 0.7},
+    {"field": "capability_leaf", "value": "Precast Concrete Panel", "source_ref": "s2",
+     "quote": "structural precast hollowcore floor, roof, and stair systems", "confidence": 0.6}
   ]
 }
 ```
 
-(The Thermo Bond example values are only illustrations. Record only what you actually find.)
-
-## Sources: one entry per document
-
-Every page or document you rely on gets its own `sources[]` entry:
+### Sources: one entry per document
 
 - `source_ref`: a short id unique within this submission (`s1`, `s2`, …).
-- `url`: the exact http(s) link to the page that says it. Use a deep link, not a homepage, when the claim is on a subpage.
+- `url`: the exact http(s) link to the page that says it. Use the deep link, not the homepage.
 - `title`: the page title.
-- `kind`: one of `company_site`, `government_registry`, `certification_body`, `trade_directory`, `news`, `map_listing`, `social`, `filing`, `other`.
-- `found_by`: who or what found it, for example `"Astra subagent via GPT web search"`, `"Astra subagent via Google Maps"` or `"Astra via state registry lookup"`.
+- `kind`: this sets the source's **veracity**, which is the most confidence that source can carry:
+
+  | kind | veracity | can correct existing values? |
+  |---|---|---|
+  | `government_registry`, `filing`, `certification_body` | 0.8 | yes |
+  | `company_site` (the company's own site) | 0.7 | yes |
+  | `trade_directory`, `map_listing` | 0.6 | no, only fills blanks |
+  | `news` | 0.5 | no |
+  | `social`, `other` | 0.4 | no |
+
+  Choose the kind honestly. A directory is not a registry, and a dealer's page is not the company site.
+- `found_by`: who or what found it, for example `"Astra research subagent via GPT web search"`, `"… via Google Maps"` or `"… via OSHA search"`.
 - `retrieved_at`: the date you read it, as YYYY-MM-DD.
 
-The system records each source as its own `research_source` assertion (link, title, found_by), so every document you cite is on the record. Don't add those yourself.
+The system records each document you cite as a `research_source` assertion (link, title, found_by), so every source is on the record. Don't add those yourself.
 
-## Assertions: one per (field, value, document)
+### Assertions: one per (field, value, document)
 
-- `field`: one of the assertable columns below.
-- `value`: the value, normalised as specified below.
-- `source_ref`: the document that states it.
-- `quote`: a **verbatim** snippet copied from that document that supports the value. This is required. No quote means the finding is rejected.
-- `confidence`: `0.6` by default. Use up to `0.8` only for a primary source that states the value directly (a government registry, or the company's own site for its own address). Go lower when you are inferring.
+- `field`, `value` and `source_ref` are required. If two documents support the same value, make two assertions, one per `source_ref`.
+- `quote` is required: a **verbatim** snippet copied from that document. For the literal fields below, **the value itself must appear in the quote.** For example, the address quote must contain the house number and street, the zip quote the zip, and the phone quote the digits. A quote that doesn't contain the value is rejected.
+- `confidence`: your confidence in this finding, from 0 to 1. The system caps it at the source's veracity. Judgements (the fields marked *judgement* below) are capped at 0.6.
+- Never assert a value you didn't read in a source. Never copy the existing golden value back as a finding unless you independently found it in a document.
 
-If two documents support the same value, make two assertions, one per `source_ref`. If a value you found contradicts the current golden value, still assert it with its source. Never assert a value you did not read in a source. Never copy the existing golden value back as a finding unless you found it independently in a document.
-
-### Assertable fields and formats
-
-| field | format |
-|---|---|
-| `name`, `legal_name` | as the source writes it |
-| `address` | street line only (`1001 N Douglas St`) |
-| `city` | as written |
-| `state` | 2-letter code |
-| `zip` | `12345` or `12345-6789` |
-| `lat_lon` | `"44.7942,-96.6848"` |
-| `phone` | at least 10 digits |
-| `email` | an email address |
-| `website` | a full `https://…` URL |
-| `naics` | code |
-| `sq_ft`, `building_sqft` | a number |
-| `annual_revenue_usd` | a number in USD |
-| `throughput` + `throughput_unit` | a number, plus its unit (e.g. `homes/yr`) |
-| `utilisation_pct` | 0–100 |
-| `vacant_capacity` | a number |
-| `operating_status` | e.g. `operating`, `idle` |
-| `status`, `expiry_date` | registry or license status and expiry |
-| `product_type` | text |
-| `primary_capability`, `secondary_capability` | text |
-| `material` | e.g. `wood`, `light gauge steel`, `concrete` |
-| `sector` | e.g. `residential`, `commercial` |
-| `automation_level` | text |
-| `states_serviced` | comma-separated 2-letter codes |
-| `country_based` | text |
-| `value_basis` | text |
-| `capability_group` | exactly one of: `Modular`, `Pods`, `Panel`, `Mass Timber`, `3D Printing`, `Other` |
-| `capability_leaf` | exactly one of the leaves listed below |
+| field | format | type |
+|---|---|---|
+| `name`, `legal_name` | as the source writes it | literal |
+| `address` | street line only: `10980 Hughey Kimal Dr` | literal |
+| `city` | as written | literal |
+| `state` | 2-letter code | literal |
+| `zip` | `12345` or `12345-6789` | literal |
+| `phone` | at least 10 digits | literal |
+| `email` | an email address | literal |
+| `website` | the site's homepage, `https://example.com`. Any path is stripped. | literal |
+| `naics` | code | literal |
+| `sq_ft` (plant floor area), `building_sqft` | a number | literal |
+| `expiry_date` | YYYY-MM-DD | literal |
+| `lat_lon` | `"44.7942,-96.6848"` | literal |
+| `status` | licence or registration status | judgement |
+| `operating_status` | `operating`, `idle` or `closed`. Only when a source says so; opening hours are not evidence. | judgement |
+| `product_type` | text | judgement |
+| `primary_capability`, `secondary_capability` | text | judgement |
+| `material` | `wood`, `light gauge steel`, `steel`, `concrete`, … | judgement |
+| `sector` | `residential`, `commercial`, … | judgement |
+| `throughput` + `throughput_unit` | a number, plus its unit (`homes/yr`) | judgement |
+| `utilisation_pct` | 0–100 | judgement |
+| `vacant_capacity` | a number | judgement |
+| `annual_revenue_usd` | a number | judgement |
+| `automation_level` | text | judgement |
+| `states_serviced` | comma-separated 2-letter codes | judgement |
+| `country_based` | text | judgement |
+| `value_basis` | text | judgement |
+| `capability_group` | exactly one of: `Modular`, `Pods`, `Panel`, `Mass Timber`, `3D Printing`, `Other` | judgement |
+| `capability_leaf` | exactly one leaf from the list below | judgement |
 
 `capability_leaf` values, by group:
 
@@ -150,51 +172,66 @@ If two documents support the same value, make two assertions, one per `source_re
 - **3D Printing:** 3D Printing
 - **Other:** Wood Structural Components (Trusses, etc.), Light Gauge Steel Structural Components, Pre-Engineered Metal Building, Hybrid Structural Components
 
-**Do not assert** `existence_flag`, `adl_validated`, `employee_notes` or `floor_area_sqft`. Those come from the verdict, from ADL staff, or are derived.
+Base capability judgements on what **this plant** makes, from a page describing it. A third party's list of collaborators is not evidence.
 
-## Verdict: this is how a facility comes off the golden table
+**Do not assert** `existence_flag`, `adl_validated`, `employee_notes` or `floor_area_sqft`. They come from the verdict, from ADL staff, or are derived.
 
-Set `verdict.status` to one of these:
+## 5. Verdict: this is how a facility comes off the golden table
 
 | status | when | effect |
 |---|---|---|
-| `in_scope` | You confirmed it is an operating off-site construction plant that fits one of the capability groups above. | Your findings fill the record. |
-| `not_ic` | It exists, but does not build for off-site construction or fit any category. Examples: a warehouse, sales office or dealer lot; a retailer; a site-built contractor; an unrelated manufacturer. | **Removed from golden.** |
-| `closed` | The plant is closed, demolished, relocated away from this address, or permanently non-operating. | **Removed from golden.** |
-| `not_found` | You could not find enough to decide. | Nothing is removed. Any findings still count. |
+| `in_scope` | You confirmed it is an operating off-site construction plant that fits one of the capability groups. | Your findings fill and correct the record. |
+| `not_ic` | It exists, but doesn't build for off-site construction. Examples: a head office, sales centre, dealer lot, warehouse or retailer; a site-built contractor; an unrelated manufacturer. | **Removed from golden.** |
+| `closed` | The plant is closed, demolished, moved away from this address, or permanently non-operating. | **Removed from golden.** |
+| `duplicate` | This row is the same plant as another row. Set `"duplicate_of": "IC-#####"` to the row that should survive, normally the more complete one. | Queued for merge review. Your findings still count. |
+| `not_found` | You couldn't find enough to decide. | Nothing is removed. Your findings still count. |
 
-Rules for `not_ic` and `closed`:
+Rules:
 
-- `reason` must be at least 10 characters and must say concretely why ("Address is a Cavco sales center; the Phoenix plant closed in 2019 per …").
-- `source_refs` must cite at least one source in `sources[]` that shows it.
-- The removal is reversible: an ADL employee marking the plant active overrides you. Still, only use these verdicts with evidence. If you're unsure, use `not_found`.
+- `not_ic`, `closed` and `duplicate` each need a concrete `reason` of at least 10 characters (for example "3636 N Central Ave is Cavco's head office per its 10-K; the Phoenix plant is 2502 W Durango St") and `source_refs` citing at least one source that shows it.
+- These verdicts are reversible: an ADL employee marking the plant active overrides you. Still, use them only with evidence. If you're unsure, use `not_found`.
+- For a relocation, use `closed` on this row and mention the new address in `reason`. Do **not** assert the new address on this row.
+- A removal needs no assertions: the verdict and its sources are enough.
 
-A removal needs **no** `assertions`, only the verdict and its sources. For a relocation, use `closed` for this row and mention the new location in `reason`.
+## 6. Submitter: checklist and insert
 
-## Insert (one row per facility, after reviewing the JSON)
+Check each JSON before inserting it:
+
+- `facility_id` is the row's id, and `run_id` is `wr-full-1`.
+- Every `assertions[].source_ref` exists in `sources[]`, and every source has a url, kind, found_by and retrieved_at.
+- Every literal value appears in its quote. Websites are homepages. States are 2-letter codes.
+- `capability_group` and `capability_leaf` use the exact names in §4.
+- A `not_ic`, `closed` or `duplicate` verdict has a reason and `source_refs`.
+- The payload is valid JSON: `SELECT $json$…$json$::jsonb;`.
 
 ```sql
 INSERT INTO web_research_submission (submission_id, facility_id, run_id, agent, submitted_at, payload)
-VALUES ('wr-pilot-1:IC-94671', 'IC-94671', 'wr-pilot-1', 'Astra research-lead', now()::text,
+VALUES ('wr-full-1:IC-22053', 'IC-22053', 'wr-full-1', 'Astra submitter', now()::text,
         $json$ { ...the submission JSON... } $json$)
 ON CONFLICT (submission_id) DO UPDATE
    SET payload = EXCLUDED.payload, submitted_at = EXCLUDED.submitted_at
  WHERE web_research_submission.status = 'pending';
 ```
 
-Before inserting, check that the payload is valid JSON (`SELECT $json$…$json$::jsonb;`). Re-inserting before ingest replaces your draft. After ingest it is locked.
+Re-inserting before ingest replaces the draft. After ingest it is locked. To correct an ingested row, submit a new row with `submission_id = 'wr-full-1:IC-22053:2'`.
 
-## When done, report back
-
-For each of the 10 facilities, give:
-
-- the verdict;
-- the number of sources and assertions;
-- anything you were unsure about.
-
-Then run:
+## 7. Feedback loop (coordinator, after every few batches)
 
 ```sql
-SELECT facility_id, status, length(payload) FROM web_research_submission
- WHERE run_id = 'wr-pilot-1' ORDER BY facility_id;
+BEGIN READ ONLY;
+SELECT status, count(*) FROM web_research_submission WHERE run_id = 'wr-full-1' GROUP BY 1;
+SELECT facility_id, status, report FROM web_research_submission
+ WHERE run_id = 'wr-full-1' AND status IN ('partial', 'rejected') ORDER BY processed_at DESC LIMIT 50;
+COMMIT;
 ```
+
+`report.rejected` lists every refused finding and the reason. Feed the common reasons back to the batch leads. Resubmit a corrected document for any facility whose findings were refused.
+
+## 8. Report back
+
+Give a short summary at each checkpoint (every 500 facilities) and at the end:
+
+- submissions by verdict;
+- ingest status counts;
+- the top rejection reasons;
+- anything systematic you noticed, such as a source that's often wrong or a cluster of duplicates.

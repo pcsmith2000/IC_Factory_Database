@@ -18,6 +18,12 @@
 #            publishes one, and is worth less than any registry that does.
 # Tako AI Search is always below the listed AND unlisted sources. golden._rank enforces
 # this source-wide floor, rather than allowing it to tie an unlisted source on recency.
+#
+# web_research (pipeline/web_research/ingest.py) is the exception, by source veracity: a value the
+# cited document states literally (checked against its quote) from a government registry, filing or
+# certification body (basis web_verified, 0.8) or the company's own site (web_primary, 0.7) ranks
+# just below people and site visits, above every automated source; within that, higher veracity
+# then recency wins. Everything else it asserts (web_cited, web_inferred) only fills a blank.
 lowest_priority_sources: [tako_ai_search, astra_manual_web_lookup, web_research]
 version: 6
 default_order: [adl_employee_feedback, operator, site_visit, "class:A", "class:D", "class:B", "class:C"]

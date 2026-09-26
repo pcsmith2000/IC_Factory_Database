@@ -61,11 +61,23 @@ def assertions_from_rows(rows: list[dict], source_class: dict[str, str]) -> list
 WEB_RESEARCH_SOURCES = ("tako_ai_search", "astra_manual_web_lookup", "web_research")
 
 
-def _rank(a: dict, order: list[str]) -> int:
+# Web research a document states literally, from a document that can vouch for it
+# (pipeline/web_research/ingest.py): a registry or filing (web_verified) outranks the company's own
+# site (web_primary), and both outrank every automated source. People still outrank both.
+WEB_OVERRIDE_BASES = ("web_verified", "web_primary")
+
+
+def _rank(a: dict, order: list[str]) -> float:
     if a["source_id"] in WEB_RESEARCH_SOURCES:
         for i, pref in enumerate(order):
-            if pref == a["source_id"] or (pref.startswith("basis:") and a.get("basis") == pref[6:]):
+            if pref == a["source_id"] or (a["source_id"] == "web_research" and pref.startswith("basis:")
+                                          and a.get("basis") == pref[6:]):
                 return i
+        if a["source_id"] == "web_research" and a.get("basis") in WEB_OVERRIDE_BASES:
+            first_auto = next((i for i, p in enumerate(order) if p not in HUMAN_SOURCES + ("site_visit",)), len(order))
+            # Within a basis the more veracious document wins (0.8 before 0.7), then recency.
+            conf = float(a.get("confidence") or 0)
+            return first_auto - 0.5 + 0.25 * WEB_OVERRIDE_BASES.index(a["basis"]) - 0.1 * conf
         return len(order) + 1
     # A street-level geocode (on the right street, not a verified building; confidence 0.3) sits
     # below everything, reviewed lookups included: it fills an empty map pin and nothing else.

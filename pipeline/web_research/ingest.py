@@ -34,7 +34,21 @@ SOURCE = "web_research"
 DEFAULT_CONFIDENCE = 0.6
 KINDS = ("company_site", "government_registry", "certification_body", "trade_directory", "news",
          "map_listing", "social", "filing", "other")
-VERDICTS = ("in_scope", "not_ic", "closed", "not_found")
+VERDICTS = ("in_scope", "not_ic", "closed", "not_found", "duplicate")
+
+# Source veracity: the most a document of this kind can vouch for. A finding's confidence is capped
+# at its document's veracity, and only findings the document states literally can override.
+VERACITY = {"government_registry": 0.8, "filing": 0.8, "certification_body": 0.8, "company_site": 0.7,
+            "trade_directory": 0.6, "map_listing": 0.6, "news": 0.5, "social": 0.4, "other": 0.4}
+INFERRED_CAP = 0.6            # a judgement from the page (category, material), not a value it states
+# Fields a page states as a value that can be checked against the quote. A verified value from a
+# document of veracity >= OVERRIDE_AT outranks every automated source (not a person): basis
+# `web_verified` (0.8 documents) or `web_primary` (the company's own site). Anything else is
+# `web_cited` or `web_inferred` and only fills a blank.
+LITERAL = {"name", "legal_name", "address", "city", "state", "zip", "phone", "email", "website", "naics",
+           "sq_ft", "building_sqft", "expiry_date", "lat_lon"}
+OVERRIDE_AT = 0.7
+OVERRIDING = ("web_verified", "web_primary")        # pipeline/golden.py ranks these above automation
 
 # Fields the agent may assert. Everything golden carries except what a person or the pipeline owns:
 # existence_flag comes only from the verdict, adl_validated and employee_notes are ADL's own, and
@@ -102,6 +116,47 @@ def check_value(field: str, value: str, taxonomy: tuple[set[str], set[str]]) -> 
     return None
 
 
+def _alnum(v: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(v).lower())
+
+
+def _host(url: str) -> str:
+    return (urlsplit(url.strip()).hostname or "").lower().removeprefix("www.")
+
+
+def homepage(url: str) -> str:
+    """A website value is the site, not a page on it: https://example.com/about -> https://example.com"""
+    u = urlsplit(url.strip())
+    return f"{u.scheme}://{u.hostname.lower()}" if u.hostname else url
+
+
+def stated(field: str, value: str, quote: str, source_url: str) -> bool:
+    """Does the quote (or, for a website, the document itself) literally state this value?"""
+    from ..recovery.streets import street_equivalent
+    from ..contract import _US_NAMES
+    q = str(quote)
+    if field == "website":
+        return _host(value) == _host(source_url) or _host(value) in q.lower()
+    if field == "phone":
+        return re.sub(r"\D", "", value)[-10:] in re.sub(r"\D", "", q)
+    if field in ("zip",):
+        return value[:5] in re.findall(r"\d{5}", q)
+    if field == "state":
+        return (re.search(rf"\b{re.escape(value)}\b", q, re.I) is not None
+                or any(n in q.lower() and c == value.upper() for n, c in _US_NAMES.items()))
+    if field == "address":
+        num = re.match(r"\s*(\d+)", value)
+        if not num:
+            return _alnum(value) in _alnum(q)
+        for m in re.finditer(rf"\b{num.group(1)}\b[^,\n]*", q):
+            if street_equivalent(value, m.group(0))[0] or _alnum(value) in _alnum(m.group(0)):
+                return True
+        return False
+    if field in ("sq_ft", "building_sqft"):
+        return re.sub(r"\D", "", value.split(".")[0]) in re.sub(r"\D", "", q)
+    return _alnum(value) in _alnum(q)
+
+
 def _h(*parts) -> str:
     return hashlib.sha256("\x1f".join(str(p) for p in parts).encode()).hexdigest()[:16]
 
@@ -139,9 +194,20 @@ def plan(payload: dict, facility_id: str, active: set[str], fields: set[str], ta
                else "a verbatim quote from the source is required" if len(quote) < 3
                else "confidence must be between 0 and 1" if not isinstance(conf, (int, float)) or not 0 <= conf <= 1
                else check_value(field, value, taxonomy))
+        if not why and field == "website":
+            value = homepage(value)
+        literal = field in LITERAL
+        if not why and literal and not stated(field, value, quote, src["url"]):
+            why = "the quote does not state this value (copy the words that contain it)"
         if why:
             rejected.append({"item": f"assertions[{i}]", "field": field, "reason": why}); continue
-        facts.append({"field": field, "value": value, "basis": "web_cited", "confidence": float(conf),
+        veracity = VERACITY[src["kind"]]
+        conf = min(float(conf), veracity if literal else min(veracity, INFERRED_CAP))
+        basis = ("web_inferred" if not literal
+                 else "web_verified" if veracity >= 0.8 and conf >= OVERRIDE_AT
+                 else "web_primary" if veracity >= OVERRIDE_AT and conf >= OVERRIDE_AT
+                 else "web_cited")
+        facts.append({"field": field, "value": value, "basis": basis, "confidence": conf,
                       "source": src, "quote": quote[:1000]})
     verdict = payload.get("verdict") or {}
     status = verdict.get("status")
@@ -153,16 +219,29 @@ def plan(payload: dict, facility_id: str, active: set[str], fields: set[str], ta
         if not cited or len(reason) < 10:
             rejected.append({"item": "verdict", "reason": "not_ic / closed needs a reason and at least one cited source"})
         else:
+            best = max(cited, key=lambda x: VERACITY[x["kind"]])
             facts.append({"field": "existence_flag", "value": status, "basis": "web_verdict",
-                          "confidence": float(verdict.get("confidence", DEFAULT_CONFIDENCE)),
-                          "source": cited[0], "quote": reason[:1000]})
+                          "confidence": min(float(verdict.get("confidence", DEFAULT_CONFIDENCE)), VERACITY[best["kind"]]),
+                          "source": best, "quote": reason[:1000]})
+    duplicate = None
+    if status == "duplicate":
+        other = str(verdict.get("duplicate_of") or "").strip()
+        cited = [sources[r] for r in verdict.get("source_refs") or [] if r in sources]
+        reason = str(verdict.get("reason") or "").strip()
+        why = ("duplicate_of must name another active facility" if other == facility_id or other not in active
+               else "duplicate needs a reason and at least one cited source" if not cited or len(reason) < 10 else None)
+        if why:
+            rejected.append({"item": "verdict", "reason": why})
+        else:
+            duplicate = {"duplicate_of": other, "reason": reason[:1000], "urls": [c["url"] for c in cited]}
     # One research_source assertion per document actually used, so each source is itself on record.
     used = {f["source"]["ref"] for f in facts}
     for ref in sorted(used):
         s = sources[ref]
         facts.append({"field": "research_source", "value": s["url"], "basis": f"source:{s['kind']}",
                       "confidence": None, "source": s, "quote": s["title"] or s["url"], "is_source_tag": True})
-    return {"sources": [sources[r] for r in sorted(used)], "facts": facts, "rejected": rejected, "fatal": False}
+    return {"sources": [sources[r] for r in sorted(used)], "facts": facts, "rejected": rejected, "fatal": False,
+            "duplicate": duplicate}
 
 
 def _rows(facility_id: str, p: dict, release_tag: str, now: str) -> tuple[list[tuple], list[tuple]]:
@@ -195,7 +274,8 @@ def ingest(wh, *, limit: int = 200, dry_run: bool = False) -> dict:
                        "WHERE status = 'pending' ORDER BY submitted_at LIMIT ?", (limit,))
     now = datetime.now(timezone.utc).isoformat()
     totals = {"submissions": len(pending), "ingested": 0, "partial": 0, "rejected": 0,
-              "facts_written": 0, "sources_written": 0, "exclusions": 0, "dry_run": dry_run}
+              "facts_written": 0, "sources_written": 0, "exclusions": 0, "duplicates": 0, "overrides": 0,
+              "dry_run": dry_run}
     outcomes = []
     for sub in pending:
         try:
@@ -204,12 +284,18 @@ def ingest(wh, *, limit: int = 200, dry_run: bool = False) -> dict:
         except (ValueError, TypeError, AttributeError) as e:
             p = {"sources": [], "facts": [], "rejected": [{"item": "payload", "reason": f"unreadable: {e}"}], "fatal": True}
         real = [f for f in p["facts"] if not f.get("is_source_tag")]
-        status = ("rejected" if p["fatal"] or not real else "partial" if p["rejected"] else "ingested")
+        dup = p.get("duplicate")
+        status = ("rejected" if p["fatal"] or (not real and not dup and p["rejected"])
+                  else "partial" if p["rejected"] else "ingested")
         report = {"facts": len(real), "sources": len(p["sources"]),
+                  "overrides": sum(1 for f in real if f["basis"] in OVERRIDING),
                   "exclusion": next((f["value"] for f in real if f["field"] == "existence_flag"), None),
+                  "duplicate_of": dup["duplicate_of"] if dup else None,
                   "rejected": p["rejected"]}
         totals[status] += 1
         totals["exclusions"] += 1 if report["exclusion"] else 0
+        totals["duplicates"] += 1 if report["duplicate_of"] else 0
+        totals["overrides"] += report["overrides"]
         outcomes.append({"submission_id": sub["submission_id"], "facility_id": sub["facility_id"], "status": status, **report})
         if dry_run:
             continue
@@ -224,6 +310,11 @@ def ingest(wh, *, limit: int = 200, dry_run: bool = False) -> dict:
                               "ON CONFLICT (row_hash) DO NOTHING", refs)
                 c.executemany("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) "
                               "ON CONFLICT (assertion_id, release_tag) DO NOTHING", facts)
+            if dup and status != "rejected":
+                # A proposed merge, never an automatic one: it waits in the duplicate queue (#52).
+                c.execute("INSERT INTO facility_duplicate_candidate (facility_id, duplicate_of, source, tier, evidence, "
+                          "created_at) VALUES (?, ?, ?, 'likely', ?, ?) ON CONFLICT (facility_id, duplicate_of) DO NOTHING",
+                          (sub["facility_id"], dup["duplicate_of"], SOURCE, json.dumps(dup), now))
             c.execute("UPDATE web_research_submission SET status = ?, processed_at = ?, report = ? WHERE submission_id = ?",
                       (status, now, json.dumps(report), sub["submission_id"]))
         totals["facts_written"] += sum(1 for f in facts if f[4] != "research_source")
