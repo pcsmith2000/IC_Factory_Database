@@ -198,6 +198,17 @@ DDL = [
     """CREATE TABLE IF NOT EXISTS golden_release (
         release_tag TEXT NOT NULL, facility_key TEXT NOT NULL, snapshot_at TEXT NOT NULL, row_json TEXT NOT NULL,
         PRIMARY KEY (release_tag, facility_key))""",
+    # Two live numbers that may be one plant (#52), proposed by pipeline/duplicates.py (parcel_scan)
+    # or by research/an operator, and decided by a merge through the registry or a rejection. A
+    # rejected pair is never proposed again; a pending one is re-tiered by each scan.
+    """CREATE TABLE IF NOT EXISTS facility_duplicate_candidate (
+        facility_id TEXT NOT NULL, duplicate_of TEXT NOT NULL,
+        source TEXT NOT NULL,            -- 'parcel_scan' | 'web_research' | 'operator'
+        tier TEXT NOT NULL,              -- 'certain' | 'likely' | 'review'
+        evidence TEXT,                   -- JSON: names, addresses, reason, urls
+        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','merged','rejected')),
+        created_at TEXT NOT NULL, decided_at TEXT, decided_by TEXT,
+        PRIMARY KEY (facility_id, duplicate_of))""",
 ]
 
 # Views are created after the golden columns are reconciled, not with the tables: they name every
