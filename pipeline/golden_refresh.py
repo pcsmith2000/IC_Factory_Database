@@ -40,7 +40,8 @@ from .registry import load_yaml
 from .warehouse import GOLDEN_FIELDS
 
 ROOT = Path(__file__).resolve().parent.parent
-CARRIED_CLASSES = ("enrichment", "tako_ai_search", "astra_manual_web_lookup", "human_feedback", "web_research")
+CARRIED_CLASSES = ("enrichment", "tako_ai_search", "astra_manual_web_lookup", "human_feedback", "web_research",
+                   "monitor_fix")
 
 # Each queued (facility_key, release_tag) resolves to a permanent facility the way
 # v_assertions_resolved does: through its release's registry and legacy_id_map, or directly when

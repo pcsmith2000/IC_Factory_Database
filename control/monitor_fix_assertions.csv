@@ -1,0 +1,67 @@
+facility_id,field,value,retrieved_date,issue,evidence
+IC-92775,state,TN,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 37421 and city Chattanooga are TN; fl_bcis stored ID
+IC-94244,state,IN,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 46528-9250 and city Goshen are IN; tx_tdlr stored IL
+IC-94871,state,FL,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 32174 and city Ormond Beach are FL; in_dhs stored IN
+IC-95014,state,FL,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 34748 and city Leesburg are FL; mo_psc stored MO
+IC-95184,state,PA,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"ZIP 16933 and city Montgomery are PA; sipa stored AL; ZIP 16933 is Mansfield PA, the Murus plant"
+IC-95431,state,OH,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 43506 and city Bryan are OH; ic_directories_more shifted the state two places alphabetically
+IC-95434,state,TX,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 77020 and city Houston are TX; ic_directories_more shifted the state two places alphabetically
+IC-95435,state,TX,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 76424 and city Breckenridge are TX; ic_directories_more shifted the state two places alphabetically
+IC-95436,state,UT,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 84084 and city West Jordan are UT; ic_directories_more shifted the state two places alphabetically
+IC-95437,state,NV,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 89115 and city North Las Vegas are NV; ic_directories_more shifted the state two places alphabetically
+IC-95439,state,TX,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 75941 and city Diboll are TX; ic_directories_more shifted the state two places alphabetically
+IC-95440,state,NV,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 89015 and city Henderson are NV; ic_directories_more shifted the state two places alphabetically
+IC-95441,state,SD,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 57025 and city Elk Point are SD; ic_directories_more shifted the state two places alphabetically
+IC-95442,state,TX,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 76106 and city Fort Worth are TX; ic_directories_more shifted the state two places alphabetically
+IC-95443,state,TX,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 79845 and city Presidio are TX; ic_directories_more shifted the state two places alphabetically
+IC-95445,state,TX,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 76513 and city Belton are TX; ic_directories_more shifted the state two places alphabetically
+IC-95446,state,TX,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 75115 and city DeSoto are TX; ic_directories_more shifted the state two places alphabetically
+IC-95447,state,UT,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 84103 and city Salt Lake City are UT; ic_directories_more shifted the state two places alphabetically
+IC-95448,state,TX,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 76028 and city Burleson are TX; ic_directories_more shifted the state two places alphabetically
+IC-95450,state,MI,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 49418 and city Grandville are MI; ic_directories_more shifted the state two places alphabetically
+IC-95451,state,MI,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,ZIP 48183 and city Trenton are MI; ic_directories_more shifted the state two places alphabetically
+IC-07972,zip,72150-0099,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (721500099); reformatted as ZIP+4
+IC-08091,zip,71730-1877,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (717301877); reformatted as ZIP+4
+IC-08363,zip,72016,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (720160000); 0000 is padding, not a ZIP+4"
+IC-20335,zip,33713-4311,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (337134311); reformatted as ZIP+4
+IC-20797,zip,33912-6008,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (339126008); reformatted as ZIP+4
+IC-21067,zip,34601-2428,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (346012428); reformatted as ZIP+4
+IC-21124,zip,33853-3207,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (338533207); reformatted as ZIP+4
+IC-21127,zip,33950-8321,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (339508321); reformatted as ZIP+4
+IC-21423,zip,33912-5906,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (339125906); reformatted as ZIP+4
+IC-21596,zip,33069-1334,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (330691334); reformatted as ZIP+4
+IC-22939,zip,31792-6339,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (317926339); reformatted as ZIP+4
+IC-56584,zip,01564,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (015640000); 0000 is padding, not a ZIP+4"
+IC-56627,zip,02370,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (023700000); 0000 is padding, not a ZIP+4"
+IC-56816,zip,01570,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (015700000); 0000 is padding, not a ZIP+4"
+IC-60120,zip,56283-1427,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (562831427); reformatted as ZIP+4
+IC-66902,zip,27028-0845,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (270280845); reformatted as ZIP+4
+IC-68309,zip,68025-5769,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (680255769); reformatted as ZIP+4
+IC-68500,zip,68787-8139,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (687878139); reformatted as ZIP+4
+IC-75679,zip,16625-0343,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (166250343); reformatted as ZIP+4
+IC-76263,zip,17963-9563,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (179639563); reformatted as ZIP+4
+IC-76493,zip,17751-9398,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (177519398); reformatted as ZIP+4
+IC-84575,zip,78645-9666,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (786459666); reformatted as ZIP+4
+IC-84815,zip,78754-4603,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (787544603); reformatted as ZIP+4
+IC-85026,zip,79924-5006,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (799245006); reformatted as ZIP+4
+IC-85139,zip,79415-2003,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (794152003); reformatted as ZIP+4
+IC-85168,zip,78108-3944,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (781083944); reformatted as ZIP+4
+IC-85189,zip,78727-5817,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (787275817); reformatted as ZIP+4
+IC-85248,zip,77447-7818,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (774477818); reformatted as ZIP+4
+IC-87878,zip,24210,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (242100000); 0000 is padding, not a ZIP+4"
+IC-87961,zip,22603,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (226030000); 0000 is padding, not a ZIP+4"
+IC-88041,zip,24112,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (241120000); 0000 is padding, not a ZIP+4"
+IC-88058,zip,24319,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (243190000); 0000 is padding, not a ZIP+4"
+IC-88107,zip,24251,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (242510000); 0000 is padding, not a ZIP+4"
+IC-88190,zip,23917,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (239170000); 0000 is padding, not a ZIP+4"
+IC-88373,zip,24277,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (242770000); 0000 is padding, not a ZIP+4"
+IC-88494,zip,24368,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (243680000); 0000 is padding, not a ZIP+4"
+IC-88517,zip,24343,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (243430000); 0000 is padding, not a ZIP+4"
+IC-88526,zip,22630,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (226300000); 0000 is padding, not a ZIP+4"
+IC-88652,zip,23047,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,"source printed 9 digits without a dash (230470000); 0000 is padding, not a ZIP+4"
+IC-91041,zip,54449-4620,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (544494620); reformatted as ZIP+4
+IC-91138,zip,54157-1556,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (541571556); reformatted as ZIP+4
+IC-91157,zip,53963-2310,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (539632310); reformatted as ZIP+4
+IC-91167,zip,54449-1042,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (544491042); reformatted as ZIP+4
+IC-94578,zip,17842-9488,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (178429488); reformatted as ZIP+4
+IC-94841,zip,76227-8030,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/issues/57,source printed 9 digits without a dash (762278030); reformatted as ZIP+4
