@@ -19,6 +19,21 @@ python -m pipeline.neon_sql --write "UPDATE ..."                    # writes: se
 say so rather than trusting results from another project. Under the hood it POSTs to
 `https://<host>/sql` with the `Neon-Connection-String` header and `Neon-Batch-Read-Only: true`.
 
+### Credentials in Claude's cloud sessions
+
+The password never lives in the container. The `IC_Database` environment has a proxy credential
+for `*.neon.tech` that adds one header to every request: `Neon-Connection-String` with the full
+connection string of the `AGENT_READ_WRITE_NON_GOLD` role (not `neondb_owner`). The `DATABASE_URL`
+in the container has the host and database but no password; the proxy supplies the real header.
+
+- `missing authentication credentials: required password` means the proxy header did not arrive
+  (credential missing or not yet picked up — it applies to new sessions only).
+- `permission denied` means the login worked but the role lacks a `GRANT` on that table.
+- The credential must not send an `Authorization: Bearer` header: Neon treats a Bearer token as
+  Neon Auth / Data API login (the `authenticated` role), not a database password.
+- Do not go digging in the proxy's configuration or status to find credentials; if the connection
+  fails, report the error and ask the user to fix the environment credential.
+
 ### Rules
 
 - **Reads:** Claude may run read-only queries at any time. They run in a read-only transaction.
