@@ -47,6 +47,13 @@ cautious, so production routes every `not_ic` to review and never removes an ADL
 The first batch (`wr-prod-001`, 25 facilities) runs `mode=dry`, then again as `wr-prod-002` with `mode=submit`
 once it grows.
 
+**Dry ramp (user's decision, 2026-09-26):** the ramp does not wait on merges or on submission. Batches run
+`mode=dry` and double on `grow` exactly as above; their artifacts (kept 90 days) hold every submission, and the
+facts are written later from them. Because dry batches submit nothing, each one passes `offset` = the number of
+facilities earlier dry batches of this seed already researched, so no facility is researched twice. The ledger
+records each batch's offset, size, commit and decision; a batch is submittable later only if it grew and ran from
+`main`. A fix may be tested on a dry batch from its branch before it merges.
+
 ## Gates (in `pipeline/web_research/production.py`)
 
 | Gate | Rule | On failure |
