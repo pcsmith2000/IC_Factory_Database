@@ -33,3 +33,23 @@ closure (v9.5). `production.reguard` applies all of them to every batch at submi
 Then `web-research-ingest` validates and writes the assertions, and the next `golden-refresh` brings them into
 golden. Suggested order: 002 first and check ingest's accepted/refused counts before the rest. Artifacts expire
 90 days after each run (late December 2026).
+
+## Submitted and ingested (2026-09-27, with the user's approval)
+
+Each batch went through `research-production-submit.yml` (today's guards re-applied) and `web-research-ingest.yml`
+(dispatched by hand after each submit; the 15-minute schedule was firing only every few hours).
+
+| Batch | Submissions | Ingested | Partial | Rejected | Facts written |
+| --- | --- | --- | --- | --- | --- |
+| wr-prod-002 | 25 | 24 | 0 | 1 | 133 |
+| wr-prod-003 | 50 | 48 | 0 | 2 | 236 |
+| wr-prod-004 | 100 | 98 | 0 | 2 | 487 |
+| wr-prod-005 | 200 | 196 | 0 | 4 | 1,081 |
+| wr-prod-006 | 400 | 392 | 1 | 7 | 2,333 |
+| wr-prod-007 | 799 | 787 | 0 | 12 | 4,651 |
+| wr-prod-008 | 2,643 | 2,602 | 2 | 39 | 14,510 |
+| **Total** | **4,217** | **4,147** | **3** | **67 (1.6%)** | **23,431** |
+
+Every rejection is the same: a not_found submission with no sources (no page loaded), so nothing true was lost.
+The three partials each lost one address whose quote did not state it (ingest's own check). `golden_dirty` was empty
+afterwards: golden-refresh has taken the facilities in.
