@@ -29,3 +29,12 @@ cumulative $3.46 list. Production budget $20, stop at $18 billed.
 7. **Verdicts are not stable at the margin.** 6 of 25 changed between two identical runs (in_scope ↔ duplicate or
    not_found). The checked duplicates are defensible (same address or phone), but a verdict seen once is weak
    evidence. Worth measuring on the next batches before any fix: agreement between two runs costs a batch.
+
+## wr-prod-003 (50, dry, offset 25): grow
+
+8. Judge precision 1.0 on 19 facts; duplicates 14%. Cost steady at $0.0080 list per facility.
+9. **Review is getting crowded with real plants.** 13 of 50 went to review (proposed not_ic). Several are in scope:
+   Tower Structural Laminating (glulam; judged a Wabash trailer dealer), Twin Oaks Truss, Phoenix Modular Elevator,
+   Coach House (garages). Safe (no removal), but withholding their facts costs comprehensiveness. Watch the share at
+   100; if it stays above ~20%, test a fix on Dev A–C (e.g. keep literal facts when the page's address matches the
+   record's, and only withhold when it does not).
