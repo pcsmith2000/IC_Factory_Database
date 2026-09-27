@@ -38,3 +38,12 @@ cumulative $3.46 list. Production budget $20, stop at $18 billed.
    Coach House (garages). Safe (no removal), but withholding their facts costs comprehensiveness. Watch the share at
    100; if it stays above ~20%, test a fix on Dev A–C (e.g. keep literal facts when the page's address matches the
    record's, and only withhold when it does not).
+
+## wr-prod-004 (100, dry, offset 75): grow
+
+10. Two shards of 50 in parallel: 100 facilities in 27 min. List cost fell to $0.0069 per facility.
+11. First `closed`: Fitts Company's Lexington SC plant, relocated to Gaston SC in 2016 (company site and SC Commerce).
+    Correct, but a **relocation is also a new plant**: the Gaston site should be in the table. The pipeline has no
+    way to propose one. Record relocations for a follow-up (comprehensiveness), don't only close the old site.
+12. Review share 19% (19/100), mostly genuinely out of scope (school districts' "plant operations", Eli Lilly,
+    cargo trailers, a Swedish head office). The v9.2 own-address rule applies from wr-prod-005.
