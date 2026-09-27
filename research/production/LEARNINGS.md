@@ -77,3 +77,13 @@ cumulative $3.46 list. Production budget $20, stop at $18 billed.
     Fix: a closure needs a quote that says so in words (closed its doors, ceased operations, out of business,
     dissolved, shutter, closure notice, permanently closed); a bare "Closed"/"Inactive" status is not evidence.
 18. 800 in 54 min (16 shards, 10 at a time), $0.0078 list per facility, 787 new literal facts, judge 0.95.
+
+## wr-prod-008 (2,651, dry, offset 1575, v9.5): grow; ramp complete
+
+19. 2,643 of 2,651 researched in 2 h 24 min (54 shards, 10 at a time), $0.0077 list per facility, judge 0.95. Seven
+    closures, every one said in words; v9.5's badge/permit/sale guards sent 10 more to review.
+20. Eight facilities failed on Alibaba's content filter (DataInspectionFailed) even with the fallback judge: the
+    fallback retries only the judge call, not the second opinion. Worth a follow-up: route every call for a
+    refused facility to the open-weight fallback.
+21. Totals after `reguard` (today's guards on every batch): 4,217 submissions, 23,422 facts, 1,590 in scope,
+    356 duplicates, 12 closures, 895 records for review. $10.06 billed of the $18 line ($32.69 list).
