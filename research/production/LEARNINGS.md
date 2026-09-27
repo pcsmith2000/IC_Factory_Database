@@ -67,3 +67,13 @@ cumulative $3.46 list. Production budget $20, stop at $18 billed.
 16. Two wrong facts in the judge's sample: `notext@whirlwindsteel.com` (an SMS opt-out address) and a Florida
     Taxpayer Number read as a phone. Both are pattern-fixable in `prevalidate` (reject opt-out/no-reply mailboxes;
     reject a phone whose quote names a taxpayer/EIN/license number).
+
+## wr-prod-007 (800, dry, offset 775, v9.3): gates grow, loop STOPPED on closures read from hours badges
+
+17. **"Closed" on a directory is usually opening hours.** MapQuest's "<name> Closed · Save · Call" and Macrae's "the
+    office is currently Closed" are open-now badges (the pages were fetched at night). Champion's Claysburg plant was
+    judged closed on those two alone; U.S. Truss (wr-prod-005) and BMC Everett leaned on the same badge. Permit and
+    tank registers ("Facility Status: Inactive", UST "Status: Closed") describe a permit or a tank, not the plant.
+    Fix: a closure needs a quote that says so in words (closed its doors, ceased operations, out of business,
+    dissolved, shutter, closure notice, permanently closed); a bare "Closed"/"Inactive" status is not evidence.
+18. 800 in 54 min (16 shards, 10 at a time), $0.0078 list per facility, 787 new literal facts, judge 0.95.
