@@ -57,3 +57,13 @@ cumulative $3.46 list. Production budget $20, stop at $18 billed.
     Fitts (wr-prod-004) was the same pattern across towns. Fix before resuming: a `closed` whose evidence speaks of a
     former address, a move or a relocation, or whose company site is live with the record's phone, is not a removal.
 14. Otherwise the batch was clean: 200 in ~28 min (4 shards), judge precision 1.0, $0.0075 list per facility.
+
+## wr-prod-006 (400, dry, offset 375, v9.3): grow
+
+15. 400 in 30 min (8 shards), $0.0074 list per facility, 388 new literal facts. Three closures, all real on
+    inspection; for Horton Homes the plant lives on as Legacy Housing, already in golden (IC-94988). An ownership
+    change is only safe to close when the new owner's plant is already a record: worth a check like the relocation
+    guard if one turns up without it.
+16. Two wrong facts in the judge's sample: `notext@whirlwindsteel.com` (an SMS opt-out address) and a Florida
+    Taxpayer Number read as a phone. Both are pattern-fixable in `prevalidate` (reject opt-out/no-reply mailboxes;
+    reject a phone whose quote names a taxpayer/EIN/license number).
