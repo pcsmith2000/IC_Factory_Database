@@ -93,3 +93,20 @@ def test_production_config_is_the_evaluated_v9_plus_the_production_rules():
     cfg = json.loads((Path(P.__file__).parent / "configs" / "production.json").read_text())
     assert cfg["judge"]["model"] == "alibaba/qwen3.7-flash"
     assert cfg["policy"]["not_ic_to_review"] and cfg["policy"]["never_remove_validated"] and cfg["policy"]["not_ic_keyword_veto"]
+
+
+def test_reguard_applies_todays_guards_to_an_older_pass(tmp_path):
+    # wr-prod-007 ran before v9.5: Champion Claysburg was "closed" on MapQuest's open-now badge. Submitted later,
+    # it goes through today's guards: the closure becomes a review, and a junk mailbox is dropped.
+    fdir = tmp_path / "IC-1"
+    fdir.mkdir()
+    answer = {"verdict": {"status": "closed", "reason": "MapQuest says Closed",
+                          "evidence": [{"passage": "P1", "quote": "Champion Home Builders, Inc. Closed"}]}}
+    (fdir / "judge-response.json").write_text(json.dumps({"choices": [{"message": {"content": json.dumps(answer)}}]}))
+    sub = {"facility_id": "IC-1", "verdict": {"status": "closed", "reason": "MapQuest says Closed"},
+           "sources": [{"source_ref": "s1", "url": "https://champion.example/contact"}],
+           "assertions": [{"field": "email", "value": "noreply@champion.example", "source_ref": "s1",
+                           "quote": "noreply@champion.example"}]}
+    out = W.reguard(sub, {"dropped": [], "kept": []}, {"address": "2551 Champion Drive"}, fdir)
+    assert out["verdict"]["status"] == "not_found" and out["verdict"]["reason"].startswith("REVIEW")
+    assert out["assertions"] == [] and sub["verdict"]["status"] == "closed"      # the original is untouched

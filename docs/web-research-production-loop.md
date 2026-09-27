@@ -54,6 +54,13 @@ facilities earlier dry batches of this seed already researched, so no facility i
 records each batch's offset, size, commit and decision; a batch is submittable later only if it grew and ran from
 `main`. A fix may be tested on a dry batch from its branch before it merges.
 
+**Submitting a dry batch later:** run `research-production-submit.yml` from `main` with the batch's `run_id` and the
+GitHub run id that researched it. It accepts only a successful `research-production` run from `main` whose health
+decision was `grow`, and re-applies the current guards to every submission first (`production.reguard`: closures
+said in words, moves and sales to review, facts about another business withheld, junk contacts left out), so a
+batch researched before a fix is submitted as the fixed pipeline would have. Submit each batch once; a second
+submission of the same `run_id` inserts nothing (`ON CONFLICT DO NOTHING`).
+
 ## Gates (in `pipeline/web_research/production.py`)
 
 | Gate | Rule | On failure |
