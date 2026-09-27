@@ -767,6 +767,16 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
         # A record that already carries an IC capability is removed only on two different pages.
         trace["downgraded"] = {"from": status, "why": "record has an IC capability; removal needs two different pages"}
         verdict["status"] = status = "not_found"
+    if status == "closed" and policy.get("relocation_guard", True):
+        # wr-prod-005: Power Truss was judged closed from its own contact page, "(Former Address: 935 W. Housman)",
+        # while the same page showed it operating across town with the record's phone. wr-prod-004: Fitts moved
+        # its plant to another town. A move is not a closure: the plant goes to a person, never removed.
+        said = reason + " " + " ".join(ws(e.get("quote")) for e in (v.get("evidence") or []) if isinstance(e, dict))
+        if RELOCATED.search(said):
+            trace["review"] = {"proposed": "closed (relocated)", "reason": reason, "sources": ev_urls}
+            trace["downgraded"] = {"from": "closed", "why": "the evidence describes a move, not a closure"}
+            verdict["reason"] = f"REVIEW (plant moved?): {reason}"[:900]
+            verdict["status"] = status = "not_found"
     if status in ("not_ic", "closed") and policy["removal_needs_ingest_rule"]:
         kinds = [sources[u]["kind"] for u in ev_urls]
         if not (len(ev_urls) >= 2 or any(k in ("government_registry", "filing", "certification_body") for k in kinds)) or len(reason) < 10:
@@ -805,6 +815,8 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
     return payload, trace
 
 
+RELOCATED = re.compile(r"former(ly)?\s+(address|location|site|plant)|relocat|moved\s+(to|its|our|from|the)|"
+                       r"new\s+(location|facility|plant|address|site)", re.I)
 _STREET_WORDS = {"street", "st", "avenue", "ave", "road", "rd", "drive", "dr", "boulevard", "blvd", "highway", "hwy",
                  "lane", "ln", "way", "parkway", "pkwy", "court", "ct", "place", "pl", "circle", "cir", "trail", "trl",
                  "pike", "route", "rte", "loop", "terrace", "n", "s", "e", "w", "north", "south", "east", "west",

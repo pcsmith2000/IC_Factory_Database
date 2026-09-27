@@ -613,3 +613,14 @@ def test_withhold_drops_contact_facts_for_another_street_and_keeps_the_website()
 def test_withhold_keeps_corrections_on_the_same_street(rec_addr, new):
     facts = _facts(("address", new), ("zip", "12345"))
     assert len(P.withhold_other_entity({"address": rec_addr}, facts, {"dropped": [], "kept": []})) == 2
+
+
+@pytest.mark.parametrize("text,hit", [
+    ("(Former Address: 935 W. Housman)", True),                      # wr-prod-005, Power Truss
+    ("the company relocated its manufacturing facility to Gaston", True),  # wr-prod-004, Fitts
+    ("moved to a new facility in Mayfield", True),
+    ("The current entity status is inactive", False),                 # U.S. Truss: a real closure
+    ("permanently closed in 2019", False),
+])
+def test_relocation_is_not_a_closure(text, hit):
+    assert bool(P.RELOCATED.search(text)) is hit
