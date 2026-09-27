@@ -13,7 +13,7 @@ on:
         description: "batch id, wr-prod-NNN (tags every submission; one batch can be excluded or reversed as a unit)"
         required: true
       batch_size:
-        description: "facilities in this batch (1..2000)"
+        description: "facilities in this batch (1..3000)"
         default: "25"
       mode:
         description: "dry = research and gates only; submit = also queue the submissions for ingest"
@@ -56,8 +56,8 @@ jobs:
         env: { RUN_ID: "${{ inputs.run_id }}", SIZE: "${{ inputs.batch_size }}", COST: "${{ inputs.max_cost_usd }}" }
         run: |
           [[ "$RUN_ID" =~ ^wr-prod-[0-9]{3}$ ]] || { echo "::error::run_id must look like wr-prod-001"; exit 1; }
-          python3 -c "import os,sys; s=int(os.environ['SIZE']); c=float(os.environ['COST']); sys.exit(0 if 1<=s<=2000 and 0<c<=12 else 1)" \
-            || { echo "::error::batch_size 1..2000 and max_cost_usd in (0, 12]"; exit 1; }
+          python3 -c "import os,sys; s=int(os.environ['SIZE']); c=float(os.environ['COST']); sys.exit(0 if 1<=s<=3000 and 0<c<=32 else 1)" \
+            || { echo "::error::batch_size 1..3000 and max_cost_usd in (0, 32]"; exit 1; }
       - name: No other workflow is spending the shared gateway key
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |

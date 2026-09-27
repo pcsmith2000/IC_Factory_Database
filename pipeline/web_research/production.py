@@ -191,8 +191,8 @@ def main(argv=None) -> int:
     if a.cmd == "select":
         from ..research_eval.benchmark import PsycopgReader
         url = next((u for u in (os.environ.get("DATABASE_URL_UNPOOLED", ""), os.environ.get("DATABASE_URL", "")) if u), "")
-        if not 1 <= a.size <= 2000:
-            print("size must be 1..2000", file=sys.stderr); return 2
+        if not 1 <= a.size <= 3000:
+            print("size must be 1..3000", file=sys.stderr); return 2
         m = select(PsycopgReader(url), a.run_id, a.size, a.seed, Path(a.out), a.offset)
         print(json.dumps({k: v for k, v in m.items() if k != "splits"}, indent=1)); return 0
     if a.cmd == "health":
