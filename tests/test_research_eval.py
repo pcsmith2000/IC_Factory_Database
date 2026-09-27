@@ -624,3 +624,24 @@ def test_withhold_keeps_corrections_on_the_same_street(rec_addr, new):
 ])
 def test_relocation_is_not_a_closure(text, hit):
     assert bool(P.RELOCATED.search(text)) is hit
+
+
+@pytest.mark.parametrize("field,value,quote,junk", [
+    ("email", "notext@whirlwindsteel.com", "text STOP or email notext@whirlwindsteel.com", True),   # wr-prod-006
+    ("email", "noreply@acme.com", "noreply@acme.com", True),
+    ("email", "info@acme.com", "Email: info@acme.com", False),
+    ("email", "stopford@acme.com", "stopford@acme.com", False),
+    ("phone", "7307508345", "Taxpayer Number 17307508345", True),                                 # wr-prod-006
+    ("phone", "7307508345", "Phone: (730) 750-8345 | License # 12345", False),
+    ("phone", "2605551234", "(260) 555-1234", False),
+])
+def test_junk_contacts_are_not_submitted(field, value, quote, junk):
+    assert bool(P.junk_contact(field, value, quote)) is junk
+
+
+def test_a_number_that_is_the_pages_own_identifier_is_not_a_phone():
+    # wr-prod-006: a Texas Taxpayer Number page gave "17307508345"; MapQuest's bare "+15743890307" is a real phone.
+    assert P.junk_contact("phone", "7307508345", "17307508345", "https://opengovus.com/texas-taxpayer/17307508345")
+    assert not P.junk_contact("phone", "5743890307", "+15743890307", "https://www.mapquest.com/us/indiana/fusion-wood-427535392")
+    assert not P.junk_contact("phone", "2295745159", "(229) 574-5159",
+                              "https://www.buzzfile.com/business/Pinnacle-Park-Homes-229-574-5159")
