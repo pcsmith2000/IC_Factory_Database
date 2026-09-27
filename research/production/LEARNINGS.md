@@ -47,3 +47,13 @@ cumulative $3.46 list. Production budget $20, stop at $18 billed.
     way to propose one. Record relocations for a follow-up (comprehensiveness), don't only close the old site.
 12. Review share 19% (19/100), mostly genuinely out of scope (school districts' "plant operations", Eli Lilly,
     cargo trailers, a Swedish head office). The v9.2 own-address rule applies from wr-prod-005.
+
+## wr-prod-005 (200, dry, offset 175, v9.2): gates grow, loop STOPPED on a wrong removal
+
+13. **A move is not a closure.** Power Truss (IC-55060) was judged `closed` from its own contact page: "(Former
+    Address: 935 W. Housman)". The same page shows the company operating in Mayfield (1009 KY-121) with the record's
+    phone. The removal rule (two pages, or one registry) was met by two pages of the company's own site, both saying
+    the plant is alive. The gates count closed verdicts but never check them; the loop's hand check caught it.
+    Fitts (wr-prod-004) was the same pattern across towns. Fix before resuming: a `closed` whose evidence speaks of a
+    former address, a move or a relocation, or whose company site is live with the record's phone, is not a removal.
+14. Otherwise the batch was clean: 200 in ~28 min (4 shards), judge precision 1.0, $0.0075 list per facility.
