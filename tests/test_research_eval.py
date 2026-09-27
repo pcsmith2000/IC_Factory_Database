@@ -645,3 +645,26 @@ def test_a_number_that_is_the_pages_own_identifier_is_not_a_phone():
     assert not P.junk_contact("phone", "5743890307", "+15743890307", "https://www.mapquest.com/us/indiana/fusion-wood-427535392")
     assert not P.junk_contact("phone", "2295745159", "(229) 574-5159",
                               "https://www.buzzfile.com/business/Pinnacle-Park-Homes-229-574-5159")
+
+
+@pytest.mark.parametrize("quote,words", [
+    ("Champion Home Builders, Inc. Closed", False),                    # wr-prod-007: MapQuest open-now badge
+    ("the office is currently Closed", False),                        # Macrae's office hours
+    ("Status: Closed Facility Name: Calumet Coach Co", False),        # an underground-tank record
+    ("Facility Status: Inactive", False),                             # a water permit
+    ("THIS LOCATION HAS PERMANENTLY CLOSED.", True),
+    ("Garco Building Systems is closing its Airway Heights factory", True),
+    ("The company stated that it will shutter manufacturing operations", True),
+    ("Patriot Homes is currently OUT OF BUSINESS.", True),
+    ("The current entity status is inactive", True),
+    ("Acme furniture factory closed in 2019", True),
+])
+def test_a_closure_is_said_in_words(quote, words):
+    assert bool(P.CLOSED_IN_WORDS.search(quote)) is words
+
+
+def test_a_sale_is_not_a_closure():
+    # wr-prod-007: Haven's "closed their doors" was said of Penn Lyon, the plant's previous owner.
+    assert P.OWNERSHIP.search("The facility was previously part of Penn Lyon Homes, who closed their doors")
+    assert P.OWNERSHIP.search("Benchmark Industries CLOSED (Purchased by Phoenix Building Systems)")
+    assert P.RELOCATED.search("decided to close its doors and move the operation to North Carolina")

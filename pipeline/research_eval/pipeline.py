@@ -773,10 +773,22 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
         # while the same page showed it operating across town with the record's phone. wr-prod-004: Fitts moved
         # its plant to another town. A move is not a closure: the plant goes to a person, never removed.
         said = reason + " " + " ".join(ws(e.get("quote")) for e in (v.get("evidence") or []) if isinstance(e, dict))
-        if RELOCATED.search(said):
-            trace["review"] = {"proposed": "closed (relocated)", "reason": reason, "sources": ev_urls}
-            trace["downgraded"] = {"from": "closed", "why": "the evidence describes a move, not a closure"}
+        if RELOCATED.search(said) or OWNERSHIP.search(said):
+            kind = "relocated" if RELOCATED.search(said) else "ownership change"
+            trace["review"] = {"proposed": f"closed ({kind})", "reason": reason, "sources": ev_urls}
+            trace["downgraded"] = {"from": "closed", "why": f"the evidence describes a {kind}, not a closure"}
             verdict["reason"] = f"REVIEW (plant moved?): {reason}"[:900]
+            verdict["status"] = status = "not_found"
+    if status == "closed" and policy.get("closure_in_words", True):
+        # wr-prod-007: Champion's Claysburg plant was judged closed on Macrae's "the office is currently Closed"
+        # and MapQuest's "<name> Closed · Save · Call", both open-now badges read at night; permit and tank
+        # registers ("Facility Status: Inactive", UST "Status: Closed") describe a permit, not the plant. A
+        # closure needs a verbatim quote that says so in words.
+        quotes = [ws(e.get("quote")) for e in (v.get("evidence") or []) if isinstance(e, dict)]
+        if not any(CLOSED_IN_WORDS.search(q) for q in quotes):
+            trace["review"] = {"proposed": "closed (weak evidence)", "reason": reason, "sources": ev_urls}
+            trace["downgraded"] = {"from": "closed", "why": "no quote says the plant closed in words (a status badge is not a closure)"}
+            verdict["reason"] = f"REVIEW (closed?): {reason}"[:900]
             verdict["status"] = status = "not_found"
     if status in ("not_ic", "closed") and policy["removal_needs_ingest_rule"]:
         kinds = [sources[u]["kind"] for u in ev_urls]
@@ -817,7 +829,20 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
 
 
 RELOCATED = re.compile(r"former(ly)?\s+(address|location|site|plant)|relocat|moved\s+(to|its|our|from|the)|"
+                       r"mov(e|es|ing)\s+(the|its|our|their)\s+(operation|plant|production|manufacturing)|"
                        r"new\s+(location|facility|plant|address|site)", re.I)
+CLOSED_IN_WORDS = re.compile(
+    r"permanently\s+closed|clos(e|ed|es|ing)\s+(its|their|the|our)\s+(doors|plant|facility|factory|operations?|location)|"
+    r"(has|have|had|was|were)\s+(now\s+)?closed|will\s+close|shut(ter|tered|ting|s)?\s+(down|its|the|manufacturing|operations)|"
+    r"shut\s*down|ceased\s+(operations?|production|manufacturing|business)|out\s+of\s+business|dissolved|"
+    r"no\s+longer\s+(active|in\s+business|operating|operational)|(entity|corporate|corporation)\s+status\W+(is\s+)?(inactive|dissolved)|"
+    r"bankrupt|liquidat|closure|defunct|ended\s+on\s+\w+|(is|are|was|were)\s+closing|closing\s+(its|the|their|a|our)\s|"
+    r"\b(they|it|we)\s+(have\s+|had\s+)?closed|closed\s+(in|on|since)\s+(\w+\s+){0,2}\d{4}|closed\s+down", re.I)
+# wr-prod-007: Haven Custom Homes' "closure" quote was about Penn Lyon, the plant's previous owner; Horton's plant is
+# now Legacy Housing's. A sale is not a closure: the plant goes to a person.
+OWNERSHIP = re.compile(r"acquir(ed|es|ing)|acquisition|purchased\s+by|bought\s+by|previously\s+(part|owned|operated)|"
+                       r"formerly\s+(occupied|owned|operated|part|known)|now\s+(owned|operated|run)\s+by|took\s+over|taken\s+over|"
+                       r"merged\s+(with|into)|new\s+owner", re.I)
 _STREET_WORDS = {"street", "st", "avenue", "ave", "road", "rd", "drive", "dr", "boulevard", "blvd", "highway", "hwy",
                  "lane", "ln", "way", "parkway", "pkwy", "court", "ct", "place", "pl", "circle", "cir", "trail", "trl",
                  "pike", "route", "rte", "loop", "terrace", "n", "s", "e", "w", "north", "south", "east", "west",
