@@ -717,7 +717,8 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
                 # novel findings. Only an address on the company's own domain is taken.
                 c = [x for x in c if site_host and x["value"].split("@")[-1].lower().removeprefix("www.").endswith(site_host)]
             # Only an unambiguous candidate fills a blank: one distinct value on the anchored pages.
-            if field not in have and len(c) == 1 and quote_ok(c[0]["quote"], text_of.get(c[0]["url"], "")):
+            if field not in have and len(c) == 1 and quote_ok(c[0]["quote"], text_of.get(c[0]["url"], "")) \
+                    and not junk_contact(field, c[0]["value"], c[0]["quote"], c[0]["url"]):
                 a = {"field": field, "value": c[0]["value"], "source_ref": ref(c[0]["url"]), "quote": c[0]["quote"],
                      "confidence": 0.7}
                 assertions.append(a); trace["kept"].append(dict(a, by="regex"))
@@ -897,6 +898,28 @@ def keyword_veto(texts: list[str]) -> list[str]:
     return [w for w in veto_terms() if re.search(rf"(?<![a-z0-9]){re.escape(w)}(?![a-z0-9])", blob)]
 
 
+_JUNK_MAILBOX = re.compile(r"^(no-?text|no-?sms|no-?reply|do-?not-?reply|unsubscribe|opt-?out|stop|bounce|mailer-daemon)\b", re.I)
+_ID_NUMBER = re.compile(r"\b(taxpayer|tax\s*id|ein|fein|tin|license|licen[cs]e\s*(no|#|number)|lic\s*#|usdot|dot\s*(no|#|number)|"
+                        r"mc\s*#|npi|duns|uei|cage|account|registration\s*(no|#|number)|document\s*(no|#|number))\b", re.I)
+_PHONE_WORD = re.compile(r"\b(phone|tel|telephone|call|ph|main|office|toll[\s-]*free|contact)\b", re.I)
+
+
+def junk_contact(field: str, value: str, quote: str, url: str = "") -> str | None:
+    """wr-prod-006: the judge's sample caught notext@whirlwindsteel.com (an SMS opt-out mailbox) and a Florida
+    Taxpayer Number read as a phone. Neither is a way to reach the plant."""
+    if field == "email" and _JUNK_MAILBOX.match(value.split("@")[0]):
+        return "an opt-out or no-reply mailbox"
+    if field == "phone" and _ID_NUMBER.search(quote) and not _PHONE_WORD.search(quote):
+        return "the quote gives an identification number, not a phone"
+    # A bare digit run that is also the page's key on an ID register (not a phone directory, whose URLs carry
+    # the formatted phone: buzzfile, allbiz, phonelookup).
+    digits = re.sub(r"\D", "", quote)
+    if field == "phone" and re.fullmatch(r"\+?\d{10,}", quote.strip()) and digits in re.sub(r"\D", "", url) \
+            and re.search(r"taxpayer|tax-?id|\bein\b|licen[cs]e|corporation|entity|duns|uei|registr", url, re.I):
+        return "the number is the page's own identifier on an ID register, not a phone"
+    return None
+
+
 def prevalidate(field: str, value: str, quote: str, url: str) -> tuple[str, str | None]:
     """The contract's own checks, run before submission (pass a-v1-gptoss120b: websites without a
     scheme, off-taxonomy leaves and quotes that do not state their value were refused). Returns the
@@ -910,7 +933,7 @@ def prevalidate(field: str, value: str, quote: str, url: str) -> tuple[str, str 
     if field == "state" and len(value) > 2:
         from ..contract import _US_NAMES
         value = _US_NAMES.get(value.lower(), value)
-    why = I.check_value(field, value, _TAXONOMY)
+    why = junk_contact(field, value, quote, url) or I.check_value(field, value, _TAXONOMY)
     if not why and field in I.LITERAL and not I.stated(field, I.homepage(value) if field == "website" else value, quote, url):
         why = "the quote does not state this value"
     return value, why
