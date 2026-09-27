@@ -822,30 +822,34 @@ def withhold_other_entity(rec: dict, assertions: list[dict], trace: dict) -> lis
     wr-prod-001: CMH Manufacturing #927 (Clayton Homes, White Pine TN) was matched to a Lubbock foundry-equipment
     maker. not_ic went to review, but the Lubbock address, city, ZIP and phone were still submitted. The verdict
     guards change verdicts, never facts. Two rules:
-    - a record sent to review (proposed not_ic), or downgraded because its evidence names another street, keeps
-      no facts at all: the pages may describe a different business;
+    - a record sent to review (proposed not_ic) keeps no facts unless a page gives the record's own address
+      (same house number or street); one downgraded because its evidence names another street keeps none;
     - an address that shares neither the house number nor a street name with the record's is another plant (or
       another company): its address, city, state, ZIP, phone and email are withheld. The website is kept.
       A record whose address is a PO box is exempt: the street address is exactly what research should add.
     """
+    rec_addr = str(rec.get("address") or "")
+    new = next((a for a in assertions if a["field"] == "address"), None)
+
+    def same_site() -> bool:
+        num_r = re.match(r"\s*(\d+)", rec_addr)
+        num_n = re.match(r"\s*(\d+)", new["value"])
+        return bool(num_r and num_n and num_r.group(1) == num_n.group(1)) or bool(_street_words(rec_addr) & _street_words(new["value"]))
+
     why = None
-    if trace.get("review"):
-        why = "sent to review (proposed not_ic): the pages may describe another business"
+    if trace.get("review") and not (rec_addr.strip() and new and same_site()):
+        # wr-prod-003: 8 of 13 review records (Tower Structural Laminating, Phoenix Modular Elevator, ...) were
+        # found at the record's own address; their facts describe this site whatever its scope, so they stay.
+        why = "sent to review (proposed not_ic) and no page address matches the record's"
     elif "evidence names" in str((trace.get("downgraded") or {}).get("why") or ""):
         why = "verdict evidence names another street address"
     if why:
         drop = list(assertions)
     else:
-        rec_addr = str(rec.get("address") or "")
-        new = next((a for a in assertions if a["field"] == "address"), None)
         drop = []
-        if rec_addr.strip() and new and not re.search(r"\bp\.?\s*o\.?\s*box\b", rec_addr, re.I):
-            num_r = re.match(r"\s*(\d+)", rec_addr)
-            num_n = re.match(r"\s*(\d+)", new["value"])
-            same_num = bool(num_r and num_n and num_r.group(1) == num_n.group(1))
-            if not same_num and not (_street_words(rec_addr) & _street_words(new["value"])):
-                why = f"address {new['value']!r} shares no number or street with the record's {rec_addr!r}"
-                drop = [a for a in assertions if a["field"] in CONTACT]
+        if rec_addr.strip() and new and not re.search(r"\bp\.?\s*o\.?\s*box\b", rec_addr, re.I) and not same_site():
+            why = f"address {new['value']!r} shares no number or street with the record's {rec_addr!r}"
+            drop = [a for a in assertions if a["field"] in CONTACT]
     for a in drop:
         trace["dropped"].append({"field": a["field"], "value": a["value"], "reason": f"withheld: {why}", "by": "guard"})
         trace["kept"] = [k for k in trace["kept"] if not (k["field"] == a["field"] and k["value"] == a["value"])]

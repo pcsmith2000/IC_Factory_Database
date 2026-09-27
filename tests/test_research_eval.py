@@ -585,6 +585,16 @@ def test_withhold_drops_every_fact_of_a_record_sent_to_review():
     assert trace["kept"] == [] and len(trace["dropped"]) == 4
 
 
+def test_withhold_keeps_a_review_record_found_at_its_own_address():
+    # wr-prod-003: Tower Structural Laminating was sent to review, but the page gave the record's own address.
+    rec = {"facility_id": "IC-3", "address": "1491 GERBER ST"}
+    facts = _facts(("address", "1491 Gerber St"), ("phone", "2605551234"))
+    trace = {"dropped": [], "kept": [], "review": {"proposed": "not_ic"}}
+    assert len(P.withhold_other_entity(rec, facts, trace)) == 2
+    no_addr = {"facility_id": "IC-4", "address": ""}             # nothing to match against: withheld
+    assert P.withhold_other_entity(no_addr, facts, {"dropped": [], "kept": [], "review": {"proposed": "not_ic"}}) == []
+
+
 def test_withhold_drops_contact_facts_for_another_street_and_keeps_the_website():
     rec = {"facility_id": "IC-2", "address": "3840 N BRUCE ST"}
     facts = _facts(("address", "3853 Losee Rd"), ("phone", "7025551234"), ("website", "https://jensen.com"))
