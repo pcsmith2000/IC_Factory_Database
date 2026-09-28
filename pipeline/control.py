@@ -146,10 +146,11 @@ def check(cfg: dict, fix: bool = False) -> list[str]:
     for i, r in enumerate(rows, 2):
         if r.get("field") not in golden_fields:
             problems.append(f"operator_assertions.csv line {i}: field {r.get('field')!r} not a golden field {sorted(golden_fields)}")
-        # existence_flag from a person is a decision, so it takes one of two words: not_ic takes the
-        # facility out of golden, review puts it back in the queue. A typo must not silently do neither.
-        if r.get("field") == "existence_flag" and r.get("value") not in ("not_ic", "review"):
-            problems.append(f"operator_assertions.csv line {i}: existence_flag must be not_ic or review, got {r.get('value')!r}")
+        # existence_flag from a person is a decision, so it takes one of three words: not_ic (out of scope)
+        # and closed (the plant shut) take the facility out of golden, review puts it back in the queue.
+        # A typo must not silently do none of them.
+        if r.get("field") == "existence_flag" and r.get("value") not in ("not_ic", "closed", "review"):
+            problems.append(f"operator_assertions.csv line {i}: existence_flag must be not_ic, closed or review, got {r.get('value')!r}")
         if not re.match(r"^IC-\d{5}$", r.get("facility_id") or ""):
             problems.append(f"operator_assertions.csv line {i}: facility_id {r.get('facility_id')!r} is not an IC-number")
 

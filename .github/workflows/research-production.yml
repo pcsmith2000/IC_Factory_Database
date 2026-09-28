@@ -32,6 +32,9 @@ on:
       offset:
         description: "skip this many facilities in seed order (dry batches submit nothing, so later dry batches skip the ones already researched)"
         default: "0"
+      facilities:
+        description: "comma-separated IC-numbers: research exactly these, researched before or not (re-research); empty = the next unresearched"
+        default: ""
 
 permissions:
   contents: read
@@ -83,8 +86,8 @@ jobs:
           if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
           python .github/scripts/neon_connection_string.py
       - name: Select the batch (database-enforced read-only session)
-        env: { RUN_ID: "${{ inputs.run_id }}", SIZE: "${{ inputs.batch_size }}", SEED: "${{ inputs.seed }}", OFFSET: "${{ inputs.offset }}" }
-        run: python -m pipeline.web_research.production select --run-id "$RUN_ID" --size "$SIZE" --seed "$SEED" --offset "$OFFSET" --out batch
+        env: { RUN_ID: "${{ inputs.run_id }}", SIZE: "${{ inputs.batch_size }}", SEED: "${{ inputs.seed }}", OFFSET: "${{ inputs.offset }}", FACILITIES: "${{ inputs.facilities }}" }
+        run: python -m pipeline.web_research.production select --run-id "$RUN_ID" --size "$SIZE" --seed "$SEED" --offset "$OFFSET" --facilities "$FACILITIES" --out batch
       - name: Plan the shards (50 facilities each)
         id: shards
         env: { COST: "${{ inputs.max_cost_usd }}" }

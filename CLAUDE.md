@@ -60,3 +60,6 @@ IC-95437,state,NV,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/
 - `python -m pipeline.monitor_fix --check` validates the file, and CI's tests do too. When the file
   changes on main, `monitor-fix.yml` appends the lines to `fact_assertions` (idempotently), and the
   next `golden-refresh` brings them into golden. To undo a fix, add a line with the right value and a later date.
+- People's rulings in `control/operator_assertions.csv` reach the warehouse the same way: when the file changes on
+  main, `operator-apply.yml` appends them to `fact_assertions` as source `operator`. A person's `existence_flag` is
+  `not_ic`, `closed` (both take the plant out of golden) or `review`.

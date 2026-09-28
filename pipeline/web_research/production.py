@@ -49,23 +49,36 @@ def _check(op, v, th):
 
 # --- select (read-only) -------------------------------------------------------------------------
 
-def select_sql(size: int, seed: int, offset: int = 0) -> str:
+FACILITY_ID = re.compile(r"^IC-\d{5}$")
+
+
+def select_sql(size: int, seed: int, offset: int = 0, facilities: list[str] | None = None) -> str:
+    """The next unresearched facilities, or, with `facilities`, exactly those (a re-research of named records,
+    researched before or not; the ids are checked, so they are safe to inline)."""
     cols = ", ".join(f"g.{f}" for f in INPUT_FIELDS)
+    if facilities:
+        if not all(FACILITY_ID.match(x) for x in facilities):
+            raise ValueError("facilities must be IC-numbers")
+        where = "g.facility_key IN (" + ",".join(f"'{x}'" for x in facilities) + ")"
+    else:
+        where = "NOT EXISTS (SELECT 1 FROM web_research_submission s WHERE s.facility_id = g.facility_key)"
     return f"""
     SELECT g.facility_key AS facility_id, {cols}
     FROM golden_facility g JOIN facility f ON f.facility_id = g.facility_key AND f.status = 'active'
-    WHERE NOT EXISTS (SELECT 1 FROM web_research_submission s WHERE s.facility_id = g.facility_key)
+    WHERE {where}
     ORDER BY md5(g.facility_key || '{int(seed)}'), g.facility_key
     LIMIT {int(size)} OFFSET {int(offset)}"""
 
 
-def select(reader, run_id: str, size: int, seed: int, out: Path, offset: int = 0) -> dict:
+def select(reader, run_id: str, size: int, seed: int, out: Path, offset: int = 0,
+           named: list[str] | None = None) -> dict:
     """Dry batches submit nothing, so the unresearched set does not shrink between them: `offset` skips the
-    facilities earlier dry batches already researched (same seed, same order)."""
+    facilities earlier dry batches already researched (same seed, same order). `named` lists the batch
+    instead (a re-research of records whose first pass was too thin or matched the wrong business)."""
     from ..research_eval.benchmark import benchmark_hash, _sha
     if not RUN_ID.match(run_id):
         raise ValueError("run_id must look like wr-prod-001")
-    rows = reader.query(select_sql(size, seed, offset))
+    rows = reader.query(select_sql(size, seed, offset, named))
     facilities = {r["facility_id"]: {"facility_id": r["facility_id"],
                                      **{f: r[f] for f in INPUT_FIELDS if r.get(f) not in (None, "")}} for r in rows}
     active = sorted(r["facility_id"] for r in reader.query("SELECT facility_id FROM facility WHERE status = 'active'"))
@@ -76,7 +89,7 @@ def select(reader, run_id: str, size: int, seed: int, out: Path, offset: int = 0
                                                  "golden_index": golden_index}, indent=1, sort_keys=True, default=str))
     si = _sha(out / "inputs.json")
     manifest = {"run_id": run_id, "selected_at": datetime.now(timezone.utc).isoformat(), "seed": seed, "offset": offset,
-                "requested": size, "selected": len(facilities), "splits": {"batch": sorted(facilities)},
+                "requested": size, "named": named or None, "selected": len(facilities), "splits": {"batch": sorted(facilities)},
                 "inputs_sha256": si, "labels_sha256": "", "benchmark_sha256": benchmark_hash(si, ""),
                 "database_writes": 0}
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
@@ -231,6 +244,7 @@ def main(argv=None) -> int:
     s = sub.add_parser("select"); s.add_argument("--run-id", required=True); s.add_argument("--size", type=int, required=True)
     s.add_argument("--seed", type=int, default=20260927); s.add_argument("--out", default="batch")
     s.add_argument("--offset", type=int, default=0)
+    s.add_argument("--facilities", default="", help="comma-separated IC-numbers: research exactly these (re-research)")
     h = sub.add_parser("health"); h.add_argument("--batch", required=True); h.add_argument("--pass", dest="passes", action="append", required=True)
     h.add_argument("--out", default="health.json"); h.add_argument("--judge-model", default="google/gemini-3-flash")
     h.add_argument("--judge-max-usd", type=float, default=0.05); h.add_argument("--sample", type=int, default=20)
@@ -243,7 +257,8 @@ def main(argv=None) -> int:
         url = next((u for u in (os.environ.get("DATABASE_URL_UNPOOLED", ""), os.environ.get("DATABASE_URL", "")) if u), "")
         if not 1 <= a.size <= 3000:
             print("size must be 1..3000", file=sys.stderr); return 2
-        m = select(PsycopgReader(url), a.run_id, a.size, a.seed, Path(a.out), a.offset)
+        named = [x.strip() for x in a.facilities.split(",") if x.strip()] or None
+        m = select(PsycopgReader(url), a.run_id, a.size, a.seed, Path(a.out), a.offset, named)
         print(json.dumps({k: v for k, v in m.items() if k != "splits"}, indent=1)); return 0
     if a.cmd == "health":
         from ..research_eval import gateway as gw

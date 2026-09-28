@@ -38,6 +38,15 @@ def test_select_skips_researched_facilities_reads_only_and_is_a_valid_pipeline_i
         W.select(r, "prod-1", 25, 7, tmp_path)
 
 
+def test_select_named_facilities_researches_exactly_those_even_if_researched(tmp_path):
+    r = Reader()
+    m = W.select(r, "wr-prod-009", 60, 7, tmp_path, named=["IC-00002"])
+    assert "g.facility_key IN ('IC-00002')" in r.sql[0] and "web_research_submission" not in r.sql[0]
+    assert m["splits"]["batch"] == ["IC-00002"] and m["named"] == ["IC-00002"]
+    with pytest.raises(ValueError):
+        W.select_sql(5, 7, facilities=["IC-1'); DROP TABLE golden_facility;--"])
+
+
 def _pass(tmp_path, verdict="in_scope", adl=None, quote="Phone (970) 522-2464"):
     batch, out = tmp_path / "batch", tmp_path / "pass"
     batch.mkdir(parents=True); (out / "facilities" / "IC-00001").mkdir(parents=True)
