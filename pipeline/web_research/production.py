@@ -71,14 +71,14 @@ def select_sql(size: int, seed: int, offset: int = 0, facilities: list[str] | No
 
 
 def select(reader, run_id: str, size: int, seed: int, out: Path, offset: int = 0,
-           facilities: list[str] | None = None) -> dict:
+           named: list[str] | None = None) -> dict:
     """Dry batches submit nothing, so the unresearched set does not shrink between them: `offset` skips the
-    facilities earlier dry batches already researched (same seed, same order). `facilities` names the batch
+    facilities earlier dry batches already researched (same seed, same order). `named` lists the batch
     instead (a re-research of records whose first pass was too thin or matched the wrong business)."""
     from ..research_eval.benchmark import benchmark_hash, _sha
     if not RUN_ID.match(run_id):
         raise ValueError("run_id must look like wr-prod-001")
-    rows = reader.query(select_sql(size, seed, offset, facilities))
+    rows = reader.query(select_sql(size, seed, offset, named))
     facilities = {r["facility_id"]: {"facility_id": r["facility_id"],
                                      **{f: r[f] for f in INPUT_FIELDS if r.get(f) not in (None, "")}} for r in rows}
     active = sorted(r["facility_id"] for r in reader.query("SELECT facility_id FROM facility WHERE status = 'active'"))
@@ -89,7 +89,7 @@ def select(reader, run_id: str, size: int, seed: int, out: Path, offset: int = 0
                                                  "golden_index": golden_index}, indent=1, sort_keys=True, default=str))
     si = _sha(out / "inputs.json")
     manifest = {"run_id": run_id, "selected_at": datetime.now(timezone.utc).isoformat(), "seed": seed, "offset": offset,
-                "requested": size, "named": facilities or None, "selected": len(facilities), "splits": {"batch": sorted(facilities)},
+                "requested": size, "named": named or None, "selected": len(facilities), "splits": {"batch": sorted(facilities)},
                 "inputs_sha256": si, "labels_sha256": "", "benchmark_sha256": benchmark_hash(si, ""),
                 "database_writes": 0}
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))

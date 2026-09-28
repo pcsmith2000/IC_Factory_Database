@@ -40,7 +40,7 @@ def test_select_skips_researched_facilities_reads_only_and_is_a_valid_pipeline_i
 
 def test_select_named_facilities_researches_exactly_those_even_if_researched(tmp_path):
     r = Reader()
-    m = W.select(r, "wr-prod-009", 60, 7, tmp_path, facilities=["IC-00002"])
+    m = W.select(r, "wr-prod-009", 60, 7, tmp_path, named=["IC-00002"])
     assert "g.facility_key IN ('IC-00002')" in r.sql[0] and "web_research_submission" not in r.sql[0]
     assert m["splits"]["batch"] == ["IC-00002"] and m["named"] == ["IC-00002"]
     with pytest.raises(ValueError):
