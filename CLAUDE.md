@@ -62,4 +62,5 @@ IC-95437,state,NV,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/
   next `golden-refresh` brings them into golden. To undo a fix, add a line with the right value and a later date.
 - People's rulings in `control/operator_assertions.csv` reach the warehouse the same way: when the file changes on
   main, `operator-apply.yml` appends them to `fact_assertions` as source `operator`. A person's `existence_flag` is
-  `not_ic`, `closed` (both take the plant out of golden) or `review`.
+  `not_ic`, `closed` (both take the plant out of golden) or `review`. A capability ruling is a pair of lines,
+  `capability_leaf` and `capability_group`, same date, naming a leaf of `registry/taxonomy.yaml` and its group.

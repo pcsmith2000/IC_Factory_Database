@@ -22,6 +22,7 @@ from . import monitor_fix
 ROOT = Path(__file__).resolve().parent.parent
 TRIAGE = {"in_scope_locatable", "in_scope_no_location", "out_of_scope"}
 STATE = re.compile(r"^[A-Z]{2}$")
+TAXONOMY = ROOT / "registry" / "taxonomy.yaml"     # the capability vocabulary (not a control input)
 
 
 def _read(path: Path) -> tuple[list[str], list[dict]]:
@@ -142,8 +143,17 @@ def check(cfg: dict, fix: bool = False) -> list[str]:
     hdr, rows = _read(c / "operator_assertions.csv")
     if hdr[:5] != ["facility_id", "field", "value", "retrieved_date", "note"]:
         problems.append(f"operator_assertions.csv: columns must be facility_id,field,value,retrieved_date,note, got {hdr}")
-    golden_fields = set(FIELD_MAP) | {"lat_lon", "legal_name", "product_type", "existence_flag"}
+    golden_fields = set(FIELD_MAP) | {"lat_lon", "legal_name", "product_type", "existence_flag",
+                                      "capability_group", "capability_leaf"}
+    # A person's capability ruling must name a taxonomy leaf (and its group): a typo would otherwise win
+    # survivorship over the model's tag and put a category into golden that no report knows.
+    tax = load_yaml(TAXONOMY)
+    leaf_group = {leaf["name"]: g["name"] for g in tax["groups"] for leaf in g["leaves"]}
     for i, r in enumerate(rows, 2):
+        if r.get("field") == "capability_leaf" and r.get("value") not in leaf_group:
+            problems.append(f"operator_assertions.csv line {i}: capability_leaf {r.get('value')!r} is not a taxonomy leaf")
+        if r.get("field") == "capability_group" and r.get("value") not in set(leaf_group.values()):
+            problems.append(f"operator_assertions.csv line {i}: capability_group {r.get('value')!r} is not a taxonomy group")
         if r.get("field") not in golden_fields:
             problems.append(f"operator_assertions.csv line {i}: field {r.get('field')!r} not a golden field {sorted(golden_fields)}")
         # existence_flag from a person is a decision, so it takes one of three words: not_ic (out of scope)
@@ -153,6 +163,14 @@ def check(cfg: dict, fix: bool = False) -> list[str]:
             problems.append(f"operator_assertions.csv line {i}: existence_flag must be not_ic, closed or review, got {r.get('value')!r}")
         if not re.match(r"^IC-\d{5}$", r.get("facility_id") or ""):
             problems.append(f"operator_assertions.csv line {i}: facility_id {r.get('facility_id')!r} is not an IC-number")
+    ruled = {}
+    for r in rows:
+        if r.get("field") in ("capability_leaf", "capability_group"):
+            ruled.setdefault((r.get("facility_id"), r.get("retrieved_date")), {})[r["field"]] = r.get("value")
+    for (fid, day), v in sorted(ruled.items()):
+        if "capability_leaf" in v and v.get("capability_group") != leaf_group.get(v["capability_leaf"]):
+            problems.append(f"operator_assertions.csv: {fid} {day} capability_leaf {v['capability_leaf']!r} needs "
+                            f"capability_group {leaf_group.get(v['capability_leaf'])!r} on the same date, got {v.get('capability_group')!r}")
 
     problems += monitor_fix.problems(c / "monitor_fix_assertions.csv")
 

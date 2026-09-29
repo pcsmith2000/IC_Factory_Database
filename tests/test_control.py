@@ -70,3 +70,27 @@ def test_the_blob_copy_of_the_control_list_is_outside_the_acquire_prefix():
     assert not "ic-control".startswith(prefix + "/") and "ic-control" != prefix
     readme = (ROOT / "control" / "README.md").read_text()
     assert "ic-control/adl-control-2026-09-17.csv" in readme
+
+
+def test_operator_capability_rulings_must_name_a_taxonomy_leaf_and_its_group(tmp_path: Path, monkeypatch):
+    # A person's capability ruling outranks the model's tag, so a typo or a leaf filed under the wrong group
+    # would go straight into golden. control.check refuses both.
+    import shutil
+    for d in ("control", "prompts", "registry"):
+        (tmp_path / d).mkdir()
+    for f in (ROOT / "control").glob("*"): shutil.copy(f, tmp_path / "control" / f.name)
+    shutil.copy(ROOT / "prompts" / "CLASSIFIER-PROMPT.md", tmp_path / "prompts")
+    monkeypatch.setattr(control, "ROOT", tmp_path)
+    cfg = load_yaml(ROOT / "registry" / "config.yaml")
+    assert not any("capability" in p for p in control.check(cfg))
+    with open(tmp_path / "control" / "operator_assertions.csv", "a", newline="") as f:
+        w = csv.writer(f, lineterminator="\n")
+        w.writerow(["IC-00001", "capability_leaf", "Wood Trusses", "2026-09-29", "typo"])
+        w.writerow(["IC-00002", "capability_leaf", "Closed Wood Panel", "2026-09-29", "leaf"])
+        w.writerow(["IC-00002", "capability_group", "Modular", "2026-09-29", "wrong group"])
+        w.writerow(["IC-00003", "capability_leaf", "HUD Modular", "2026-09-29", "leaf"])
+        w.writerow(["IC-00003", "capability_group", "Modular", "2026-09-29", "right group"])
+    probs = [p for p in control.check(cfg) if "capability" in p]
+    assert any("'Wood Trusses' is not a taxonomy leaf" in p for p in probs)
+    assert any("IC-00002" in p and "'Panel'" in p for p in probs)
+    assert not any("IC-00003" in p for p in probs) and len(probs) == 2
