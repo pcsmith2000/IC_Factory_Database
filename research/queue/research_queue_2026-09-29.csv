@@ -1,0 +1,284 @@
+facility_id,name,address,city,state,zip,phone,website,current_capability,earlier_finding
+IC-00055,BUILDERS CHOICE INC,13296 ROSSER DRIVE,EAGLE RIVER,AK,99577,,,HUD Modular,"No source shows manufacturing, closure or current use at the Eagle River address."
+IC-00489,CAVALIER HOME BUILDERS LLC ADDISON DIV,HIGHWAY 41 N & CAVALIER ROAD,ADDISON,AL,35540,,,HUD Modular,Historic Highway 41 N address cannot be tied to current Clayton Alabama plant at 32 Wilson Blvd or to a closure.
+IC-00516,"CAVALIER MFG., CAVALIER HOMES OF ALABAMA, PLANT 3 DIV.",SARDIS RD.,ADDISON,AL,35540,,,HUD Modular,Historic Plant 3 on Sardis Rd; neither current operation nor closure established.
+IC-00958,SOUTHERN ENERGY HOMES II,HWY 278 W,ADDISON,AL,35540,,,HUD Modular,Hwy 278 W entry cannot be matched to either current Addison plant on County Road 41.
+IC-94842,S E HOMES ADDISON,S E HOMES,ADDISON,AL,35540,,,HUD Modular,"No street address; cannot tell which Addison plant (I or II), if any, this row is."
+IC-01121,PALM HARBOR HOMES,BOAZ INSUSTRIAL PK. SAND MOUNT,BOAZ,AL,35957-1040,,,HUD Modular,Imprecise address; Kabco now at 1300 Industrial Blvd but link to this row unproven.
+IC-00526,BRILLIANT HOMES,HIGH WAY 129 NORTH,BRILLIANT,AL,35548,,,HUD Modular,American Homestar closure and new BG Manufacturing plant both in Brilliant; no site match.
+IC-93449,"Yellow Hammer Building Systems, Inc.",,Bay Minette,AL,,2519371100,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-00564,Cana Inc,1321 Industrial Blvd,Boaz,AL,35957-1040,,,HUD Modular,Only historic records at this address; current use and product unknown.
+IC-01037,SOUTHERN HOMES I,HIGHWAY 195 NORTH OF 278,DOUBLE SPRINGS,AL,35553,,,HUD Modular,Vacated Double Springs facility not tied to this Highway 195 address.
+IC-94182,"Wingfield Engineering Company, Inc.",419 Armory Rd,GOODWATER,AL,35072,2568396006,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-00492,CAVALIER MANUFACTURING INCORPORATED RIVERCHASE HOMES DIVISION,HWY. 13 N. INDL. PARK,HALEYVILLE,AL,35565,,,HUD Modular,Only historic evidence of Riverchase plant; no closure statement found.
+IC-00493,WAVERLEE HOMES INC,BEDFORD INDUSTRIAL PARKP.O. BOX 1887,HAMILTON,AL,35570,,,HUD Modular,Historic Waverlee production only; no current status or closure evidence.
+IC-00842,BUCCANEER HOMES OF AL,10TH AVENUE SOUTH,HAMILTON,AL,35570,,,HUD Modular,10th Ave South entry cannot be matched to the current Buccaneer plant at 2039 Bexar Ave E.
+IC-01352,NORTH RIVER HOMES INC,406 AIRPORT RD,HAMILTON,AL,35570,,,HUD Modular,Historic North River Homes; no operation or closure evidence found.
+IC-07557,"CHAMPION HOME BUILDERS, INC. PLANT 192",155 COUNTY ROAD 355,LYNN,AL,35575,,,HUD Modular,"Likely related to Champion Lynn plant at CR 351, but no source ties CR 355 to it."
+IC-04254,PHILLIPS MANUFACTURING COMPANY INC,1837 US HIGHWAY 78 EAST,OXFORD,AL,36203,,,HUD Modular,Dissolved 1975 corporation and inactive carrier; present site use unknown.
+IC-96163,"CMH SET AND FINISH, INC.",232 MELTON DRIVE,PHIL CAMPBELL,AL,35581,,,Pre-Engineered Metal Building,Clayton set-up/finish entity; only an OSHA NAICS code suggests metal-building manufacturing at 232 Melton Dr.
+IC-00499,SPIRAL INDUSTRY INC,11700 HWY. 43 S.,RUSSELLVILLE,AL,35653-4711,,,HUD Modular,Only late-1990s OSHA records; no closure statement.
+IC-00746,Sunshine Homes Inc,509 6th St W,Red Bay,AL,35582,,,HUD Modular,Sunshine Homes operates at 100 Sunshine Ave; relationship of 509 6th St W unknown.
+IC-00441,BUCCANEER HOMES OF ALABAMA  PLANT 2 DIV,490 COMMERCE DR.,WINFIELD,AL,35594,,,HUD Modular,Winfield closures/reopenings not tied to this plant.
+IC-00506,CAVALIER MFG. BUCCANEER HOMES PLANT 3 DIV.,601 COUNTY HWY. 69,WINFIELD,AL,35594,,,HUD Modular,Winfield closure notice names no plant number or address.
+IC-08110,GUERDON INDUSTRIES,HWY 67 & APPLE ST,BEEBE,AR,72012,,,HUD Modular,Only 1977 and EPA-derived historic evidence for Beebe plant.
+IC-08363,"SPIRIT HOMES, INC-WEST",HWY 113 SOUTH,BIGELOW,AR,72016,,,HUD Modular,Only 2009 creditor list evidence.
+IC-08052,GUERDON INDUSTRIES,918 S 2ND ST,CABOT,AR,72023,,,HUD Modular,Only historic evidence for Guerdon Cabot.
+IC-07967,SPIRIT HOMES,830 MCNUTT ROAD,CONWAY,AR,72034-9303,,,HUD Modular,Former Spirit Homes site now Clayton at 901 McNutt; 830 McNutt's relation unknown.
+IC-08420,RIVER VALLEY HOMES,HWY 286/MCNUTT RD,CONWAY,AR,72032-2035,,,HUD Modular,No site-level evidence for this Conway intersection.
+IC-09695,"CAVALIER HOMES, INC. - CLAYTON HOMES",1113 MCNUTT RD,CONWAY,AR,72034,,,HUD Modular,Clayton Conway is at 901 McNutt; 1113 McNutt unverified.
+IC-09120,SCOTT STEWART,602 EAST WEBB STREET,MOUNTAIN VIEW,AR,72560,,,HUD Modular,Only a 2013 OSHA inspection.
+IC-09962,CLAYTON HOMES-EL MIRAGE,12345 W BUTLER DR,EL MIRAGE,AZ,85335,,,HUD Modular,Clayton El Mirage listed with no floor plans; no closure statement found.
+IC-10105,"RFX2024XEG419X0050 - CAVCO INDUSTRIES, INC. DBA DURANGO HOMES",1300 S LITCHFIELD RD,GOODYEAR,AZ,85338,6232186581,,HUD Modular,"Probably part of Cavco Goodyear complex (IC-95864, 1366 S Litchfield) but not proven same plant."
+IC-94483,DRL CONSTRUCTION LLC,4705 S 35TH AVE,PHOENIX,AZ,85041,,,HUD Modular,Company not tied to this address; unclear whether it manufactures or only contracts.
+IC-94116,EVERGREEN INNOVATION GROUP LLC,11840 N LITCHFIELD RD STE 160,SURPRISE,AZ,85379,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94509,MODULES INC.,6401 AUTO MALL PARKWAY,GILROY,CA,95020,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94476,CONNEST LLC,2421 EAST 57TH ST,LOS ANGELES,CA,90058,,,HUD Modular,"HCD-certified modular maker, but 2421 E 57th St not confirmed as its plant."
+IC-95791,SILVER CREEK INDUSTRIES LLC,2097 IMOLA AVE NAPA,NAPA,CA,94559,,,HUD Modular,No source ties Silver Creek to 2097 Imola Ave Napa; neither operation nor closure there verified.
+IC-96035,"CALIFORNIA MODULARS, INC.",3589 MCCARTHY RD.,PALM SPRINGS,CA,92262,,,HUD Modular,California Modulars is a Northern California firm; nothing confirms a plant at 3589 McCarthy Rd Palm Springs or its current status.
+IC-13046,SILVER CREEK INDUSTRIES INC.,3091 INDIAN AVENUE,PERRIS,CA,92571,,,HUD Modular,No positive statement that production at 3091 Indian Ave ended or continues.
+IC-94523,SCHOOLHOUSE MANUFACTURING LLC,1651 S. JUANITA ST,SAN JACINTO,CA,92583,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-15522,CONEX MODULAR LLC,14183 CATALINA ST,SAN LEANDRO,CA,94577,,,HUD Modular,14183 Catalina St is a corporate/mailing address for a container-ADU seller; production site unverified.
+IC-10648,PROFILE STRUCTURES INC,13926 CARMENITA RD,SANTA FE SPRINGS,CA,90670-4994,,,HUD Modular,Only directory listings; no current evidence of operation or closure at 13926 Carmenita Rd.
+IC-94487,HAUS.ME INC.,12906 TELEGRAPH RD,SANTA FE SPRINGS,CA,90670,(213)463-7887,,HUD Modular,Haus.me makes factory-built tiny homes; unverified whether 12906 Telegraph Rd is the factory or HUD-code production.
+IC-94466,BEVYHOUSE LLC,630 TODD LANE UNIT # A,SANTA PAULA,CA,93060,,,HUD Modular,Bevyhouse's known factory is in Ventura; nothing confirms or rules out production at 630 Todd Lane Santa Paula.
+IC-92924,IPME,1711 Alameda Street,Wilmington,CA,90744,3104200027,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-18631,RIBLET PRODUCTS OF COLORADO#,HWY 85 N,BRIGHTON,CO,80601,,,HUD Modular,Only a historic EPA entry with no street number; no positive closure or current operation found.
+IC-92816,Force 5 Structures,101 West Palmetto street,Arcadia,FL,34266,8634919902,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-21412,"NOBILITY HOMES, INC.",SHOW ROAD,BELLEVIEW,FL,32678,,,HUD Modular,"Nobility's Belleview factory closed 2009, but Show Road site not tied to it; closure unconfirmed for this row."
+IC-95941,CONSOLIDATED INDUSTRIES LLC,212 WEST SEMINOLE AVENUE,BUSHNELL,FL,33513,,,HUD Modular,Parcel class is a broad commercial code; owner in Paris TN. Actual use (sales lot vs plant) not confirmed.
+IC-92629,Builder Modules-#1 Cocoa,837 N Cocoa Blvd,Cocoa,FL,32922,5742027070,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-92667,"Central Modular Systems, Inc.",1309 E. International Speedway Blvd.,Deland,FL,32724,3867407600,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94551,"ISLAND STYLE HOMES, INC.",4275 MARIAH CIRCLE,FORT PIERCE,FL,34947,7724646259,http://www.islandstylehomes.com/,Wood Volumetric Modular,Directory category only; no evidence of production at 4275 Mariah Circle.
+IC-93164,PR MODULAR CORP.,5105 BUFFALO AVE,JACKSONVILLE,FL,32206,7875255620,http://www.prmodular.com,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-20090,HOMES OF MERIT INC,HWY 100 E,LAKE CITY,FL,32055,,,HUD Modular,Unnumbered Hwy 100 E address; cannot map to an operating Lake City plant.
+IC-20933,CHAMPION ENTERPRISES INC HOMES OF MERIT PLANT 2,1823 SE STATE RD 100,LAKE CITY,FL,32025,,,HUD Modular,TRI records through 2022 only; current status at 1823 SE SR 100 unverified.
+IC-21197,HOMES OF MERIT LC  PLANT # 3,10 AIRPORT CIR. LAKE CITY,LAKE CITY,FL,32056,,,HUD Modular,Neither duplicate nor closure proven.
+IC-21124,WAUSAU HOMES INC,731 N SCENIC HWY,LAKE WALES,FL,33853-3207,,,HUD Modular,Hurricane damage in 2004 reported but no positive closure; current use of 731 N Scenic Hwy unknown.
+IC-95790,"STATE WIDE, INCORPORATED",11636 US HIGHWAY 98 NORTH,LAKELAND,FL,33809,,,HUD Modular,No evidence found about State Wide at this Lakeland address.
+IC-93170,"PREFABRICA TECH INDUSTRIES, LLC",6699 NW 36TH AVE,MIAMI,FL,33147,3055626960,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-92646,Category 5 Homes LLC,8757 Laredo St,Navarre,FL,32566,6033969793,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94546,SKYLINE CORPORATION,3030 SOUTHWEST SILVER SPRINGS DRIVE,OCALA,FL,34475-5648,,https://championhomes.com,HUD Modular,Current Skyline Ocala plant listed at 1230 SW 10th St; status of 3030 SW Silver Springs Dr unverified.
+IC-95980,Southern Structures Inc.,334 CYPRESS ROAD,OCALA,FL,34472,3526801911,https://southernstructuresinc.com,HUD Modular,"Modular (not HUD) firm, but its site gives only a PMB address; 334 Cypress Rd production unverified."
+IC-93187,"Pruitt Building Systems, LLC",9250 SIDNEY HAYES RD.,ORLANDO,FL,32824,4078168790,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-92656,"Cavco Manufacturing, LLC /Cavco Ocala-Inactive",931 NW 37th Avenue,Ocala,FL,34475,3526297007,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-95671,Skyline Homes #535,,Ocala,FL,,,https://skylinehomes.com,HUD Modular,No address; likely the Ocala Skyline plant (IC-20076?) but plant #535 not mapped to it.
+IC-20818,"Builders FirstSource - Plant City, Industrial Park Dr",1602 INDUSTRIAL PARK DR,PLANT CITY,FL,33566,8137595922,https://bldr.com,HUD Modular,Conflicting readings (lumber yard vs truss plant); not HUD either way; could not verify.
+IC-92654,"Cavco Manufacturing, LLC/Cavco Plant City-inactive",605 SOUTH FRONTAGE ROAD,PLANT CITY,FL,33563,8137521368,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-93087,"Nelson, L. C.",1140 Albright Road,Sanford,FL,32771,4073020940,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-20382,SPACE MASTER MFG INC,28114 CR 561,TAVARES,FL,32778-9463,,,HUD Modular,Space Master production at this site and its end are not documented.
+IC-92815,"Florida Structures, Inc.",28518 Lake Industrial Blvd.,Tavares,FL,32778,3523431751,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94929,ModRush,11308 N 53rd ST,Temple Terrace,FL,33617,(850) 518-4509,https://modrush.com,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-95788,"INNOVAR STRUCTURES, LLC",1510 US HWY 17 N,WAUCHULA,FL,33873,,,HUD Modular,No prior research and no evidence gathered for Innovar Structures at 1510 US Hwy 17 N.
+IC-92560,American Truss Company,5605 commercial blvd.,winter haven,FL,33880,8639676550,,HUD Modular,"Likely a truss maker by name, but no evidence of operation at 5605 Commercial Blvd found."
+IC-22920,FLEETWOOD HOMES OF GEORGIA INC 75,32 W. INDUSTRIAL BLVD.,ALMA,GA,31510,,,HUD Modular,Fleetwood #75 Alma site unmapped; not on MHI 2024 list but no closure statement.
+IC-24203,REDMAN HOMES INC,MATHEWS DRIVE,AMERICUS,GA,31709,,,HUD Modular,Unnumbered Mathews Drive; no closure or operation evidence.
+IC-24108,ARABI HOMES INC,SOUTH THIRD AVE,ARABI,GA,31712,,,HUD Modular,Only 1996-era listings for Arabi Homes.
+IC-24194,ALL AMERICAN HOMES,INDUSTRIAL DR.,ASHBURN,GA,31714,,,HUD Modular,Unnumbered Industrial Dr Ashburn; no evidence either way.
+IC-22979,FLEETWOOD HOMES #35-1,AMBROSE HWY.,BROXTON,GA,31519,,,HUD Modular,Unnumbered Ambrose Hwy; may be the Live Oak Broxton site but not proven.
+IC-92593,"Baugh Enterprises, Inc",744 Prospect Rd,Carnesville,GA,30521,7063842367,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-23839,Modular Engineering Manufacturing Inc,280 Stapleton Rd,Cornelia,GA,30631,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-22975,FLEETWOOD HOMES #05-1,NORTHSIDE INDUSTRIAL PARK,DOUGLAS,GA,31533,,,HUD Modular,Fleetwood #260 Douglas operates but plant 05-1 site unmapped.
+IC-94553,FLEETWOOD HOUSING COMPONENTS # 46,2122 BROXTON RD HWY 441 N,DOUGLAS,GA,31533,,,HUD Modular,Fleetwood components plant #46; no current status evidence.
+IC-24183,CHAMPION HOME BUILDER,HWY 19 SOUTH,ELLAVILLE,GA,31806,,,HUD Modular,Historic Champion Ellaville plant; no positive closure.
+IC-95063,Georgia Modular Systems,114 Stuart Way,Fitzgerald,GA,,2296220123,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-93121,Palm Harbor Homes-LaGrange,1508 Redding Drive,LaGrange,GA,30240,7068851200,,HUD Modular,Earlier claim conflicts with MHI Oct 2024 list (no Palm Harbor GA plant); could not verify.
+IC-24157,PEACHTREE HOMES,HWY 133 SOUTH,MOULTRIE,GA,31768,,,HUD Modular,Historic plant only; no current operation or closure evidence for this site.
+IC-24162,KAUFMAN & BROAD HOME,PAVO ROAD,MOULTRIE,GA,31768,,,HUD Modular,Site identity and current status unresolved.
+IC-92729,Custom Craft Builders,49 Jim Knight Rd,Milan,GA,31060,2293157253,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-92658,"Cavco Manufacturing, LLC/Cavco Moultrie-inactive",250 RW Bryant Rd,Moultrie,GA,31788,2298736606,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-24172,FLINTSTONE INDUSTRIES,HWY 129 NORTH,OCILLA,GA,31774,,,HUD Modular,Only an unverified forum recollection; no dependable closure or operation source.
+IC-23476,FLEETWOOD HOMES #34,RAILROAD STREET,PEARSON,GA,31642,,,HUD Modular,10-K lists one idled/sold Pearson plant; unclear whether it is this Railroad St site or Plant 35-2.
+IC-23471,CHAMPION HOME BUILDERS CO,US HWY 280 EAST,PLAINS,GA,31780,,,HUD Modular,Champion currently lists Georgia plants in Millen and Waycross only; no positive closure statement for Plains.
+IC-30619,CUSTOM CONCRETE HOMES,1727 NICKLESVILLE ROAD NE,RESACA,GA,30735,,,Precast Concrete Panel,No evidence of a factory or of its closure at this address.
+IC-23410,REDMAN HOMES INC,US HWY 280 EAST,RICHLAND,GA,31825,,,HUD Modular,Historic Redman plant; no current operation or closure evidence.
+IC-92849,"Great Plains Residential Homes, Inc.",710 ASHBURN HIGHWAY,SYLVESTER,GA,31791,(229) 777-7801,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-31019,"CAJ PRODUCTIONS, LLC",444 WEST DOYLE STREET,TOCCOA,GA,30577,,,HUD Modular,No evidence either way.
+IC-22917,GENERAL MANUFACTURED HOUSING INC  PLANT 4,2885 FULFORD RD.,WAYCROSS,GA,31503,,,HUD Modular,No current-status evidence; possible duplicate of IC-23758 unproven.
+IC-22918,GENERAL MANUFACTURED HOUSING INC  PLANT 2,3233 INDUSTRIAL BLVD.,WAYCROSS,GA,31502,,,HUD Modular,No current-status evidence.
+IC-23758,GENERAL MANUFACTURED HOUSIM  #4,9885 FULFORD RD.,WAYCROSS,GA,31502,,,HUD Modular,9885 vs 2885 Fulford Rd likely typo of IC-22917 but unproven; no status evidence.
+IC-24253,WAYCROSS HOMES,RT 4 BOX 284C INDL BLVD,WAYCROSS,GA,31501,,,HUD Modular,Historic plant; status unknown.
+IC-47765,MODCOMP HOME INC,8TH & WASHINGTON,DUBUQUE,IA,52001,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94818,"POE Consruction & Manufacturing, Inc.",840 South Front Street,Montezuma,IA,50171,641-623-5426,,HUD Modular,"Poe is a general contractor, but NAICS 321991 listing and Amwood's Montezuma plant leave manufacturing unresolved."
+IC-47761,OLIVIER READY BUILT-FORMER SITE OF,"HWY 75 S, .1 MI N OF 20TH ST",SIOUX CENTER,IA,51250,,,Wood Volumetric Modular,EPA name suggests a former site but no independent closure or operation source found.
+IC-47549,"Merchandising Frontiers, Inc.",1300 E Buchanan St,Winterset,IA,50273,5154624965,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-48437,KIT HOME BUILDERS WEST,1124 GARBER STREET,CALDWELL,ID,83605-6727,,,HUD Modular,"Unclear whether 1124 is a separate, renumbered or vacated site."
+IC-48440,CHAMPION HOME BUILDERS,1442 SUNNYSIDE RD,WEISER,ID,83672,,,HUD Modular,"Likely now a retail/model centre, but production on the 1442 parcel not ruled out."
+IC-48547,GREENSTAR BUILDING SYSTEMS,1428 SUNNYSIDE RD,WEISER,ID,83672,,,HUD Modular,2012 man-camp modular plant opening confirmed; current operation or closure unknown.
+IC-94826,Precision Systems,22498 Miller Rd.,Steger,IL,60475,,,HUD Modular,No evidence either way.
+IC-52019,105777 - HI-TECH HOUSING INCORPORATED,1103 SOUTH MAPLE STREET,BRISTOL,IN,46507,,,HUD Modular,Current status at 1103 S Maple not established.
+IC-94737,"E3 Solutions, Inc",DBA Advanced Laminated Housing,Bristol,IN,46507,,,HUD Modular,No street address and no evidence of current plant.
+IC-51342,HART HOUSING GROUP INC PLANT 1,57475 COUNTY ROAD 3 SOUTH,ELKHART,IN,46517-9798,,,HUD Modular,Site now tied to vehicle conversions but Hart link unresolved.
+IC-51723,ATWOOD MOBILE PRODUCTS,2701 ADA DR,ELKHART,IN,46514,,,HUD Modular,Current products at site unknown.
+IC-51982,Mobile/Modular Express II,58120 COUNTY ROAD 3 SOUTH,ELKHART,IN,46517,574-295-1214,,Wood Volumetric Modular,Approval closure is not plant closure; status unknown.
+IC-94752,"Falcon Luxury Homes, LLC",53850 Fall Creek Way,Elkhart,IN,46514,8662743113,https://www.fallcreekhomes.com,HUD Modular,Fall Creek Homes at this address is closed; Falcon Luxury Homes' current activity there unverified.
+IC-94796,Michiana Mobile Structures,57420 County Road 3,Elkhart,IN,46515,574-522-7741,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-51320,SKYLINE DOUBLE WIDE- PLT 112,65415 US 33,GOSHEN,IN,46526,,,HUD Modular,No current exact-site evidence.
+IC-95289,THE COMMODORE CORPORATION,,GOSHEN,IN,,,,HUD Modular,No address; possibly Commodore office or IC-95281 plant.
+IC-94784,Lifetime Manufactured Homes,P.O. Box 417,Howe,IN,46746,2195622777,,HUD Modular,Only a PO box and state listing; no plant evidence.
+IC-51291,Dutch Housing - Corporate Office,1500 N Detroit Street,LaGrange,IN,46761,,,HUD Modular,Shared site with Forest River RV; housing production status unknown.
+IC-94687,"Advance Building Concepts Indiana Operations, LLC",325 SE 12th Street,Linton,IN,47441,812-847-8924,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94840,Royalty Homes,Box 1250,Linton,IN,47441,8885094819,,HUD Modular,No evidence found.
+IC-51529,SCHULT HOMES CORP SFS,221 US 20 W,MIDDLEBURY,IN,46540,,,HUD Modular,Conflicting current records.
+IC-52098,CRYSTAL VALLEY HOMES,10400 COUNTY ROAD 2,MIDDLEBURY,IN,46540,,,HUD Modular,Possible typo of the 10440 CR 2 plant; unresolved.
+IC-51865,Fairmont Homes Inc - Friendship 1,502 S OAKLAND,NAPPANEE,IN,46550,5747737941,http://www.fairmonthomes.com,HUD Modular,"Research merged into Cavco-Nappanee, but that plant is at 2181 E Market, not 502/625 S Oakland; merge unproven."
+IC-51867,"FAIRMONT HOMES, INC. (NORTH PORTION)",1961 E MARKET ST,NAPPANEE,IN,46550,,,HUD Modular,Historic Fairmont/Showcase site; current status of 1961 E Market unresolved.
+IC-94749,Fairmont Homes Inc - Friendship 2,P O Box 27,Nappanee,IN,46550,5747737941,https://www.fairmonthomes.com,HUD Modular,"PO-box registration for a separately numbered plant ('Friendship 2'); merge with Friendship 1 unproven, no physical site."
+IC-94750,Fairmont Homes Inc - Plant 1,P O Box 27,Nappanee,IN,46550,574-773-7941,,HUD Modular,PO-box registration; which physical Nappanee plant it names is unknown.
+IC-94751,Fairmont Homes Inc - Showcase Homes,P O Box 27,Nappanee,IN,46550,5747737941,,HUD Modular,"Showcase Homes plant was at 1961 E Market (IC-51867), not 502 S Oakland; PO-box row, status unknown."
+IC-94813,New Castle Modular Specialties,432 N Memorial Drive,New Castle,IN,47362,9417566900,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94919,IteraSpace,19260 CR 46,New Paris,IN,46553,(574) 538 3838,https://www.iteraspace.com,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94770,Hoosier Rustic Cabins LLC,1332 N 625 E,Paoli,IN,47454,2607687511,,HUD Modular,"Small finished cabins; may be shed-style/park-model product, not HUD; plant at Paoli address unverified."
+IC-51302,CHAMPION HOME BUILDERS COMPANY,700 N. PORTLAND RD.,RIDGEVILLE,IN,47380-1015,,,HUD Modular,Closure listing is for a different Ridgeville address; 700 N Portland status unproven.
+IC-51839,Hart Housing Group - Division of Forest River Housing Inc.,66700 SR 19,WAKARUSA,IN,46573,5748654461,http://www.forestriverinc.com,HUD Modular,Hart division may be the second Clayton plant; cannot map to one record.
+IC-53002,SKYLINE MOBILE HOMES,"RTE. 2, HWY. 77 N.",ARKANSAS CITY,KS,67005,,,HUD Modular,Historic 1989 address; link to 315 W Skyline Rd plant unproven.
+IC-52384,"Advanced Systems Homes, Inc.",4711 S Santa Fe Ave,CHANUTE,KS,66720,,https://www.advancedsystemshomes.com,Wood Volumetric Modular,"Company operates modular plant in Chanute, but Hwy 169 S site not tied to current factory."
+IC-94560,SKYLINE HOMES - HALSTEAD,920 W. SECOND,HALSTEAD,KS,67056-1603,(316) 835-2214,,HUD Modular,Directory listing only; Skyline Kansas site now points to Arkansas City; current Halstead production unverified.
+IC-52457,STANDARD HOMES CO INC,I35 & HWY 169,OLATHE,KS,66061,,,Wood Volumetric Modular,Historic plant only; no closure or current evidence.
+IC-53192,QUALITY HOMES INC.,61212 702 ROAD,SUMMERFIELD,KS,66541,,http://qualityhomesinc.com,Wood Volumetric Modular,Conflicting weak evidence; 2016 OSHA shows prefab wood production.
+IC-54965,"Housing Innovations, LLC",7562 Morehead Road,Flemingsburg,KY,41041,,,HUD Modular,Conflicting evidence on current status.
+IC-94712,Cave Country Cabins LLC,294 Dry Run Road,Munfordville,KY,42765,,,HUD Modular,No evidence found about this business or site.
+IC-96060,JEM CUSTOM BUILDERS,22 WILDFLOWER DRIVE,AMHERST,MA,01002,,,HUD Modular,Likely a builder at a residential street; no evidence of a plant.
+IC-56727,WALLACE BUILDING PRODUCTS CORPORATION,15 PARCELL PARK DRIVE,RANDOLPH,MA,02368,,,HUD Modular,Company now in Danbury NH; Randolph site status unknown.
+IC-96046,"TOMU, INC.",18450 SHOWALTER ROAD BAY 4,HAGERSTOWN,MD,21742,,https://tomuhaus.com,HUD Modular,"Production now at airport facility, maybe not 18450 Showalter Bay 4; module material unknown."
+IC-57316,COASTAL MODULAR CORP,ALLENDER ROAD,WHITE MARSH,MD,21162,,,HUD Modular,Historic only; no closure evidence.
+IC-58065,"C.A. CONSTRUCTION, INC.",US ROUTE ONE,SULLIVAN,ME,04664,,,HUD Modular,Possible log-shell yard elsewhere; site unconfirmed.
+IC-95960,"RITZ-CRAFT CORPORATION OF MICHIGAN, INC.",112 DEXTER ST,ELK RAPIDS,MI,49629,,,HUD Modular,No evidence for or against a plant at Elk Rapids.
+IC-94764,Great Lakes Commercial Space LLC,1216 Shearer Rd,Greenville,MI,48838,,,HUD Modular,No evidence gathered.
+IC-94686,Active Home Corporation,7876 S Van Dyke,Marlette,MI,48453,9896353533,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-92984,MACH Technologies LLC,1105 24th Street,Port Huron,MI,48060,8106503451,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-93815,Leisure Health Systems LLC - Little Housing Systems,6101 Product Road,Sterling Heights,MI,48312,7347489883,,HUD Modular,Research matched a different business in Romeo; nothing on this Sterling Heights site.
+IC-60248,Wells,210 Inspiration Lane,Albany,MN,56307,3208452229,https://www.wells.work/,HUD Modular,"Conflicting readings; could be precast plant, unverified."
+IC-60386,WORLDWIDE HOMES,9536 GRAND AVE,DULUTH,MN,55808-1399,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-61695,"Fuqua Homes, Inc.",1701 INDUSTRIAL DR,BOONVILLE,MO,65233,8139674402,,HUD Modular,Research may have matched wrong business; plant status unverified.
+IC-62258,HENGES MANUFACTURING - HENGES MANUFACTURING,12100 PRITCHARD FARM ROAD,MARYLAND HEIGHTS,MO,63043,,,HUD Modular,In-plant buildings maker (2000); current site use unknown.
+IC-61808,NEW STYLE MOBILE HOMES - PINEVILLE,406 HIGHWAY 59,PINEVILLE,MO,64856,,,HUD Modular,No current evidence either way.
+IC-62188,UNIVERSAL MODULAR STRUCTURES,2151 59TH ST,ST LOUIS,MO,63110-2807,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-64376,LEXINGTON HOMES,100 LEXINGTON CIR,LEXINGTON,MS,39095,6628340292,http://www.lexington-homes.com,HUD Modular,Research matched a different business in Kentucky; MS plant unverified.
+IC-96022,"MAJESTIC HOMES, INC.",308 6TH AVE. N.,BILLINGS,MT,59101,,https://majestichomessite.com,HUD Modular,Only a sales centre found elsewhere in Billings; this address unverified.
+IC-95088,Mountain Manufacturing,2120 3rd Avenue North,Billings,MT,59101,4062565397,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-95574,LAKESIDE MANUFACTURED HOMES LLC,7140 US HWY 93,LAKESIDE,MT,59922,4062703623,https://lakesidegarages.com,HUD Modular,Linked website is storage garages at another address; nothing on 7140 US Hwy 93.
+IC-94923,"Mar Technology Building Systems, Inc.",2001 Widewaters Parkway,Knightdale,NC,27545,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-64895,CHAMPION HOME BUILDERS CO,3204 SOUTH RIVER RD.,LILLINGTON,NC,27546-8344,,,HUD Modular,"Champion's Lillington plant is at 4055 US 401 S; this address unconfirmed as a plant, no closure evidence."
+IC-64948,FLEETWOOD HOMES OF NORTH CAROLINA INC #46,107 Backswamp Rd,LUMBERTON,NC,28360,,,HUD Modular,Lumberton not in 2008 closure list; no current operation or closure evidence found.
+IC-94695,American Modular Technologies,P.O. Box 1069,Liberty,NC,27298,336-622-6200,https://americanmodulartechnologies.com,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-64928,REDMAN HOMES INC,16620 Airbase Rd,MAXTON,NC,28364,,,HUD Modular,"Succession dated 2003-08, not current; no positive closure or operation evidence."
+IC-65501,HOMETTE CORPORATION,BETHEL CHURCH RD,MOCKSVILLE,NC,27028,,,HUD Modular,No current operation or closure evidence found for the Mocksville plant.
+IC-66902,CAMERON HOMES D/B/A SKYLINE CORPORATION,BETHEL CHURCH ROAD,MOCKSVILLE,NC,27028-0845,,,HUD Modular,Historical only; possibly same site as Homette IC-65501 but no street number; no current evidence.
+IC-66177,MOUNTAIN VALLEY HOMES,SR 742,OAKBORO,NC,28129,,,HUD Modular,No source identifies this plant's current status.
+IC-66193,HOMES BY OAKWOOD INC  PLANT #3 ** INACTI,US HIGHWAY 1 SOUTH,PINEBLUFF,NC,28373,,,HUD Modular,EPA name says INACTIVE but no dated closure statement found; current status unknown.
+IC-66664,"CHAMPION HOME BUILDERS, INC.",2405 HWY 64 WEST,PLYMOUTH,NC,27962,,,HUD Modular,Suggests the plant is gone but no explicit closure found; searches found no Plymouth plant.
+IC-64915,HOMES BY OAKWOOD INC  PLANTS 5 & 6,1 Viscount Road,ROCKWELL,NC,28138,,,HUD Modular,Clayton Rockwell operates at 508 Palmer Rd; status of 1 Viscount Rd plants 5-6 not established.
+IC-66166,"TIDWELL HOMES OF NC,",PALMER ROAD,ROCKWELL,NC,28138,,,HUD Modular,Possibly the site of today's Clayton Rockwell (508 Palmer Rd) but not established.
+IC-65495,CMH Manufacturing,44073 US Highway 52 N,Richfield,NC,28137,,,HUD Modular,May be the same Clayton Richfield plant under an older address; not established.
+IC-64897,Mark Line Industries of NC,455 Lucy Garrett Rd,Roxboro,NC,27574,,,Wood Volumetric Modular,Regulatory listings conflict; current production not established. Not HUD in any case (modular).
+IC-95881,152335 - IDEAL GROUP INC.,245 PEACH ORCHARD RD,SALISBURY,NC,28147,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-64942,REDMAN HOMES INC,4130 HARVEY FAULK ROAD,SANFORD,NC,27330,,,HUD Modular,"Redman is documented at 298 Harvey Faulk Rd, not 4130; neither site's current status established."
+IC-95282,CHAMPION HOMES - CHAMPION HOMES OF NORTH CAROLINA,,SANFORD,NC,,,,HUD Modular,No address; likely a retailer or a mis-placed Lillington row but cannot be tied to either.
+IC-65098,"Liberty Homes, Inc.",101 Old Wellhouse Road,Statesville,NC,28677-1138,,,Wood Volumetric Modular,Old directory lists a plant; BBB lists sales; no current operation or closure evidence.
+IC-94853,Smart Space LLC,5910 S 27th Street,Omaha,NE,68107,(402) 731-7484,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-68313,TIMBER CREEK HOMES INC,450 COUNTRY LANE,STRATTON,NE,69043,,,HUD Modular,No confirmed closure or current operation; address mismatch unresolved.
+IC-94794,Mark Solutions Inc,150 Pacific Ave,Jersey City,NJ,07304,201-332-6874,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-70122,DEMING MANUFACTURED HOMES,0.5 MI FROM DEMING AIRPORT,DEMING,NM,88030-,,,HUD Modular,Plant operated at 100 Tapia Rd SE in 2020 (now Solitaire/Cavco); link from airport locator to that site not verified; possible duplicate.
+IC-95958,CLAYTON HOMES ALBUQUERQUE,300 PEACOCK RD,ESTANCIA,NM,87016,,,HUD Modular,"Clayton's Albuquerque plant is in Albuquerque; 300 Peacock Rd Estancia may be an OSHA job site, not a plant."
+IC-70741,"MORGAN WILLOWS HOMES, LLC",215 LYON DRIVE,FERNLEY,NV,89408,,,HUD Modular,No current or closure evidence for 215 Lyon Drive.
+IC-96230,MICHAEL WOODFORD,283 RIVERVIEW RD.,REXFORD,NY,12148,,,HUD Modular,Only an OSHA NAICS code for an individual; no evidence of an actual plant.
+IC-72697,All American Homes of Ohio,4005 ALL AMERICAN WAY,ZANESVILLE,OH,43701-7251,8663501822,https://allamericanhomes.com,Wood Volumetric Modular,No positive closure or current operation evidence.
+IC-94498,LAYCO ELECTRIC INNOVATIONS,1827 NORTH 75TH AVE,TULSA,OK,74115,4055284605,,HUD Modular,No information found about this business's products.
+IC-74967,MODERN BUILDING SYSTEMS LLC,9493 PORTER RD SE,AUMSVILLE,OR,97325,5037494949,http://www.modernbuildingsystems.com/,HUD Modular,Company website now redirects to WillScot; current plant operation and product (commercial modular vs HUD) not verified.
+IC-94724,Cornerstone Manufacturing LLC,2446 SW Redmond Hill Rd,McMinnville,OR,97128,,,HUD Modular,No evidence about this business found.
+IC-74360,MODS PDX INC.,9125 N. TIME OIL RD,PORTLAND,OR,97203,,,HUD Modular,Site status and product unresolved.
+IC-95959,317733734 - MODERN BUILDING SYSTEMS INC,2830 MAPLE COURT,WHITE CITY,OR,97503,,,HUD Modular,No evidence of a Modern Building Systems plant at White City.
+IC-74099,FLEETWOOD HOMES OF OREGON INCORPORATED NUMBER 48 3,2855 NATIONAL WAY,WOODBURN,OR,97071,,,HUD Modular,Exact address unconfirmed and current status not established.
+IC-92869,"Haven Group, Inc., The - WIN",306 Runville Road,Bellefonte,PA,16823,4106940091,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-79760,COZY CABINS,478 E. FARMERSVILLE ROAD,"EARL, TOWNSHIP OF",PA,17557,,,HUD Modular,Cozy Cabins factory is at 455 Farmersville Rd; 478 not tied to production.
+IC-75892,HOMETTE CORP/SKYLINE HOMES EPHRATA,465 N READING ROAD,EPHRATA,PA,17522-9606,,,HUD Modular,Directory listings persist but no current source confirms production or product type at this multi-tenant address.
+IC-78273,"Castle Housing of Pennsylvania, Ltd",199 Boyle Memorial Drive,Knox,PA,16232,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-96278,"HESS HOMES, LLC",3915 NOLT RD,LANDISVILLE,PA,17538,,,"Wood Structural Components (Trusses, etc.)",Site home builder near 3911 Nolt Rd; no evidence of a factory at 3915 Nolt Rd.
+IC-75713,MAURA BUILDINGS INC,201 N 5TH AVE,LEBANON,PA,17046,,,HUD Modular,Mailing address on a multi-tenant property; no plant verified.
+IC-75771,BECK INS LTD PARTNER/LEOLA PLT,74 NEWPORT ROAD,LEOLA,PA,17540-1821,,,HUD Modular,Chassis/trailer maker historically; current use unknown.
+IC-76074,DESIGN HOMES/MIFFLINVILLE PLT,6949 OLD BERWICK RD,MIFFLINVILLE,PA,18631,,,HUD Modular,Historic Design Homes plant; no current status found.
+IC-76263,PINE GROVE MANFACTURED HOMES INC,2 PLEASANT VALLEY RD,PINE GROVE,PA,17963-9563,,,HUD Modular,Historic Pine Grove plant; current use of this parcel unresolved.
+IC-76128,PRINCESS HOMES INC,W SASSAFRAS ST,SELINSGROVE,PA,17870,,,HUD Modular,"Historic only; no number, no current evidence."
+IC-75678,COMMODORE CORP,ROUTE 66 NORTH,SHIPPENVILLE,PA,16254,,,HUD Modular,Vague Commodore locator; may match a Paint Blvd plant but unproven.
+IC-95811,BEST GEN HOMES,23430 456TH AVENUE,MADISON,SD,57042,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-82670,BLOCKER R NEAL,BY PASS WEST,COLUMBIA,TN,38401,,,HUD Modular,No evidence either way.
+IC-82713,CHALLENGER HOMES INC,DEMASTUS LANE,COLUMBIA,TN,38401,,,HUD Modular,Historic 1977 plant; current status unknown.
+IC-94696,Aneal Joseph,Blue Company,Columbia,TN,38401,,,HUD Modular,Garbled record; no business identified.
+IC-82848,REDMAN INDUSTRIES INC,PO BOX 626,DYERSBURG,TN,38024,,,HUD Modular,PO box only; historical.
+IC-83140,"FLEETWOOD HOME OF TN, INC.",1555 AIRPORT BLVD.,GALLATIN,TN,37066,,,HUD Modular,Likely the closed Fleetwood plant but address link unproven.
+IC-82836,JONES HOMES INC,PO BOX 1,HENDERSONVILLE,TN,37075,,,HUD Modular,PO box only.
+IC-82104,CHAMPION HOME BUILDERS  DIV 021,560 ATLANTIC AVE.,HENRY,TN,38231,,,HUD Modular,BBB still lists Henry address but active Champion TN plant is in Dresden; status unproven.
+IC-94814,Office Dimensions Inc,4242 Dry Fork Rd,Hampshire,TN,38461,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-82098,CLAYTON HOMES INC  HALLS,3938 FOUNTAIN VALLEY RD.,KNOXVILLE,TN,37918,,,HUD Modular,Possibly same as TRU Halls (IC-83348) but unproven.
+IC-82698,CLAYTON INDUSTRIES INC,STOCKYARD ROAD,KNOXVILLE,TN,37912,,,HUD Modular,No site evidence.
+IC-82582,BUILDING STRUCTURERS BY LNR*,TOWN CREEK RD,LENOIR CITY,TN,37771,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-82574,WICKES CORPORATION,LEWISBURG INDUSTRIAL PARK,LEWISBURG,TN,37091,,,HUD Modular,Vague historic locator.
+IC-82754,SKYLINE CORP,HIGHWAY 22 NORTH,LEXINGTON,TN,38351,,,HUD Modular,Vague historic locator.
+IC-82694,GILES INDUSTRIES INC,69. N 281  Y   Y   Y  /,NEW TAZEWELL,TN,37825,,,HUD Modular,Corrupt address; cannot tie to Giles plant.
+IC-82231,"Modular One, LLC",1884 Mines Road,Pulaski,TN,38478,,,Wood Volumetric Modular,Property marketed as former industrial space; closure not positively stated.
+IC-82663,KAJN HOMES INC,HWY #57,RAMER,TN,38367,,,HUD Modular,No site evidence.
+IC-94717,CLAYTON HOMES,925 RUTLEDGE,RUTLEDGE,TN,37861,,https://claytonmaynardville.com,HUD Modular,No evidence of a plant at this address.
+IC-82736,APECO CORP,TOWNHOUSE DRIVE SEIMER TN,SELMER,TN,38375,,,HUD Modular,No evidence either way.
+IC-82696,"GLENBROOK HOMES OF TENNESSEE, INC.",0 N,WESTMORELAND,TN,37186,,,HUD Modular,No usable evidence.
+IC-92929,JCF Housements Manufacturing LLC,63 east park drive,fayetteville,TN,37334,9314340338,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94212,HOMELUX HOMES LLC,2865 NW 201,ANDREWS,TX,79714-9115,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-86716,CHAMPION HOMES OF TEXAS,3400 W. CORSICANA,ATHENS,TX,75751,,https://championhomes.com,HUD Modular,"Probably the Champion Athens plant with an off-by-one number, but unproven."
+IC-94841,Ruf-Neck Building Systems - Sheltering Systems Partnership,3500 Mosley Rd,Aubrey,TX,76227-8030,,,HUD Modular,"No current evidence of what, if anything, is manufactured at 3500 Mosley Rd."
+IC-92625,Brodie Modular LLC,4400 Supply Court,Austin,TX,78744,8329939964,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94126,INSTABUILT LLC,2928 Manor Road,Austin,TX,78722,5126605650,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-94992,TRU BELTON II,1315 INDUSTRIAL PARK RD,BELTON,TX,76513,2548316002,https://owntru.com,HUD Modular,"2015 Clayton release shows a TRU facility on Industrial Park Rd, distinct from 520 Sparta; current operation unverified."
+IC-83770,TOWN & COUNTRY HOMES PLANT 3- DIV  OF CAVALIER MFG,216 N. OHIO ST.,GRAHAM,TX,76450-1820,,,HUD Modular,Graham plant made homes in 1999; no current-status or closure evidence found.
+IC-83773,HOMES BY OAKWOOD INC,1020 INDUSTRIAL LOOP,HILLSBORO,TX,76645,,,HUD Modular,"Oakwood had two Hillsboro plants in 2002; closure article gives no address, so cannot tie to 1020 Industrial Loop."
+IC-95278,CHAMPION INTEGRATED BUILDING SOLUTIONS,10315 Sheldon Rd,Houston,TX,77049,+1 555-555-5556,https://champion-building.com,HUD Modular,Mostly e-houses/enclosures (not IC) plus some modular offices; directories also give a Humble address.
+IC-84265,AMERICAN MODULAR TECHNOLOGY,US HIGHWAY 79 EAST,JACKSONVILLE,TX,75766,,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-86827,CAVCO - LANCASTER,800 S BECKLEY ST,LANCASTER,TX,75146,,,HUD Modular,"Probably a mis-keyed copy of the 800 N Beckley plant (IC-94096), but S Beckley not confirmed."
+IC-84523,LA PELUQUITA ENERSAVE HOMES,1902 GONZALES ST,LAREDO,TX,78040-3006,,,HUD Modular,Only a generic directory listing; no evidence of current production or HUD homes.
+IC-83757,CAVALIER MFG  TOWN & COUNTRY HOMES PLANT 2- DIV,6000 COLUMBIA ST.,MINERAL WELLS,TX,76067,,,HUD Modular,No current-status or closure evidence found for the Mineral Wells plant.
+IC-94157,"RED OAK MODULAR, LLC",26790 FM 2090,Splendora,TX,77372,832-543-5253,https://redoakmodular.com,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-87739,WASATCH CHOICE HOMES,1928 N 1120 W,PROVO,UT,84604,(801) 377-8035,,HUD Modular,Only contractor-type listings found; no plant evidence.
+IC-95808,SMART KIT LLC,1100 SOUTH STREET,VERNAL,UT,84078,,,HUD Modular,Only an OSHA NAICS code; no evidence of actual products or current operation.
+IC-88150,HOME PRIDE INC.,21528 TRAVELITE DRIVE,BRISTOL,VA,24202,,,"Wood Structural Components (Trusses, etc.)",Closure evidence refers to a different address; status at Travelite Drive unknown.
+IC-89199,"FIRST COLONY HOMES, INC.",4163 OLD CALVERTON ROAD,CALVERTON,VA,20138,(540) 788-4222,https://violationtracker.goodjobsfirst.org,HUD Modular,No evidence of manufacturing at Calverton.
+IC-96200,ART&CREATION INC.,8492 B SIGNAL HILL ROAD,MANASSAS,VA,20110,7032579510,https://artcreation-inc.business.site/,HUD Modular,Only an OSHA NAICS label; business site is gone and products are unknown.
+IC-92655,"Cavco Manufacturing, LLC /Cavco Martinsville-Inactive",1100 Rives Rd,Martinsville,VA,24112,2766567202,https://cavco.com,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-88122,"Excel Homes of Virginia, LLC",260 WEAVER STREET,ROCKY MOUNT,VA,24151-2251,,,Wood Volumetric Modular,"A West Virginia registration ended, which does not prove the Rocky Mount plant closed."
+IC-89472,SKYLINE HOMES,875 SOUTH MAIN STREET,FAIR HAVEN,VT,05743-1178,(802) 265-4954,https://www.skylinecorp.com,HUD Modular,No current-plant or closure evidence found for Fair Haven.
+IC-89595,"VERMOD HIGH PERFORMANCE MANUFACTURED HOUSING, LLC",2677 HARTFORD AVE,WILDER,VT,05088,,,Closed Wood Panel,"Unresolved whether Vermod builds HUD-code or modular homes, and whether it still operates; website did not load."
+IC-90308,LINDAL BUILDING PRODUCTS,11596 WATERTANK RD,BURLINGTON,WA,98233,,https://lindal.com,HUD Modular,No evidence about the Burlington site's current use or products.
+IC-90025,AMERICAN PACIFIC INDUSTRIES,1203 LUM RD,CENTRALIA,WA,98531,,,HUD Modular,No evidence found.
+IC-94504,"METHOD, LLC - CM",6840 NORTHGATE WAY,FERNDALE,WA,98248,3603662266,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-95628,AMERICAN MICRO HOMES LLC,,OLYMPIA,WA,98512,,,HUD Modular,Only a mailing address found; no plant.
+IC-90589,STATESVILLE WEST,5915 176TH ST E,PUYALLUP,WA,98375,2539291818,,HUD Modular,"Entity dissolved in 2019, but there is no site-level evidence."
+IC-89874,HW BLACKSTOCK CO,4000 W MARGINAL WAY,SEATTLE,WA,98106,2062841313,,HUD Modular,No evidence for this site.
+IC-94827,Professional Systems Inc,P O Box 560,Hartland,WI,53029,,,HUD Modular,No evidence found for any plant; PO box only.
+IC-91604,MANTERNACH DEVELOPMENT CO.,6164 N. 40TH STREET,MILWAUKEE,WI,53209,,,HUD Modular,Manternach's factory is in Friendship; nothing ties the Milwaukee address to a plant.
+IC-93120,"Palm Harbor Homes, Inc. - AL",1300 Industrial Blvd,Boaz,,35957-1040,8009337256,,HUD Modular,Palm Harbor Boaz plant existed historically; no current evidence it operates or of closure; one source calls site a branch office.
+IC-93370,"Triple A Modular Buildings, Inc.",29 Airport Road,Buena Vista,,31803-7143,9129375401,,HUD Modular,Conflicting addresses; entity-inactive filing is not a plant closure statement.
+IC-95536,Champion Home Builders (Claysburg #007),2551 Champion Drive,Claysburg,,16625,814-239-5121,http://chbclaysburg.com,HUD Modular,Only directory 'closed' labels; no closure news; Champion still lists Claysburg pages. Operating status unproven.
+IC-94496,KeyPlants Emtunga AB,"EKVAGEN 28 P.O. BOX 84, ,   SE",Emtunga,,,+46 (0) 512 773 300,,HUD Modular,"Plant is in Sweden, outside a US database; needs a person to decide removal."
+IC-95157,"CMH Manufacturing West, Inc.",,Goshen,,,,,HUD Modular,Addressless NY registry row; no Goshen plant verified.
+IC-93351,The Public Restroom Company,2587 Business Parkway,Minden,,89423,888-888-2060,,HUD Modular,"Prefab restroom buildings; Minden listed as HQ, factory location and construction type not confirmed."
+IC-92532,"Advanced Shelter Solutions, Inc.",,Napa,,94559,7278451019,,HUD Modular,No evidence of what or where it manufactures.
+IC-94489,HONOMOBO MANUFACTURING LTD,"3925 8 STREET, ,   CA",Nisku,,,(780) 220-3896,https://www.honomobo.com,HUD Modular,"Plant is in Alberta, Canada, outside a US database; the CA tag came from a California HCD licence."
+IC-93348,"Tharrington Industries, Inc.",1539 S. Church Street,Rocky Mount,,27803,2529777775,,HUD Modular,Only a directory category (heating equipment); no evidence of homes or IC products.
+IC-94153,PTW STRUCTURAL SOLUTIONS,285188 Frontier Road,Rocky View County,,,+1-403-234-8647,https://ptwenergy.com,HUD Modular,"Plant is in Alberta, Canada, outside a US database; product mix (energy modules) unconfirmed."
+IC-95138,"Champion Home Builders, Inc.",,Topeka,,,2605932962,,HUD Modular,Champion has three Topeka facilities; cannot assign.
+IC-92526,"Action Diversified Industries, Inc.",,,,,9123841808,,HUD Modular,No evidence found.
+IC-92550,all service group modular,,,,,9549227467,,HUD Modular,No evidence found.
+IC-92553,"Allied Foam Products, Inc.",,,,,7705367900,,HUD Modular,No evidence found.
+IC-92825,Frontline Modular Inc.,,,,,2294684159,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-92850,GreenCore Earth Products,,,,,8505477348,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-92926,"J. L. Harvey Manufacturing, Inc.",,,,,3527422112,,Wood Volumetric Modular,wood-volumetric audit: web search limit hit before checked
+IC-93275,Southeast Modular Mfg.-Wauchula,,,,,8637734692,,HUD Modular,No evidence of a current Wauchula plant nor of closure.
+IC-93344,Tech-Craft,,,,,7277963140,,HUD Modular,No evidence found.
+IC-93367,"Trans 10 Technologies, Inc.",,,,,5138294935,,HUD Modular,No evidence found.
+IC-93368,Trensetter Homes,,,,,9123839182,,HUD Modular,Earlier match is a different TN business; Georgia phone record unverified.
+IC-93369,"Triple A Custom Builders, Inc.",,,,,9047286794,,HUD Modular,No evidence found.
+IC-93372,"Trus-Bilt Systems, Inc.",,,,,3059416466,,HUD Modular,No evidence found.
+IC-93380,Ultra Mobile Structures,,,,,3192770010,,HUD Modular,No evidence found.
+IC-93382,"Unicoast Industries, Inc.",,,,,8137637787,,HUD Modular,No evidence found.
+IC-93387,United Modular (plant 5),,,,,7275288006,,HUD Modular,No evidence found.
+IC-95539,"CMH Manufacturing, Inc. -927",1160 Highway US-11 W,,,,,,HUD Modular,Clayton plant 927 not located; search budget exhausted.
+IC-95540,"CMH Manufacturing, Inc.-958",304 East Church Street,,,,,,HUD Modular,Clayton plant 958 address unresolved.
+IC-95724,Champion Homebuilders Plant 1,,,,,,http://www.championhomes.com/,HUD Modular,No location; cannot identify the plant.
