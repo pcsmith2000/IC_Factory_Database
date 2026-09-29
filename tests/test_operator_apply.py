@@ -58,3 +58,19 @@ def test_dry_run_writes_nothing(wh, tmp_path):
 
 def test_operator_class_is_carried_across_releases():
     assert "operator" in gr.CARRIED_CLASSES
+
+
+def test_a_capability_ruling_beats_the_models_tag(wh, tmp_path):
+    with wh.transaction() as c:
+        c.executemany("INSERT INTO fact_assertions (assertion_id, release_tag, facility_key, source_key, field_key, value, "
+                      "source_class, basis, date_key) VALUES (?, ?, 'IC-00003', 'capability', ?, ?, 'capability', 'model_capability', '2026-09-21')",
+                      [("m1", NOW, "capability_leaf", "Mass Timber (CLT)"), ("m2", NOW, "capability_group", "Mass Timber")])
+    gr.refresh(wh)
+    assert wh.query("SELECT capability_leaf FROM golden_facility WHERE facility_key = 'IC-00003'")[0]["capability_leaf"] == "Mass Timber (CLT)"
+    p = _write(tmp_path / "o.csv", [["IC-00003", "capability_leaf", "Wood Structural Components (Trusses, etc.)", "2026-09-29", "audit"],
+                                    ["IC-00003", "capability_group", "Other", "2026-09-29", "audit"]])
+    assert O.apply(wh, path=p)["written"] == 2
+    gr.refresh(wh)
+    row = wh.query("SELECT capability_leaf, capability_leaf__source, capability_group FROM golden_facility WHERE facility_key = 'IC-00003'")[0]
+    assert (row["capability_leaf"], row["capability_leaf__source"], row["capability_group"]) == \
+        ("Wood Structural Components (Trusses, etc.)", "operator", "Other")
