@@ -238,14 +238,23 @@ def main(argv=None) -> int:
     ap.add_argument("--dry-run", action="store_true", help="read Overture and report; write nothing")
     ap.add_argument("--index", default="enrich/overture_index.json", help="cached Overture file -> bbox index")
     args = ap.parse_args(argv)
-    wh = (SqliteWarehouse(Path(args.db)) if args.db
-          else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
+    def connect():
+        return (SqliteWarehouse(Path(args.db)) if args.db
+                else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
+    wh = connect()
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1
     todo = plan(wh, limit=args.limit, refresh=args.refresh)
+    # Reading Overture takes about a minute per file, and a connection left idle that long is
+    # closed under us: Neon suspends an idle compute after five minutes and drops its connections
+    # (the first run died on the next query with AdminShutdown after 12 minutes of S3 reads).
+    # Close it now and open a fresh one for the writes.
+    wh.close()
     measured = footprint.around(todo, radius_m=CANDIDATE_RADIUS_M, min_sqft=MIN_CANDIDATE_SQFT,
                                 max_n=MAX_CANDIDATES, cache=Path(args.index), max_files=args.max_files)
+    wh = connect()
     rep = apply(wh, measured, dry_run=args.dry_run)
+    wh.close()
     rep["planned"] = len(todo)
     print(json.dumps(rep, indent=1, default=str))
     return 0
