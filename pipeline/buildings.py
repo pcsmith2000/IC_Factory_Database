@@ -155,19 +155,27 @@ def apply(wh, measured: list[dict], *, dry_run: bool) -> dict:
     """Judge each measured point and write the outcome. One transaction per facility, so a run
     that dies part-way leaves every facility it finished complete and the rest untouched."""
     from .golden_refresh import current_release
-    from .warehouse import SYNTHETIC_SOURCES, _date_row
     tag = current_release(wh)
     now, today = _now(), date.today().isoformat()
     report = {"judged": 0, "deferred": 0, "contains_point": 0, "nearest_largest": 0, "ambiguous": 0,
               "none": 0, "held": 0, "small_building": 0, "sqft_asserted": 0, "dry_run": dry_run, "examples": [],
               "judgments": []}
+    # Every facility's current rows in one read, not one query per facility: against Neon each
+    # round trip costs more than the work, and the first full run spent 34 minutes writing 1,268.
+    known: dict[str, dict] = {}
+    fids = sorted({m["facility_id"] for m in measured if not m.get("reason")})
+    for i in range(0, len(fids), 500):
+        part = fids[i:i + 500]
+        for r in wh.query(f"SELECT * FROM facility_building WHERE facility_key IN ({','.join('?' * len(part))})",
+                          tuple(part)):
+            known.setdefault(r["facility_key"], {})[r["building_id"]] = r
+    batch = _new_batch()
     for m in measured:
         if m.get("reason"):                          # outside every file, or past the file ceiling
             report["deferred"] += 1
             continue
         fid, point, release = m["facility_id"], m["point"], m["overture_release"]
-        existing = {r["building_id"]: r for r in wh.query(
-            "SELECT * FROM facility_building WHERE facility_key = ?", (fid,))}
+        existing = known.get(fid, {})
         d = decide(point, m["buildings"], existing)
         report["judged"] += 1
         report[d["outcome"]] += 1
@@ -198,61 +206,89 @@ def apply(wh, measured: list[dict], *, dry_run: bool) -> dict:
         if dry_run:
             report["sqft_asserted"] += 1 if assert_sqft else 0
             continue
-        with wh.transaction() as c:
-            for b in m["buildings"]:
-                c.execute("INSERT INTO building_footprint VALUES (?,?,?,?,?,?,?) ON CONFLICT (building_id) DO UPDATE "
-                          "SET overture_release = excluded.overture_release, geometry = excluded.geometry, "
-                          "area_sqft = excluded.area_sqft, height_m = excluded.height_m, "
-                          "centroid = excluded.centroid, fetched_at = excluded.fetched_at",
-                          (b["building_id"], release, json.dumps(b["geometry"], separators=(",", ":")),
-                           b["area_sqft"], b["height_m"], b["centroid"], now))
-            for bid in d["drop"]:
-                old = existing[bid]
-                c.execute("DELETE FROM facility_building WHERE facility_key = ? AND building_id = ?", (fid, bid))
-                if old["status"] != "candidate":
-                    _event(c, fid, bid, old["status"], "candidate", "the point moved away from this building", now)
-            for bid, r in d["rows"].items():
-                old = existing.get(bid)
-                c.execute("INSERT INTO facility_building (facility_key, building_id, status, role, basis, distance_m, "
-                          "contains_point, point, decided_kind, decided_by, decided_at) "
-                          "VALUES (?,?,?,?,?,?,?,?,'pipeline','pipeline/buildings.py',?) "
-                          "ON CONFLICT (facility_key, building_id) DO UPDATE SET status = excluded.status, "
-                          "role = excluded.role, basis = excluded.basis, distance_m = excluded.distance_m, "
-                          "contains_point = excluded.contains_point, point = excluded.point, "
-                          "decided_at = excluded.decided_at",
-                          (fid, bid, r["status"], r["role"], r["basis"], r["distance_m"], r["contains_point"],
-                           r["point"], now))
-                if r["status"] != "candidate" and (old is None or old["status"] != r["status"]):
-                    _event(c, fid, bid, old["status"] if old else None, r["status"], d["reason"] or r["basis"], now)
-            c.execute("INSERT INTO facility_building_review VALUES (?,?,?,?,?,?,?) ON CONFLICT (facility_key) DO UPDATE "
-                      "SET point = excluded.point, overture_release = excluded.overture_release, "
-                      "outcome = excluded.outcome, reason = excluded.reason, "
-                      "n_candidates = excluded.n_candidates, evaluated_at = excluded.evaluated_at",
-                      (fid, point, release, d["outcome"], d["reason"] or None, len(m["buildings"]), now))
-            if assert_sqft:
-                rh = _h(SOURCE, fid, ",".join(ids), release)
-                doc = f"{release}:{'+'.join(ids)} contains {point}"
-                c.execute("INSERT INTO dim_source VALUES (?,?,?,?,?,?,?) ON CONFLICT (source_key) DO NOTHING",
-                          (SOURCE, SOURCE, SYNTHETIC_SOURCES[SOURCE]["name"], "enrichment", "overture_buildings",
-                           None, "active"))
-                if dr := _date_row(today):
-                    c.execute("INSERT INTO dim_date VALUES (?,?,?,?) ON CONFLICT (date_key) DO NOTHING", dr)
-                c.execute("INSERT INTO ref_source_row VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
-                          "ON CONFLICT (row_hash) DO NOTHING",
-                          (rh, SOURCE, None, doc, today, "building_sqft", "pipeline/buildings.py",
-                           None, None, None, None, None, fid, "contains_point", None, tag))
-                c.execute("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) "
-                          "ON CONFLICT (assertion_id, release_tag) DO NOTHING",
-                          (_h(SOURCE, "assertion", fid, "building_sqft", sqft, rh), tag, fid, SOURCE,
-                           "building_sqft", today, str(sqft), "buildings_contains_point", 0, rh, None,
-                           "enrichment", now))
-                report["sqft_asserted"] += 1
+        # Written in batches of WRITE_BATCH facilities, one transaction and one round trip per kind
+        # of row each: a run that dies loses at most the batch in flight, which rolls back whole,
+        # and the next run judges those facilities again because their review row never landed.
+        batch["footprints"].update({b["building_id"]: (
+            b["building_id"], release, json.dumps(b["geometry"], separators=(",", ":")),
+            b["area_sqft"], b["height_m"], b["centroid"], now) for b in m["buildings"]})
+        for bid in d["drop"]:
+            old = existing[bid]
+            batch["drops"].append((fid, bid))
+            if old["status"] != "candidate":
+                batch["events"].append(_event_row(fid, bid, old["status"], "candidate",
+                                                  "the point moved away from this building", now))
+        for bid, r in d["rows"].items():
+            old = existing.get(bid)
+            batch["rows"].append((fid, bid, r["status"], r["role"], r["basis"], r["distance_m"],
+                                  r["contains_point"], r["point"], now))
+            if r["status"] != "candidate" and (old is None or old["status"] != r["status"]):
+                batch["events"].append(_event_row(fid, bid, old["status"] if old else None, r["status"],
+                                                  d["reason"] or r["basis"], now))
+        batch["reviews"].append((fid, point, release, d["outcome"], d["reason"] or None, len(m["buildings"]), now))
+        if assert_sqft:
+            rh = _h(SOURCE, fid, ",".join(ids), release)
+            doc = f"{release}:{'+'.join(ids)} contains {point}"
+            batch["refs"].append((rh, SOURCE, None, doc, today, "building_sqft", "pipeline/buildings.py",
+                                  None, None, None, None, None, fid, "contains_point", None, tag))
+            batch["facts"].append((_h(SOURCE, "assertion", fid, "building_sqft", sqft, rh), tag, fid, SOURCE,
+                                   "building_sqft", today, str(sqft), "buildings_contains_point", 0, rh, None,
+                                   "enrichment", now))
+            report["sqft_asserted"] += 1
+        batch["n"] += 1
+        if batch["n"] >= WRITE_BATCH:
+            _flush(wh, batch, today)
+            batch = _new_batch()
+    if not dry_run:
+        _flush(wh, batch, today)
     return report
 
 
-def _event(c, fid, bid, before, after, reason, at, actor_kind="pipeline", actor="pipeline/buildings.py"):
-    c.execute("INSERT INTO facility_building_event VALUES (?,?,?,?,?,?,?,?,?)",
-              (_h("event", fid, bid, before, after, at), fid, bid, before, after, actor_kind, actor, reason, at))
+WRITE_BATCH = 200
+
+
+def _event_row(fid, bid, before, after, reason, at, actor_kind="pipeline", actor="pipeline/buildings.py"):
+    return (_h("event", fid, bid, before, after, at), fid, bid, before, after, actor_kind, actor, reason, at)
+
+
+def _new_batch() -> dict:
+    return {"n": 0, "footprints": {}, "drops": [], "rows": [], "events": [], "reviews": [], "refs": [], "facts": []}
+
+
+def _flush(wh, b: dict, today: str) -> None:
+    """One transaction for a batch of facilities: every kind of row in one executemany."""
+    from .warehouse import SYNTHETIC_SOURCES, _date_row
+    if not b["n"]:
+        return
+    with wh.transaction() as c:
+        c.executemany("INSERT INTO building_footprint VALUES (?,?,?,?,?,?,?) ON CONFLICT (building_id) DO UPDATE "
+                      "SET overture_release = excluded.overture_release, geometry = excluded.geometry, "
+                      "area_sqft = excluded.area_sqft, height_m = excluded.height_m, "
+                      "centroid = excluded.centroid, fetched_at = excluded.fetched_at", list(b["footprints"].values()))
+        c.executemany("DELETE FROM facility_building WHERE facility_key = ? AND building_id = ?", b["drops"])
+        c.executemany("INSERT INTO facility_building (facility_key, building_id, status, role, basis, distance_m, "
+                      "contains_point, point, decided_kind, decided_by, decided_at) "
+                      "VALUES (?,?,?,?,?,?,?,?,'pipeline','pipeline/buildings.py',?) "
+                      "ON CONFLICT (facility_key, building_id) DO UPDATE SET status = excluded.status, "
+                      "role = excluded.role, basis = excluded.basis, distance_m = excluded.distance_m, "
+                      "contains_point = excluded.contains_point, point = excluded.point, "
+                      "decided_at = excluded.decided_at", b["rows"])
+        c.executemany("INSERT INTO facility_building_event VALUES (?,?,?,?,?,?,?,?,?) "
+                      "ON CONFLICT (event_id) DO NOTHING", b["events"])
+        c.executemany("INSERT INTO facility_building_review VALUES (?,?,?,?,?,?,?) ON CONFLICT (facility_key) DO UPDATE "
+                      "SET point = excluded.point, overture_release = excluded.overture_release, "
+                      "outcome = excluded.outcome, reason = excluded.reason, "
+                      "n_candidates = excluded.n_candidates, evaluated_at = excluded.evaluated_at", b["reviews"])
+        if b["facts"]:
+            c.execute("INSERT INTO dim_source VALUES (?,?,?,?,?,?,?) ON CONFLICT (source_key) DO NOTHING",
+                      (SOURCE, SOURCE, SYNTHETIC_SOURCES[SOURCE]["name"], "enrichment", "overture_buildings",
+                       None, "active"))
+            if dr := _date_row(today):
+                c.execute("INSERT INTO dim_date VALUES (?,?,?,?) ON CONFLICT (date_key) DO NOTHING", dr)
+            c.executemany("INSERT INTO ref_source_row VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+                          "ON CONFLICT (row_hash) DO NOTHING", b["refs"])
+            c.executemany("INSERT INTO fact_assertions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) "
+                          "ON CONFLICT (assertion_id, release_tag) DO NOTHING", b["facts"])
 
 
 def main(argv=None) -> int:
