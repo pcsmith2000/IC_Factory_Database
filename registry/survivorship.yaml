@@ -91,7 +91,10 @@ fields:
   # throw away the only case that carries information: the one where the claim and the measurement
   # disagree. A consumer wanting one number should read sq_ft and fall back to building_sqft; a
   # consumer auditing the roster wants both side by side.
-  building_sqft:   {order: [adl_employee_feedback, operator, "basis:footprint"], tie: most_recent}
+  # pipeline/buildings.py: the summed footprint of the buildings attached to the facility. A set a
+  # person confirmed (basis:buildings_confirmed) beats the building containing the coordinate,
+  # which beats stage 11's largest-within-30m (basis:footprint), now only the fallback.
+  building_sqft:   {order: [adl_employee_feedback, operator, "basis:buildings_confirmed", "basis:buildings_contains_point", "basis:footprint"], tie: most_recent}
   # A web-research verdict (not_ic / closed, with a cited source) outranks stage 12's advisory
   # `review`, and a person outranks both: an employee's `active` undoes an agent's `closed`.
   existence_flag:  {order: [adl_employee_feedback, operator, "basis:web_verdict", "basis:advisory"], tie: most_recent}
@@ -106,7 +109,7 @@ fields:
   # as a plausible plant size (below 500 or above 20,000,000 sq ft, or not a number) cannot win.
   # sq_ft and building_sqft stay side by side for the auditor, as the note above explains.
 derived:
-  floor_area_sqft: {from: [sq_ft, building_sqft], order: [adl_employee_feedback, operator, "class:D", "class:A", "class:B", "class:C", "basis:footprint"], tie: most_recent, min: 500, max: 20000000}
+  floor_area_sqft: {from: [sq_ft, building_sqft], order: [adl_employee_feedback, operator, "class:D", "class:A", "class:B", "class:C", "basis:buildings_confirmed", "basis:buildings_contains_point", "basis:footprint"], tie: most_recent, min: 500, max: 20000000}
 
 # Operational flags: fields an enrichment stage asserts for its own bookkeeping and that never
 # reach golden. geocode_quality records "Geocodio could not place this address at rooftop" so the

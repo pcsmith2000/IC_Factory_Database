@@ -82,6 +82,10 @@ SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     # against — while every other enrichment stage stays where it is.
     "capability": {"name": "Enrichment 15 — capability over registry/taxonomy.yaml",
                    "class": "capability"},
+    # pipeline/buildings.py: the summed footprint of a facility's attached buildings. The basis
+    # says who attached them (the containing building, or a person), and survivorship ranks on it.
+    "facility_buildings": {"name": "Attached Overture buildings (pipeline/buildings.py)",
+                           "class": "enrichment"},
 }
 
 
@@ -212,6 +216,45 @@ DDL = [
         status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','merged','rejected')),
         created_at TEXT NOT NULL, decided_at TEXT, decided_by TEXT,
         PRIMARY KEY (facility_id, duplicate_of))""",
+    # Buildings (pipeline/buildings.py). A facility's square footage is the footprint of the
+    # buildings attached to it, not of whatever sits near its coordinate.
+    #
+    # building_footprint: one Overture building, cached so nothing downstream reads S3. Keyed by
+    # its GERS id, which is stable across Overture releases; a later release overwrites the shape.
+    """CREATE TABLE IF NOT EXISTS building_footprint (
+        building_id TEXT PRIMARY KEY, overture_release TEXT NOT NULL,
+        geometry TEXT NOT NULL,          -- GeoJSON Polygon / MultiPolygon, lon/lat
+        area_sqft INTEGER NOT NULL, height_m REAL, centroid TEXT, fetched_at TEXT NOT NULL)""",
+    # facility_building: the current state of each (facility, building) pair.
+    #   candidate  near the facility, offered for attaching (pipeline only)
+    #   proposed   suggested (the largest nearby building, or an agent); not counted
+    #   confirmed  attached and counted in the facility's square footage (at most 5)
+    #   rejected   ruled out by a person or agent; never proposed again
+    # decided_kind is who set the status: 'pipeline', 'person' or 'agent'. The pipeline never
+    # overrides a person's or an agent's decision.
+    """CREATE TABLE IF NOT EXISTS facility_building (
+        facility_key TEXT NOT NULL, building_id TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('candidate','proposed','confirmed','rejected')),
+        role TEXT CHECK (role IN ('primary','additional')),
+        basis TEXT,                      -- contains_point | nearest_largest | ambiguous | person | agent
+        distance_m REAL, contains_point INTEGER NOT NULL DEFAULT 0,
+        point TEXT,                      -- the lat_lon this row was judged against
+        decided_kind TEXT NOT NULL DEFAULT 'pipeline' CHECK (decided_kind IN ('pipeline','person','agent')),
+        decided_by TEXT, decided_at TEXT NOT NULL, note TEXT,
+        PRIMARY KEY (facility_key, building_id))""",
+    "CREATE INDEX IF NOT EXISTS ix_facility_building_status ON facility_building (facility_key, status)",
+    # Every change to facility_building, append-only: who, what, why, when.
+    """CREATE TABLE IF NOT EXISTS facility_building_event (
+        event_id TEXT PRIMARY KEY, facility_key TEXT NOT NULL, building_id TEXT NOT NULL,
+        status_before TEXT, status_after TEXT NOT NULL,
+        actor_kind TEXT NOT NULL, actor TEXT, reason TEXT, at TEXT NOT NULL)""",
+    "CREATE INDEX IF NOT EXISTS ix_facility_building_event ON facility_building_event (facility_key, at)",
+    # One row per facility the pipeline has judged: against which point and release, and what it
+    # found. Every outcome but 'contains_point' is the human / agent review queue.
+    """CREATE TABLE IF NOT EXISTS facility_building_review (
+        facility_key TEXT PRIMARY KEY, point TEXT NOT NULL, overture_release TEXT NOT NULL,
+        outcome TEXT NOT NULL,           -- contains_point | nearest_largest | ambiguous | none | held
+        reason TEXT, n_candidates INTEGER, evaluated_at TEXT NOT NULL)""",
 ]
 
 # Views are created after the golden columns are reconciled, not with the tables: they name every
