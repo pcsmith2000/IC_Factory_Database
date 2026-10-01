@@ -24,7 +24,7 @@ existence_flag = active from ADL_Viz feedback brings the plant back.
     python -m pipeline.web_research.ingest [--limit 200] [--dry-run]
 """
 from __future__ import annotations
-import hashlib, json, re, sys
+import functools, hashlib, json, re, sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -49,6 +49,15 @@ LITERAL = {"name", "legal_name", "address", "city", "state", "zip", "phone", "em
            "sq_ft", "building_sqft", "expiry_date", "lat_lon"}
 OVERRIDE_AT = 0.7
 OVERRIDING = ("web_verified", "web_primary")        # pipeline/golden.py ranks these above automation
+# What a plant makes is a judgement, never a literal, so it is web_inferred and only fills a blank:
+# except that the company's own site or a registry describing THIS plant beats the stage-15 model's
+# guess. Such a pair (capability_group + capability_leaf from one document of veracity >= OVERRIDE_AT,
+# the leaf inside the group) is basis `web_capability`, which registry/survivorship.yaml ranks above
+# `capability` and below ADL's own labels (class:D) and people. Half a pair, or a pair that
+# disagrees with the taxonomy, stays web_inferred or is refused, so golden never holds a truss leaf
+# under a Modular group.
+CAPABILITY_FIELDS = ("capability_group", "capability_leaf")
+WEB_CAPABILITY = "web_capability"
 REMOVAL_GRADE = ("government_registry", "filing", "certification_body")   # one of these can remove a plant alone
 
 # Fields the agent may assert. Everything golden carries except what a person or the pipeline owns:
@@ -73,6 +82,35 @@ def _taxonomy() -> tuple[set[str], set[str]]:
     groups = {g["name"] for g in t["groups"]}
     leaves = {l["name"] for g in t["groups"] for l in g.get("leaves", [])}
     return groups, leaves
+
+
+@functools.lru_cache(maxsize=1)
+def _group_of() -> dict[str, str]:
+    from ..registry import load_yaml
+    t = load_yaml(ROOT / "registry" / "taxonomy.yaml")
+    return {l["name"]: g["name"] for g in t["groups"] for l in g.get("leaves", [])}
+
+
+def _pair_capabilities(facts: list[dict], rejected: list[dict]) -> list[dict]:
+    """Promote a matching group + leaf from one primary document to WEB_CAPABILITY; refuse a mismatch."""
+    group_of, out = _group_of(), []
+    by_src: dict[str, dict[str, dict]] = {}
+    for f in facts:
+        if f["field"] in CAPABILITY_FIELDS:
+            by_src.setdefault(f["source"]["ref"], {})[f["field"]] = f
+    for f in facts:
+        if f["field"] not in CAPABILITY_FIELDS:
+            out.append(f); continue
+        pair = by_src[f["source"]["ref"]]
+        if len(pair) == 2 and group_of.get(pair["capability_leaf"]["value"]) != pair["capability_group"]["value"]:
+            rejected.append({"item": "assertions", "field": f["field"], "reason":
+                             f"capability_leaf {pair['capability_leaf']['value']!r} is in group "
+                             f"{group_of.get(pair['capability_leaf']['value'])!r}, not {pair['capability_group']['value']!r}"})
+            continue
+        if len(pair) == 2 and VERACITY[f["source"]["kind"]] >= OVERRIDE_AT:
+            f = {**f, "basis": WEB_CAPABILITY}
+        out.append(f)
+    return out
 
 
 def _is_url(v: str) -> bool:
@@ -210,6 +248,7 @@ def plan(payload: dict, facility_id: str, active: set[str], fields: set[str], ta
                  else "web_cited")
         facts.append({"field": field, "value": value, "basis": basis, "confidence": conf,
                       "source": src, "quote": quote[:1000]})
+    facts = _pair_capabilities(facts, rejected)
     verdict = payload.get("verdict") or {}
     status = verdict.get("status")
     if status and status not in VERDICTS:

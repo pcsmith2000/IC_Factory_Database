@@ -245,3 +245,50 @@ def test_a_submission_with_no_sources_is_refused_and_not_found_records_what_it_c
     assert st == {"empty": "rejected", "nf": "ingested"} and rep["sources_written"] == 1
     tag = wh.query("SELECT value FROM fact_assertions WHERE source_key = 'web_research' AND field_key = 'research_source'")
     assert [t["value"] for t in tag] == [MAPS["url"]]
+
+
+# ---------------------------------------------------------------- capability: a cited pair beats the model
+TRUSS = "Wood Structural Components (Trusses, etc.)"
+
+
+def test_a_capability_pair_from_the_company_site_is_web_capability():
+    p = plan(payload(assertions=[A("capability_group", "Other", "s2", "we design and manufacture roof trusses"),
+                                 A("capability_leaf", TRUSS, "s2", "we design and manufacture roof trusses")]))
+    got = {f["field"]: (f["basis"], f["confidence"]) for f in p["facts"] if not f.get("is_source_tag")}
+    assert got == {"capability_group": ("web_capability", 0.6), "capability_leaf": ("web_capability", 0.6)}
+
+
+def test_half_a_pair_or_a_weak_source_only_fills_a_blank():
+    p = plan(payload(assertions=[A("capability_leaf", TRUSS, "s2", "roof trusses")]))
+    assert [f["basis"] for f in p["facts"] if not f.get("is_source_tag")] == ["web_inferred"]
+    p = plan(payload(assertions=[A("capability_group", "Other", "s3", "truss plant"),
+                                 A("capability_leaf", TRUSS, "s3", "truss plant")]))
+    assert {f["basis"] for f in p["facts"] if not f.get("is_source_tag")} == {"web_inferred"}
+
+
+def test_a_leaf_outside_its_group_is_refused():
+    p = plan(payload(assertions=[A("capability_group", "Modular", "s2", "roof trusses"),
+                                 A("capability_leaf", TRUSS, "s2", "roof trusses")]))
+    assert not [f for f in p["facts"] if not f.get("is_source_tag")]
+    assert all("not 'Modular'" in r["reason"] for r in p["rejected"]) and len(p["rejected"]) == 2
+
+
+def test_survivorship_web_capability_beats_the_model_but_not_adl_or_people():
+    from pathlib import Path
+    from pipeline.golden import build_golden
+    from pipeline.registry import load_yaml
+    rules = load_yaml(Path(__file__).resolve().parents[1] / "registry" / "survivorship.yaml")
+
+    def a(value, source, basis, cls="enrichment", date="2026-09-01"):
+        return {"facility_id": "IC-1", "field": "capability_leaf", "value": value, "source_id": source,
+                "source_class": cls, "basis": basis, "retrieved_date": date, "site_visit": False, "row_hash": "",
+                "confidence": 0.6}
+    model = a("Wood Volumetric Modular", "capability", "model_capability", date="2026-09-30")
+    web = a(TRUSS, "web_research", "web_capability", cls="web")
+    assert build_golden([model, web], rules)[0][0]["capability_leaf"] == TRUSS
+    assert build_golden([model, a(TRUSS, "web_research", "web_inferred", cls="web")], rules)[0][0]["capability_leaf"] \
+        == "Wood Volumetric Modular", "any other web judgement still only fills a blank"
+    adl = a("Wood Volumetric Modular", "adl_plant_list", "adl_label", cls="D")
+    assert build_golden([adl, web], rules)[0][0]["capability_leaf"] == "Wood Volumetric Modular"
+    person = a("Wood Volumetric Modular", "operator", "operator")
+    assert build_golden([person, web], rules)[0][0]["capability_leaf"] == "Wood Volumetric Modular"
