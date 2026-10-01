@@ -230,7 +230,9 @@ groups:
 #     and the lots that sell them. (A plant that also builds homes or modules stays, on those.)
 #   - Heavy structural steel: fabricators and erectors of hot-rolled beams and columns, bridge and
 #     plate work, and offshore/energy modules. PEMB kits stay in scope (ruling of 2026-09-21).
-#     Open-web steel joist and deck plants are NOT covered by this ruling; they await their own.
+#   - Open-web steel joists, joist girders and steel deck (Vulcraft, New Millennium, Canam,
+#     Valley Joist, CMC Joist & Deck, SMI Joist): out, on a further ruling the same day. Wood
+#     I-joists and open-web wood joists are Wood Structural Components and stay.
 #   - Post-frame (pole barn) kits and builders. A post-frame supplier that runs its own truss plant
 #     stays, as Wood Structural Components.
 unmapped_legacy: []
