@@ -76,5 +76,28 @@ jobs:
           set -- --limit "${LIMIT:-500}" --max-files "${MAX_FILES:-20}"
           if [ "$REFRESH" = "true" ]; then set -- "$@" --refresh; fi
           if [ "$DRY_RUN" = "true" ]; then set -- "$@" --dry-run; fi
-          python -m pipeline.buildings "$@" | tee buildings.json
+          python -m pipeline.buildings "$@" --report buildings-judgments.jsonl | tee buildings.json
           { echo '```json'; cat buildings.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Print the judgments (and a sample of outlines) to the log
+        if: always()
+        run: |
+          [ -f buildings-judgments.jsonl ] || exit 0
+          python - <<'PY'
+          import json
+          rows = [json.loads(l) for l in open("buildings-judgments.jsonl")]
+          print("J|facility_id|outcome|status|area_sqft|distance_m|largest_30m_sqft|n_candidates")
+          for j in rows:
+              print("J|" + "|".join(str(j.get(k)) for k in ("facility_id", "outcome", "status", "area_sqft",
+                                                             "distance_m", "largest_30m_sqft", "n_candidates")))
+          sample = [j for j in rows if j["outcome"] == "contains_point"][:10] + \
+                   [j for j in rows if j["outcome"] == "nearest_largest"][:5]
+          for j in sample:
+              print("G|" + j["facility_id"] + "|" + j["point"] + "|" + json.dumps(j["geometry"], separators=(",", ":")))
+          PY
+      - name: Keep every judgment (with the chosen outline) for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildings-judgments-${{ github.run_id }}
+          path: buildings-judgments.jsonl
+          if-no-files-found: ignore

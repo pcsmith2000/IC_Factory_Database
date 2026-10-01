@@ -162,3 +162,22 @@ def test_main_reconnects_after_reading_overture(tmp_path, monkeypatch):
     w = real(db)
     assert w.query("SELECT status FROM facility_building") == [{"status": "confirmed"}]
     w.close()
+
+
+def test_report_writes_one_line_per_judged_facility(tmp_path, monkeypatch):
+    from pipeline.enrich import footprint
+    db = tmp_path / "w.sqlite"
+    w = warehouse.SqliteWarehouse(db); w.init_schema()
+    with w.transaction() as c:
+        c.execute("INSERT INTO golden_facility (facility_key, release_tag, name, lat_lon) VALUES "
+                  "('IC-1','r1','P',?), ('IC-2','r1','Q','36.0,-81.0')", (POINT,))
+    w.close()
+    monkeypatch.setattr(footprint, "around", lambda pts, **kw: [
+        {**p, "buildings": [bld("plant", 0, 90000, True), bld("office", 12, 4000)] if p["facility_id"] == "IC-1"
+         else [bld("shed", 20, 2000)], "reason": "", "overture_release": "rel"} for p in pts])
+    out = tmp_path / "j.jsonl"
+    assert B.main(["--db", str(db), "--dry-run", "--report", str(out)]) == 0
+    rows = {j["facility_id"]: j for j in map(json.loads, out.read_text().splitlines())}
+    assert rows["IC-1"]["outcome"] == "contains_point" and rows["IC-1"]["area_sqft"] == 90000
+    assert rows["IC-1"]["largest_30m_sqft"] == 90000 and rows["IC-1"]["geometry"]["type"] == "Polygon"
+    assert rows["IC-2"]["status"] == "proposed" and rows["IC-2"]["distance_m"] == 20

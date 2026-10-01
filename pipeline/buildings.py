@@ -141,7 +141,8 @@ def apply(wh, measured: list[dict], *, dry_run: bool) -> dict:
     tag = current_release(wh)
     now, today = _now(), date.today().isoformat()
     report = {"judged": 0, "deferred": 0, "contains_point": 0, "nearest_largest": 0, "ambiguous": 0,
-              "none": 0, "held": 0, "sqft_asserted": 0, "dry_run": dry_run, "examples": []}
+              "none": 0, "held": 0, "sqft_asserted": 0, "dry_run": dry_run, "examples": [],
+              "judgments": []}
     for m in measured:
         if m.get("reason"):                          # outside every file, or past the file ceiling
             report["deferred"] += 1
@@ -162,6 +163,17 @@ def apply(wh, measured: list[dict], *, dry_run: bool) -> dict:
             # person confirms a building. Say so where they will look.
             d["reason"] += (f"; the point no longer lies in {'+'.join(before_ids)}, whose square footage "
                             f"stays in golden until a person confirms a building")
+        pick = next((bid for bid, r in d["rows"].items() if r["role"] == "primary"), None)
+        near30 = [b for b in m["buildings"] if b["distance_m"] <= PROPOSE_RADIUS_M]
+        by_id = {b["building_id"]: b for b in m["buildings"]}
+        report["judgments"].append({
+            "facility_id": fid, "point": point, "outcome": d["outcome"],
+            "status": d["rows"][pick]["status"] if pick else None,
+            "building_id": pick, "area_sqft": by_id[pick]["area_sqft"] if pick else None,
+            "distance_m": by_id[pick]["distance_m"] if pick else None,
+            "largest_30m_sqft": max((b["area_sqft"] for b in near30), default=None),
+            "n_candidates": len(m["buildings"]),
+            "geometry": by_id[pick]["geometry"] if pick else None})
         if len(report["examples"]) < 20:
             report["examples"].append({"facility_id": fid, "outcome": d["outcome"], "sqft": sqft,
                                        "buildings": ids, "reason": d["reason"]})
@@ -237,6 +249,7 @@ def main(argv=None) -> int:
     ap.add_argument("--refresh", action="store_true", help="re-judge facilities already judged at this point")
     ap.add_argument("--dry-run", action="store_true", help="read Overture and report; write nothing")
     ap.add_argument("--index", default="enrich/overture_index.json", help="cached Overture file -> bbox index")
+    ap.add_argument("--report", default=None, help="write one JSON line per judged facility here")
     args = ap.parse_args(argv)
     def connect():
         return (SqliteWarehouse(Path(args.db)) if args.db
@@ -255,6 +268,10 @@ def main(argv=None) -> int:
     wh = connect()
     rep = apply(wh, measured, dry_run=args.dry_run)
     wh.close()
+    judgments = rep.pop("judgments")
+    if args.report:
+        # Every judgment, with the chosen building's outline: what a reviewer checks the run against.
+        Path(args.report).write_text("\n".join(json.dumps(j, separators=(",", ":")) for j in judgments) + "\n")
     rep["planned"] = len(todo)
     print(json.dumps(rep, indent=1, default=str))
     return 0
