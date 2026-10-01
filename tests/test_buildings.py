@@ -214,3 +214,18 @@ def test_a_small_containing_building_is_proposed_not_attached():
     assert B.confirmed_sqft(d["rows"], {"shop": 5084, "far": 90000}) == (None, [])
     # At the threshold it is a plant.
     assert B.decide(POINT, [bld("plant", 0, 10_000, True)], {})["outcome"] == "contains_point"
+
+
+def test_writes_flush_in_batches_and_a_batch_boundary_loses_nothing(wh, monkeypatch):
+    monkeypatch.setattr(B, "WRITE_BATCH", 2)
+    with wh.transaction() as c:
+        c.execute("INSERT INTO golden_facility (facility_key, release_tag, name, lat_lon) VALUES ('IC-4','r1','R','37.0,-82.0')")
+    m = [measured("IC-1", POINT, [bld("plant", 0, 90000, True)]),
+         measured("IC-2", "36.0,-81.0", [bld("shed", 20, 2000)]),
+         measured("IC-4", "37.0,-82.0", [bld("mill", 0, 40000, True), bld("plant", 50, 90000)])]
+    rep = B.apply(wh, m, dry_run=False)
+    assert rep["judged"] == 3 and rep["sqft_asserted"] == 2
+    assert {r["facility_key"] for r in wh.query("SELECT facility_key FROM facility_building_review")} == {"IC-1", "IC-2", "IC-4"}
+    # one footprint row per building even when two facilities see it
+    assert wh.query("SELECT count(*) AS n FROM building_footprint WHERE building_id = 'plant'")[0]["n"] == 1
+    assert len(wh.query("SELECT 1 FROM fact_assertions WHERE field_key = 'building_sqft'")) == 2
