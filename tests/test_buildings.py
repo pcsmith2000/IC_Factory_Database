@@ -130,3 +130,35 @@ def test_survivorship_the_containing_building_beats_the_nearby_largest_even_when
     rows, _ = build_golden([a("building_sqft", "90000", "facility_buildings", "buildings_contains_point", "2026-09-30"),
                             a("building_sqft", "130000", "facility_buildings", "buildings_confirmed", "2026-09-01")], RULES)
     assert rows[0]["building_sqft"] == "130000"            # a person's set beats the pipeline's
+
+
+def test_main_reconnects_after_reading_overture(tmp_path, monkeypatch):
+    # A connection held through ~1 minute per Overture file is closed under us by an idle-suspending
+    # database; main() must read the plan, close, measure, and write on a fresh connection.
+    from pipeline.enrich import footprint
+    db = tmp_path / "w.sqlite"
+    w = warehouse.SqliteWarehouse(db); w.init_schema()
+    with w.transaction() as c:
+        c.execute("INSERT INTO golden_facility (facility_key, release_tag, name, lat_lon) VALUES ('IC-1','r1','P',?)", (POINT,))
+    w.close()
+    opened, closed = [], []
+    real = warehouse.SqliteWarehouse
+
+    class Tracked(real):
+        def __init__(self, *a, **k):
+            super().__init__(*a, **k); opened.append(self)
+
+        def close(self):
+            closed.append(self); super().close()
+
+    def fake_around(points, **kw):
+        assert opened and all(o in closed for o in opened), "the warehouse must be closed while Overture is read"
+        return [{**p, "buildings": [bld("plant", 0, 90000, True)], "reason": "", "overture_release": "rel"} for p in points]
+
+    monkeypatch.setattr(warehouse, "SqliteWarehouse", Tracked)
+    monkeypatch.setattr(footprint, "around", fake_around)
+    assert B.main(["--db", str(db)]) == 0
+    assert len(opened) == 2 and len(closed) == 2
+    w = real(db)
+    assert w.query("SELECT status FROM facility_building") == [{"status": "confirmed"}]
+    w.close()
