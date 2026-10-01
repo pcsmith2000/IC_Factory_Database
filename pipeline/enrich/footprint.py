@@ -236,3 +236,90 @@ def containing(points: list[dict], release: str = DEFAULT_RELEASE,
             out.append({**p, "buildings": buildings, "reason": reason,
                         "overture_release": release})
     return out
+
+
+def _dist_to_ring_m(lat: float, lon: float, ring: list[tuple[float, float]]) -> float:
+    """Metres from a point to a ring's edges, on a local equirectangular projection about the
+    point. Degrees are not metres: a degree of longitude is cos(lat) of a degree of latitude, so
+    treating ST_Distance's degrees as latitude degrees overstates east-west gaps by ~30% at 40N."""
+    k = math.cos(math.radians(lat))
+    pts = [(math.radians(x - lon) * k * R, math.radians(y - lat) * R) for x, y in ring]
+    best = float("inf")
+    for (x1, y1), (x2, y2) in zip(pts, pts[1:] + pts[:1]):
+        dx, dy = x2 - x1, y2 - y1
+        t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, -(x1 * dx + y1 * dy) / (dx * dx + dy * dy)))
+        best = min(best, math.hypot(x1 + t * dx, y1 + t * dy))
+    return best
+
+
+def _outer_rings(geojson: dict) -> list[list[tuple[float, float]]]:
+    polys = [geojson["coordinates"]] if geojson["type"] == "Polygon" else geojson["coordinates"]
+    return [[(float(x), float(y)) for x, y, *_ in poly[0]] for poly in polys]
+
+
+def around(points: list[dict], radius_m: float = 150.0, min_sqft: int = 1500, max_n: int = 20,
+           release: str = DEFAULT_RELEASE, cache: Path | None = None,
+           max_files: int | None = None) -> list[dict]:
+    """Every Overture building near each point, with its outline: the input pipeline/buildings.py
+    attaches from, and the candidates the map offers a person.
+
+    points: [{facility_id, lat, lon}] -> each point plus `buildings`, nearest first:
+    [{building_id, geometry (GeoJSON), area_sqft, height_m, centroid, distance_m, contains_point}].
+    A building that contains the point has distance 0 and is always kept, whatever its size;
+    the rest are kept if at least `min_sqft` (sheds and garages are not plant capacity), up to
+    `max_n`. Points beyond the file ceiling come back with a reason, never silently dropped.
+    """
+    idx = build_index(release, cache)
+    by_file: dict[str, list[dict]] = {}
+    out: list[dict] = []
+    for p in points:
+        f = file_for(idx, p["lat"], p["lon"])
+        if f is None:
+            out.append({**p, "buildings": [], "reason": "outside every Overture file bbox"})
+        else:
+            by_file.setdefault(f, []).append(p)
+    files = list(by_file)
+    if max_files is not None and len(files) > max_files:
+        for f in files[max_files:]:
+            for p in by_file[f]:
+                out.append({**p, "buildings": [], "reason": "deferred: file ceiling reached"})
+        files = files[:max_files]
+    if not files:
+        return out
+    con = _connect()
+    for f in files:
+        ps = by_file[f]
+        boxes = []
+        for p in ps:
+            dlat = radius_m / (math.pi * R / 180)
+            dlon = dlat / max(math.cos(math.radians(p["lat"])), 0.01)
+            p["_box"] = (p["lon"] - dlon, p["lon"] + dlon, p["lat"] - dlat, p["lat"] + dlat)
+            boxes.append("(bbox.xmax >= {0} AND bbox.xmin <= {1} AND bbox.ymax >= {2} AND bbox.ymin <= {3})"
+                         .format(*p["_box"]))
+        # A TEMP TABLE for the same reason as measure(): one S3 read per file, not per point.
+        con.execute(f"CREATE OR REPLACE TEMP TABLE src AS SELECT geometry, bbox, id, height "
+                    f"FROM read_parquet('{f}') WHERE {' OR '.join(boxes)}")
+        for p in ps:
+            x0, x1, y0, y1 = p.pop("_box")
+            rows = con.execute(
+                "SELECT id, ST_AsGeoJSON(geometry), ST_AsText(geometry), height, "
+                "ST_Intersects(geometry, ST_Point(?, ?)), ST_X(ST_Centroid(geometry)), ST_Y(ST_Centroid(geometry)) "
+                "FROM src WHERE bbox.xmax >= ? AND bbox.xmin <= ? AND bbox.ymax >= ? AND bbox.ymin <= ?",
+                [p["lon"], p["lat"], x0, x1, y0, y1]).fetchall()
+            got = []
+            for bid, gj, wkt, height, inside, cx, cy in rows:
+                geo = json.loads(gj)
+                if geo.get("type") not in ("Polygon", "MultiPolygon"):
+                    continue
+                area = round(wkt_area_m2(wkt) * M2_FT2)
+                dist = 0.0 if inside else min(_dist_to_ring_m(p["lat"], p["lon"], r) for r in _outer_rings(geo))
+                if dist > radius_m or (not inside and area < min_sqft):
+                    continue
+                got.append({"building_id": bid, "geometry": geo, "area_sqft": area,
+                            "height_m": height, "centroid": f"{cy:.6f},{cx:.6f}",
+                            "distance_m": round(dist, 1), "contains_point": bool(inside)})
+            got.sort(key=lambda b: (b["distance_m"], -b["area_sqft"]))
+            keep = [b for b in got if b["contains_point"]]
+            keep += [b for b in got if not b["contains_point"]][:max(0, max_n - len(keep))]
+            out.append({**p, "buildings": keep, "reason": "", "overture_release": release})
+    return out
