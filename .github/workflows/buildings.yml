@@ -28,6 +28,10 @@ on:
         description: "re-judge facilities already judged at their current coordinate"
         type: boolean
         default: false
+      sample:
+        description: "test sample: blank = the next facilities in order · stated-sqft = only those a source states a plant size for · or comma-separated facility ids"
+        type: string
+        default: ""
       dry_run:
         description: "read Overture and report; write nothing"
         type: boolean
@@ -71,11 +75,14 @@ jobs:
           MAX_FILES: ${{ inputs.max_files }}
           REFRESH: ${{ inputs.refresh }}
           DRY_RUN: ${{ inputs.dry_run }}
+          SAMPLE: ${{ inputs.sample }}
         run: |
           mkdir -p enrich
           set -- --limit "${LIMIT:-500}" --max-files "${MAX_FILES:-20}"
           if [ "$REFRESH" = "true" ]; then set -- "$@" --refresh; fi
           if [ "$DRY_RUN" = "true" ]; then set -- "$@" --dry-run; fi
+          if [ "$SAMPLE" = "stated-sqft" ]; then set -- "$@" --only-with-stated-sqft
+          elif [ -n "$SAMPLE" ]; then set -- "$@" --only "$SAMPLE"; fi
           python -m pipeline.buildings "$@" --report buildings-judgments.jsonl | tee buildings.json
           { echo '```json'; cat buildings.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Print the judgments (and a sample of outlines) to the log
