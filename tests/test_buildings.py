@@ -229,3 +229,18 @@ def test_writes_flush_in_batches_and_a_batch_boundary_loses_nothing(wh, monkeypa
     # one footprint row per building even when two facilities see it
     assert wh.query("SELECT count(*) AS n FROM building_footprint WHERE building_id = 'plant'")[0]["n"] == 1
     assert len(wh.query("SELECT 1 FROM fact_assertions WHERE field_key = 'building_sqft'")) == 2
+
+
+def test_survivorship_person_beats_agent_beats_the_pipeline():
+    rows, _ = build_golden([a("building_sqft", "90000", "facility_buildings", "buildings_contains_point", "2026-09-30"),
+                            a("building_sqft", "120000", "facility_buildings", "buildings_agent", "2026-09-01")], RULES)
+    assert rows[0]["building_sqft"] == "120000"
+    rows, _ = build_golden([a("building_sqft", "120000", "facility_buildings", "buildings_agent", "2026-09-30"),
+                            a("building_sqft", "130000", "facility_buildings", "buildings_confirmed", "2026-09-01")], RULES)
+    assert rows[0]["building_sqft"] == "130000"
+
+
+def test_review_task_table_exists(wh):
+    with wh.transaction() as c:
+        c.execute("INSERT INTO facility_review_task (facility_key) VALUES ('IC-1')")
+    assert wh.query("SELECT queue, passes, audit FROM facility_review_task") == [{"queue": "agent", "passes": 0, "audit": 0}]
