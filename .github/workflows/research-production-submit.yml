@@ -1,0 +1,74 @@
+# Submit a finished dry production batch later (docs/web-research-production-loop.md, "Dry ramp").
+# Downloads the batch's artifacts from its research-production run, re-applies the current guards to every
+# submission (reguard), and inserts pending rows into web_research_submission; web-research-ingest does the rest.
+# Runs only from main, only on a research-production run from main whose health decision was `grow`.
+name: research-production-submit
+run-name: "Submit production batch · ${{ inputs.run_id }} · run ${{ inputs.source_run }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "batch id, wr-prod-NNN (as dispatched; its artifacts are named after it)"
+        required: true
+      source_run:
+        description: "GitHub run id of the research-production run that researched it"
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: research-production       # never alongside a research batch
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  submit:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: The source is a research-production run from main for this batch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          SOURCE: ${{ inputs.source_run }}
+        run: |
+          [[ "$RUN_ID" =~ ^wr-prod-[0-9]{3}$ ]] || { echo "::error::run_id must look like wr-prod-001"; exit 1; }
+          [[ "$SOURCE" =~ ^[0-9]+$ ]] || { echo "::error::source_run must be a run id"; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE" --jq '[.path, .head_branch, .conclusion, .display_title] | @tsv' > src.tsv
+          IFS=$'\t' read -r path branch conclusion title < src.tsv
+          echo "source: $path $branch $conclusion $title"
+          [[ "$path" == ".github/workflows/research-production.yml" ]] || { echo "::error::not a research-production run"; exit 1; }
+          [[ "$branch" == "main" ]] || { echo "::error::the batch did not run from main"; exit 1; }
+          [[ "$conclusion" == "success" ]] || { echo "::error::the batch run did not succeed"; exit 1; }
+          [[ "$title" == *"· $RUN_ID ·"* ]] || { echo "::error::run $SOURCE is not batch $RUN_ID"; exit 1; }
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres,dev]"
+      - uses: actions/download-artifact@v4
+        with: { name: "batch-${{ inputs.run_id }}", path: batch, run-id: "${{ inputs.source_run }}", github-token: "${{ github.token }}" }
+      - uses: actions/download-artifact@v4
+        with: { name: "health-${{ inputs.run_id }}", path: ., run-id: "${{ inputs.source_run }}", github-token: "${{ github.token }}" }
+      - uses: actions/download-artifact@v4
+        with: { pattern: "pass-${{ inputs.run_id }}-*", path: passes, run-id: "${{ inputs.source_run }}", github-token: "${{ github.token }}" }
+      - name: Resolve the Neon warehouse connection
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
+          python .github/scripts/neon_connection_string.py
+      - name: Queue the submissions for ingest (current guards re-applied; pending, tagged with the run id)
+        env: { RUN_ID: "${{ inputs.run_id }}" }
+        run: |
+          set -- ; for d in passes/*/; do set -- "$@" --pass "$d"; done
+          python -m pipeline.web_research.production submit --run-id "$RUN_ID" "$@" --health health.json --batch batch | tee -a "$GITHUB_STEP_SUMMARY"

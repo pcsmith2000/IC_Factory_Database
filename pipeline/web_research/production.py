@@ -36,7 +36,9 @@ GATES = {
     "closed_share": ("<=", 0.10),         # removals are rare; a spike means something is wrong
     "not_ic_applied": ("==", 0),          # not_ic always goes to review in production
     "validated_removed": ("==", 0),       # an ADL-validated plant is never removed
-    "duplicate_share": ("<=", 0.15),
+    # wr-prod-001: 5 of 25 were duplicates, all real (same address or phone as an active record). The backlog
+    # holds more duplicates than the benchmark; only a spike beyond this suggests the matcher is overreaching.
+    "duplicate_share": ("<=", 0.30),
     "judge_precision": (">=", 0.85),      # new literal facts the judge found correct, on a random sample
 }
 
@@ -47,21 +49,36 @@ def _check(op, v, th):
 
 # --- select (read-only) -------------------------------------------------------------------------
 
-def select_sql(size: int, seed: int) -> str:
+FACILITY_ID = re.compile(r"^IC-\d{5}$")
+
+
+def select_sql(size: int, seed: int, offset: int = 0, facilities: list[str] | None = None) -> str:
+    """The next unresearched facilities, or, with `facilities`, exactly those (a re-research of named records,
+    researched before or not; the ids are checked, so they are safe to inline)."""
     cols = ", ".join(f"g.{f}" for f in INPUT_FIELDS)
+    if facilities:
+        if not all(FACILITY_ID.match(x) for x in facilities):
+            raise ValueError("facilities must be IC-numbers")
+        where = "g.facility_key IN (" + ",".join(f"'{x}'" for x in facilities) + ")"
+    else:
+        where = "NOT EXISTS (SELECT 1 FROM web_research_submission s WHERE s.facility_id = g.facility_key)"
     return f"""
     SELECT g.facility_key AS facility_id, {cols}
     FROM golden_facility g JOIN facility f ON f.facility_id = g.facility_key AND f.status = 'active'
-    WHERE NOT EXISTS (SELECT 1 FROM web_research_submission s WHERE s.facility_id = g.facility_key)
+    WHERE {where}
     ORDER BY md5(g.facility_key || '{int(seed)}'), g.facility_key
-    LIMIT {int(size)}"""
+    LIMIT {int(size)} OFFSET {int(offset)}"""
 
 
-def select(reader, run_id: str, size: int, seed: int, out: Path) -> dict:
+def select(reader, run_id: str, size: int, seed: int, out: Path, offset: int = 0,
+           named: list[str] | None = None) -> dict:
+    """Dry batches submit nothing, so the unresearched set does not shrink between them: `offset` skips the
+    facilities earlier dry batches already researched (same seed, same order). `named` lists the batch
+    instead (a re-research of records whose first pass was too thin or matched the wrong business)."""
     from ..research_eval.benchmark import benchmark_hash, _sha
     if not RUN_ID.match(run_id):
         raise ValueError("run_id must look like wr-prod-001")
-    rows = reader.query(select_sql(size, seed))
+    rows = reader.query(select_sql(size, seed, offset, named))
     facilities = {r["facility_id"]: {"facility_id": r["facility_id"],
                                      **{f: r[f] for f in INPUT_FIELDS if r.get(f) not in (None, "")}} for r in rows}
     active = sorted(r["facility_id"] for r in reader.query("SELECT facility_id FROM facility WHERE status = 'active'"))
@@ -71,8 +88,8 @@ def select(reader, run_id: str, size: int, seed: int, out: Path) -> dict:
     (out / "inputs.json").write_text(json.dumps({"facilities": facilities, "active": active,
                                                  "golden_index": golden_index}, indent=1, sort_keys=True, default=str))
     si = _sha(out / "inputs.json")
-    manifest = {"run_id": run_id, "selected_at": datetime.now(timezone.utc).isoformat(), "seed": seed,
-                "requested": size, "selected": len(facilities), "splits": {"batch": sorted(facilities)},
+    manifest = {"run_id": run_id, "selected_at": datetime.now(timezone.utc).isoformat(), "seed": seed, "offset": offset,
+                "requested": size, "named": named or None, "selected": len(facilities), "splits": {"batch": sorted(facilities)},
                 "inputs_sha256": si, "labels_sha256": "", "benchmark_sha256": benchmark_hash(si, ""),
                 "database_writes": 0}
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1))
@@ -146,7 +163,52 @@ INSERT = ("INSERT INTO web_research_submission (submission_id, facility_id, run_
           "VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (submission_id) DO NOTHING")
 
 
-def submission_rows(run_id: str, pass_dirs: list[Path]) -> list[tuple]:
+def _answers(fdir: Path) -> list[dict]:
+    """The judge's parsed answers for one facility (first call, fallback, second look)."""
+    out = []
+    for name in ("judge-response.json", "judge-fallback.json", "second-look.json"):
+        f = fdir / name
+        if not f.exists():
+            continue
+        try:
+            raw = json.loads(f.read_text())
+            text = raw["choices"][0]["message"]["content"] if isinstance(raw, dict) and raw.get("choices") else json.dumps(raw)
+            m = re.search(r"\{.*\}", text or "", re.S)
+            if m:
+                out.append(json.loads(m.group()))
+        except (ValueError, KeyError, IndexError, TypeError):
+            continue
+    return out
+
+
+def reguard(sub: dict, trace: dict, rec: dict, fdir: Path) -> dict:
+    """Re-apply the current guards to a submission a finished (earlier-version) pass produced, so a batch run
+    before a fix is submitted as the fixed pipeline would have: closures said in words (v9.5), moves and sales to
+    review (v9.3/v9.5), facts about another business withheld (v9.1/v9.2), junk contacts left out (v9.4)."""
+    from ..research_eval import pipeline as P
+    sub = json.loads(json.dumps(sub))
+    trace = json.loads(json.dumps(trace))
+    v = sub["verdict"]
+    if v["status"] == "closed":
+        closed = [a.get("verdict") or {} for a in _answers(fdir) if (a.get("verdict") or {}).get("status") == "closed"]
+        quotes = [P.ws(e.get("quote")) for a in closed for e in (a.get("evidence") or []) if isinstance(e, dict)]
+        said = P.ws(v.get("reason")) + " " + " ".join(quotes)
+        kind = ("relocated" if P.RELOCATED.search(said) else "ownership change" if P.OWNERSHIP.search(said)
+                else None if any(P.CLOSED_IN_WORDS.search(q) for q in quotes) else "weak evidence")
+        if kind:
+            trace["review"] = {"proposed": f"closed ({kind})", "reason": v.get("reason"), "sources": []}
+            trace["downgraded"] = {"from": "closed", "why": f"reguard: {kind}"}
+            v["status"] = "not_found"
+            v["reason"] = f"REVIEW (closed? {kind}): {v.get('reason') or ''}"[:900]
+    urls = {x["source_ref"]: x["url"] for x in sub.get("sources", [])}
+    sub["assertions"] = [a for a in sub["assertions"]
+                         if not P.junk_contact(a["field"], a["value"], a.get("quote") or "", urls.get(a.get("source_ref"), ""))]
+    sub["assertions"] = P.withhold_other_entity(rec, sub["assertions"], trace)
+    return sub
+
+
+def submission_rows(run_id: str, pass_dirs: list[Path], inputs: dict | None = None) -> list[tuple]:
+    """One pending row per facility. With the batch's inputs, each submission first goes through reguard."""
     if not RUN_ID.match(run_id):
         raise ValueError("run_id must look like wr-prod-001")
     now = datetime.now(timezone.utc).isoformat()
@@ -154,16 +216,20 @@ def submission_rows(run_id: str, pass_dirs: list[Path]) -> list[tuple]:
     for d in pass_dirs:
         for line in (d / "submissions.jsonl").read_text().splitlines():
             sub = json.loads(line)
+            if inputs is not None:
+                fdir = d / "facilities" / sub["facility_id"]
+                trace = json.loads((fdir / "trace.json").read_text()) if (fdir / "trace.json").exists() else {}
+                sub = reguard(sub, trace, inputs["facilities"].get(sub["facility_id"], {}), fdir)
             sub["run_id"] = run_id
             sub["agent"] = f"research pipeline {sub.get('agent', '')}".strip()
             rows.append((f"{run_id}:{sub['facility_id']}", sub["facility_id"], run_id, sub["agent"], now, json.dumps(sub)))
     return rows
 
 
-def submit(url: str, run_id: str, pass_dirs: list[Path], health_report: dict) -> int:
+def submit(url: str, run_id: str, pass_dirs: list[Path], health_report: dict, inputs: dict | None = None) -> int:
     if health_report.get("decision") != "grow":
         raise RuntimeError(f"health decision is {health_report.get('decision')!r}: nothing submitted")
-    rows = submission_rows(run_id, pass_dirs)
+    rows = submission_rows(run_id, pass_dirs, inputs)
     import psycopg
     with psycopg.connect(url, connect_timeout=20) as db:
         with db.transaction():
@@ -177,18 +243,22 @@ def main(argv=None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("select"); s.add_argument("--run-id", required=True); s.add_argument("--size", type=int, required=True)
     s.add_argument("--seed", type=int, default=20260927); s.add_argument("--out", default="batch")
+    s.add_argument("--offset", type=int, default=0)
+    s.add_argument("--facilities", default="", help="comma-separated IC-numbers: research exactly these (re-research)")
     h = sub.add_parser("health"); h.add_argument("--batch", required=True); h.add_argument("--pass", dest="passes", action="append", required=True)
     h.add_argument("--out", default="health.json"); h.add_argument("--judge-model", default="google/gemini-3-flash")
     h.add_argument("--judge-max-usd", type=float, default=0.05); h.add_argument("--sample", type=int, default=20)
     w = sub.add_parser("submit"); w.add_argument("--run-id", required=True); w.add_argument("--pass", dest="passes", action="append", required=True)
     w.add_argument("--health", required=True)
+    w.add_argument("--batch", default=None, help="the batch folder: re-apply the current guards before submitting")
     a = ap.parse_args(argv)
     if a.cmd == "select":
         from ..research_eval.benchmark import PsycopgReader
         url = next((u for u in (os.environ.get("DATABASE_URL_UNPOOLED", ""), os.environ.get("DATABASE_URL", "")) if u), "")
-        if not 1 <= a.size <= 2000:
-            print("size must be 1..2000", file=sys.stderr); return 2
-        m = select(PsycopgReader(url), a.run_id, a.size, a.seed, Path(a.out))
+        if not 1 <= a.size <= 3000:
+            print("size must be 1..3000", file=sys.stderr); return 2
+        named = [x.strip() for x in a.facilities.split(",") if x.strip()] or None
+        m = select(PsycopgReader(url), a.run_id, a.size, a.seed, Path(a.out), a.offset, named)
         print(json.dumps({k: v for k, v in m.items() if k != "splits"}, indent=1)); return 0
     if a.cmd == "health":
         from ..research_eval import gateway as gw
@@ -208,7 +278,8 @@ def main(argv=None) -> int:
     if a.cmd == "submit":
         rep = json.loads(Path(a.health).read_text())
         url = os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
-        n = submit(url, a.run_id, [Path(p) for p in a.passes], rep)
+        inputs = json.loads(Path(a.batch, "inputs.json").read_text()) if a.batch else None
+        n = submit(url, a.run_id, [Path(p) for p in a.passes], rep, inputs)
         print(f"submitted {n} pending submissions for {a.run_id}"); return 0
     return 1
 

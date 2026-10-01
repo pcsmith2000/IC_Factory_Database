@@ -30,10 +30,21 @@ def test_select_skips_researched_facilities_reads_only_and_is_a_valid_pipeline_i
     r = Reader()
     m = W.select(r, "wr-prod-001", 25, 7, tmp_path)
     assert m["selected"] == 1 and m["splits"]["batch"] == ["IC-00001"] and m["database_writes"] == 0
-    assert "NOT EXISTS (SELECT 1 FROM web_research_submission" in r.sql[0] and "LIMIT 25" in r.sql[0]
+    assert "NOT EXISTS (SELECT 1 FROM web_research_submission" in r.sql[0] and "LIMIT 25 OFFSET 0" in r.sql[0]
+    m = W.select(r, "wr-prod-003", 50, 7, tmp_path, offset=25)           # the next dry batch skips the first 25
+    assert "LIMIT 50 OFFSET 25" in r.sql[-3] and m["offset"] == 25
     assert B.verify(tmp_path)["benchmark_sha256"] == m["benchmark_sha256"]        # the pipeline accepts it
     with pytest.raises(ValueError):
         W.select(r, "prod-1", 25, 7, tmp_path)
+
+
+def test_select_named_facilities_researches_exactly_those_even_if_researched(tmp_path):
+    r = Reader()
+    m = W.select(r, "wr-prod-009", 60, 7, tmp_path, named=["IC-00002"])
+    assert "g.facility_key IN ('IC-00002')" in r.sql[0] and "web_research_submission" not in r.sql[0]
+    assert m["splits"]["batch"] == ["IC-00002"] and m["named"] == ["IC-00002"]
+    with pytest.raises(ValueError):
+        W.select_sql(5, 7, facilities=["IC-1'); DROP TABLE golden_facility;--"])
 
 
 def _pass(tmp_path, verdict="in_scope", adl=None, quote="Phone (970) 522-2464"):
@@ -91,3 +102,20 @@ def test_production_config_is_the_evaluated_v9_plus_the_production_rules():
     cfg = json.loads((Path(P.__file__).parent / "configs" / "production.json").read_text())
     assert cfg["judge"]["model"] == "alibaba/qwen3.7-flash"
     assert cfg["policy"]["not_ic_to_review"] and cfg["policy"]["never_remove_validated"] and cfg["policy"]["not_ic_keyword_veto"]
+
+
+def test_reguard_applies_todays_guards_to_an_older_pass(tmp_path):
+    # wr-prod-007 ran before v9.5: Champion Claysburg was "closed" on MapQuest's open-now badge. Submitted later,
+    # it goes through today's guards: the closure becomes a review, and a junk mailbox is dropped.
+    fdir = tmp_path / "IC-1"
+    fdir.mkdir()
+    answer = {"verdict": {"status": "closed", "reason": "MapQuest says Closed",
+                          "evidence": [{"passage": "P1", "quote": "Champion Home Builders, Inc. Closed"}]}}
+    (fdir / "judge-response.json").write_text(json.dumps({"choices": [{"message": {"content": json.dumps(answer)}}]}))
+    sub = {"facility_id": "IC-1", "verdict": {"status": "closed", "reason": "MapQuest says Closed"},
+           "sources": [{"source_ref": "s1", "url": "https://champion.example/contact"}],
+           "assertions": [{"field": "email", "value": "noreply@champion.example", "source_ref": "s1",
+                           "quote": "noreply@champion.example"}]}
+    out = W.reguard(sub, {"dropped": [], "kept": []}, {"address": "2551 Champion Drive"}, fdir)
+    assert out["verdict"]["status"] == "not_found" and out["verdict"]["reason"].startswith("REVIEW")
+    assert out["assertions"] == [] and sub["verdict"]["status"] == "closed"      # the original is untouched

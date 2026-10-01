@@ -717,7 +717,8 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
                 # novel findings. Only an address on the company's own domain is taken.
                 c = [x for x in c if site_host and x["value"].split("@")[-1].lower().removeprefix("www.").endswith(site_host)]
             # Only an unambiguous candidate fills a blank: one distinct value on the anchored pages.
-            if field not in have and len(c) == 1 and quote_ok(c[0]["quote"], text_of.get(c[0]["url"], "")):
+            if field not in have and len(c) == 1 and quote_ok(c[0]["quote"], text_of.get(c[0]["url"], "")) \
+                    and not junk_contact(field, c[0]["value"], c[0]["quote"], c[0]["url"]):
                 a = {"field": field, "value": c[0]["value"], "source_ref": ref(c[0]["url"]), "quote": c[0]["quote"],
                      "confidence": 0.7}
                 assertions.append(a); trace["kept"].append(dict(a, by="regex"))
@@ -767,6 +768,28 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
         # A record that already carries an IC capability is removed only on two different pages.
         trace["downgraded"] = {"from": status, "why": "record has an IC capability; removal needs two different pages"}
         verdict["status"] = status = "not_found"
+    if status == "closed" and policy.get("relocation_guard", True):
+        # wr-prod-005: Power Truss was judged closed from its own contact page, "(Former Address: 935 W. Housman)",
+        # while the same page showed it operating across town with the record's phone. wr-prod-004: Fitts moved
+        # its plant to another town. A move is not a closure: the plant goes to a person, never removed.
+        said = reason + " " + " ".join(ws(e.get("quote")) for e in (v.get("evidence") or []) if isinstance(e, dict))
+        if RELOCATED.search(said) or OWNERSHIP.search(said):
+            kind = "relocated" if RELOCATED.search(said) else "ownership change"
+            trace["review"] = {"proposed": f"closed ({kind})", "reason": reason, "sources": ev_urls}
+            trace["downgraded"] = {"from": "closed", "why": f"the evidence describes a {kind}, not a closure"}
+            verdict["reason"] = f"REVIEW (plant moved?): {reason}"[:900]
+            verdict["status"] = status = "not_found"
+    if status == "closed" and policy.get("closure_in_words", True):
+        # wr-prod-007: Champion's Claysburg plant was judged closed on Macrae's "the office is currently Closed"
+        # and MapQuest's "<name> Closed · Save · Call", both open-now badges read at night; permit and tank
+        # registers ("Facility Status: Inactive", UST "Status: Closed") describe a permit, not the plant. A
+        # closure needs a verbatim quote that says so in words.
+        quotes = [ws(e.get("quote")) for e in (v.get("evidence") or []) if isinstance(e, dict)]
+        if not any(CLOSED_IN_WORDS.search(q) for q in quotes):
+            trace["review"] = {"proposed": "closed (weak evidence)", "reason": reason, "sources": ev_urls}
+            trace["downgraded"] = {"from": "closed", "why": "no quote says the plant closed in words (a status badge is not a closure)"}
+            verdict["reason"] = f"REVIEW (closed?): {reason}"[:900]
+            verdict["status"] = status = "not_found"
     if status in ("not_ic", "closed") and policy["removal_needs_ingest_rule"]:
         kinds = [sources[u]["kind"] for u in ev_urls]
         if not (len(ev_urls) >= 2 or any(k in ("government_registry", "filing", "certification_body") for k in kinds)) or len(reason) < 10:
@@ -798,9 +821,77 @@ def build_submission(rec: dict, answer: dict, psg: list[dict], pages: list[dict]
             ref(p["url"])
     if not verdict["reason"]:
         verdict["reason"] = "No passage confirmed this plant." if status == "not_found" else status
+    if policy.get("withhold_other_entity"):
+        assertions = withhold_other_entity(rec, assertions, trace)
     payload = {"facility_id": rec["facility_id"], "agent": f"research_eval {cfg['name']}", "run_id": cfg["name"],
                "verdict": verdict, "sources": list(sources.values()), "assertions": assertions}
     return payload, trace
+
+
+RELOCATED = re.compile(r"former(ly)?\s+(address|location|site|plant)|relocat|moved\s+(to|its|our|from|the)|"
+                       r"mov(e|es|ing)\s+(the|its|our|their)\s+(operation|plant|production|manufacturing)|"
+                       r"new\s+(location|facility|plant|address|site)", re.I)
+CLOSED_IN_WORDS = re.compile(
+    r"permanently\s+closed|clos(e|ed|es|ing)\s+(its|their|the|our)\s+(doors|plant|facility|factory|operations?|location)|"
+    r"(has|have|had|was|were)\s+(now\s+)?closed|will\s+close|shut(ter|tered|ting|s)?\s+(down|its|the|manufacturing|operations)|"
+    r"shut\s*down|ceased\s+(operations?|production|manufacturing|business)|out\s+of\s+business|dissolved|"
+    r"no\s+longer\s+(active|in\s+business|operating|operational)|(entity|corporate|corporation)\s+status\W+(is\s+)?(inactive|dissolved)|"
+    r"bankrupt|liquidat|closure|defunct|ended\s+on\s+\w+|(is|are|was|were)\s+closing|closing\s+(its|the|their|a|our)\s|"
+    r"\b(they|it|we)\s+(have\s+|had\s+)?closed|closed\s+(in|on|since)\s+(\w+\s+){0,2}\d{4}|closed\s+down", re.I)
+# wr-prod-007: Haven Custom Homes' "closure" quote was about Penn Lyon, the plant's previous owner; Horton's plant is
+# now Legacy Housing's. A sale is not a closure: the plant goes to a person.
+OWNERSHIP = re.compile(r"acquir(ed|es|ing)|acquisition|purchased\s+by|bought\s+by|previously\s+(part|owned|operated)|"
+                       r"formerly\s+(occupied|owned|operated|part|known)|now\s+(owned|operated|run)\s+by|took\s+over|taken\s+over|"
+                       r"merged\s+(with|into)|new\s+owner", re.I)
+_STREET_WORDS = {"street", "st", "avenue", "ave", "road", "rd", "drive", "dr", "boulevard", "blvd", "highway", "hwy",
+                 "lane", "ln", "way", "parkway", "pkwy", "court", "ct", "place", "pl", "circle", "cir", "trail", "trl",
+                 "pike", "route", "rte", "loop", "terrace", "n", "s", "e", "w", "north", "south", "east", "west",
+                 "ne", "nw", "se", "sw", "us", "state", "county", "industrial", "park"}
+CONTACT = ("address", "city", "state", "zip", "phone", "email")
+
+
+def _street_words(address: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z]+", address.lower()) if w not in _STREET_WORDS and len(w) > 1}
+
+
+def withhold_other_entity(rec: dict, assertions: list[dict], trace: dict) -> list[dict]:
+    """Facts about another company or another plant never reach the record.
+
+    wr-prod-001: CMH Manufacturing #927 (Clayton Homes, White Pine TN) was matched to a Lubbock foundry-equipment
+    maker. not_ic went to review, but the Lubbock address, city, ZIP and phone were still submitted. The verdict
+    guards change verdicts, never facts. Two rules:
+    - a record sent to review (proposed not_ic) keeps no facts unless a page gives the record's own address
+      (same house number or street); one downgraded because its evidence names another street keeps none;
+    - an address that shares neither the house number nor a street name with the record's is another plant (or
+      another company): its address, city, state, ZIP, phone and email are withheld. The website is kept.
+      A record whose address is a PO box is exempt: the street address is exactly what research should add.
+    """
+    rec_addr = str(rec.get("address") or "")
+    new = next((a for a in assertions if a["field"] == "address"), None)
+
+    def same_site() -> bool:
+        num_r = re.match(r"\s*(\d+)", rec_addr)
+        num_n = re.match(r"\s*(\d+)", new["value"])
+        return bool(num_r and num_n and num_r.group(1) == num_n.group(1)) or bool(_street_words(rec_addr) & _street_words(new["value"]))
+
+    why = None
+    if trace.get("review") and not (rec_addr.strip() and new and same_site()):
+        # wr-prod-003: 8 of 13 review records (Tower Structural Laminating, Phoenix Modular Elevator, ...) were
+        # found at the record's own address; their facts describe this site whatever its scope, so they stay.
+        why = "sent to review (proposed not_ic) and no page address matches the record's"
+    elif "evidence names" in str((trace.get("downgraded") or {}).get("why") or ""):
+        why = "verdict evidence names another street address"
+    if why:
+        drop = list(assertions)
+    else:
+        drop = []
+        if rec_addr.strip() and new and not re.search(r"\bp\.?\s*o\.?\s*box\b", rec_addr, re.I) and not same_site():
+            why = f"address {new['value']!r} shares no number or street with the record's {rec_addr!r}"
+            drop = [a for a in assertions if a["field"] in CONTACT]
+    for a in drop:
+        trace["dropped"].append({"field": a["field"], "value": a["value"], "reason": f"withheld: {why}", "by": "guard"})
+        trace["kept"] = [k for k in trace["kept"] if not (k["field"] == a["field"] and k["value"] == a["value"])]
+    return [a for a in assertions if a not in drop]
 
 
 _TAXONOMY = None
@@ -832,6 +923,28 @@ def keyword_veto(texts: list[str]) -> list[str]:
     return [w for w in veto_terms() if re.search(rf"(?<![a-z0-9]){re.escape(w)}(?![a-z0-9])", blob)]
 
 
+_JUNK_MAILBOX = re.compile(r"^(no-?text|no-?sms|no-?reply|do-?not-?reply|unsubscribe|opt-?out|stop|bounce|mailer-daemon)\b", re.I)
+_ID_NUMBER = re.compile(r"\b(taxpayer|tax\s*id|ein|fein|tin|license|licen[cs]e\s*(no|#|number)|lic\s*#|usdot|dot\s*(no|#|number)|"
+                        r"mc\s*#|npi|duns|uei|cage|account|registration\s*(no|#|number)|document\s*(no|#|number))\b", re.I)
+_PHONE_WORD = re.compile(r"\b(phone|tel|telephone|call|ph|main|office|toll[\s-]*free|contact)\b", re.I)
+
+
+def junk_contact(field: str, value: str, quote: str, url: str = "") -> str | None:
+    """wr-prod-006: the judge's sample caught notext@whirlwindsteel.com (an SMS opt-out mailbox) and a Florida
+    Taxpayer Number read as a phone. Neither is a way to reach the plant."""
+    if field == "email" and _JUNK_MAILBOX.match(value.split("@")[0]):
+        return "an opt-out or no-reply mailbox"
+    if field == "phone" and _ID_NUMBER.search(quote) and not _PHONE_WORD.search(quote):
+        return "the quote gives an identification number, not a phone"
+    # A bare digit run that is also the page's key on an ID register (not a phone directory, whose URLs carry
+    # the formatted phone: buzzfile, allbiz, phonelookup).
+    digits = re.sub(r"\D", "", quote)
+    if field == "phone" and re.fullmatch(r"\+?\d{10,}", quote.strip()) and digits in re.sub(r"\D", "", url) \
+            and re.search(r"taxpayer|tax-?id|\bein\b|licen[cs]e|corporation|entity|duns|uei|registr", url, re.I):
+        return "the number is the page's own identifier on an ID register, not a phone"
+    return None
+
+
 def prevalidate(field: str, value: str, quote: str, url: str) -> tuple[str, str | None]:
     """The contract's own checks, run before submission (pass a-v1-gptoss120b: websites without a
     scheme, off-taxonomy leaves and quotes that do not state their value were refused). Returns the
@@ -845,7 +958,7 @@ def prevalidate(field: str, value: str, quote: str, url: str) -> tuple[str, str 
     if field == "state" and len(value) > 2:
         from ..contract import _US_NAMES
         value = _US_NAMES.get(value.lower(), value)
-    why = I.check_value(field, value, _TAXONOMY)
+    why = junk_contact(field, value, quote, url) or I.check_value(field, value, _TAXONOMY)
     if not why and field in I.LITERAL and not I.stated(field, I.homepage(value) if field == "website" else value, quote, url):
         why = "the quote does not state this value"
     return value, why

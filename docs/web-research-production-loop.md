@@ -47,6 +47,20 @@ cautious, so production routes every `not_ic` to review and never removes an ADL
 The first batch (`wr-prod-001`, 25 facilities) runs `mode=dry`, then again as `wr-prod-002` with `mode=submit`
 once it grows.
 
+**Dry ramp (user's decision, 2026-09-26):** the ramp does not wait on merges or on submission. Batches run
+`mode=dry` and double on `grow` exactly as above; their artifacts (kept 90 days) hold every submission, and the
+facts are written later from them. Because dry batches submit nothing, each one passes `offset` = the number of
+facilities earlier dry batches of this seed already researched, so no facility is researched twice. The ledger
+records each batch's offset, size, commit and decision; a batch is submittable later only if it grew and ran from
+`main`. A fix may be tested on a dry batch from its branch before it merges.
+
+**Submitting a dry batch later:** run `research-production-submit.yml` from `main` with the batch's `run_id` and the
+GitHub run id that researched it. It accepts only a successful `research-production` run from `main` whose health
+decision was `grow`, and re-applies the current guards to every submission first (`production.reguard`: closures
+said in words, moves and sales to review, facts about another business withheld, junk contacts left out), so a
+batch researched before a fix is submitted as the fixed pipeline would have. Submit each batch once; a second
+submission of the same `run_id` inserts nothing (`ON CONFLICT DO NOTHING`).
+
 ## Gates (in `pipeline/web_research/production.py`)
 
 | Gate | Rule | On failure |
@@ -58,7 +72,7 @@ once it grows.
 | Closed verdicts | <= 10% of the batch | hold |
 | not_ic applied | 0 (always review) | **stop** |
 | ADL-validated plant removed | 0 | **stop** |
-| Duplicate verdicts | <= 15% of the batch | hold |
+| Duplicate verdicts | <= 30% of the batch (the backlog holds many real duplicates) | hold |
 | Judge precision on 20 new facts | >= 0.85 | hold |
 | After ingest: submissions refused | <= 2% of the run | hold |
 

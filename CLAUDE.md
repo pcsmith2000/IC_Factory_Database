@@ -60,3 +60,11 @@ IC-95437,state,NV,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/
 - `python -m pipeline.monitor_fix --check` validates the file, and CI's tests do too. When the file
   changes on main, `monitor-fix.yml` appends the lines to `fact_assertions` (idempotently), and the
   next `golden-refresh` brings them into golden. To undo a fix, add a line with the right value and a later date.
+- People's rulings in `control/operator_assertions.csv` reach the warehouse the same way: when the file changes on
+  main, `operator-apply.yml` appends them to `fact_assertions` as source `operator`. A person's `existence_flag` is
+  `not_ic`, `closed` (both take the plant out of golden) or `review`. A capability ruling is a pair of lines,
+  `capability_leaf` and `capability_group`, same date, naming a leaf of `registry/taxonomy.yaml` and its group.
+- The warehouse workflows share one concurrency group, and GitHub keeps only ONE pending run per group: a
+  newer queued run cancels the older pending one. Don't dispatch several warehouse workflows back to back;
+  wait for each. `golden-refresh` re-applies both control files before it drains, so a cancelled
+  `operator-apply` / `monitor-fix` run is healed by the next refresh.

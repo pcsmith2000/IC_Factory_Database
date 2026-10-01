@@ -570,3 +570,101 @@ def test_production_never_applies_not_ic_and_never_removes_a_validated_plant():
     assert P.build_submission(rec, closed, psg, pages, {}, cfg, {"IC-1"}, [], "")[0]["verdict"]["status"] == "closed"
     payload, trace = P.build_submission(dict(rec, adl_validated="1"), closed, psg, pages, {}, cfg, {"IC-1"}, [], "")
     assert payload["verdict"]["status"] == "not_found" and "ADL-validated" in trace["downgraded"]["why"]
+
+
+def _facts(*pairs):
+    return [{"field": f, "value": v, "source_ref": "s1", "quote": v, "confidence": 0.8} for f, v in pairs]
+
+
+def test_withhold_drops_every_fact_of_a_record_sent_to_review():
+    # wr-prod-001: CMH #927 (White Pine TN) was matched to a Lubbock TX foundry; its facts must not be submitted.
+    rec = {"facility_id": "IC-1", "address": "1160 Highway US-11 W"}
+    facts = _facts(("address", "1320 Harvard Street"), ("city", "Lubbock"), ("zip", "79403"), ("material", "steel"))
+    trace = {"dropped": [], "kept": [dict(a, by="model") for a in facts], "review": {"proposed": "not_ic"}}
+    assert P.withhold_other_entity(rec, facts, trace) == []
+    assert trace["kept"] == [] and len(trace["dropped"]) == 4
+
+
+def test_withhold_keeps_a_review_record_found_at_its_own_address():
+    # wr-prod-003: Tower Structural Laminating was sent to review, but the page gave the record's own address.
+    rec = {"facility_id": "IC-3", "address": "1491 GERBER ST"}
+    facts = _facts(("address", "1491 Gerber St"), ("phone", "2605551234"))
+    trace = {"dropped": [], "kept": [], "review": {"proposed": "not_ic"}}
+    assert len(P.withhold_other_entity(rec, facts, trace)) == 2
+    no_addr = {"facility_id": "IC-4", "address": ""}             # nothing to match against: withheld
+    assert P.withhold_other_entity(no_addr, facts, {"dropped": [], "kept": [], "review": {"proposed": "not_ic"}}) == []
+
+
+def test_withhold_drops_contact_facts_for_another_street_and_keeps_the_website():
+    rec = {"facility_id": "IC-2", "address": "3840 N BRUCE ST"}
+    facts = _facts(("address", "3853 Losee Rd"), ("phone", "7025551234"), ("website", "https://jensen.com"))
+    trace = {"dropped": [], "kept": []}
+    kept = P.withhold_other_entity(rec, facts, trace)
+    assert [a["field"] for a in kept] == ["website"]
+
+
+@pytest.mark.parametrize("rec_addr,new", [
+    ("100 GARBER ST", "1000 Garber Street"),        # same street, corrected number
+    ("1320 YACHT DRIVE", "1316 Yacht Drive"),
+    ("909 N. WHEELING", "909 N Wheeling Ave"),
+    ("PO BOX 12", "55 Mill Road"),                   # a PO box is what research should replace
+    ("", "55 Mill Road"),                            # a blank is filled
+])
+def test_withhold_keeps_corrections_on_the_same_street(rec_addr, new):
+    facts = _facts(("address", new), ("zip", "12345"))
+    assert len(P.withhold_other_entity({"address": rec_addr}, facts, {"dropped": [], "kept": []})) == 2
+
+
+@pytest.mark.parametrize("text,hit", [
+    ("(Former Address: 935 W. Housman)", True),                      # wr-prod-005, Power Truss
+    ("the company relocated its manufacturing facility to Gaston", True),  # wr-prod-004, Fitts
+    ("moved to a new facility in Mayfield", True),
+    ("The current entity status is inactive", False),                 # U.S. Truss: a real closure
+    ("permanently closed in 2019", False),
+])
+def test_relocation_is_not_a_closure(text, hit):
+    assert bool(P.RELOCATED.search(text)) is hit
+
+
+@pytest.mark.parametrize("field,value,quote,junk", [
+    ("email", "notext@whirlwindsteel.com", "text STOP or email notext@whirlwindsteel.com", True),   # wr-prod-006
+    ("email", "noreply@acme.com", "noreply@acme.com", True),
+    ("email", "info@acme.com", "Email: info@acme.com", False),
+    ("email", "stopford@acme.com", "stopford@acme.com", False),
+    ("phone", "7307508345", "Taxpayer Number 17307508345", True),                                 # wr-prod-006
+    ("phone", "7307508345", "Phone: (730) 750-8345 | License # 12345", False),
+    ("phone", "2605551234", "(260) 555-1234", False),
+])
+def test_junk_contacts_are_not_submitted(field, value, quote, junk):
+    assert bool(P.junk_contact(field, value, quote)) is junk
+
+
+def test_a_number_that_is_the_pages_own_identifier_is_not_a_phone():
+    # wr-prod-006: a Texas Taxpayer Number page gave "17307508345"; MapQuest's bare "+15743890307" is a real phone.
+    assert P.junk_contact("phone", "7307508345", "17307508345", "https://opengovus.com/texas-taxpayer/17307508345")
+    assert not P.junk_contact("phone", "5743890307", "+15743890307", "https://www.mapquest.com/us/indiana/fusion-wood-427535392")
+    assert not P.junk_contact("phone", "2295745159", "(229) 574-5159",
+                              "https://www.buzzfile.com/business/Pinnacle-Park-Homes-229-574-5159")
+
+
+@pytest.mark.parametrize("quote,words", [
+    ("Champion Home Builders, Inc. Closed", False),                    # wr-prod-007: MapQuest open-now badge
+    ("the office is currently Closed", False),                        # Macrae's office hours
+    ("Status: Closed Facility Name: Calumet Coach Co", False),        # an underground-tank record
+    ("Facility Status: Inactive", False),                             # a water permit
+    ("THIS LOCATION HAS PERMANENTLY CLOSED.", True),
+    ("Garco Building Systems is closing its Airway Heights factory", True),
+    ("The company stated that it will shutter manufacturing operations", True),
+    ("Patriot Homes is currently OUT OF BUSINESS.", True),
+    ("The current entity status is inactive", True),
+    ("Acme furniture factory closed in 2019", True),
+])
+def test_a_closure_is_said_in_words(quote, words):
+    assert bool(P.CLOSED_IN_WORDS.search(quote)) is words
+
+
+def test_a_sale_is_not_a_closure():
+    # wr-prod-007: Haven's "closed their doors" was said of Penn Lyon, the plant's previous owner.
+    assert P.OWNERSHIP.search("The facility was previously part of Penn Lyon Homes, who closed their doors")
+    assert P.OWNERSHIP.search("Benchmark Industries CLOSED (Purchased by Phoenix Building Systems)")
+    assert P.RELOCATED.search("decided to close its doors and move the operation to North Carolina")

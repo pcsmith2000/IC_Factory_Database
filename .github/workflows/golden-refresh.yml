@@ -13,7 +13,7 @@ on:
   # GitHub drops most scheduled runs (13 fired in two days, ~4h apart), so the workflows that
   # write assertions also start a refresh when they finish. Draining the queue is idempotent.
   workflow_run:
-    workflows: [monitor-fix, web-research-ingest, duplicates]
+    workflows: [monitor-fix, operator-apply, web-research-ingest, duplicates]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -55,6 +55,19 @@ jobs:
         run: |
           if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
           python .github/scripts/neon_connection_string.py
+      # Every workflow here shares the ic-warehouse-pipeline group, and GitHub keeps only ONE pending
+      # run per group: a newer queued run silently cancels the older pending one. A push that changes
+      # control/operator_assertions.csv or control/monitor_fix_assertions.csv could so lose its
+      # operator-apply / monitor-fix run (2026-09-29: two duplicates dispatches cancelled both). Both
+      # appends are idempotent, so every real refresh re-applies the files on main first: a cancelled
+      # apply is healed by the next refresh, which runs on a schedule and after every writer.
+      - name: Re-apply people's rulings and monitor fixes (idempotent)
+        if: inputs.dry_run != true
+        continue-on-error: true           # a bad control file must not stop the queue from draining
+        run: |
+          python -m pipeline.operator_apply | tee operator.json
+          python -m pipeline.monitor_fix | tee monitor_fix.json
+          python3 -c "import json; o=json.load(open('operator.json')); m=json.load(open('monitor_fix.json')); print(f'operator: {o[\"written\"]} new, monitor_fix: {m[\"written\"]} new')" >> "$GITHUB_STEP_SUMMARY"
       - name: Refresh
         env:
           ALL: ${{ inputs.all }}
