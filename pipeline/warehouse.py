@@ -255,6 +255,17 @@ DDL = [
         facility_key TEXT PRIMARY KEY, point TEXT NOT NULL, overture_release TEXT NOT NULL,
         outcome TEXT NOT NULL,           -- contains_point | small_building | nearest_largest | ambiguous | none | held
         reason TEXT, n_candidates INTEGER, evaluated_at TEXT NOT NULL)""",
+    # The review pane's work state (ADL_Viz /review), one row per facility once anyone opens it.
+    # queue: 'agent' (the browser agent works it), 'human' (flagged, or sampled for audit), 'done'.
+    # A lease keeps two reviewers off one facility; it expires, so an abandoned one returns.
+    # The facilities to review are facility_building_review's non-contains_point outcomes; this
+    # table only says where each one is in the loop and who touched it last.
+    """CREATE TABLE IF NOT EXISTS facility_review_task (
+        facility_key TEXT PRIMARY KEY,
+        queue TEXT NOT NULL DEFAULT 'agent' CHECK (queue IN ('agent','human','done')),
+        passes INTEGER NOT NULL DEFAULT 0, audit INTEGER NOT NULL DEFAULT 0,
+        lease_holder TEXT, lease_kind TEXT, lease_until TEXT,
+        last_actor TEXT, last_actor_kind TEXT, last_verdict TEXT, last_note TEXT, updated_at TEXT)""",
 ]
 
 # Views are created after the golden columns are reconciled, not with the tables: they name every
