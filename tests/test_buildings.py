@@ -200,3 +200,17 @@ def test_only_with_stated_sqft_judges_just_the_facilities_with_a_stated_size(tmp
     monkeypatch.setattr(footprint, "around", lambda pts, **kw: seen.extend(p["facility_id"] for p in pts) or [])
     assert B.main(["--db", str(db), "--dry-run", "--only-with-stated-sqft"]) == 0
     assert seen == ["IC-1"]
+
+
+def test_a_small_containing_building_is_proposed_not_attached():
+    # The office the geocode lands on, beside the plant: propose the plant, count nothing.
+    d = B.decide(POINT, [bld("office", 0, 7573, True), bld("plant", 18, 78314)], {})
+    assert d["outcome"] == "small_building"
+    assert d["rows"]["plant"]["status"] == "proposed" and d["rows"]["office"]["status"] == "candidate"
+    assert "7,573 sqft" in d["reason"] and "78,314" in d["reason"]
+    # Nothing bigger within 30m: the small building itself is proposed.
+    d = B.decide(POINT, [bld("shop", 0, 5084, True), bld("far", 80, 90000)], {})
+    assert d["outcome"] == "small_building" and d["rows"]["shop"]["status"] == "proposed"
+    assert B.confirmed_sqft(d["rows"], {"shop": 5084, "far": 90000}) == (None, [])
+    # At the threshold it is a plant.
+    assert B.decide(POINT, [bld("plant", 0, 10_000, True)], {})["outcome"] == "contains_point"

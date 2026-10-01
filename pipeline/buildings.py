@@ -41,6 +41,11 @@ PROPOSE_RADIUS_M = 30.0         # the old stage-11 radius: a rooftop geocode can
 MIN_CANDIDATE_SQFT = 1500       # sheds and garages are not plant capacity
 MAX_CANDIDATES = 20
 MAX_CONFIRMED = 5
+# A building under this that contains the coordinate is the office, guard house or a house on the
+# site, not the plant. Measured on the 186 facilities a source states a plant size for: all 16 such
+# attachments were under half the stated size (Vaagen Timbers 1,082 sqft against 70,000; Clark
+# Pacific 6,688 against 120,000), so they are proposed for review rather than attached.
+SMALL_SQFT = 10_000
 HUMAN = ("person", "agent")
 
 
@@ -79,8 +84,19 @@ def decide(point: str, buildings: list[dict], existing: dict[str, dict]) -> dict
                 "rows": rows, "drop": drop}
 
     containing = [b for b in buildings if b["contains_point"]]
-    if len(containing) == 1:
+    if len(containing) == 1 and containing[0]["area_sqft"] >= SMALL_SQFT:
         pick, status, basis, outcome, reason = containing[0], "confirmed", "contains_point", "contains_point", ""
+    elif len(containing) == 1:
+        # The point is in a small building. Propose the largest building within 30m (often the
+        # plant right behind the office), or the small one itself if nothing bigger is that close.
+        small = containing[0]
+        close = [b for b in buildings if b["distance_m"] <= PROPOSE_RADIUS_M]
+        pick = max(close + [small], key=lambda b: b["area_sqft"])
+        status, basis, outcome = "proposed", "small_building", "small_building"
+        reason = (f"the point is in a {small['area_sqft']:,} sqft building, under the {SMALL_SQFT:,} sqft a plant "
+                  f"is taken to need; " + ("it is proposed" if pick is small else
+                  f"the largest within {PROPOSE_RADIUS_M:.0f}m ({pick['area_sqft']:,} sqft, "
+                  f"{pick['distance_m']}m away) is proposed"))
     elif containing:
         pick = max(containing, key=lambda b: b["area_sqft"])
         status, basis, outcome = "proposed", "ambiguous", "ambiguous"
@@ -143,7 +159,7 @@ def apply(wh, measured: list[dict], *, dry_run: bool) -> dict:
     tag = current_release(wh)
     now, today = _now(), date.today().isoformat()
     report = {"judged": 0, "deferred": 0, "contains_point": 0, "nearest_largest": 0, "ambiguous": 0,
-              "none": 0, "held": 0, "sqft_asserted": 0, "dry_run": dry_run, "examples": [],
+              "none": 0, "held": 0, "small_building": 0, "sqft_asserted": 0, "dry_run": dry_run, "examples": [],
               "judgments": []}
     for m in measured:
         if m.get("reason"):                          # outside every file, or past the file ceiling

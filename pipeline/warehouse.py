@@ -236,7 +236,7 @@ DDL = [
         facility_key TEXT NOT NULL, building_id TEXT NOT NULL,
         status TEXT NOT NULL CHECK (status IN ('candidate','proposed','confirmed','rejected')),
         role TEXT CHECK (role IN ('primary','additional')),
-        basis TEXT,                      -- contains_point | nearest_largest | ambiguous | person | agent
+        basis TEXT,                      -- contains_point | small_building | nearest_largest | ambiguous | person | agent
         distance_m REAL, contains_point INTEGER NOT NULL DEFAULT 0,
         point TEXT,                      -- the lat_lon this row was judged against
         decided_kind TEXT NOT NULL DEFAULT 'pipeline' CHECK (decided_kind IN ('pipeline','person','agent')),
@@ -253,7 +253,7 @@ DDL = [
     # found. Every outcome but 'contains_point' is the human / agent review queue.
     """CREATE TABLE IF NOT EXISTS facility_building_review (
         facility_key TEXT PRIMARY KEY, point TEXT NOT NULL, overture_release TEXT NOT NULL,
-        outcome TEXT NOT NULL,           -- contains_point | nearest_largest | ambiguous | none | held
+        outcome TEXT NOT NULL,           -- contains_point | small_building | nearest_largest | ambiguous | none | held
         reason TEXT, n_candidates INTEGER, evaluated_at TEXT NOT NULL)""",
 ]
 
