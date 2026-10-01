@@ -222,4 +222,15 @@ groups:
 # level; parts of the bucket belong to other leaves entirely and stage 15 moves them on the
 # evidence — steel-stud plants such as SCAFCO (332322) to Light Gauge Steel Structural
 # Components, metal roof and wall panel plants such as Central States to Exterior Envelope Panels.
+#
+# OUT OF SCOPE, on ADL's scope rulings of 2026-10-01. A plant whose product is one of these is
+# not an IC factory (existence_flag not_ic in control/operator_assertions.csv), whatever leaf a
+# source or the model gave it:
+#   - Sheds: portable storage sheds, mini-barns, garden/utility buildings and portable garages,
+#     and the lots that sell them. (A plant that also builds homes or modules stays, on those.)
+#   - Heavy structural steel: fabricators and erectors of hot-rolled beams and columns, bridge and
+#     plate work, and offshore/energy modules. PEMB kits stay in scope (ruling of 2026-09-21).
+#     Open-web steel joist and deck plants are NOT covered by this ruling; they await their own.
+#   - Post-frame (pole barn) kits and builders. A post-frame supplier that runs its own truss plant
+#     stays, as Wood Structural Components.
 unmapped_legacy: []
