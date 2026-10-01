@@ -162,3 +162,41 @@ def test_main_reconnects_after_reading_overture(tmp_path, monkeypatch):
     w = real(db)
     assert w.query("SELECT status FROM facility_building") == [{"status": "confirmed"}]
     w.close()
+
+
+def test_report_writes_one_line_per_judged_facility(tmp_path, monkeypatch):
+    from pipeline.enrich import footprint
+    db = tmp_path / "w.sqlite"
+    w = warehouse.SqliteWarehouse(db); w.init_schema()
+    with w.transaction() as c:
+        c.execute("INSERT INTO golden_facility (facility_key, release_tag, name, lat_lon) VALUES "
+                  "('IC-1','r1','P',?), ('IC-2','r1','Q','36.0,-81.0')", (POINT,))
+    w.close()
+    monkeypatch.setattr(footprint, "around", lambda pts, **kw: [
+        {**p, "buildings": [bld("plant", 0, 90000, True), bld("office", 12, 4000)] if p["facility_id"] == "IC-1"
+         else [bld("shed", 20, 2000)], "reason": "", "overture_release": "rel"} for p in pts])
+    out = tmp_path / "j.jsonl"
+    assert B.main(["--db", str(db), "--dry-run", "--report", str(out)]) == 0
+    rows = {j["facility_id"]: j for j in map(json.loads, out.read_text().splitlines())}
+    assert rows["IC-1"]["outcome"] == "contains_point" and rows["IC-1"]["area_sqft"] == 90000
+    assert rows["IC-1"]["largest_30m_sqft"] == 90000 and rows["IC-1"]["geometry"]["type"] == "Polygon"
+    assert rows["IC-2"]["status"] == "proposed" and rows["IC-2"]["distance_m"] == 20
+
+
+def test_only_narrows_the_plan(wh):
+    assert [t["facility_id"] for t in B.plan(wh, limit=10, refresh=False, only={"IC-2"})] == ["IC-2"]
+    assert B.plan(wh, limit=10, refresh=False, only=set()) == []
+
+
+def test_only_with_stated_sqft_judges_just_the_facilities_with_a_stated_size(tmp_path, monkeypatch):
+    from pipeline.enrich import footprint
+    db = tmp_path / "w.sqlite"
+    w = warehouse.SqliteWarehouse(db); w.init_schema()
+    with w.transaction() as c:
+        c.execute("INSERT INTO golden_facility (facility_key, release_tag, name, lat_lon, sq_ft) VALUES "
+                  "('IC-1','r1','P',?, '120000'), ('IC-2','r1','Q','36.0,-81.0', NULL)", (POINT,))
+    w.close()
+    seen = []
+    monkeypatch.setattr(footprint, "around", lambda pts, **kw: seen.extend(p["facility_id"] for p in pts) or [])
+    assert B.main(["--db", str(db), "--dry-run", "--only-with-stated-sqft"]) == 0
+    assert seen == ["IC-1"]

@@ -109,9 +109,9 @@ def confirmed_sqft(rows: dict[str, dict], areas: dict[str, int]) -> tuple[int | 
     return (sum(areas[b] for b in ids) if ids else None), ids
 
 
-def plan(wh, *, limit: int, refresh: bool) -> list[dict]:
+def plan(wh, *, limit: int, refresh: bool, only: set[str] | None = None) -> list[dict]:
     """Facilities to judge: golden rows with a coordinate whose point (or Overture release) has
-    not been judged yet, or every one of them with `refresh`."""
+    not been judged yet, or every one of them with `refresh`; `only` narrows it to these ids."""
     from .enrich.footprint import DEFAULT_RELEASE
     done = {} if refresh else {
         r["facility_key"]: (r["point"], r["overture_release"])
@@ -124,6 +124,8 @@ def plan(wh, *, limit: int, refresh: bool) -> list[dict]:
         except (ValueError, AttributeError):
             continue
         if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat, lon) == (0.0, 0.0):
+            continue
+        if only is not None and r["facility_key"] not in only:
             continue
         if done.get(r["facility_key"]) == (r["lat_lon"], DEFAULT_RELEASE):
             continue
@@ -141,7 +143,8 @@ def apply(wh, measured: list[dict], *, dry_run: bool) -> dict:
     tag = current_release(wh)
     now, today = _now(), date.today().isoformat()
     report = {"judged": 0, "deferred": 0, "contains_point": 0, "nearest_largest": 0, "ambiguous": 0,
-              "none": 0, "held": 0, "sqft_asserted": 0, "dry_run": dry_run, "examples": []}
+              "none": 0, "held": 0, "sqft_asserted": 0, "dry_run": dry_run, "examples": [],
+              "judgments": []}
     for m in measured:
         if m.get("reason"):                          # outside every file, or past the file ceiling
             report["deferred"] += 1
@@ -162,6 +165,17 @@ def apply(wh, measured: list[dict], *, dry_run: bool) -> dict:
             # person confirms a building. Say so where they will look.
             d["reason"] += (f"; the point no longer lies in {'+'.join(before_ids)}, whose square footage "
                             f"stays in golden until a person confirms a building")
+        pick = next((bid for bid, r in d["rows"].items() if r["role"] == "primary"), None)
+        near30 = [b for b in m["buildings"] if b["distance_m"] <= PROPOSE_RADIUS_M]
+        by_id = {b["building_id"]: b for b in m["buildings"]}
+        report["judgments"].append({
+            "facility_id": fid, "point": point, "outcome": d["outcome"],
+            "status": d["rows"][pick]["status"] if pick else None,
+            "building_id": pick, "area_sqft": by_id[pick]["area_sqft"] if pick else None,
+            "distance_m": by_id[pick]["distance_m"] if pick else None,
+            "largest_30m_sqft": max((b["area_sqft"] for b in near30), default=None),
+            "n_candidates": len(m["buildings"]),
+            "geometry": by_id[pick]["geometry"] if pick else None})
         if len(report["examples"]) < 20:
             report["examples"].append({"facility_id": fid, "outcome": d["outcome"], "sqft": sqft,
                                        "buildings": ids, "reason": d["reason"]})
@@ -237,6 +251,10 @@ def main(argv=None) -> int:
     ap.add_argument("--refresh", action="store_true", help="re-judge facilities already judged at this point")
     ap.add_argument("--dry-run", action="store_true", help="read Overture and report; write nothing")
     ap.add_argument("--index", default="enrich/overture_index.json", help="cached Overture file -> bbox index")
+    ap.add_argument("--report", default=None, help="write one JSON line per judged facility here")
+    ap.add_argument("--only", default="", help="comma-separated facility ids to judge (a test sample)")
+    ap.add_argument("--only-with-stated-sqft", action="store_true",
+                    help="judge only facilities a source states a plant size for (ground truth for a test)")
     args = ap.parse_args(argv)
     def connect():
         return (SqliteWarehouse(Path(args.db)) if args.db
@@ -244,7 +262,16 @@ def main(argv=None) -> int:
     wh = connect()
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1
-    todo = plan(wh, limit=args.limit, refresh=args.refresh)
+    only = None
+    if args.only:
+        only = set(args.only.replace(",", " ").split())
+        if args.only_with_stated_sqft:
+            raise SystemExit("--only and --only-with-stated-sqft are exclusive")
+    elif args.only_with_stated_sqft:
+        # The facilities a source states a plant size for: the ground truth to test a run against.
+        only = {r["facility_key"] for r in wh.query(
+            "SELECT facility_key FROM golden_facility WHERE sq_ft IS NOT NULL AND lat_lon IS NOT NULL")}
+    todo = plan(wh, limit=args.limit, refresh=args.refresh, only=only)
     # Reading Overture takes about a minute per file, and a connection left idle that long is
     # closed under us: Neon suspends an idle compute after five minutes and drops its connections
     # (the first run died on the next query with AdminShutdown after 12 minutes of S3 reads).
@@ -255,6 +282,10 @@ def main(argv=None) -> int:
     wh = connect()
     rep = apply(wh, measured, dry_run=args.dry_run)
     wh.close()
+    judgments = rep.pop("judgments")
+    if args.report:
+        # Every judgment, with the chosen building's outline: what a reviewer checks the run against.
+        Path(args.report).write_text("\n".join(json.dumps(j, separators=(",", ":")) for j in judgments) + "\n")
     rep["planned"] = len(todo)
     print(json.dumps(rep, indent=1, default=str))
     return 0
