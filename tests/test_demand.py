@@ -118,3 +118,22 @@ def test_load_statements_run_and_are_idempotent_on_sqlite():
     assert db.execute("SELECT count(*) FROM demand_project").fetchone()[0] == 1
     assert db.execute("SELECT review_status FROM demand_project").fetchone()[0] == "proposed"
     assert db.execute("SELECT count(*) FROM demand_assertion").fetchone()[0] == len(p["assertions"])
+
+
+def test_score_matches_aliases_and_addresses_and_counts_splits():
+    from pipeline.demand.score import score
+    p1 = build_project(VBC, [mention("https://a", name="Edgewater II", state="PA", units=140)])
+    p2 = build_project(VBC, [mention("https://b", name="4233 Chestnut Street", address="4233 Chestnut St", state="PA")])
+    p3 = build_project(VBC, [mention("https://c", name="Edgewater Phase II", state="PA", units=160)])
+    p4 = build_project(VBC, [mention("https://d", name="Somewhere Else", state="NJ")])
+    ref = {"projects": [
+        {"project_name": "Edgewater II", "alt_names": [], "street_address": None, "city": "Philadelphia", "state": "PA",
+         "units": 160, "manufacturer": "Volumetric Building Companies (VBC)"},
+        {"project_name": "The Chestnut", "alt_names": [], "street_address": "4233 Chestnut Street", "city": "Philadelphia",
+         "state": "PA", "units": 273, "manufacturer": "Volumetric Building Companies (VBC)"},
+        {"project_name": "Harbor Point", "alt_names": [], "street_address": None, "state": "NJ",
+         "manufacturer": "Volumetric Building Companies (VBC)"}]}
+    sc = score(doc(p1, p2, p3, p4), ref)
+    assert sc["R1_recall"] == round(2 / 3, 3)
+    assert sc["D1_split"] == 1 and sc["novel_to_check"] == 1
+    assert sc["F1_agreement"]["units"]["compared"] == 1
