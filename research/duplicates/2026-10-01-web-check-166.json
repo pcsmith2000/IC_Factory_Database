@@ -1,0 +1,3004 @@
+[
+ {
+  "pair": "1.1",
+  "a": "IC-90534",
+  "b": "IC-90801",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.constrafor.com/network/washington/instafab-company",
+    "quote": "Instafab's headquarters are located at 2424 E 2nd St, Vancouver, Washington, 98661",
+    "snippet": true
+   }
+  ],
+  "note": "Same company name; no source links Instafab to 18101 SE 6th Ave (could be a former site or second yard). Both look like WA Ecology registrations."
+ },
+ {
+  "pair": "1.2",
+  "a": "IC-91574",
+  "b": "IC-95676",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://accessdane.danecounty.gov/050902113001",
+    "quote": "Trachte Associates LLP has a primary address at 350 Braun Road, with a billing address at 422 N Burr Oak Avenue",
+    "snippet": true
+   }
+  ],
+  "note": "Braun Rd is a separate Trachte manufacturing facility from the Burr Oak Ave site."
+ },
+ {
+  "pair": "1.3",
+  "a": "IC-30698",
+  "b": "IC-30858",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.yelp.com/biz/first-string-space-pearson",
+    "quote": "892 Railroad Ave E, Pearson, Georgia",
+    "snippet": true
+   },
+   {
+    "url": "https://first-string-construction.hub.biz/",
+    "quote": "First String Construction, Builder, 884 Albany Ave E",
+    "snippet": true
+   }
+  ],
+  "note": "Shared phone, but no source places a First String Space plant at 1034 Albany Ave W; A is labelled 'Plant 1', implying a second plant may exist. A related firm (First String Construction) is on Albany Ave E."
+ },
+ {
+  "pair": "1.4",
+  "a": "IC-94318",
+  "b": "IC-96359",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.bldr.com/location/boise-id-truss/BOIVIDMF",
+    "quote": "4100 S Eagleson Road  Boise, ID  83705"
+   },
+   {
+    "url": "https://www.bldr.com/location/boise-id-truss/BOIVIDMF",
+    "quote": "11670 West Franklin Road, Boise, Idaho 83709 ... (208) 376-5500 ... Lumber and Building Materials, Trusses, Wall Panels and Components",
+    "snippet": true
+   }
+  ],
+  "note": "Two separate BFS locations: Eagleson truss plant and Franklin Rd lumber yard (which also lists trusses). B's phone is a corporate number."
+ },
+ {
+  "pair": "1.5",
+  "a": "IC-93790",
+  "b": "IC-94992",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www7.eere.energy.gov/buildings/residential/exploredenh/partners/3042",
+    "quote": "Clayton Tru Belton is a Manufactured Home Plant Partner located at 520 Sparta Rd, Belton, TX 76513",
+    "snippet": true
+   },
+   {
+    "url": "https://www.claytonhomes.com/newsroom/press-releases/TRUmhBelton-Expansion",
+    "quote": "renovation and retooling of an existing building located at 1313 Industrial Park Rd. Belton, TX, 76513"
+   }
+  ],
+  "note": "'Belton II' name suggests a second building/plant at Industrial Park Rd, but I could not confirm whether it is separate from the 520 Sparta Rd plant (geocodes identical). Needs a person."
+ },
+ {
+  "pair": "1.6",
+  "a": "IC-94683",
+  "b": "IC-95128",
+  "verdict": "different",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://mbimodularbuildinginstitute.growthzoneapp.com/ap/CloudFile/Download/PYmxnJxP",
+    "quote": "Whitley East, LLC is located in Leola, Pennsylvania and includes 110,000 square feet of production space",
+    "snippet": true
+   },
+   {
+    "url": "https://www.whitleyman.com/our-locations",
+    "quote": "Whitley Manufacturing's headquarters are located at 201 W 1st St, South Whitley, Indiana, 46787",
+    "snippet": true
+   }
+  ],
+  "note": "Whitley East LLC is Whitley's Leola PA plant; record B carries the HQ PO box/phone in South Whitley. Do not merge; B's location likely should be Leola PA."
+ },
+ {
+  "pair": "1.7",
+  "a": "IC-21965",
+  "b": "IC-93675",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.yelp.com/biz/champion-home-builders-lake-city",
+    "quote": "1915 SE State Rd 100, Lake City, Florida",
+    "snippet": true
+   }
+  ],
+  "note": "B has no address and a '#261 #3' code that may denote another Champion plant in Lake City; could not confirm how many Champion plants are in Lake City."
+ },
+ {
+  "pair": "1.8",
+  "a": "IC-93492",
+  "b": "IC-95004",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.biz417.com/companies/manufacturing/how-two-springfield-business-build-7-brew/",
+    "quote": "CMC has five locations in Springfield. One location manufactures, and the other four assemble."
+   }
+  ],
+  "note": "CMC runs five separate Springfield sites; Cherry St and E Central Court are different addresses (1.7 mi). B's role (office vs site) not confirmed."
+ },
+ {
+  "pair": "1.9",
+  "a": "IC-93493",
+  "b": "IC-96155",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.biz417.com/companies/manufacturing/how-two-springfield-business-build-7-brew/",
+    "quote": "CMC has five locations in Springfield. One location manufactures, and the other four assemble."
+   },
+   {
+    "url": "https://springfieldareachamberofcommerce.growthzoneapp.com/directory/Details/creative-modular-construction-cmc-2881023",
+    "quote": "Creative Modular Construction's main headquarters is located at 2821-D West Chestnut Expressway, Springfield, MO, 65802",
+    "snippet": true
+   }
+  ],
+  "note": "Eldon Ave site vs Chestnut Expwy HQ; separate sites."
+ },
+ {
+  "pair": "1.10",
+  "a": "IC-93495",
+  "b": "IC-94725",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.cmcmod.com/",
+    "quote": "319 North Main Ave, Suite 200 Springfield, MO 65802"
+   },
+   {
+    "url": "https://projects.constructconnect.com/companies/2282312-creative-modular-construction-cmc-aka-architectural-design-concepts-llc&find_loc=MO-65802",
+    "quote": "529 N Prince Ln, Springfield, MO 65802",
+    "snippet": true
+   }
+  ],
+  "note": "B is the Suite 200 office address; A is the Prince Ln production site."
+ },
+ {
+  "pair": "1.11",
+  "a": "IC-94273",
+  "b": "IC-96285",
+  "verdict": "different",
+  "relation": "store_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://84lumbercomv3.84-iase-v3.p.azurewebsites.net/manufacturing/",
+    "quote": "91 Riverside Dr, Cartersville, GA 30120"
+   },
+   {
+    "url": "https://www.superpages.com/bp/cartersville-ga/84-lumber-L0504848978.htm",
+    "quote": "84 Lumber 71 Riverside Dr SW, Cartersville, GA 30120 ... Hardware store and Construction Supplies Store",
+    "snippet": true
+   }
+  ],
+  "note": "Truss plant (91 Riverside) vs 84 Lumber store #1681 (71 Riverside). B may not be a plant at all."
+ },
+ {
+  "pair": "1.12",
+  "a": "IC-09875",
+  "b": "IC-93665",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-09875",
+  "evidence": [
+   {
+    "url": "https://www.modularhomes.com/manufacturer/2055/champion-homes/chandler/",
+    "quote": "Champion Homes is a prefab home manufacturer located in Chandler, Arizona",
+    "snippet": true
+   },
+   {
+    "url": "https://www.bbb.org/us/az/chandler/profile/manufactured-home-manufacturers/redman-homes-inc-1126-12668",
+    "quote": "Redman Homes Inc. dba Champion Home Builders",
+    "snippet": true
+   }
+  ],
+  "note": "Only one Champion plant in Chandler found (6420 W Allison Rd); B has no address. Moderate confidence: check that no second Champion plant exists in Chandler."
+ },
+ {
+  "pair": "1.13",
+  "a": "IC-51865",
+  "b": "IC-93805",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://oas.dhs.in.gov/dfbs/code/main.do?method=view&manufacturerNameId=42",
+    "quote": "Fairmont Homes Inc - Plant 1, P O Box 27, Nappanee, IN 46550"
+   },
+   {
+    "url": "https://oas.dhs.in.gov/dfbs/code/main.do?method=view&manufacturerNameId=42",
+    "quote": "\"Fairmont Homes Inc - Plant 1\" located at \"P O Box 27, 502 S. Oakland Ave, Nappanee, IN 46550\"",
+    "snippet": true
+   },
+   {
+    "url": "https://www.inkfreenews.com/2025/04/17/fairmont-homes-is-now-cavco-nappanee/",
+    "quote": "Fairmont Homes ... is now operating as Cavco-Nappanee, effective April 1",
+    "snippet": true
+   }
+  ],
+  "note": "Both Cavco/Fairmont, but 502 S Oakland (IN-listed Plant 1) and 2181 E Market are distinct sites 0.5 mi apart. Earlier agent's 'same' rests only on shared phone."
+ },
+ {
+  "pair": "1.14",
+  "a": "IC-94749",
+  "b": "IC-94751",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://oas.dhs.in.gov/dfbs/code/main.do?method=view&manufacturerNameId=42",
+    "quote": "Fairmont Homes Inc - Plant 1, P O Box 27, Nappanee, IN 46550"
+   }
+  ],
+  "note": "Friendship 2 and Showcase Homes are different Fairmont plant/division names sharing the HQ PO box; nothing says whether they are one plant."
+ },
+ {
+  "pair": "1.15",
+  "a": "IC-91520",
+  "b": "IC-91574",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://business.oregonwi.com/list/member/trachte-llc-34",
+    "quote": "422 North Burr Oak Avenue Oregon WI 53575"
+   },
+   {
+    "url": "https://business.oregonwi.com/list/member/trachte-llc-34",
+    "quote": "(608) 835-5707"
+   }
+  ],
+  "note": "Same company and phone (Trachte Inc became Trachte LLC/nVent), 0.13 mi apart; 490 N Burr Oak is a separate parcel on LoopNet. Could be an adjacent Trachte building or an old address."
+ },
+ {
+  "pair": "1.16",
+  "a": "IC-48095",
+  "b": "IC-95330",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-95330",
+  "evidence": [
+   {
+    "url": "https://buildingclean.org/manufacturers/facility/10297",
+    "quote": "603 N. Van Gordon Avenue Graettinger, IA 51342 United States"
+   },
+   {
+    "url": "https://sipa.s3-us-west-2.amazonaws.com/media/Floor-Plans.pdf",
+    "quote": "ENERGY PANEL STRUCTURES 102 EAST INDUSTRIAL PARK",
+    "snippet": true
+   }
+  ],
+  "note": "Same company, same phone, 0.17 mi apart; EPS has one Graettinger plant (other plant is Perryville MO). The industrial-park address is the older form."
+ },
+ {
+  "pair": "1.17",
+  "a": "IC-19659",
+  "b": "IC-93632",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://unitedconcrete.com/contact/",
+    "quote": "Plant 1 - 173 Church Street Yalesville, CT 06492"
+   },
+   {
+    "url": "https://unitedconcrete.com/contact/",
+    "quote": "Plant 5 - 475 Main Street Yalesville, CT 06492"
+   }
+  ],
+  "note": "Two numbered plants of the same company."
+ },
+ {
+  "pair": "1.18",
+  "a": "IC-22512",
+  "b": "IC-96401",
+  "verdict": "different",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://members.tbba.net/list/member/carpenter-contractors-of-america-inc-winter-haven-800-959-8806-274",
+    "quote": "Carpenter Contractors of America is located at 3900 Avenue G NW in Winter Haven",
+    "snippet": true
+   },
+   {
+    "url": "https://network.procore.com/p/american-builders-supply-inc-winter-haven",
+    "quote": "American Builders Supply, Inc. is located at 1801 7th St SW, Winter Haven, FL and can be reached at +1-863-294-0611",
+    "snippet": true
+   }
+  ],
+  "note": "B's phone/website are American Builders Supply's building-materials yard on 7th St SW, not the CCA truss plant. B's name looks mislabelled."
+ },
+ {
+  "pair": "1.19",
+  "a": "IC-94264",
+  "b": "IC-96287",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://84lumbercomv3.84-iase-v3.p.azurewebsites.net/manufacturing/",
+    "quote": "200 Emmett Road, Dunn, NC 28334"
+   }
+  ],
+  "note": "Distinct 84 Lumber unit numbers (2383 truss, 2385 panel) at different addresses 3.5 mi apart. Panel plant not confirmed on 84's site."
+ },
+ {
+  "pair": "1.20",
+  "a": "IC-93856",
+  "b": "IC-93865",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.michigan.gov/lara/-/media/Project/Websites/lara/bcc-media/Plan-Review/Approved_Manufacturers_Listings.pdf",
+    "quote": "Atelier7 Group LLC operates two manufacturing plants in Atlanta: Plant 1 located at 1050 Murphy Avenue SW and Plant 2 located at 1524 E Taylor Avenue",
+    "snippet": true
+   }
+  ],
+  "note": "Plant 1 vs Plant 2."
+ },
+ {
+  "pair": "1.21",
+  "a": "IC-09132",
+  "b": "IC-96481",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.yellowpages.com/russellville-ar/tristate-truss",
+    "quote": "600 SW 1st St, Atkins, AR 72823"
+   },
+   {
+    "url": "https://www.yellowpages.com/russellville-ar/tristate-truss",
+    "quote": "7135 Us Highway 64 E, Pottsville, AR 72858"
+   }
+  ],
+  "note": "600 SW 1st St is in Atkins (separate phone 479-641-2407), not Pottsville; a second Tri-State Truss site. A's city looks wrong."
+ },
+ {
+  "pair": "1.22",
+  "a": "IC-30705",
+  "b": "IC-94988",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.modularhomes.com/manufacturer/3327/legacy-housing/eatonton/",
+    "quote": "Legacy Housing is a prefab home manufacturer located at 184 Industrial Blvd, Eatonton, GA 31024",
+    "snippet": true
+   }
+  ],
+  "note": "No source ties Legacy to 113 Milledgeville Rd (0.6 mi away); could be an old/other plant."
+ },
+ {
+  "pair": "1.23",
+  "a": "IC-51867",
+  "b": "IC-94750",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://oas.dhs.in.gov/dfbs/code/main.do?method=view&manufacturerNameId=42",
+    "quote": "\"Fairmont Homes Inc - Plant 1\" located at \"P O Box 27, 502 S. Oakland Ave, Nappanee, IN 46550\"",
+    "snippet": true
+   }
+  ],
+  "note": "Indiana lists Plant 1 at 502 S Oakland Ave, not 1961 E Market St; different sites."
+ },
+ {
+  "pair": "1.24",
+  "a": "IC-70056",
+  "b": "IC-70122",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-70056",
+  "evidence": [
+   {
+    "url": "https://www.env.nm.gov/wp-content/uploads/2020/11/Notice-of-Closure-Deming-Manuf-Homes-11-3-20.pdf",
+    "quote": "Deming Manufactured Homes, LLC was located at 100 Tapia Rd., Deming, NM, 88030",
+    "snippet": true
+   }
+  ],
+  "note": "Same name, 0.1 mi; airport-landmark description vs street address. Note: NMED closure notice (Nov 2020) - plant may be closed."
+ },
+ {
+  "pair": "1.25",
+  "a": "IC-75982",
+  "b": "IC-96002",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-96002",
+  "evidence": [
+   {
+    "url": "https://www.rigidply.com/",
+    "quote": "701 East Linden Street, Richland, PA 17087"
+   }
+  ],
+  "note": "Rigidply's site lists only one Richland location (701 E Linden St); A is '3 Linden St' (and B misspells Linden)."
+ },
+ {
+  "pair": "1.26",
+  "a": "IC-90733",
+  "b": "IC-94399",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-94399",
+  "evidence": [
+   {
+    "url": "https://www.thetrussco.com/locations/",
+    "quote": "15599 Ashten Rd. Burlington, WA 98233"
+   },
+   {
+    "url": "https://apps.ecology.wa.gov/paris/DownloadDocument.aspx?id=134549",
+    "quote": "Josh Wright General Manager Tri County Truss 15599 Ashten Rd",
+    "snippet": true
+   }
+  ],
+  "note": "Tri-County Truss was acquired by The Truss Co.; its plant is 15599 Ashten Rd. 11768 Westar Ln is a multi-tenant WSU Extension building, not a plant."
+ },
+ {
+  "pair": "1.27",
+  "a": "IC-94492",
+  "b": "IC-95007",
+  "verdict": "same",
+  "relation": "other",
+  "survivor": "IC-95007",
+  "evidence": [
+   {
+    "url": "https://imsbuilder.com/contact/",
+    "quote": "924 N. Tweedy Rd Eloy, AZ, 85131"
+   },
+   {
+    "url": "https://www.yelp.com/biz/hoover-diesel-repair-llc-eloy",
+    "quote": "HOOVER DIESEL REPAIR, LLC ... 230 S Sunshine Blvd, Eloy, Arizona",
+    "snippet": true
+   }
+  ],
+  "note": "IMS lists only an office (Scottsdale) and the Tweedy Rd warehouse; 230 S Sunshine Blvd is a diesel repair shop (likely old/registration address)."
+ },
+ {
+  "pair": "1.28",
+  "a": "IC-95775",
+  "b": "IC-96511",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://wbhowland.com/contact-us/",
+    "quote": "610 11th St SW, Live Oak, FL 32064-3015"
+   }
+  ],
+  "note": "610 11th St SW is the WB Howland store/HQ; truss plant is a 33-acre site with no street address found. Winderweedle St NW may be the actual plant; same company, but which record is the plant is unknown."
+ },
+ {
+  "pair": "2.1",
+  "a": "IC-68309",
+  "b": "IC-96709",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://scstruss.com/contact",
+    "quote": "1255 Front St. Fremont, NE 68025 | (402) 721-5622"
+   },
+   {
+    "url": "https://www.fremontecodev.org/site-map/business-directory/p/item/7516/structural-component-systems-inc",
+    "quote": "1255 East Front Street Fremont, NE 68025 United States"
+   },
+   {
+    "url": "https://www.sbcacomponents.com/member-directory/structural-component-systems-inc-co",
+    "quote": "The company is located at 1451 Morningside Rd, Fremont, NE 68025. Their main business address is also listed as 1255 Front St",
+    "snippet": true
+   }
+  ],
+  "note": "Company site labels 1255 Front St the 'Corporate Office'; 1451 Morningside Rd appears only in a directory snippet. Could be office vs plant or a single site with two addresses; not resolved."
+ },
+ {
+  "pair": "2.2",
+  "a": "IC-94360",
+  "b": "IC-96388",
+  "verdict": "different",
+  "relation": "store_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.bldr.com/location/shafter-ca-truss/SHAFCAMF",
+    "quote": "141 Vultee St. Shafter, CA 93263"
+   },
+   {
+    "url": "https://www.yelp.com/biz/builders-firstsource-shafter-2",
+    "quote": "there is a lumber yard at 300 N American St. Shafter, CA 93263",
+    "snippet": true
+   }
+  ],
+  "note": "141 Vultee St is the BFS truss plant ((661) 535-6375); 300 N American St is a separate BFS lumber yard with a different phone."
+ },
+ {
+  "pair": "2.3",
+  "a": "IC-10675",
+  "b": "IC-93054",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-10675",
+  "evidence": [
+   {
+    "url": "https://www.sec.gov/Archives/edgar/data/0001075066/000119312505129471/d10k.htm",
+    "quote": "principal executive and administrative facilities are located in approximately 17,000 square feet of modular buildings at our primary manufacturing facility located in Perris, California"
+   },
+   {
+    "url": "https://www.sec.gov/Archives/edgar/data/0001075066/000119312505129471/d10k.htm",
+    "quote": "2830 Barrett Avenue, Perris, California 92571"
+   },
+   {
+    "url": "https://members.modular.org/member-directory/Details/silver-creek-modular-3087554",
+    "quote": "Silver Creek Modular is located at 2830 Barrett Avenue, Perris, CA 92571",
+    "snippet": true
+   }
+  ],
+  "note": "Modtech (defunct, bankrupt 2008) ran its primary Perris plant at 2830 Barrett Ave; Silver Creek Modular now operates at that address. B's '- TX' name suffix and 254 phone look like a mixed-up Modtech record (its TX plant was Glen Rose). No source explicitly says Silver Creek took over Modtech's plant; worth a human glance."
+ },
+ {
+  "pair": "2.4",
+  "a": "IC-12007",
+  "b": "IC-17400",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.americanmodular.com/visit-us/",
+    "quote": "787 Spreckels Ave. Manteca, CA 95336"
+   },
+   {
+    "url": "https://www.loopnet.com/Listing/13490671/333-E-Carnegie-Court-Manteca-CA/",
+    "quote": "333 Carnegie Ct is a property located in Manteca, CA 95337 ... light industrial ... lot size of 7.91 acres",
+    "snippet": true
+   }
+  ],
+  "note": "AMS's site lists only 787 Spreckels Ave (main office; factory tours at 'the AMS Manufacturing Facility, Manteca'). 333 E Carnegie Ct is a 7.9-acre industrial parcel tied to AMS in OpenCorporates/OSHA snippets: could be a second yard/plant or a former site."
+ },
+ {
+  "pair": "2.5",
+  "a": "IC-92541",
+  "b": "IC-95081",
+  "verdict": "same",
+  "relation": "mailing_address",
+  "survivor": "IC-92541",
+  "evidence": [
+   {
+    "url": "http://www.mssi.us/",
+    "quote": "Maximum Security Systems corporate office is located in 1741 Main St, Fyffe, Alabama, 35971",
+    "snippet": true
+   },
+   {
+    "url": "https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&original_query_param=NAME&query_string=3988961&original_query_string=MAXIMUM+SECURITY+SYSTEMS",
+    "quote": "ALABAMA DETENTION HOLDINGS LLC (search on 'MAXIMUM SECURITY SYSTEMS' returns USDOT 3988961, Fyffe)",
+    "snippet": true
+   }
+  ],
+  "note": "Same business (Alabama Detention Holdings dba Maximum Security Systems) in tiny Fyffe AL; B is a PO Box. Steel detention cells; B's 'Wood' capability is wrong. mssi.us contact page was down (503), so evidence is snippets."
+ },
+ {
+  "pair": "2.6",
+  "a": "IC-88058",
+  "b": "IC-96335",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-96335",
+  "evidence": [
+   {
+    "url": "https://www.berryhomecenter.com/truss-shop/",
+    "quote": "650 East Lee Highway, Chilhowie, VA 24319"
+   },
+   {
+    "url": "https://atlas.atlasbldr.com/directory/suppliers/berry-truss-amp-component-shop-inc-315/",
+    "quote": "Berry Truss & Component Shop, Inc. is located at 650 E Lee Hwy Chilhowie VA 24319. Their contact number is 276-646-5333",
+    "snippet": true
+   }
+  ],
+  "note": "Berry runs one truss shop in Chilhowie, at 650 E Lee Hwy; 518 Lee Highway appears in no source found. Same phone and website."
+ },
+ {
+  "pair": "2.7",
+  "a": "IC-68554",
+  "b": "IC-68600",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.superpages.com/valley-ne/bpp/midwest-manufacturing-452342186",
+    "quote": "the Truss operation at 4801 N 264th St Valley, NE",
+    "snippet": true
+   },
+   {
+    "url": "http://buildingclean.org/manufacturers/facility/5694",
+    "quote": "4801 N. 264th Street Valley, NE 68064 United States"
+   }
+  ],
+  "note": "Menards' Midwest Manufacturing Valley campus makes steel roofing/siding, treated lumber, doors and trusses. 5301 N 264th Cir (0.11 mi away) is only a directory snippet; it may be the same campus or a separate building/plant (e.g. steel). Not resolved."
+ },
+ {
+  "pair": "2.8",
+  "a": "IC-93492",
+  "b": "IC-93494",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "CREATIVE MODULAR CONSTRUCTION 9/8/2026 3228 E CHERRY ST, SPRINGFIELD, MO 65802-2628"
+   },
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "CREATIVE MODULAR CONSTRUCTION, LLC 11/29/2026 2738 E KEARNEY ST, SPRINGFIELD, MO 65803-4914"
+   }
+  ],
+  "note": "Texas TDLR registers each CMC plant separately (physical addresses Cherry St, Kearney St, Prince Ln, Farm Rd 123, all mailing to 319 N Main). Cherry and Kearney are separate registered plants."
+ },
+ {
+  "pair": "2.9",
+  "a": "IC-93494",
+  "b": "IC-95004",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "CREATIVE MODULAR CONSTRUCTION, LLC 11/29/2026 2738 E KEARNEY ST, SPRINGFIELD, MO 65803-4914"
+   },
+   {
+    "url": "https://psc.mo.gov/CMSInternetData/ManufacturedHousing/Manufacturer/ACTIVE%20MOD%201-14-26.pdf",
+    "quote": "2101 E Central Court in Springfield, MO 65802 is the address for Creative Modular Construction, a registered modular manufacturer in Missouri (Registration # 25-000249)",
+    "snippet": true
+   }
+  ],
+  "note": "Kearney St is a TDLR-registered CMC plant; 2101 E Central Ct is a separate MO PSC modular-manufacturer registration 1.7 mi away. CMC runs several Springfield plants. MO PSC PDF itself returned 404, so the Central Ct evidence is a snippet."
+ },
+ {
+  "pair": "2.10",
+  "a": "IC-93495",
+  "b": "IC-95003",
+  "verdict": "same",
+  "relation": "spelling",
+  "survivor": "IC-93495",
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "CREATIVE MODULAR CONSTRUCTION 5/2/2027 529 N PRINCE LN, SPRINGFIELD, MO 65802-2552"
+   }
+  ],
+  "note": "Same number, same company; 'PRICE LN' is a typo for Prince Ln."
+ },
+ {
+  "pair": "2.11",
+  "a": "IC-92939",
+  "b": "IC-95316",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-95316",
+  "evidence": [
+   {
+    "url": "https://www.surepods.com/contact",
+    "quote": "624 N 44th Ave Phoenix, AZ 85043"
+   },
+   {
+    "url": "https://www.costar.com/article/903853551/softbank-funded-construction-startup-katerra-to-close-phoenix-factory",
+    "quote": "The 250,000-square-foot Phoenix factory at 624 N. 44th Ave. was Katerra's first building components making site",
+    "snippet": true
+   }
+  ],
+  "note": "Katerra closed this Phoenix factory and later went bankrupt; SurePods (DPR) now runs a bathroom-pod plant in the same building. This is the same building with a new operator, not a continuation of Katerra's business. Merging keeps one plant record (SurePods) but drops Katerra's wall-panel history. Needs a person to check."
+ },
+ {
+  "pair": "2.12",
+  "a": "IC-94267",
+  "b": "IC-95250",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-94267",
+  "evidence": [
+   {
+    "url": "https://www.prnewswire.com/news-releases/84-lumber-to-host-hiring-event-in-winchester-seeks-to-fill-immediate-openings-at-truss-manufacturing-plant-301244930.html",
+    "quote": "240 Yardmaster Ct., Stephenson, VA"
+   },
+   {
+    "url": "https://84lumbercomv3.84-iase-v3.p.azurewebsites.net/about/press-room/84-press-releases/84-lumber-announces-first-truss-plant-in-virginia/",
+    "quote": "84 Lumber's truss plant in Winchester, Virginia and the first 84 Lumber location of its kind in the state",
+    "snippet": true
+   }
+  ],
+  "note": "B is an address-less '84 Lumber, Winchester' truss record. 84 Lumber's only VA truss plant is the 'Winchester' plant at 240 Yardmaster Ct, Stephenson."
+ },
+ {
+  "pair": "2.13",
+  "a": "IC-51865",
+  "b": "IC-94749",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.buzzfile.com/business/Friendship-Homes-Division-574-773-7941",
+    "quote": "Fairmont Homes, LLC is located at 502 S Oakland Ave Nappanee, IN ... operates under the trade name Friendship Homes Division",
+    "snippet": true
+   }
+  ],
+  "note": "'Friendship 1' vs 'Friendship 2' looks like two plant designations sharing PO Box 27 and the main phone. Plant 2's street address is unknown, so not merged. The earlier agent's note refers to another candidate (IC-52027). Fairmont/Cavco Nappanee site redirected and gave no content."
+ },
+ {
+  "pair": "2.14",
+  "a": "IC-51839",
+  "b": "IC-52028",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-52028",
+  "evidence": [
+   {
+    "url": "https://claytonwakarusa.com/contact/",
+    "quote": "66700 State Road 19 Wakarusa, IN 46573"
+   },
+   {
+    "url": "https://www.yelp.com/biz/hart-housing-group-wakarusa-2",
+    "quote": "HART HOUSING GROUP - ... 66700 State Rd 19, Wakarusa, Indiana",
+    "snippet": true
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Hart_Housing",
+    "quote": "(Redirected from Hart Housing)"
+   }
+  ],
+  "note": "Same street address. Hart Housing Group (formerly a Forest River division) is now operated under Clayton Homes as Clayton Wakarusa. Clayton also opened a second Wakarusa plant, which should stay a separate record."
+ },
+ {
+  "pair": "2.15",
+  "a": "IC-10216",
+  "b": "IC-96314",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://azbuildingsupply.com/locations/glendale-truss-grand/",
+    "quote": "8205 N 67th Ave, Glendale, AZ 85302"
+   },
+   {
+    "url": "https://www.loc8nearme.com/arizona/glendale/truss-fab-llc/2902715/",
+    "quote": "Arizona Building Supply (fka Truss Fab)"
+   },
+   {
+    "url": "https://www.loc8nearme.com/arizona/glendale/truss-fab-llc/2902715/",
+    "quote": "7831 N 67th Ave, Glendale AZ 85301"
+   }
+  ],
+  "note": "ABS acquired Truss Fab (7831 N 67th Ave). ABS's own site lists only 'Glendale Truss \u2013 Grand' at 8205 N 67th Ave. That could mean Truss Fab moved there or that ABS runs two truss yards 0.3 mi apart. Different phones."
+ },
+ {
+  "pair": "2.16",
+  "a": "IC-95241",
+  "b": "IC-95837",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://montgomerytruss.com/contact",
+    "quote": "803 W Main St, Grove City, PA 16127"
+   }
+  ],
+  "note": "Company site lists only 803 W Main St; 7 E Gate Industrial Dr was not found in any source. It could be a second plant or yard, or a former site."
+ },
+ {
+  "pair": "2.17",
+  "a": "IC-92586",
+  "b": "IC-92733",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://avonmodular.com/about-us/",
+    "quote": "1074 S. Florida Ave. Suite 102, Lakeland FL 33803"
+   }
+  ],
+  "note": "No source found linking Avon or 'Custom Modular Manufacturing' to 3023 Porter Rd, Lithia. Could be co-tenants, a successor, or the same plant under a contract manufacturer. Different phones."
+ },
+ {
+  "pair": "2.18",
+  "a": "IC-92584",
+  "b": "IC-94817",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.kfvs12.com/story/34670276/phoenix-modular-elevator-grand-opening-in-mt-vernon-il/",
+    "quote": "Phoenix Modular Elevator's new manufacturing facility is located in Mt. Vernon, IL, and the address is 4800 Phoenix Drive",
+    "snippet": true
+   }
+  ],
+  "note": "4800 Phoenix Dr is Phoenix Modular Elevator's plant (elevator hoistways). No source ties Avon Modular 'Plant 3' to it. Possibly co-tenants or a bad record. Do not merge without a person checking."
+ },
+ {
+  "pair": "2.19",
+  "a": "IC-93467",
+  "b": "IC-93837",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://members.modular.org/manufacturerwholesale/Details/apollo-modular-systems-inc-2596357",
+    "quote": "2162 Industrial Blvd. , Douglas , GA , 31533 United States"
+   },
+   {
+    "url": "https://www.industrynet.com/listing/3726921/titan-modular-systems-inc",
+    "quote": "Titan Modular Systems, Inc. is located at 162 Industrial Drive, Alma, GA, 31510 and their phone number is 912-632-3344",
+    "snippet": true
+   }
+  ],
+  "note": "Two plants in different towns about 20 mi apart (Douglas vs Alma). They may share an owner and phone (Impresa), but they are separate factories. Apollo's MBI phone is 912-292-0786."
+ },
+ {
+  "pair": "2.20",
+  "a": "IC-86219",
+  "b": "IC-94096",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-86219",
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/TABS/Search/Print/TABS2019002553",
+    "quote": "800 NORTH 1-35E, Lancaster, TX 75146"
+   },
+   {
+    "url": "https://pr.business/oak-creek-homes-lancaster-lancaster-texas",
+    "quote": "Oak Creek Homes Lancaster - ... 800 N Beckley St Lancaster, TX",
+    "snippet": true
+   }
+  ],
+  "note": "Same name, same phone 972-230-3995 and same house number. I-35E and Beckley run side by side in Lancaster, so these are two names for one address. The 10.7 mi gap is a geocoding error."
+ },
+ {
+  "pair": "2.21",
+  "a": "IC-16103",
+  "b": "IC-95254",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.connectcre.com/stories/california-people-and-company-news-week-of-dec-20-2024/",
+    "quote": "FullStack Modular has opened a West Coast manufacturing facility at 3025 E. Dominguez St. in Carson."
+   },
+   {
+    "url": "https://pitchbook.com/profiles/company/435177-46",
+    "quote": "CRATE Modular was planning to move offices in May 2024 from its existing location at 3025 E Dominguez St, Carson, CA",
+    "snippet": true
+   }
+  ],
+  "note": "CRATE (owned by AHF since 2023) appears to have left 3025 E Dominguez in 2024, and FullStack opened a plant there in Dec 2024/Jan 2025. Same building, different firms, one after the other. CRATE may now operate elsewhere, so a merge could lose a live business. Needs a person to check."
+ },
+ {
+  "pair": "2.22",
+  "a": "IC-30815",
+  "b": "IC-30869",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://steelmetalsystems.com/",
+    "quote": "505 Main St. Blackshear, GA 31516"
+   },
+   {
+    "url": "https://steelmetalsystems.com/",
+    "quote": "All building components are produced in our own facility"
+   }
+  ],
+  "note": "One company in Blackshear; 617 Memory St (0.19 mi away) was not confirmed by any source. It could be the shop behind the 505 Main office (office vs plant), or the same site."
+ },
+ {
+  "pair": "2.23",
+  "a": "IC-51867",
+  "b": "IC-94751",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.buzzfile.com/business/Friendship-Homes-Division-574-773-7941",
+    "quote": "Fairmont Homes has multiple locations including 2181 E Market St Nappanee, IN 46550-9382 and 502 S Oakland Ave Nappanee, IN 46550-2327",
+    "snippet": true
+   }
+  ],
+  "note": "Fairmont (now Cavco Nappanee) has several Nappanee plants. 'Showcase Homes' is a PO Box record and cannot be tied to the 1961 E Market 'north portion' plant."
+ },
+ {
+  "pair": "2.24",
+  "a": "IC-72575",
+  "b": "IC-93801",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://unibiltcustomhomes.com/contact-us/",
+    "quote": "Unibilt Industries, Inc. 8005 Johnson Station Rd., P.O. Box 373 Vandalia, Ohio 45377"
+   },
+   {
+    "url": "https://unibiltcustomhomes.com/contact-us/",
+    "quote": "Dayton (Factory): 937-890-7570"
+   },
+   {
+    "url": "https://prefabricated-modular-building-dealers.cmac.ws/unibilt-industries-inc/2161/",
+    "quote": "4671 Poplar Creek Rd, Vandalia, OH, 45377"
+   }
+  ],
+  "note": "Probably one factory: the Poplar Creek Rd listing carries the same factory phone, and the two addresses are 0.23 mi apart, perhaps two frontages of one parcel. Nothing says so directly, so marked unsure, leaning same."
+ },
+ {
+  "pair": "2.25",
+  "a": "IC-82231",
+  "b": "IC-93067",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-93067",
+  "evidence": [
+   {
+    "url": "https://www.modulartoday.com/Modular-One.html",
+    "quote": "Formerly Modular One, LLC\n1884 Mines Road\nPulaski, TN 38478"
+   }
+  ],
+  "note": "Modular One was renamed Meadows Homes; same plant at 1884 Mines Rd."
+ },
+ {
+  "pair": "2.26",
+  "a": "IC-90853",
+  "b": "IC-96028",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://nobletrusswa.com/",
+    "quote": "355 Malaga Alcoa Hwy, Wenatchee WA"
+   }
+  ],
+  "note": "Noble Truss's website lists only 355 Malaga Alcoa Hwy. 3470 Ashwood Dr carries a separate WA site ID and could be a former site, an owner or mailing address, or a second yard. Search budget ran out before this could be resolved."
+ },
+ {
+  "pair": "2.27",
+  "a": "IC-94522",
+  "b": "IC-94944",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-94944",
+  "evidence": [
+   {
+    "url": "https://s2amodular.com/contact",
+    "quote": "300 Park Center Drive Patterson, CA 95363"
+   }
+  ],
+  "note": "S2A lists one Patterson 'Northern California MegaFactory' at 300 Park Center Dr. 'S2A Modular 2 LLC' at 287 Baldwin Rd geocodes 0.05 mi away, most likely a parcel or entity address for the same factory. No source names Baldwin Rd, so a quick human check is advised."
+ },
+ {
+  "pair": "2.28",
+  "a": "IC-95836",
+  "b": "IC-96409",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://cascade-mfg-co.com/",
+    "quote": "109 Madison St SE, PO Box 220, Cascade, IA 52033-0220"
+   }
+  ],
+  "note": "Cascade's site calls 109 Madison St SE the 'Corporate Headquarters'. 404 Monroe St NE (0.19 mi away) is not mentioned and could be the truss plant (office vs plant) or another building."
+ },
+ {
+  "pair": "3.1",
+  "a": "IC-94346",
+  "b": "IC-96611",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-94346",
+  "evidence": [
+   {
+    "url": "https://www.bldr.com/location/noltex-midland-tx-truss/MIDLTXMF",
+    "quote": "Midland TX Truss ... 4711 FM 715 Midland, TX 79706 ... (432) 203-8831"
+   },
+   {
+    "url": "https://www.bldr.com/location/noltex-midland-tx-truss/MIDLTXMF",
+    "quote": "Address: 4711 FM 715 Midland, TX 79706 - Phone: (432) 687-1241",
+    "snippet": true
+   },
+   {
+    "url": "https://noltex-truss-tx-1.hub.biz/",
+    "quote": "Noltex Truss, Roofing Material, 3101 Garden City Hwy",
+    "snippet": true
+   }
+  ],
+  "note": "BFS's only Midland truss page has URL slug 'noltex-midland' and (per search snippet) carries Noltex's old phone 432-687-1241; Noltex's 3101 Garden City Hwy address appears only on old directories. Plant likely relocated to or re-addressed as 4711 FM 715 under BFS; the move is not confirmed."
+ },
+ {
+  "pair": "3.2",
+  "a": "IC-18419",
+  "b": "IC-96426",
+  "verdict": "different",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://stresscon.com",
+    "quote": "3210 Astrozon Blvd., Colorado Springs, CO ... (719) 390-5041"
+   },
+   {
+    "url": "https://coloradobuildingsupply.com/location/colorado-springs-truss-and-wall-systems/",
+    "quote": "3240 Astrozon Blvd. Colorado Springs, CO 80910 ... 719-598-4500"
+   }
+  ],
+  "note": "Unrelated firms: Stresscon is a precast plant at 3210 Astrozon. Colorado Building Supply (Fox Gal) is a truss plant at 3240 Astrozon (record B lists International Cir). The earlier agent's match was wrong."
+ },
+ {
+  "pair": "3.3",
+  "a": "IC-94614",
+  "b": "IC-96349",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-94614",
+  "evidence": [
+   {
+    "url": "https://network.procore.com/p/bray-truss-systems-llc-valdosta",
+    "quote": "Bray Truss Systems, LLC ... 1102 E Hill Ave, Valdosta, GA ... +12292474650"
+   },
+   {
+    "url": "https://www.yelp.com/biz/bray-truss-valdosta",
+    "quote": "BRAY TRUSS - Updated December 2025 - 1100 E Hill Ave, Valdosta, Georgia",
+    "snippet": true
+   }
+  ],
+  "note": "Same phone. The LLC is the successor to the Inc. at the same E Hill Ave plant. 1900 N Patterson St is probably a mailing or officer address; Bray has no plant there."
+ },
+ {
+  "pair": "3.4",
+  "a": "IC-61035",
+  "b": "IC-96034",
+  "verdict": "different",
+  "relation": "store_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.grizzlytruss.com/contact/",
+    "quote": "Lumber Yard: 580 Mahnomen Dr. Bemidji, MN 56601 ... Showroom: 4641 Northland DR NW. Bemidji, MN 56601"
+   }
+  ],
+  "note": "4641 Northland Dr NW is Grizzly's showroom, open by appointment, not the truss plant. Record B probably should not carry a truss capability."
+ },
+ {
+  "pair": "3.5",
+  "a": "IC-01303",
+  "b": "IC-94742",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.modulartoday.com/Southern-Energy-Homes.html",
+    "quote": "18025 County Road 41, Addison, AL 35540 ... 256-747-1544 ... Energy Homes & Southern Estates brands at the SEhomes of Addison facility"
+   },
+   {
+    "url": "https://www.directionus.com/al/addison/southern-energy-homes-plant-1-service-department",
+    "quote": "Southern Energy Homes Plant 1 Southern Energy Service Department",
+    "snippet": true
+   }
+  ],
+  "note": "Both brands are built at the 'SEhomes of Addison facility' (18025 CR 41). 17921 CR 41 is listed as 'Plant 1 ... Service Department' and has a different phone. Southern Energy historically ran several Addison plants, so these may be two plants on the same road."
+ },
+ {
+  "pair": "3.6",
+  "a": "IC-19435",
+  "b": "IC-96447",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://directlumberanddoor.com/contact-us",
+    "quote": "Denver Lumber & Corporate Offices 1530 E 64th Avenue, Denver, CO 80229 ... Denver Truss 6700 Franklin Street, Denver, CO 80229"
+   }
+  ],
+  "note": "A is the lumber yard and corporate office; B is the truss plant. A probably should not carry a truss capability."
+ },
+ {
+  "pair": "3.7",
+  "a": "IC-22458",
+  "b": "IC-96304",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.americanbuildsupply.com/locations/sanford-truss/",
+    "quote": "Sanford Truss location is located at 901 Wylly Avenue, Sanford, FL 32771, with phone (407) 936-9071",
+    "snippet": true
+   },
+   {
+    "url": "https://www.americanbuildsupply.com/locations/",
+    "quote": "Corporate Headquarters and Sanford Door location is at 2801 W. Airport Blvd, Sanford, FL 32771, with phone (407) 321-3667",
+    "snippet": true
+   }
+  ],
+  "note": "A is ABS's headquarters and door facility; B is the truss plant."
+ },
+ {
+  "pair": "3.8",
+  "a": "IC-93492",
+  "b": "IC-94725",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.cmcmod.com/",
+    "quote": "319 North Main Ave, Suite 200 Springfield, MO 65802"
+   }
+  ],
+  "note": "B's address, 319 N Main Ave Suite 200, is CMC's corporate headquarters, not a factory. The status of A's Cherry St site is unverified."
+ },
+ {
+  "pair": "3.9",
+  "a": "IC-93494",
+  "b": "IC-94725",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.cmcmod.com/",
+    "quote": "319 North Main Ave, Suite 200 Springfield, MO 65802"
+   },
+   {
+    "url": "https://projects.constructconnect.com/companies/2282312-creative-modular-construction-cmc-aka-architectural-design-concepts-llc&find_loc=MO-65802",
+    "quote": "Manufacturing Facility: 2738 East Kearney St, Springfield, MO",
+    "snippet": true
+   }
+  ],
+  "note": "A (Kearney St) is a manufacturing facility; B is the downtown corporate HQ suite."
+ },
+ {
+  "pair": "3.10",
+  "a": "IC-95003",
+  "b": "IC-95004",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://sbj.net/stories/a-conversation-with-lee-loveall,94800",
+    "quote": "operates out of five locations",
+    "snippet": true
+   }
+  ],
+  "note": "CMC runs several Springfield sites; 529 N Price/Prince Ln and 2101 E Central Ct could be two separate production sites. The 0.0 mi distance is probably a town-centroid geocode."
+ },
+ {
+  "pair": "3.11",
+  "a": "IC-94844",
+  "b": "IC-95181",
+  "verdict": "same",
+  "relation": "brand/division",
+  "survivor": "IC-95181",
+  "evidence": [
+   {
+    "url": "https://fischersips.com/about/",
+    "quote": "In 1997, FischerSIPS partnered with Samson Homes to form one of the early SIP Modular plants in the US."
+   },
+   {
+    "url": "https://fischersips.com/about/",
+    "quote": "Our plant is located in Louisville, KY where all manufacturing and fabrication occurs."
+   },
+   {
+    "url": "https://fischersips.com/contact/",
+    "quote": "1844 Northwestern Parkway Louisville, KY 40203 ... (502) 778-5577"
+   }
+  ],
+  "note": "Same phone, addresses 1843 and 1844 across the street (0.04 mi), and FischerSIPS says it has one plant. If the Samson SIP-modular line still runs, keep its modular capability in the merge."
+ },
+ {
+  "pair": "3.12",
+  "a": "IC-95889",
+  "b": "IC-96463",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-95889",
+  "evidence": [
+   {
+    "url": "https://www.epsbuildings.com/contact",
+    "quote": "EPS Missouri 232 Semo Lane Perryville, MO 63775 Phone: 573-547-8187"
+   },
+   {
+    "url": "https://www.sbcacomponents.com/member-directory/energy-panel-structures---perryville",
+    "quote": "Energy Panel Structures - Perryville is located at 3709 PCR 614 in Perryville, MO 63775, and they can be reached at 573-547-8187",
+    "snippet": true
+   }
+  ],
+  "note": "EPS lists one Missouri facility. Same phone, 0.17 mi apart; PCR 614 looks like the rural-route address of the same site. Keep both capabilities (panels and trusses)."
+ },
+ {
+  "pair": "3.13",
+  "a": "IC-51865",
+  "b": "IC-94750",
+  "verdict": "same",
+  "relation": "mailing_address",
+  "survivor": "IC-51865",
+  "evidence": [
+   {
+    "url": "https://www.modulartoday.com/Fairmont-Homes.html",
+    "quote": "Fairmont Homes is located at 502 South Oakland in Nappanee, IN 46550 ... operates under the tradestyle \"Friendship Homes Division\" at this location",
+    "snippet": true
+   }
+  ],
+  "note": "Same phone 574-773-7941. B is a PO Box record named 'Plant 1'; A is 'Friendship 1' at the street address. Now Cavco-Nappanee. Fairmont has had more than one Nappanee plant, so a person should confirm Plant 1 = 502 S Oakland."
+ },
+ {
+  "pair": "3.14",
+  "a": "IC-95495",
+  "b": "IC-95974",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.mitek-us.com/wp-content/uploads/2020/11/MiTek-Manufacturing-Expansion-Tolleson-AZ-08-21-2020.pdf",
+    "quote": "MiTek produces connector plates and MiTek Builder Products in its 261,000 square foot plant at 7890 West Lincoln, and expanded its presence into a neighboring building at 7506 West Lincoln ... produces MiTek's Lateral Systems (Hardy Frame)",
+    "snippet": true
+   }
+  ],
+  "note": "Two separate leased MiTek buildings with different products. B's 'trusses' capability is doubtful: 7890 makes connector plates."
+ },
+ {
+  "pair": "3.15",
+  "a": "IC-95487",
+  "b": "IC-95488",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.procore.com/network/p/dsi-spaceframes-inc-addison",
+    "quote": "locations at both 509 S Westgate St, Addison, IL 60101 and 104 W Interstate Rd Addison, IL 60101",
+    "snippet": true
+   }
+  ],
+  "note": "DSI lists two Addison addresses. It is unknown whether both are fabrication sites or one is an old address."
+ },
+ {
+  "pair": "3.16",
+  "a": "IC-93460",
+  "b": "IC-94896",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://build-at-ava.life/contact",
+    "quote": "6757 Karmen Avenue Northeast, Albertville, Minnesota 55301, United States"
+   },
+   {
+    "url": "https://members.modular.org/manufacturerdirect/Details/advanced-volumetric-alliance-1977112",
+    "quote": "The company also has an office at 7535 River Road NE, Otsego, MN, 55330",
+    "snippet": true
+   }
+  ],
+  "note": "The Otsego River Road address is an office; the factory is in Albertville. B should not carry a plant capability."
+ },
+ {
+  "pair": "3.17",
+  "a": "IC-96561",
+  "b": "IC-96562",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "http://www.madisontrussin.com/",
+    "quote": "5854 N US 421, Madison, IN 47250 ... 5426 N Olive Branch Rd, Madison, IN 47250"
+   }
+  ],
+  "note": "The company website lists both addresses (2 mi apart, same phone) without labels. They could be two sites or a plant plus a yard or office."
+ },
+ {
+  "pair": "3.18",
+  "a": "IC-30869",
+  "b": "IC-96153",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.theblacksheartimes.com/article/237,kelly-s-tanning-salon-spa-to-close-october-31",
+    "quote": "Employees for both companies work alongside each other at facilities on Main, Brantley, Memory and Park Streets and most recently at the former Big Z warehouse on Carter Ave."
+   },
+   {
+    "url": "https://www.theblacksheartimes.com/article/237,kelly-s-tanning-salon-spa-to-close-october-31",
+    "quote": "SAMS purchased that warehouse in December 2021 to accommodate their manufacturing expansion."
+   }
+  ],
+  "note": "Steel & Metal Systems runs several Blackshear facilities. 505 Main St (HQ) and the Carter Ave manufacturing warehouse are separate sites."
+ },
+ {
+  "pair": "3.19",
+  "a": "IC-92753",
+  "b": "IC-92755",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.modulartoday.com/Destiny-Industries.html",
+    "quote": "operates one manufacturing facility located in Moultrie, Georgia",
+    "snippet": true
+   }
+  ],
+  "note": "Old HUD-style records 'Plant I' and 'Plant III' at the same rural-route address with different phones. Destiny (now Cavco) is described today as having one facility (250 RW Bryant Rd). These may be numbered lines at one site, or historical plants. A person must decide."
+ },
+ {
+  "pair": "3.20",
+  "a": "IC-92705",
+  "b": "IC-94147",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-94147",
+  "evidence": [
+   {
+    "url": "https://palomarmodular.com/contact/",
+    "quote": "505 North I-35 East, DeSoto, Texas 75115"
+   },
+   {
+    "url": "https://www.yelp.com/biz/comark-building-systems-desoto",
+    "quote": "COMARK BUILDING SYSTEMS - Updated April 2026 - 505 N Interstate 35 E, Desoto, Texas",
+    "snippet": true
+   },
+   {
+    "url": "https://www.linkedin.com/company/comark-building-systems",
+    "quote": "Riverside, California; Desoto, Texas; Pembroke, North Carolina (manufacturing facility locations)"
+   },
+   {
+    "url": "https://theorg.com/org/palomar-modular-buildings/org-chart/frank-laywell",
+    "quote": "Assistant Production Manager/Production Supervisor for Comark Building System from 2003 to 2011 before continuing with Palomar",
+    "snippet": true
+   }
+  ],
+  "note": "Comark's DeSoto modular plant at 505 N I-35E is now occupied and operated by Palomar Modular Buildings (founded 2010). The site and product type are the same, so the successor relation is inferred. Verify that Comark has no other DeSoto site."
+ },
+ {
+  "pair": "3.21",
+  "a": "IC-20728",
+  "b": "IC-93675",
+  "verdict": "unsure",
+  "relation": "successor",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.modulartoday.com/Homes-of-Merit.html",
+    "quote": "(Division of Champion Homes) ... Location of Factories: Lake City, FL"
+   }
+  ],
+  "note": "Homes of Merit is a Champion division in Lake City. I could not confirm that Champion #261 plant #3 is the Plant 3 at 200 SE Industrial Park Dr, and B has no address. Probably the same plant, but this needs the plant list the earlier agent cited."
+ },
+ {
+  "pair": "3.22",
+  "a": "IC-30815",
+  "b": "IC-96153",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.theblacksheartimes.com/article/237,kelly-s-tanning-salon-spa-to-close-october-31",
+    "quote": "Employees for both companies work alongside each other at facilities on Main, Brantley, Memory and Park Streets and most recently at the former Big Z warehouse on Carter Ave."
+   }
+  ],
+  "note": "Memory St and Carter Ave are distinct Steel & Metal Systems facilities. Some may belong to the sister firm Roll-Up Door, Inc."
+ },
+ {
+  "pair": "3.23",
+  "a": "IC-52615",
+  "b": "IC-53193",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.ptmw.com/contact-us/",
+    "quote": "5040 NW HWY 24 Topeka, KS 66618",
+    "snippet": true
+   }
+  ],
+  "note": "PTMW lists only 5040 NW Hwy 24 in Topeka. A is an air-permit record at 3409 NW US Hwy 24, 0.4 mi away, possibly an older address or a second building. PTMW is a metal fabricator (enclosures and cases), so its IC relevance is doubtful."
+ },
+ {
+  "pair": "3.24",
+  "a": "IC-75229",
+  "b": "IC-96490",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://harbortruss.com/",
+    "quote": "15887 US-101, Brookings, OR 97415 ... (541) 469-2516"
+   },
+   {
+    "url": "https://opencorpdata.com/us-or/27151893",
+    "quote": "Harbor Truss, Incorporated \u00b7 17629 Carpenterville Rd, Brookings, OR 97415",
+    "snippet": true
+   }
+  ],
+  "note": "The current site is 15887 US-101; neither record's address matches it. Harbor Truss Inc (Carpenterville Rd) and Harbor Truss LLC (Marina Heights) look like one business at different addresses over time, but the actual plant site is unclear."
+ },
+ {
+  "pair": "3.25",
+  "a": "IC-90507",
+  "b": "IC-96710",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.bbb.org/us/wa/yakima/profile/trusses/structural-components-inc-1296-56000999",
+    "quote": "Structural Components Inc. is located at 2451 S 38th Ave, Yakima, WA 98903",
+    "snippet": true
+   }
+  ],
+  "note": "No source ties Structural Components to 2203 S 75th Ave, which appears to be a multi-unit (#30) property. It could be an old address, an owner's address or a separate site."
+ },
+ {
+  "pair": "3.26",
+  "a": "IC-94045",
+  "b": "IC-94675",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://lelandsmodular.com/ready-now/",
+    "quote": "Kentucky Factory ... 270-560-0292"
+   },
+   {
+    "url": "https://zmaps.net/company/rolling-acres-cabins-2705244252",
+    "quote": "Rolling Acres Cabins Kentucky,Munfordville, Buildings-Portable ,166 John Logsdon Cemetery Rd,42765",
+    "snippet": true
+   }
+  ],
+  "note": "Leland's/Rolling Acres shows a single 'Kentucky Factory', so they are likely the same. But A ('Factory 1') has no address, and its name implies a source that counts more than one factory. I could not check that source because the search budget ran out."
+ },
+ {
+  "pair": "3.27",
+  "a": "IC-94633",
+  "b": "IC-95181",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-95181",
+  "evidence": [
+   {
+    "url": "https://fischersips.com/contact/",
+    "quote": "1844 Northwestern Parkway Louisville, KY 40203"
+   },
+   {
+    "url": "https://fischersips.com/about/",
+    "quote": "Our plant is located in Louisville, KY where all manufacturing and fabrication occurs."
+   }
+  ],
+  "note": "Same company and website, and it has one plant. '1800 North Western Parkway' is a block-level or spelling variant of 1844 Northwestern Pkwy."
+ },
+ {
+  "pair": "3.28",
+  "a": "IC-96073",
+  "b": "IC-96584",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://local.yahoo.com/info-213572512-midwest-manufacturing-truss-plant-eau-claire/",
+    "quote": "Midwest Manufacturing Truss Plant is located at 5231 Kane Road in Eau Claire, WI 54703",
+    "snippet": true
+   }
+  ],
+  "note": "Midwest Manufacturing (Menards) runs a multi-building Kane Rd campus making trusses, steel roofing, doors and blocks. A ('Building 9', metal building) and B (5311 Kane Rd, trusses) may be different buildings and product lines on one campus. A person should decide whether campus = one plant."
+ },
+ {
+  "pair": "4.1",
+  "a": "IC-51573",
+  "b": "IC-95281",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.yahoo.com/news/articles/developer-turn-empty-office-apartments-230100085.html",
+    "quote": "rezone property at 1423 Lincolnway East to allow the former Commodore Homes office to be transformed into an apartment building",
+    "snippet": true
+   },
+   {
+    "url": "https://kcma.org/company/commodore-homes-indiana",
+    "quote": "The Commodore Corporation is located at 1902 Century Dr, Goshen, IN 46528",
+    "snippet": true
+   }
+  ],
+  "note": "1423 Lincolnway East was Commodore's corporate office (now being converted to apartments); 1902 Century Dr is the Cavco/Commodore Homes of Indiana plant. A is not a plant."
+ },
+ {
+  "pair": "4.2",
+  "a": "IC-96212",
+  "b": "IC-96308",
+  "verdict": "same",
+  "relation": "spelling",
+  "survivor": "IC-96308",
+  "evidence": [
+   {
+    "url": "https://apexstructuralinnovation.com/wp-content/uploads/2019/08/Apex-Drivers-Application-For-Employment.pdf",
+    "quote": "Apex Structural Innovation, LLC 14011 Harrison Road Romulus MI 48174",
+    "snippet": true
+   },
+   {
+    "url": "https://www.waze.com/live-map/directions/us/mi/romulus/apex-structural-innovation-llc?to=place.ChIJIWZZx6FIO4gRsUo8nZQWqkY",
+    "quote": "Apex Structural Innovation LLC, 14011 Harrison St, Romulus",
+    "snippet": true
+   }
+  ],
+  "note": "Same street number, name, phone and website; Street vs Road is a suffix variant. Company documents use Harrison Road."
+ },
+ {
+  "pair": "4.3",
+  "a": "IC-94725",
+  "b": "IC-95004",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "319 N MAIN AVE STE 200, SPRINGFIELD MO 65806-1203"
+   },
+   {
+    "url": "https://www.cmcmod.com/",
+    "quote": "Corporate Headquarters: 319 North Main Ave, Suite 200 Springfield, MO 65802"
+   },
+   {
+    "url": "https://psc.mo.gov/CMSInternetData/ManufacturedHousing/Manufacturer/ACTIVE%20MOD%209-23-25.pdf",
+    "quote": "Creative Modular Construction has a facility at 2101 E Central Cr (Central Circle), Springfield, MO 65802",
+    "snippet": true
+   }
+  ],
+  "note": "319 N Main Ave Ste 200 is CMC's HQ/mailing address shared by all its registered plants (TDLR lists it as mailing address for four separate physical sites); 2101 E Central is a separately registered facility. Do not merge plant into HQ record."
+ },
+ {
+  "pair": "4.4",
+  "a": "IC-94039",
+  "b": "IC-94828",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://oas.dhs.in.gov/dfbs/code/main.do?method=filter&filter=byCity&manufacturerCity=Ellaville",
+    "quote": "Promod Manufacturing - 1619 State Road 26 West, Ellaville, GA 31806; PROMOD/Southeast - 603 South Broad St, Ellaville, GA 31806"
+   },
+   {
+    "url": "https://members.modular.org/member-directory/Details/promod-manufacturing-1923542",
+    "quote": "PO Box 1310, 603 South Broad Street , Ellaville , GA , 31806"
+   }
+  ],
+  "note": "Indiana DHS carries two separate ProMod manufacturer entries at the two addresses (603 S Broad is the former Southeast Modular plant); MBI says one dual-line plant on a 24.5-acre campus. Cannot tell whether these are one campus with two addresses or two plants."
+ },
+ {
+  "pair": "4.5",
+  "a": "IC-01303",
+  "b": "IC-94984",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-94984",
+  "evidence": [
+   {
+    "url": "https://claytonaddisonhbf.com/contact/",
+    "quote": "17921 Co Rd 41 Addison, AL 35540 ... (256) 747-1509"
+   }
+  ],
+  "note": "Southern Estates record has the identical street address and the identical phone (256-747-1509) as Clayton Addison's plant contact page; Clayton is the current operator at that address. Name flag 'names_unrelated' is explained by succession, but no source found that names Southern Estates explicitly."
+ },
+ {
+  "pair": "4.6",
+  "a": "IC-93520",
+  "b": "IC-93943",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-93520",
+  "evidence": [
+   {
+    "url": "https://oas.dhs.in.gov/dfbs/code/main.do?method=view&manufacturerNameId=4142",
+    "quote": "Gas Chromatography Systems Maxum LLC ... Facility Address: 5980 W Sam Houston Pkwy N Suite 500 Houston, TX 77041"
+   },
+   {
+    "url": "https://www.valmet.com/news/press-releases/2024/valmet-has-completed-the-acquisition-of-the-process-gas-chromatography-business-from-siemens/",
+    "quote": "Systems Integration, and Customer Services offering"
+   },
+   {
+    "url": "https://www.hydrocarbonengineering.com/gas-processing/18072023/valmet-acquires-siemens-process-gas-chromatography-business/",
+    "quote": "Valmet completed the acquisition of the Process Gas Chromatography & Integration business from Siemens AG, with the acquisition effective as of April 2, 2024",
+    "snippet": true
+   }
+  ],
+  "note": "Same suite (Ste 500). Siemens' process GC & systems-integration business (which builds the analyzer shelters) was sold to Valmet in April 2024 and now runs as Gas Chromatography Systems Maxum LLC at that suite. Person should confirm Siemens has no separate fabrication left there."
+ },
+ {
+  "pair": "4.7",
+  "a": "IC-93491",
+  "b": "IC-94725",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "IHM-913 CREATIVE MODULAR CONSTRUCTION 10/7/2026 1012 N FARM ROAD 123, SPRINGFIELD, MO 65802-6616 319 N MAIN AVE STE 200"
+   }
+  ],
+  "note": "1012 N Farm Road 123 is a registered physical plant; 319 N Main Ave Ste 200 is the HQ/mailing address shared by four CMC plants."
+ },
+ {
+  "pair": "4.8",
+  "a": "IC-93492",
+  "b": "IC-93495",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "IHM-899 CREATIVE MODULAR CONSTRUCTION 9/8/2026 3228 E CHERRY ST, SPRINGFIELD, MO"
+   },
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "IHM-868 CREATIVE MODULAR CONSTRUCTION 5/2/2027 529 N PRINCE LN, SPRINGFIELD, MO"
+   }
+  ],
+  "note": "Separate TDLR registrations, each with its own physical address."
+ },
+ {
+  "pair": "4.9",
+  "a": "IC-93494",
+  "b": "IC-93495",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "IHM-770 CREATIVE MODULAR CONSTRUCTION, LLC 11/29/2026 2738 E KEARNEY ST, SPRINGFIELD, MO"
+   },
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "IHM-868 CREATIVE MODULAR CONSTRUCTION 5/2/2027 529 N PRINCE LN, SPRINGFIELD, MO"
+   }
+  ],
+  "note": "Separate TDLR registrations at different physical addresses."
+ },
+ {
+  "pair": "4.10",
+  "a": "IC-95003",
+  "b": "IC-96155",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "IHM-868 CREATIVE MODULAR CONSTRUCTION 5/2/2027 529 N PRINCE LN, SPRINGFIELD, MO"
+   },
+   {
+    "url": "https://projects.constructconnect.com/companies/2282312-creative-modular-construction-cmc-aka-architectural-design-concepts-llc&find_loc=MO-65802",
+    "quote": "2821 West Chestnut Expressway Suite D, Springfield, MO 65802",
+    "snippet": true
+   }
+  ],
+  "note": "A '529 N PRICE LN' is a typo of the 529 N Prince Ln plant (which is IC-93495); B is an office suite on W Chestnut Expwy. Not one site. Note A likely duplicates IC-93495 instead."
+ },
+ {
+  "pair": "4.11",
+  "a": "IC-94625",
+  "b": "IC-96294",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://affordabletruss.com",
+    "quote": "3191 New Hope Road, New Haven KY 40051-5227, United States"
+   },
+   {
+    "url": "https://www.bbb.org/us/ky/new-haven/profile/trusses/affordable-truss-inc-0402-2038306",
+    "quote": "3191 New Hope Rd"
+   }
+  ],
+  "note": "Company site and BBB give only 3191 New Hope Rd; 225 Dee Head Road appears in directories but nothing says whether it is an old address, the owner's address, or a second yard. Likely same (one plant), unproven."
+ },
+ {
+  "pair": "4.12",
+  "a": "IC-94139",
+  "b": "IC-94140",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.lasfm.org/media/esrf0unj/ib_manufacturer_approved_list_as_of_7-26-2024.pdf",
+    "quote": "WHITLEY MANUFACTURING CO INC 3089 FORT WAYNE RD, ROCHESTER, IN 46975"
+   },
+   {
+    "url": "https://www.lasfm.org/media/esrf0unj/ib_manufacturer_approved_list_as_of_7-26-2024.pdf",
+    "quote": "WHITLEY MANUFACTURING CO., INC. DBA MODULAR BUILDERS 2 2756 E. FORT WAYNE ROAD, ROCHESTER, IN 46975"
+   }
+  ],
+  "note": "Louisiana carries two separate IB-manufacturer approvals (different LAIB numbers) for the two Rochester addresses; Plant #1 and Plant #2."
+ },
+ {
+  "pair": "4.13",
+  "a": "IC-51865",
+  "b": "IC-94751",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://permits.air.idem.in.gov/11290f.pdf",
+    "quote": "Source Address: Fairmont Homes, 502 S Oakland Avenue, Nappanee, Indiana 46550"
+   },
+   {
+    "url": "https://permits.air.idem.in.gov/11290f.pdf",
+    "quote": "Fairmont Homes, Inc. P.O. Box 27 Nappanee, IN 46550"
+   }
+  ],
+  "note": "P O Box 27 is Fairmont's corporate mailing box for the whole Nappanee complex, which holds several plants (Friendship 1 is one). Nothing ties 'Showcase Homes' to the Friendship 1 plant specifically; it could be another plant in the complex."
+ },
+ {
+  "pair": "4.14",
+  "a": "IC-10190",
+  "b": "IC-94368",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.bldr.com/location/surprise-az-truss-foxfire/SURFAZMF",
+    "quote": "Surprise AZ Truss (Foxfire) 13550 W. Foxfire Dr. Surprise, AZ 85378 (602) 344-6240"
+   },
+   {
+    "url": "https://www.bldr.com/location/surprise-az-truss-peoria/SURPAZMF",
+    "quote": "Surprise AZ Truss (Peoria) 13550 W. Peoria Ave. Surprise, AZ 85379 (623) 584-8151"
+   }
+  ],
+  "note": "Builders FirstSource lists two separate Surprise truss locations with distinct addresses, ZIPs and phones."
+ },
+ {
+  "pair": "4.15",
+  "a": "IC-95187",
+  "b": "IC-95589",
+  "verdict": "same",
+  "relation": "mailing_address",
+  "survivor": "IC-95187",
+  "evidence": [
+   {
+    "url": "https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&original_query_param=NAME&query_string=4206406&original_query_string=SUPERIOR+WALLS+OF+NORTH+DAKOTA+LLC",
+    "quote": "Physical Address: 2512 LOCKHEED DRIVE BISMARCK, ND 58504 ... Mailing Address: 3100 N 14TH ST BISMARCK, ND 58503 ... (701) 389-2671"
+   },
+   {
+    "url": "https://magnumstone.com/supplier/superior-precast-bismarck/",
+    "quote": "Superior Precast \u2013 Bismarck ... 2512 Lockheed Drive, Bismarck, North Dakota"
+   }
+  ],
+  "note": "FMCSA lists 2512 Lockheed as physical and 3100 N 14th St as mailing, with B's phone; the Superior Precast dba is also at Lockheed."
+ },
+ {
+  "pair": "4.16",
+  "a": "IC-59600",
+  "b": "IC-96085",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.schererbros.com/locations/",
+    "quote": "10751 67th St. NE, Albertville, MN 55301 ... Phone: 763-497-3324"
+   },
+   {
+    "url": "https://www.yellowpages.com/albertville-mn/mip/scherer-bros-truss-manufacturing-no-lumber-467281422",
+    "quote": "11920 53rd St NE, Albertville, MN 55301 is the address for Scherer Bros Lumber Co",
+    "snippet": true
+   }
+  ],
+  "note": "Scherer's own site lists only 10751 67th St NE (truss plant) in Albertville. Directories put 'Scherer Bros Truss Manufacturing' at 11920 53rd St NE, maybe an older address or a lumber yard/office. Likely the same truss operation, but not proven."
+ },
+ {
+  "pair": "4.17",
+  "a": "IC-94332",
+  "b": "IC-94530",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [],
+  "note": "Search budget ran out before checking. These are two differently named BFS locations (Fort Worth Truss at 7001 Enterprise Ave vs Hurst Components on Hurst Blvd) with different phones; probably two sites. Do not merge without a check."
+ },
+ {
+  "pair": "4.18",
+  "a": "IC-86695",
+  "b": "IC-94363",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [],
+  "note": "Not checked (search budget used up). Two differently named BFS truss locations (Henderson vs Shortwood) with different addresses and phones; probably two plants."
+ },
+ {
+  "pair": "4.19",
+  "a": "IC-93602",
+  "b": "IC-93603",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://oas.dhs.in.gov/dfbs/code/main.do?method=view&manufacturerNameId=910",
+    "quote": "Facility 2: \"1212 N. Rockford Ave. Tulsa, OK 74110\" Facility 3: \"909 N. Wheeling Ave Tulsa, OK 74110\""
+   },
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/4-Manufacturers_List.pdf",
+    "quote": "IHM-948 SAGEBRUSH BUILDING SYSTEMS 1/28/2027 1212 N ROCKFORD AVE, TULSA, OK 74106-5035 909 N WHEELING AVE, TULSA OK"
+   }
+  ],
+  "note": "Indiana DHS lists 1212 N Rockford and 909 N Wheeling as separate facilities of Ventaire/Sagebrush (909 is also corporate). TDLR uses 909 Wheeling as mailing only. Two sites."
+ },
+ {
+  "pair": "4.20",
+  "a": "IC-95599",
+  "b": "IC-95600",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [],
+  "note": "Not checked (search budget used up; company site returned 503). Same name, different addresses and phones, 3.9 mi apart."
+ },
+ {
+  "pair": "4.21",
+  "a": "IC-22917",
+  "b": "IC-22918",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [],
+  "note": "Not checked (search budget used up). Record names say Plant 4 vs Plant 2, at different street addresses, which suggests two plants. Do not merge."
+ },
+ {
+  "pair": "4.22",
+  "a": "IC-30953",
+  "b": "IC-94029",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://panelbuilt.com/contact/",
+    "quote": "~30,000 Sq. Ft. Mezzanine Facility: 302 Beasley St., Blairsville Ga 30512"
+   },
+   {
+    "url": "https://panelbuilt.com/contact/",
+    "quote": "~20,000 Sq. Ft. Mezzanines/Towers Facility: 303 Beasley St., Blairsville, GA 30512"
+   }
+  ],
+  "note": "Panel Built lists 302 and 303 Beasley St as separate production facilities."
+ },
+ {
+  "pair": "4.23",
+  "a": "IC-53148",
+  "b": "IC-53198",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [],
+  "note": "Not checked (search budget used up). Geocodes 0.02 mi apart, so possibly one site with two addresses, but this is unverified."
+ },
+ {
+  "pair": "4.24",
+  "a": "IC-75229",
+  "b": "IC-75230",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.harbortruss.com/",
+    "quote": "Physical Location: 15887 US-101, Brookings, OR 97415"
+   }
+  ],
+  "note": "Harbor Truss's current site gives a third address (15887 US-101); neither record's address is confirmed. Both may be stale. A person should check."
+ },
+ {
+  "pair": "4.25",
+  "a": "IC-90670",
+  "b": "IC-96028",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://nobletrusswa.com",
+    "quote": "355 Malaga Alcoa Hwy, Wenatchee WA"
+   }
+  ],
+  "note": "Company site confirms the plant at 355 Malaga Alcoa Hwy (B). Nothing found on 1510 Alexander Pl (A has no phone); it may be an office or old address, but this is unverified."
+ },
+ {
+  "pair": "4.26",
+  "a": "IC-94045",
+  "b": "IC-94046",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [],
+  "note": "No address on either record; site returned 503. Names say Factory 1 vs Factory 2 with different capabilities, which suggests two factories. Do not merge."
+ },
+ {
+  "pair": "4.27",
+  "a": "IC-94726",
+  "b": "IC-94727",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [],
+  "note": "Not checked (search budget used up). 5655 vs 5765 W 400 S, 0.15 mi apart; could be one sawmill or two adjacent operations."
+ },
+ {
+  "pair": "4.28",
+  "a": "IC-96116",
+  "b": "IC-96710",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [],
+  "note": "The structuralcomponents.org site shows no Yakima address (it may not be this firm). 2107 Terrace Heights Dr (EPA record) vs 2451 S 38th Ave are 5 mi apart; not resolved."
+ },
+ {
+  "pair": "5.1",
+  "a": "IC-51573",
+  "b": "IC-95289",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": null,
+    "quote": "Commodore Homes of Indiana (a division of Commodore Homes) is located at 1902 Century Drive in Goshen, IN 46526, which serves as their manufacturing facility.",
+    "snippet": true,
+    "search_query": "Commodore Homes Goshen",
+    "quote_note": "WebSearch result summary text, not a page quote"
+   }
+  ],
+  "note": "B has no street address; A's 1423 Lincolnway E is the Commodore office/showroom, the Goshen plant is 1902 Century Dr; cannot tell which site B is."
+ },
+ {
+  "pair": "5.2",
+  "a": "IC-68905",
+  "b": "IC-68965",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://csigroup.com",
+    "quote": "9 Commercial Street Hudson, NH 03051"
+   }
+  ],
+  "note": "Company site lists only 9 Commercial St; nothing found on 14 Commercial St (0.14 mi away) - could be a second yard/building or an address error."
+ },
+ {
+  "pair": "5.3",
+  "a": "IC-94725",
+  "b": "IC-95003",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.cmcmod.com/",
+    "quote": "319 North Main Ave, Suite 200 Springfield, MO 65802"
+   },
+   {
+    "url": "https://sgfcitizen.org/economy-growth/business/7-brew-builder-breaks-ground-on-30-million-springfield-complex/",
+    "quote": "Right now, we're working out of five different buildings."
+   }
+  ],
+  "note": "A is CMC's main office (Suite 200, 319 N Main); B (529 N Price Ln) is presumably one of CMC's five Springfield buildings - not verified."
+ },
+ {
+  "pair": "5.4",
+  "a": "IC-83774",
+  "b": "IC-83781",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.mhao.org/manufacturers-list/2022/12/19/jessup-housing-1",
+    "quote": "Jessup Housing 2 ... 1101 Foundation Dr. Waco, TX 76712"
+   },
+   {
+    "url": "https://www.jessuphousing.com/contact/",
+    "quote": "1001 West Loop 340 Waco, TX 76712"
+   }
+  ],
+  "note": "Jessup Plant 1 (W Loop 340) and Plant 2 (Foundation Dr) are separate plants."
+ },
+ {
+  "pair": "5.5",
+  "a": "IC-95036",
+  "b": "IC-95766",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.manufacturedhomes.com/manufacturer/2691/cavalier-homes/addison/",
+    "quote": "32 Wilson Blvd, Addison, AL 35540"
+   }
+  ],
+  "note": "Same phone; 32 vs 47 Wilson Blvd. Could be one Cavalier campus or a separate Clayton Tiny Homes plant; not resolved."
+ },
+ {
+  "pair": "5.6",
+  "a": "IC-94334",
+  "b": "IC-94341",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.bldr.com/location/groveland-fl-truss/HGLFMF",
+    "quote": "8612 Justice Place Groveland, FL 34736"
+   },
+   {
+    "url": "https://www.bldr.com/location/lake-county-fl-truss/LACOFLMF",
+    "quote": "19900 Independence Blvd, Groveland, FL 34736"
+   }
+  ],
+  "note": "BFS lists two separate truss locations in Groveland (Groveland FL Truss, Lake County FL Truss) with different phones."
+ },
+ {
+  "pair": "5.7",
+  "a": "IC-93491",
+  "b": "IC-93493",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://sgfcitizen.org/economy-growth/business/7-brew-builder-breaks-ground-on-30-million-springfield-complex/",
+    "quote": "Right now, we're working out of five different buildings."
+   }
+  ],
+  "note": "Two distinct Springfield street addresses; CMC operates out of five buildings. Specific addresses not verified online."
+ },
+ {
+  "pair": "5.8",
+  "a": "IC-93492",
+  "b": "IC-95003",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://sgfcitizen.org/economy-growth/business/7-brew-builder-breaks-ground-on-30-million-springfield-complex/",
+    "quote": "Right now, we're working out of five different buildings."
+   }
+  ],
+  "note": "3228 E Cherry vs 529 N Price Ln - distinct CMC buildings; addresses not verified online."
+ },
+ {
+  "pair": "5.9",
+  "a": "IC-93494",
+  "b": "IC-95003",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://sgfcitizen.org/economy-growth/business/7-brew-builder-breaks-ground-on-30-million-springfield-complex/",
+    "quote": "Right now, we're working out of five different buildings."
+   },
+   {
+    "url": null,
+    "quote": "the company also has a location at 2738 East Kearney Street, Springfield, MO",
+    "snippet": true,
+    "search_query": "Creative Modular Construction",
+    "quote_note": "WebSearch result summary text, not a page quote"
+   }
+  ],
+  "note": "Kearney St is a known CMC location; Price Ln is a different building."
+ },
+ {
+  "pair": "5.10",
+  "a": "IC-95004",
+  "b": "IC-96155",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://sgfcitizen.org/economy-growth/business/7-brew-builder-breaks-ground-on-30-million-springfield-complex/",
+    "quote": "Right now, we're working out of five different buildings."
+   },
+   {
+    "url": "https://springfieldareachamberofcommerce.growthzoneapp.com/directory/Details/creative-modular-construction-cmc-2881023",
+    "quote": "2821 W. Chestnut Expy Suite D, Springfield MO 65802"
+   }
+  ],
+  "note": "Chestnut Expy and E Central Court are 4.4 mi apart; separate CMC buildings."
+ },
+ {
+  "pair": "5.11",
+  "a": "IC-90711",
+  "b": "IC-90780",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": null,
+    "quote": "Phoenix Truss Corporation is located at 1621 Vantage Highway, Ellensburg, WA 98926 (note: some sources list slightly different addresses like 1619 or 2015 Old Hwy 10).",
+    "snippet": true,
+    "search_query": "Phoenix Truss Ellensburg",
+    "quote_note": "WebSearch result summary text, not a page quote"
+   }
+  ],
+  "note": "Same phone, small firm (5-9 staff), likely one plant on Vantage Hwy; '5005 Ruby' not found anywhere. Lean same but unverified."
+ },
+ {
+  "pair": "5.12",
+  "a": "IC-94244",
+  "b": "IC-94677",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://comstruc.com/contact-us/",
+    "quote": "655 N. Tomahawk Trail, Nappanee, IN 46550. United States"
+   },
+   {
+    "url": "https://www.yellowpages.com/goshen-in/mip/speed-space-6344180",
+    "quote": "Commercial Structures Corp 65213 County Road 31, Goshen, IN 46528",
+    "snippet": true
+   }
+  ],
+  "note": "Speed Space is a division of Commercial Structures Corp; its Goshen site is 15 mi from the parent's Nappanee plant. B record wrongly carries speedspace.org website."
+ },
+ {
+  "pair": "5.13",
+  "a": "IC-51865",
+  "b": "IC-51867",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": null,
+    "quote": "Fairmont Homes, LLC is located at 502 S Oakland Ave Nappanee, IN ... Additionally, Fairmont Homes, LLC has a location at 2181 E Market St Nappanee",
+    "snippet": true,
+    "search_query": "Fairmont Homes Nappanee",
+    "quote_note": "WebSearch result summary text, not a page quote"
+   }
+  ],
+  "note": "Fairmont has separate S Oakland and E Market St sites; 'North portion' at 1961 E Market looks like a different plant than Friendship 1. Moderate confidence."
+ },
+ {
+  "pair": "5.14",
+  "a": "IC-95619",
+  "b": "IC-96144",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://ecpcompany.com/",
+    "quote": "14616 Wagner Lane, Rapid City, South Dakota 57701, United States"
+   },
+   {
+    "url": null,
+    "quote": "22466 Bennett Road in Rapid City, SD is the address for Engineered Concrete Projects, LLC, with phone number 605-526-8877.",
+    "snippet": true,
+    "search_query": "22466 Bennett Rapid City",
+    "quote_note": "WebSearch result summary text, not a page quote"
+   }
+  ],
+  "note": "Company site lists only Wagner Ln; 22466 Bennett Rd (5-acre parcel with a house) also tied to ECP in a 2024 GFP planholder list. Possibly owner/mailing address or old yard; not confirmed."
+ },
+ {
+  "pair": "5.15",
+  "a": "IC-93195",
+  "b": "IC-95038",
+  "verdict": "same",
+  "relation": "successor",
+  "survivor": "IC-95038",
+  "evidence": [
+   {
+    "url": "https://members.nc-mha.org/active-member-directory/Details/cavco-crouse-3630023",
+    "quote": "235 Anthony Grove Road , Crouse , NC , 28033"
+   },
+   {
+    "url": null,
+    "quote": "R-Anell Homes, a Cavco Industries company, is now operating as Cavco-Crouse, located at 235 Anthony Grove Rd. in Crouse.",
+    "snippet": true,
+    "search_query": "Cavco Crouse R-Anell",
+    "quote_note": "WebSearch result summary text, not a page quote"
+   }
+  ],
+  "note": "R-Anell Crouse plant rebranded Cavco-Crouse at the same address."
+ },
+ {
+  "pair": "5.16",
+  "a": "IC-93501",
+  "b": "IC-93993",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://deerruncabins.com/contact/",
+    "quote": "Campbellsville, Kentucky"
+   }
+  ],
+  "note": "Same address; no source links Appalachian Enterprises (NV phone) to Deer Run Cabins; one search snippet tied the address to Silver Lake Structures & Cabins. Possibly co-tenants or a holding entity."
+ },
+ {
+  "pair": "5.17",
+  "a": "IC-84342",
+  "b": "IC-86805",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.modularhomes.com/manufacturer/2019/cavco-lake-arlington/fort-worth/",
+    "quote": "4805 E. Loop 820 South , Fort Worth, TX 76119"
+   },
+   {
+    "url": "https://www.manufacturedhomes.com/manufacturer/3368/palm-harbor-homes/fort-worth/?pg=2",
+    "quote": "6991 Bowman Roberts Rd, Fort Worth, TX 76179"
+   }
+  ],
+  "note": "Cavco Lake Arlington and Cavco Fort Worth are two separate Cavco plants 16 mi apart; earlier note's 'same' reasoning was wrong."
+ },
+ {
+  "pair": "5.18",
+  "a": "IC-94333",
+  "b": "IC-95213",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": null,
+    "quote": "The Green Cove Springs manufacturing location is located at 4750 J P Hall Blvd, Green Cove Springs, FL 32043.",
+    "snippet": true,
+    "search_query": "Innovative Construction Group Green Cove Springs",
+    "quote_note": "WebSearch result summary text, not a page quote"
+   }
+  ],
+  "note": "Neither address matches the known ICG plant (4750 JP Hall Blvd, now Builders FirstSource); both records carry the city's website. Records need cleanup by a person."
+ },
+ {
+  "pair": "5.19",
+  "a": "IC-85937",
+  "b": "IC-94119",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-85937",
+  "evidence": [
+   {
+    "url": "https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string=225577",
+    "quote": "1767 CR 1000 CENTER, TX 75935"
+   },
+   {
+    "url": "https://www.bbb.org/us/tx/center/profile/portable-buildings/general-shelters-of-texas-1075-22001476",
+    "quote": "1639 TX-87"
+   }
+  ],
+  "note": "Same company, same phone, geocodes 0.09 mi apart: Hwy 87 frontage vs CR 1000 side of one site. Capabilities differ (metal bldg vs wood modular) - keep both on merge."
+ },
+ {
+  "pair": "5.20",
+  "a": "IC-00746",
+  "b": "IC-94166",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.sunshinehomes-inc.com/contact-us/",
+    "quote": "100 Sunshine Ave, Red Bay, AL 35582"
+   }
+  ],
+  "note": "Sunshine Homes lists only 100 Sunshine Ave; 509 6th St W unverified (Sunshine Mills pet food is at 500 6th St SW - possible mix-up, or an old Sunshine Homes plant)."
+ },
+ {
+  "pair": "5.21",
+  "a": "IC-22920",
+  "b": "IC-92810",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": null,
+    "quote": "the plants in Elizabethtown and Alma, Ga., weren't included in any sale and shut down on August 7.",
+    "snippet": true,
+    "search_query": "Fleetwood Alma GA",
+    "quote_note": "WebSearch result summary text, not a page quote"
+   }
+  ],
+  "note": "Fleetwood's Alma plant(s) closed in 2009; whether 32 W Industrial Blvd and 140 Business Blvd were one or two plants is unknown. Existence of both should be reviewed."
+ },
+ {
+  "pair": "5.22",
+  "a": "IC-50844",
+  "b": "IC-95646",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://qcbr.org/places/csi-homes-csi-manufacturing-inc/",
+    "quote": "419 E Court St, Cambridge, Illinois 61238"
+   }
+  ],
+  "note": "Same company; Route 81 E vs 419 E Court St may be the same site (snippet references 'Highway 81 East'), but not confirmed."
+ },
+ {
+  "pair": "5.23",
+  "a": "IC-57612",
+  "b": "IC-95226",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": null,
+    "quote": "14173 Graceham Rd, Thurmont, MD 21788 is the address for NVHomes ... The property appears to be 45.80 acres in size with a zoning designation of LI (Light Industrial).",
+    "snippet": true,
+    "search_query": "14173 Graceham Thurmont",
+    "quote_note": "WebSearch result summary text, not a page quote"
+   }
+  ],
+  "note": "210 N Carroll St is the widely listed NVR Building Products address; 14173 Graceham Rd (0.33 mi) is a 45.8-acre LI parcel listed as NVHomes - may be the plant parcel itself. Needs a map/parcel check."
+ },
+ {
+  "pair": "5.24",
+  "a": "IC-75230",
+  "b": "IC-96490",
+  "verdict": "unsure",
+  "relation": "successor",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://harbortruss.com/",
+    "quote": "15887 US-101, Brookings, OR 97415"
+   }
+  ],
+  "note": "Harbor Truss Inc vs Harbor Truss LLC; current plant is 15887 US-101, matching neither record. Likely one business over time, but neither address verified."
+ },
+ {
+  "pair": "5.25",
+  "a": "IC-90670",
+  "b": "IC-90710",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=USDOT&query_string=1847042",
+    "quote": "355 MALAGA ALCOA HWY WENATCHEE, WA 98801"
+   }
+  ],
+  "note": "Noble Truss's documented address is 355 Malaga Alcoa Hwy; neither Alexander Pl nor Yarrow Rd verified."
+ },
+ {
+  "pair": "5.26",
+  "a": "IC-94046",
+  "b": "IC-94675",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://zmaps.net/company/rolling-acres-cabins-2705244252",
+    "quote": "Rolling Acres Cabins Kentucky,Munfordville, Buildings-Portable ,166 John Logsdon Cemetery Rd,42765",
+    "snippet": true
+   }
+  ],
+  "note": "A is 'Factory 2' with no address, implying a second factory; cannot confirm."
+ },
+ {
+  "pair": "5.27",
+  "a": "IC-94828",
+  "b": "IC-94893",
+  "verdict": "unsure",
+  "relation": "co-tenants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://sunbeltmodular.com/about/sunbelt-companies/",
+    "quote": "ProMod Manufacturing ... 603 S Broad St, Ellaville, GA 31806 ... ProBox Manufacturing ... 1619 GA-26, Ellaville, GA 31806"
+   }
+  ],
+  "note": "Sunbelt lists ProMod (603 S Broad St, 140,000 SF) and ProBox (1619 GA-26, 45,000 SF) as separate companies; A's Promod record carries ProBox's address - either a mislabeled ProMod record or ProBox succeeded ProMod at that site."
+ },
+ {
+  "pair": "6.1",
+  "a": "IC-10289",
+  "b": "IC-94950",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://members.modular.org/manufacturerwholesale/Details/phoenix-modular-1969374",
+    "quote": "5301 W. Madison St. , Phoenix , AZ , 85043 United States"
+   },
+   {
+    "url": "https://members.modular.org/member-directory/Details/sunbelt-modular-inc-1969482?rendermode=print",
+    "quote": "3033 N. Central Ave, Ste 300, Phoenix, AZ, 85012 United States"
+   },
+   {
+    "url": "https://members.modular.org/member-directory/Details/sunbelt-modular-inc-1969482?rendermode=print",
+    "quote": "parent company of Amtex Corp, Indicom Buildings, Inc; Phoenix Modular, Corp and MR Steel Corp"
+   }
+  ],
+  "note": "A is the Phoenix Modular plant (Sunbelt subsidiary); B is Sunbelt's corporate office (Suite 300, N Central Ave). Not two plants: B is an office record that should probably not carry plant capability - needs a person."
+ },
+ {
+  "pair": "6.2",
+  "a": "IC-94365",
+  "b": "IC-96361",
+  "verdict": "same",
+  "relation": "brand/division",
+  "survivor": "IC-94365",
+  "evidence": [
+   {
+    "url": "https://www.bldr.com/location/spenard-builders-supply-eklutna-ak-truss/ANCHAKMF",
+    "quote": "Spenard Builders Supply Eklutna AK Truss ... 28275 Denaina Elders Rd., Chugiak, AK 99567"
+   },
+   {
+    "url": "https://www.sbcacomponents.com/member-directory/builders-firstsource---anchorage",
+    "quote": "Builders FirstSource has a location at 28273 Denaina Elders Rd, Chugiak, AK 99567 ... also known as the Spenard Builders Supply Eklutna Truss Plant",
+    "snippet": true
+   }
+  ],
+  "note": "Spenard (BFS subsidiary) Eklutna truss plant; 28275 vs 28273 is an address variant of the same site. Survivor A matches bldr.com's own location page."
+ },
+ {
+  "pair": "6.3",
+  "a": "IC-94725",
+  "b": "IC-96155",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.cmcmod.com/",
+    "quote": "319 North Main Ave, Suite 200 Springfield, MO 65802"
+   },
+   {
+    "url": "https://sgfcitizen.org/springfield-culture/springfield-company-behind-7-brew-buildings-sprouting-across-u-s/",
+    "quote": "The bulk of the work happens in the manufacturing shop, located at 2821 W. Chestnut Expressway"
+   },
+   {
+    "url": "https://sgfcitizen.org/economy-growth/business/7-brew-builder-breaks-ground-on-30-million-springfield-complex/",
+    "quote": "Right now, we're working out of five different buildings."
+   }
+  ],
+  "note": "CMC runs several Springfield buildings: 319 N Main Suite 200 is the office address; 2821 W Chestnut is the manufacturing shop. Person should decide whether the office record (A) belongs in the DB at all."
+ },
+ {
+  "pair": "6.4",
+  "a": "IC-83778",
+  "b": "IC-83779",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://wacotrib.com/news/business/clayton-homes-neighborworks-waco-join-forces-for-affordable-housing/article_a598860b-6aa4-5e83-8ee0-40bf222d0b86.html",
+    "quote": "Clayton Homes operates two production facilities locally in Waco, both on Imperial Drive",
+    "snippet": true
+   },
+   {
+    "url": "https://www.mhao.org/manufacturers-list/2022/12/19/clayton-homes-waco-2",
+    "quote": "Clayton Homes-Waco 2",
+    "snippet": true
+   }
+  ],
+  "note": "Waco 1 (6800 Imperial) and Waco 2 (7001 Imperial) are separate plants with separate phones."
+ },
+ {
+  "pair": "6.5",
+  "a": "IC-00457",
+  "b": "IC-04597",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://valleyjoist.com/contact/",
+    "quote": "Fort Payne, AL (East) ... 2350 Jordan Rd SW, Fort Payne, AL 35967 ... 256 845 2330"
+   },
+   {
+    "url": "https://www.dunnbuildingcompany.com/project/valley-joist-new-plant-facility/",
+    "quote": "64,320 SF Joist Plant and 10,602 SF Office / Maintenance Building"
+   },
+   {
+    "url": "https://www.yelp.com/biz/ebsco-valley-joist-fort-payne",
+    "quote": "EBSCO Valley Joist - Official Yelp Page - Updated August 2026 - 3019 Gault Ave N, Fort Payne",
+    "snippet": true
+   }
+  ],
+  "note": "Looks like a relocation: Valley Joist built a new plant (Jordan Rd) after a 2019 deal to stay in Fort Payne; Gault Ave N is the older site. Not the same building; need to confirm Gault Ave closed before merging/retiring A."
+ },
+ {
+  "pair": "6.6",
+  "a": "IC-94340",
+  "b": "IC-96373",
+  "verdict": "different",
+  "relation": "store_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.bldr.com/location/kingston-wa-truss/KINGWAMF",
+    "quote": "Kingston WA Truss ... 26855 State Hwy 104, Kingston, WA 98346 ... (360) 297-6020"
+   },
+   {
+    "url": "https://www.cylex.us.com/company/builders-firstsource-9856432.html",
+    "quote": "26343 Bond Rd NE #1, Kingston, WA 98346, which offers lumber and building materials ... pro retail store",
+    "snippet": true
+   }
+  ],
+  "note": "BFS has a truss manufacturing facility on SR 104 and a separate lumber yard / pro store on Bond Rd with a different phone. B could be relabelled as non-plant; geocodes 0.05 mi apart - person may wish to confirm B isn't a plant."
+ },
+ {
+  "pair": "6.7",
+  "a": "IC-93491",
+  "b": "IC-96155",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/1-Bldr%20List.pdf",
+    "quote": "Creative Modular Construction has multiple registered locations ... including addresses at 529 N Prince Ln, 1012 N Farm Rd 123, 1630 N Eldon Ave, and 5300 State Hwy EE",
+    "snippet": true
+   },
+   {
+    "url": "https://sgfcitizen.org/springfield-culture/springfield-company-behind-7-brew-buildings-sprouting-across-u-s/",
+    "quote": "The bulk of the work happens in the manufacturing shop, located at 2821 W. Chestnut Expressway"
+   }
+  ],
+  "note": "Two separate CMC buildings in Springfield (company says it works out of five buildings)."
+ },
+ {
+  "pair": "6.8",
+  "a": "IC-93493",
+  "b": "IC-94725",
+  "verdict": "different",
+  "relation": "office_vs_plant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/1-Bldr%20List.pdf",
+    "quote": "addresses at 529 N Prince Ln, 1012 N Farm Rd 123, 1630 N Eldon Ave, and 5300 State Hwy EE",
+    "snippet": true
+   },
+   {
+    "url": "https://www.cmcmod.com/",
+    "quote": "319 North Main Ave, Suite 200 Springfield, MO 65802"
+   }
+  ],
+  "note": "Eldon Ave is a registered CMC location; 319 N Main Ste 200 is the office."
+ },
+ {
+  "pair": "6.9",
+  "a": "IC-93495",
+  "b": "IC-95004",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.tdlr.texas.gov/ihb/pdf/1-Bldr%20List.pdf",
+    "quote": "addresses at 529 N Prince Ln, 1012 N Farm Rd 123, 1630 N Eldon Ave, and 5300 State Hwy EE",
+    "snippet": true
+   },
+   {
+    "url": "https://sgfcitizen.org/economy-growth/business/7-brew-builder-breaks-ground-on-30-million-springfield-complex/",
+    "quote": "CMC is spread out over five Springfield warehouses"
+   }
+  ],
+  "note": "Prince Ln is a registered CMC location; 2101 E Central Court not verified but is a distinct street address ~1 mi away. Not same; whether Central Ct is a live site is unverified."
+ },
+ {
+  "pair": "6.10",
+  "a": "IC-95297",
+  "b": "IC-95298",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.bankersteel.com/contact/",
+    "quote": "1619 Wythe Road, Lynchburg, VA 24501"
+   },
+   {
+    "url": "https://www.bankersteel.com/contact/",
+    "quote": "351 Rangoon Street, Lynchburg, VA 24502"
+   }
+  ],
+  "note": "Banker Steel's Virginia Main Plant and South Plant are both listed."
+ },
+ {
+  "pair": "6.11",
+  "a": "IC-95281",
+  "b": "IC-95289",
+  "verdict": "same",
+  "relation": "other",
+  "survivor": "IC-95281",
+  "evidence": [
+   {
+    "url": "https://www.yelp.com/biz/commodore-home-systems-goshen",
+    "quote": "COMMODORE HOME SYSTEMS - Updated September 2026 - 1902 Century Dr, Goshen, Indiana",
+    "snippet": true
+   },
+   {
+    "url": "https://kcma.org/company/commodore-homes-indiana",
+    "quote": "Commodore Homes of Indiana",
+    "snippet": true
+   }
+  ],
+  "note": "B is the same name in Goshen with no address/phone; the only Commodore plant known in Goshen is 1902 Century Dr. Note Indiana's list also shows a Commodore office at 1423 Lincolnway East, Goshen - B could originate from that; low risk since B has no address."
+ },
+ {
+  "pair": "6.12",
+  "a": "IC-94750",
+  "b": "IC-94751",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://oas.dhs.in.gov/dfbs/code/main.do?manufacturerNameId=46&method=view",
+    "quote": "Fairmont Homes Inc - Showcase Homes ... P O Box 27, 502 Oakland, Nappanee, IN 46550"
+   },
+   {
+    "url": "https://oas.dhs.in.gov/reports/rwservlet?dfbsepnpdf=&report=code_mnfctr_list_for_web.rdf",
+    "quote": "Fairmont Homes Inc - Friendship 1Fairmont Homes Inc - Friendship 2Fairmont Homes Inc - Plant 1"
+   }
+  ],
+  "note": "Indiana licenses Showcase Homes as its own entry (at 502 Oakland, zero seals); current Indiana list shows Friendship 1, Friendship 2, Plant 1 but no Showcase. Showcase may be a retired name of one of those plants - can't tell which."
+ },
+ {
+  "pair": "6.13",
+  "a": "IC-94749",
+  "b": "IC-94750",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://oas.dhs.in.gov/reports/rwservlet?dfbsepnpdf=&report=code_mnfctr_list_for_web.rdf",
+    "quote": "Fairmont Homes Inc - Friendship 1Fairmont Homes Inc - Friendship 2Fairmont Homes Inc - Plant 1"
+   }
+  ],
+  "note": "Friendship 2 and Plant 1 are separately listed Fairmont (now Cavco Nappanee) plants sharing the PO Box 27 mailing address."
+ },
+ {
+  "pair": "6.14",
+  "a": "IC-91520",
+  "b": "IC-95676",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.nvent.com/en-us/trachte/trachte-locations",
+    "quote": "422 N Burr Oak (Office/Receiving) and 479 N Burr Oak (Weld Shop)",
+    "snippet": true
+   },
+   {
+    "url": "https://www.nvent.com/en-us/trachte/trachte-locations",
+    "quote": "350 Braun Road, Oregon, WI 53575 ... The Braun Road location runs two shifts and a weekend shift with approximately 150 employees",
+    "snippet": true
+   }
+  ],
+  "note": "nVent Trachte has Burr Oak facilities and a separate Braun Road facility in Oregon WI. (nvent page returned 403 to fetch; quotes from search snippet.) B's 'Wood Volumetric Modular' capability looks wrong - Trachte builds steel enclosures."
+ },
+ {
+  "pair": "6.15",
+  "a": "IC-48095",
+  "b": "IC-95898",
+  "verdict": "same",
+  "relation": "mailing_address",
+  "survivor": "IC-48095",
+  "evidence": [
+   {
+    "url": "https://www.sips.org/members/energy-panel-structures-inc",
+    "quote": "603 North Van Gordon Avenue, Graettinger, IA 51342, United States ... 712-859-3219, ext. 1024"
+   },
+   {
+    "url": "https://buildingclean.org/manufacturers/facility/10297",
+    "quote": "Energy Panel Structures Inc. is a wholly owned subsidiary of the MacArthur Company",
+    "snippet": true
+   }
+  ],
+  "note": "B is the MacArthur Co (parent) PO box with EPS's phone and epsbuildings.com website - mailing record of the EPS Graettinger plant. Note A's address (102 E Industrial Park) differs from EPS's published 603 N Van Gordon Ave; A's street address should be checked."
+ },
+ {
+  "pair": "6.16",
+  "a": "IC-94715",
+  "b": "IC-95538",
+  "verdict": "same",
+  "relation": "mailing_address",
+  "survivor": "IC-95538",
+  "evidence": [
+   {
+    "url": "https://www.firststatemha.org/company/new-era-building-systems-new-image-homes-2/",
+    "quote": "451 Southern Ave. PO Box 269 ... Strattanville, PA 16258 ... 800-678-5581"
+   }
+  ],
+  "note": "PO Box 269 and 451 Southern Ave are the same Champion (New Era) Strattanville plant; same website and the same 800 number. 130-mile distance is a bad geocode."
+ },
+ {
+  "pair": "6.17",
+  "a": "IC-95246",
+  "b": "IC-96779",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://ufpsitebuilt.com/our-locations/conway-sc",
+    "quote": "2650 Shoffner Rd Conway, SC 29526 ... (843) 248-0123"
+   },
+   {
+    "url": "https://www.yelp.com/biz/universal-forest-products-conway",
+    "quote": "UNIVERSAL FOREST PRODUCTS - Updated April 2026 - 708 Country Club Dr, Conway, South Carolina",
+    "snippet": true
+   }
+  ],
+  "note": "Same phone; UFP lists only Shoffner Rd. 708 Country Club Dr is an older Universal Forest Products listing - could be an old address of the same site or a separate/former yard. Could not confirm."
+ },
+ {
+  "pair": "6.18",
+  "a": "IC-94516",
+  "b": "IC-94938",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://www.plantprefab.com/contact/",
+    "quote": "5805 Santa Elena Dr, Arvin, CA 93203"
+   },
+   {
+    "url": "https://www.thebluebook.com/iProView/1528592/plant-prefab/general-contractors/locations-contacts/",
+    "quote": "Plant Prefab has two factories in California (Rialto, Tejon Ranch)",
+    "snippet": true
+   }
+  ],
+  "note": "Arvin (Tejon Ranch factory & HQ) and Rialto are two factories. Rialto status today not confirmed (contact page lists only Arvin)."
+ },
+ {
+  "pair": "6.19",
+  "a": "IC-93944",
+  "b": "IC-94205",
+  "verdict": "same",
+  "relation": "spelling",
+  "survivor": "IC-93944",
+  "evidence": [
+   {
+    "url": "https://www.doylesmfg.com/contact",
+    "quote": "Doyle's Construction & Manufacturing Inc. ... 624 6th St. Graham, Tx. 76450 ... 940-549-5517"
+   }
+  ],
+  "note": "Same name and address, spelling variants. B's truss capability doubtful (company makes modular press boxes / metal buildings)."
+ },
+ {
+  "pair": "6.20",
+  "a": "IC-02969",
+  "b": "IC-95816",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-95816",
+  "evidence": [
+   {
+    "url": "https://www.osha.gov/ords/imis/establishment.inspection_detail?id=1566093.015",
+    "quote": "Clayton Supply, Inc. ... 365 11th Ave W, Guin, AL 35563 ... 321214/Truss Manufacturing"
+   },
+   {
+    "url": "https://www.facebook.com/ClaytonSupplyGuin/",
+    "quote": "Clayton Supply Guin, formerly known as WoodPerfect, is a Supply facility to Clayton Homes",
+    "snippet": true
+   }
+  ],
+  "note": "Same company and house number 365; 'Clayton Supply Guin' is the plant's own name. 'State Hwy 118' as alias of 11th Ave W not directly confirmed (SR 118 does run into Guin). Moderate confidence."
+ },
+ {
+  "pair": "6.21",
+  "a": "IC-22939",
+  "b": "IC-92679",
+  "verdict": "unsure",
+  "relation": "successor",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://75588-us.all.biz/bulk-construction-materials-mcg305",
+    "quote": "Citadel Building Products, Company is located at 1025 Campbell St, Thomasville, Georgia 31792",
+    "snippet": true
+   }
+  ],
+  "note": "Same address, but couldn't find what Citadel Building Products makes or whether it took over the Grand Manor HUD plant. Needs a person."
+ },
+ {
+  "pair": "6.22",
+  "a": "IC-51867",
+  "b": "IC-94749",
+  "verdict": "unsure",
+  "relation": "other",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://oas.dhs.in.gov/reports/rwservlet?dfbsepnpdf=&report=code_mnfctr_list_for_web.rdf",
+    "quote": "Fairmont Homes Inc - Friendship 1Fairmont Homes Inc - Friendship 2Fairmont Homes Inc - Plant 1"
+   }
+  ],
+  "note": "Fairmont has several Nappanee plants (and 2181 E Market St is the main published address). Couldn't determine which plant is at 1961 E Market St (north portion) or whether it's Friendship 2."
+ },
+ {
+  "pair": "6.23",
+  "a": "IC-68702",
+  "b": "IC-68881",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://stebbinscommercialproperties.com/property/88-pine-street121-valley-street-manchester-nh-03103-officemanufacturingwarehouse-sale",
+    "quote": "KalWall panels, a proprietary insulated panel manufactured by the owner."
+   },
+   {
+    "url": "https://buildingclean.org/manufacturers/facility/6785",
+    "quote": "Kalwall Corporation, Manchester, NH",
+    "snippet": true
+   }
+  ],
+  "note": "1111 Candia Rd is Kalwall's HQ/plant; 88 Pine St was a separate Kalwall-owned office/manufacturing/warehouse site, now listed for sale/redevelopment - likely closed rather than a duplicate."
+ },
+ {
+  "pair": "6.24",
+  "a": "IC-75953",
+  "b": "IC-93549",
+  "verdict": "different",
+  "relation": "two_plants",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "https://modularbuildingsystemsofpa.com/contact-us/",
+    "quote": "200 Custom Avenue Middleburg PA 17842"
+   },
+   {
+    "url": "https://www.pbsmodular.com/contact-us/",
+    "quote": "72 East Market Street ... Corporate Office for Professional Building Systems, which is a division of Modular Building Systems of PA",
+    "snippet": true
+   }
+  ],
+  "note": "MBSP's Plant 1 at 72 E Market (Professional Building Systems) vs the Custom Building Systems plant at 200 Custom Ave - two sites. Confirm 72 E Market is still producing."
+ },
+ {
+  "pair": "6.25",
+  "a": "IC-90710",
+  "b": "IC-96028",
+  "verdict": "unsure",
+  "relation": "address_variant",
+  "survivor": null,
+  "evidence": [
+   {
+    "url": "http://www.nobletrusswa.com/contact",
+    "quote": "355 Malaga-Alcoa Hwy, Wenatchee, WA 98801"
+   }
+  ],
+  "note": "Noble publishes only 355 Malaga-Alcoa Hwy; couldn't find what is at 2110 Yarrow Rd (search budget exhausted). Probably an old/mailing address but unverified."
+ },
+ {
+  "pair": "6.26",
+  "a": "IC-94270",
+  "b": "IC-96289",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-96289",
+  "evidence": [
+   {
+    "url": "https://84lumbercomv3.84-iase-v3.p.azurewebsites.net/about/press-room/84-press-releases/84-lumber-opens-new-component-plant-in-winter-haven-florida/",
+    "quote": "Located at 165 Industrial Blvd W, Winter Haven, Florida, this is the company's primary component plant in the state of Florida."
+   }
+  ],
+  "note": "'65 Industrial Blvd W' is a dropped digit of the 165 address; one truss plant."
+ },
+ {
+  "pair": "6.27",
+  "a": "IC-95578",
+  "b": "IC-95967",
+  "verdict": "same",
+  "relation": "address_variant",
+  "survivor": "IC-95967",
+  "evidence": [
+   {
+    "url": "https://natmodusa.com/contact-us/",
+    "quote": "Plant 1 8905 Industrial Drive Haven, Kansas 67543 620-466-5000"
+   }
+  ],
+  "note": "8095 vs 8905 is a digit transposition of Plant 1's address."
+ }
+]
