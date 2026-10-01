@@ -69,8 +69,12 @@ fields:
   # those 218 rows are the ground truth this stage is SCORED against. A stage that could overwrite
   # its own answer key would make its measurement meaningless — 0.899 by group and 0.706 by leaf
   # on run 35638112033, against a deterministic floor of 0.417 and 0.307.
-  capability_group:    {order: [adl_employee_feedback, operator, "class:D", capability], tie: most_recent}
-  capability_leaf:     {order: [adl_employee_feedback, operator, "class:D", capability], tie: most_recent}
+  # basis:web_capability (2026-10-01): the company's own site or a registry describing THIS plant,
+  # quoted, with group and leaf asserted together (pipeline/web_research/ingest.py). It beats the
+  # model's guess (a truss plant the model filed as Wood Volumetric Modular) and loses to ADL's
+  # labels and to people. Any other web judgement still only fills a blank.
+  capability_group:    {order: [adl_employee_feedback, operator, "class:D", "basis:web_capability", capability], tie: most_recent}
+  capability_leaf:     {order: [adl_employee_feedback, operator, "class:D", "basis:web_capability", capability], tie: most_recent}
   secondary_capability: {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
   material:            {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
   sector:              {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}

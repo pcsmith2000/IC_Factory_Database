@@ -88,7 +88,7 @@ states:
 
 | Found | Submit |
 |---|---|
-| The plant makes something else (a truss plant filed as Wood Volumetric Modular) | `capability_group` and `capability_leaf` assertions quoting the page, e.g. `"Wood Structural Components (Trusses, etc.)"` with quote `"we design and manufacture roof and floor trusses"`, plus a `product_type` assertion with the same quote |
+| The plant makes something else (a truss plant filed as Wood Volumetric Modular) | **both** `capability_group` (`"Other"`) and `capability_leaf` (`"Wood Structural Components (Trusses, etc.)"`) from the **same** company-site or registry source, each quoting it (`"we design and manufacture roof and floor trusses"`), plus a `product_type` assertion with the same quote |
 | It is a lumber yard, dealer, retailer or office, with no production | verdict `not_ic` with a concrete reason. A removal needs **two sources on different pages, or one registry, filing or certification body**. With one weaker source, use `not_found` and say so |
 | It is closed or moved | verdict `closed`. For a move, put the new address in `reason`; do not assert it on this row |
 | A stated plant size | `sq_ft` assertion. The number must appear in the quote |
@@ -96,8 +96,12 @@ states:
 
 **What happens next:**
 - A literal fact from the company site or a registry can correct the record.
-- A capability is a *judgement*: today it fills a blank capability but does not replace an existing
-  one. So **also say it in the review note** (§7), where a person sees it and can rule.
+- **A capability correction switches the category** when you assert `capability_group` *and*
+  `capability_leaf` together, from the same company-site or registry page that describes this plant,
+  with the leaf inside its group. Ingest records the pair as basis `web_capability`, which outranks
+  the stage-15 model's guess but never ADL's own labels or a person's ruling. Anything less does not
+  replace an existing category: one of the two alone, a directory or map listing, or a mismatched
+  pair (which is refused). Say it in the review note too (§7).
 - Removals take the facility out of golden, and with it out of this queue.
 
 ## 6. Deciding
