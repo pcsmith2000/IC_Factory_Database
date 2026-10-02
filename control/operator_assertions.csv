@@ -2395,3 +2395,7 @@ IC-93033,existence_flag,not_ic,2026-10-01,M1 Containers / MobileOne Restoration 
 IC-94731,existence_flag,not_ic,2026-10-01,Custom Container Builders (Anderson IN): shipping container homes and container-based structures (customcontainerbuilders.com/pages/about-us). Shipping-container conversion shop: not IC (owner ruling 2026-10-01).
 IC-94895,existence_flag,not_ic,2026-10-01,"A American Container (Tampa FL): portable storage container sales/rental, not a builder (a-american.com/contact/). Shipping-container conversion shop: not IC (owner ruling 2026-10-01)."
 IC-92714,existence_flag,not_ic,2026-10-01,Container Creations (Weeki Wachee FL): makes vent/skylight adapters for Conex containers; corporation listed inactive (containercreations.com/collections; bizapedia). Shipping-container conversion shop: not IC (owner ruling 2026-10-01).
+IC-52384,lat_lon,"37.63305,-95.45360",2026-10-02,"Advanced Systems Homes Chanute: plant hall SW of 4711 S Santa Fe Ave (review-pane move used a mis-scaled point 37.63223,-95.45303) (ADL review, agent pin fix)"
+IC-92590,lat_lon,"33.54622,-97.83411",2026-10-02,"B2 Medical Bowie: hall east of 901 Decatur St (pane move used 33.54577,-97.83330) (ADL review, agent pin fix)"
+IC-93229,lat_lon,"27.25928,-80.85488",2026-10-02,"Royal Concrete Concepts Okeechobee: precast hall on NW 16th Blvd (pane move used 27.25880,-80.85447) (ADL review, agent pin fix)"
+IC-93230,lat_lon,"27.25928,-80.85488",2026-10-02,"Royal Concrete Concepts LLC (duplicate of IC-93229): same plant (ADL review, agent pin fix)"
