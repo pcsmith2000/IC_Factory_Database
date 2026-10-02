@@ -95,18 +95,22 @@ Look at the map: is the pin on a plant?
 1. Search the company's locations, contact, plant-tour or "directions to our factory" page, and
    state registries, for the **plant** address. A head office, registered agent or PO box is not
    the plant.
-2. Get the coordinates **of the plant building**, not the street:
-   - geocode the address with the US Census geocoder:
-     `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=<address>&benchmark=Public_AR_Current&format=json`
-   - then find that address on satellite imagery (Google Maps, or the pane's *Google satellite*
-     link) and read the latitude, longitude off the centre of the production building. Look for
-     staged product, a material yard and signage.
+2. Put the pin **on the plant building**, not the street, by clicking it. Never type coordinates you
+   worked out from a picture: that put four pins 50 to 100 m off their plants.
+   1. Geocode the address with the US Census geocoder:
+      `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=<address>&benchmark=Public_AR_Current&format=json`
+   2. Type that rough `lat, lon` in the pane's box and click **Go to typed point**. The map jumps
+      there.
+   3. Find the production building: staged product, a material yard, signage. Zoom with + and −.
+   4. Click **Set pin on map**, then click the centre of that building. The box fills with the exact
+      coordinate and a blue pin shows it. Click again to correct it, and use **Back to facility** to
+      look at the old pin.
 
 **Decide:**
 
 | Finding | Action |
 |---|---|
-| The plant is found elsewhere | **Move pin**: type `lat, lon` in the pane's box and click **Move pin**, with the plant address and the URL that gives it in the note. Also submit the address to the inbox (§5) if a page states it literally. It comes back to the queue with new buildings after the next buildings run. Done for now |
+| The plant is found elsewhere | **Move pin**: set the pin by clicking the plant building (step 2 above) and click **Move pin**, with the plant address and the URL that gives it in the note. Also submit the address to the inbox (§5) if a page states it literally. It comes back to the queue with new buildings after the next buildings run. Done for now |
 | There is no plant here, and evidence says it closed or moved away (a registry approval expired; a filing shows it dissolved or merged; the site is now something else; a news item on the closure) | submit verdict `closed`, or `not_ic` if it never was a plant. Click **Not a plant here**. Done |
 | No trace of the company anywhere, and the pin has no plant | submit verdict `not_found` with the pages you checked (it removes nothing). Click **Not a plant here**. Done |
 
