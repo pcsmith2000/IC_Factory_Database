@@ -279,6 +279,11 @@ def _flush(wh, b: dict, today: str) -> None:
                       "SET point = excluded.point, overture_release = excluded.overture_release, "
                       "outcome = excluded.outcome, reason = excluded.reason, "
                       "n_candidates = excluded.n_candidates, evaluated_at = excluded.evaluated_at", b["reviews"])
+        # A reviewer who moved the pin parked the facility (queue done, verdict move_pin) until it was
+        # judged at the new point. This is that judgement: hand it back to the agent's queue.
+        c.executemany("UPDATE facility_review_task SET queue = 'agent', updated_at = ? "
+                      "WHERE facility_key = ? AND queue = 'done' AND last_verdict = 'move_pin'",
+                      [(r[6], r[0]) for r in b["reviews"]])
         if b["facts"]:
             c.execute("INSERT INTO dim_source VALUES (?,?,?,?,?,?,?) ON CONFLICT (source_key) DO NOTHING",
                       (SOURCE, SOURCE, SYNTHETIC_SOURCES[SOURCE]["name"], "enrichment", "overture_buildings",
