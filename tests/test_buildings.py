@@ -244,3 +244,28 @@ def test_review_task_table_exists(wh):
     with wh.transaction() as c:
         c.execute("INSERT INTO facility_review_task (facility_key) VALUES ('IC-1')")
     assert wh.query("SELECT queue, passes, audit FROM facility_review_task") == [{"queue": "agent", "passes": 0, "audit": 0}]
+
+
+def test_survivorship_a_reviewers_pin_beats_any_geocode_and_a_person_beats_the_agent():
+    def p(value, basis, source="building_review", date="2026-09-01"):
+        return {**a("lat_lon", value, source, basis, date), "source_class": "building_review"}
+    rooftop = p("40.0,-76.0", "rooftop", "geocodio", "2026-09-30")
+    agent = p("41.2,-79.3", "review_pin_agent")
+    assert build_golden([rooftop, agent], RULES)[0][0]["lat_lon"] == "41.2,-79.3"
+    person = p("41.21,-79.31", "review_pin_person")
+    assert build_golden([agent, person, rooftop], RULES)[0][0]["lat_lon"] == "41.21,-79.31"
+    op = {**a("lat_lon", "41.0,-79.0", "operator", "operator"), "source_class": "operator"}
+    assert build_golden([agent, op], RULES)[0][0]["lat_lon"] == "41.0,-79.0"
+
+
+def test_a_moved_pin_hands_the_facility_back_to_the_agent_queue(wh):
+    with wh.transaction() as c:
+        c.execute("INSERT INTO facility_review_task (facility_key, queue, last_verdict) VALUES ('IC-1', 'done', 'move_pin')")
+        c.execute("INSERT INTO facility_review_task (facility_key, queue, last_verdict) VALUES ('IC-2', 'done', 'confident')")
+    batch = B._new_batch()
+    batch["n"] = 2
+    batch["reviews"] = [("IC-1", "41,-79", "r", "nearest_largest", None, 3, "2026-10-02T00:00:00Z"),
+                        ("IC-2", "42,-80", "r", "none", None, 0, "2026-10-02T00:00:00Z")]
+    B._flush(wh, batch, "2026-10-02")
+    got = {r["facility_key"]: r["queue"] for r in wh.query("SELECT facility_key, queue FROM facility_review_task")}
+    assert got == {"IC-1": "agent", "IC-2": "done"}, "only a move_pin facility goes back; a confident one stays done"
