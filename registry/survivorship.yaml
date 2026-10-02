@@ -38,7 +38,10 @@ fields:
   # facility. Measured against 241 verified rooftop coordinates: median 63m, p90 302m. That is
   # good enough to place a facility that has NO coordinate and not good enough to displace one
   # that has a real geocode, so it sits below basis:rooftop and only ever fills a hole.
-  lat_lon:         {order: [adl_employee_feedback, operator, "basis:rooftop", "basis:place_match", "basis:interpolated_on_building", "class:B"], tie: most_recent}
+  # basis:review_pin_person / review_pin_agent (2026-10-02): a reviewer in ADL_Viz /review moved
+  # the pin onto the plant a cited source places it at (the factory, not the office, mailbox or
+  # registered address a geocode lands on). Above every geocode; a person's above the agent's.
+  lat_lon:         {order: [adl_employee_feedback, operator, "basis:review_pin_person", "basis:review_pin_agent", "basis:rooftop", "basis:place_match", "basis:interpolated_on_building", "class:B"], tie: most_recent}
   naics:           {order: [adl_employee_feedback, operator, "class:B"], tie: most_recent}
   status:          {order: [adl_employee_feedback, operator, "basis:dated_expiry", "basis:explicit_status_field", "basis:certified_as_of_date", "basis:on_current_list"], tie: most_recent}
   expiry_date:     {order: [adl_employee_feedback, operator, "basis:dated_expiry"], tie: most_recent}
