@@ -34,7 +34,7 @@ then everything else; within each, the likeliest wrong first. For each facility:
 3. **Research** (§3), about 10 minutes and 6 to 10 queries at most.
 4. **Look at the map** (§4): which numbered buildings are the plant.
 5. **Write up what research found** (§5), if anything: one `web_research_submission`.
-6. **Decide in the pane** (§6): *Confident: save* or *Needs a person*, with the note format in §7.
+6. **Decide in the pane** (§6): *Confident: save*, *Move pin*, *Not a plant here*, or (rarely) *Needs a person*, with the note format in §7.
 
 Every 25 facilities, report back (§9).
 
@@ -104,34 +104,60 @@ states:
   pair (which is refused). Say it in the review note too (§7).
 - Removals take the facility out of golden, and with it out of this queue.
 
-## 6. Deciding
+## 6. Deciding: resolve it yourself; a person is the exception
 
-### Confident: save
+**Target: fewer than 1 in 6 facilities go to a person.** The first runs sent most to a person even
+though the agent had found the answer: the pin was on an office and the factory's address was on the
+company's own site, the category was wrong with a quote in hand, the row was a duplicate. Each of
+those now has an action. Work down this list and take the **first** that applies:
 
-Only when **all** of these hold:
+| What research found | Do this in the pane | And submit to the inbox (§5) |
+|---|---|---|
+| The pin is on an office, mailbox, house or the wrong town, and a cited page gives the plant's location | **Move pin**: type the plant's `lat, lon` (read it off Google Maps at the factory building, after matching the address) and cite the page in the note | the address correction if the page states it literally |
+| No plant at this address: head office or registered address only, mailbox, residence, sales lot, closed or moved with no new plant found | **Not a plant here**, citing the pages | verdict `not_ic` or `closed` (two pages, or one registry, filing or certification body), else `not_found` with what you checked |
+| This row is the same plant as another row | **Not a plant here** with `DUPLICATE OF IC-xxxxx` in the note; review the survivor normally when it comes up | verdict `duplicate` with `duplicate_of` |
+| The category is wrong | **Do not stop**: decide the buildings as below | the capability pair, if a company-site or registry page states it |
+| The plant is here | decide the buildings (below) | plant size, if stated |
 
-1. Every attached building is visibly part of the plant (§4).
-2. No plausible plant building is left out, whether unattached, without an outline, or beyond the list.
-3. One of these settles the size:
-   - the panel's ratio to the stated floor area is between **0.6× and 1.6×**;
-   - a source you cite states the plant's size or building count, and the attached set matches it;
-   - there is no stated size, and the site is a single plant building with nothing else plausible
-     around it.
-4. Research found nothing that puts the facility itself in doubt: wrong capability, not a plant,
-   closed, or pin on the wrong site.
+### Deciding the buildings
 
-A confident save counts the attached square footage now and rejects the facility's other proposals.
-The system sends 5% of your confident calls to a person anyway, to measure your agreement with people.
+Save **Confident** when:
 
-### Needs a person
+1. the attached buildings are the plant's production buildings, with production evidence (staged
+   modules, panels or trusses, material yards, loading doors) on one site; **and**
+2. the size is settled by one of these:
+   - the ratio to the stated floor area is between **0.5× and 2×**;
+   - a cited source states the size or building count, and the set matches it within that range;
+   - no size is stated, and you attached every production building on the fenced site. Offices,
+     model homes and small sheds don't count; leave them out.
 
-Use it for everything else. Still attach your best proposal, the set you would save if forced, so the
-person starts from it. Attach nothing only when no candidate is plausibly the plant: a multi-tenant
-park with no way to tell which unit, or a pin on the wrong site.
+**Multi-tenant parks.** Before giving up on which unit is the plant, try this ladder. Two agreeing
+rungs are enough for Confident:
+- a Google Maps business pin for the company inside one building;
+- signage visible in Street View;
+- a park site plan or leasing brochure that letters the buildings ("Building C");
+- the county assessor or parcel record, which names the owner and building area;
+- photos on the company's own site.
+
+**A building has no outline.** If the unoutlined part is small (under about a fifth of the plant),
+save Confident on what is outlined and say so in the note. If it is the main hall, **Needs a person**.
+
+### Needs a person, only for these
+
+- two credible sources conflict, and the ladder above doesn't settle it;
+- the main production building has no outline;
+- a scope ruling is needed that the taxonomy doesn't settle, e.g. tiny homes on wheels, a nonprofit
+  workshop, or a plant whose products are split between in-scope and out-of-scope lines;
+- the agent queue would otherwise act on an ADL-validated plant against ADL's own record.
+
+Always attach your best proposal, and ask one answerable question.
 
 **Skip** only for a stale pin, or when the page fails to load.
 
-## 7. The note (required for *Needs a person*, always written)
+A confident save counts the attached square footage now and rejects the facility's other proposals.
+The system sends 5% of your Confident and Not-a-plant-here calls to a person, to measure agreement.
+
+## 7. The note (always written; Not a plant here and Move pin need a URL in it)
 
 One line per heading, plain text:
 
@@ -162,7 +188,7 @@ WEB: none submitted
 
 ## 9. Report back every 25 facilities
 
-- confident / needs a person / skipped counts;
+- confident / moved pin / not a plant here / needs a person / skipped counts, and the share sent to a person;
 - capability corrections submitted (old leaf → new leaf), and removals submitted;
 - the questions you sent to people, grouped by kind (multi-tenant, size unknown, capability, pin);
 - anything systematic, such as a capability mislabelled across a whole source, or a region where
