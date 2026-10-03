@@ -1,26 +1,25 @@
-# Re-research of "not_found" plants in the building-review queue (2026-10-02)
+# Re-research of "not_found" plants in the building-review queue (2026-10-02/03)
 
 Run `wr-buildings-1`. The building-review queue held 620 facilities whose earlier web research ended
 `not_found`. Agents re-researched them in the browser, wrote one submission each (validated with
-`pipeline.web_research.ingest.plan`) and inserted it into `web_research_submission`; the ingest workflow
-has applied them.
+`pipeline.web_research.ingest.plan`) and inserted it into `web_research_submission`.
 
-**Done: 331 of 620** (batches 00–17; batches 13–17 partly, cut short when the Chrome extension
-disconnected). Remaining: ~289 (batches 18–30 plus the unfinished tails of 13–17).
+**Done: 399 of 620** (batches 00–19). Remaining: 221 (batches 20–30), paused when the
+Chrome extension disconnected.
 
 | verdict | count |
 |---|---|
-| not_found | 162 |
-| not_ic | 58 |
-| in_scope | 49 |
-| closed | 35 |
-| duplicate | 27 |
+| not_found | 192 |
+| not_ic | 71 |
+| in_scope | 63 |
+| closed | 40 |
+| duplicate | 33 |
 
-61 submissions move a record onto its real plant address (`plant_address_asserted`).
+77 submissions move a record onto its real plant address (`plant_address_asserted`).
 Every verdict, reason and source is in `web-research-not-found-rerun-2026-10-02.csv`.
 
 Held back, not inserted: IC-20076 and IC-94546 (conflicting readings of 1230 SW 10th St, Ocala: Champion
-retail lot vs Skyline plant), IC-96192 (Biszko, not_ic needs a second source).
+retail lot vs Skyline plant).
 
 ## Needs a person
 ## Scope rulings needed
@@ -50,4 +49,9 @@ retail lot vs Skyline plant), IC-96192 (Biszko, not_ic needs a second source).
 - Scope: cleanroom panels IC-74439; steel fabricators IC-74999, IC-84575; General Shelters cabins IC-86152/85937/94119; MBCI roll-formers IC-86348/84102/87050/94568; e-house enclosures IC-96133; kit suppliers IC-95830; BFS lumber yards IC-21067/21826; Blackwater steel trusses IC-96033; Midwest Mfg IC-96073 PEMB vs truss.
 - Missing plants: Benson/MiTek curtain wall Portland; MESCO 2218 Dawson Dr Chester SC.
 - Held draft: nf/hold/IC-96192.json (Biszko, not_ic needs 2nd source).
+- Missing plants: Turnkey Lumber 435 Lancaster St Leominster MA + Dade City FL; SCS Grimes IA; Elite Outdoor Buildings Live Oak FL.
+- Greenhouses/carports located but held: IC-95928, IC-96037, IC-96260. Job-site OSHA rows for bulk rule: IC-82409, IC-96268, IC-96025.
+- IC-57929 record re-pointed to Ecocor (closed wood panel) at former Sprowl site; IC-50858 Alply → Exterior Envelope Panels if operating; IC-47502 Amwood capability (panelized homes); IC-95942 mixed-source row not in golden.
+- Likely defunct, no closure source: IC-56336, 56349, 57343, 57346, 65234, 70351, 72498, 68201, 76166; possible not_ic: IC-65269, IC-74616, IC-57098.
+- WA317… EPA-FRS rows (The Truss Company, Trus Way, Roof Truss Supply, Truss Components of WA) at residential streets look like construction-permit records, not plants — candidate for one bulk ruling (e.g. IC-90519, IC-90604, IC-90838, IC-95759…IC-96117).
 
