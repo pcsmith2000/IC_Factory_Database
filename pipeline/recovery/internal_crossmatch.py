@@ -4,6 +4,12 @@ This pass never searches the web and never calls a provider.  It only links an u
 row to a rooftop assertion already in the warehouse.  The linkage is deliberately narrower than
 ordinary entity resolution: normalized name, city and state must all agree; the name must be
 distinctive; and every qualifying donor must resolve to one coordinate.
+
+A donor's rooftops are read through v_assertions_resolved (permanent_facility_id), never by
+facility_key alone. Before the permanent registry one IC-number named different plants in different
+releases, so a raw key join offers another plant's rooftop as this donor's: on 2026-10-03, 792
+rooftop assertions filed under a golden facility's number resolved, through the registry, to a
+different plant or to none (766 geocodio, 26 from this module's own earlier passes).
 """
 from __future__ import annotations
 
@@ -252,7 +258,7 @@ def run(db, campaign: str, workflow: str, write: bool = False, limit: int = 100)
         (campaign,)).fetchall()
     donors = db.execute("""SELECT g.facility_key AS facility_id,g.name,g.city,g.state,
             a.assertion_id,a.value,a.source_key,a.row_hash,r.source_url
-        FROM golden_facility g JOIN fact_assertions a ON a.facility_key=g.facility_key
+        FROM golden_facility g JOIN v_assertions_resolved a ON a.permanent_facility_id=g.facility_key
         LEFT JOIN ref_source_row r ON r.row_hash=a.row_hash
         WHERE a.field_key='lat_lon' AND a.basis='rooftop'
           AND NULLIF(btrim(a.value),'') IS NOT NULL""").fetchall()
@@ -277,7 +283,7 @@ def run_contact(db, campaign: str, workflow: str, write: bool = False, limit: in
         (campaign,)).fetchall()
     donors = db.execute("""SELECT g.facility_key AS facility_id,g.name,g.city,g.state,g.website,g.phone,
             a.assertion_id,a.value,a.source_key,a.row_hash,r.source_url
-        FROM golden_facility g JOIN fact_assertions a ON a.facility_key=g.facility_key
+        FROM golden_facility g JOIN v_assertions_resolved a ON a.permanent_facility_id=g.facility_key
         LEFT JOIN ref_source_row r ON r.row_hash=a.row_hash
         WHERE a.field_key='lat_lon' AND a.basis='rooftop'
           AND NULLIF(btrim(a.value),'') IS NOT NULL""").fetchall()
@@ -301,7 +307,7 @@ def run_name_only(db, campaign: str, workflow: str, write: bool = False, limit: 
         (campaign,)).fetchall()
     donors = db.execute("""SELECT g.facility_key AS facility_id,g.name,
             a.assertion_id,a.value,a.source_key,a.row_hash,r.source_url
-        FROM golden_facility g JOIN fact_assertions a ON a.facility_key=g.facility_key
+        FROM golden_facility g JOIN v_assertions_resolved a ON a.permanent_facility_id=g.facility_key
         LEFT JOIN ref_source_row r ON r.row_hash=a.row_hash
         WHERE a.field_key='lat_lon' AND a.basis='rooftop'
           AND NULLIF(btrim(a.value),'') IS NOT NULL""").fetchall()
@@ -327,7 +333,7 @@ def run_address(db, campaign: str, workflow: str, write: bool = False, limit: in
         (campaign,)).fetchall()
     donors = db.execute("""SELECT g.facility_key AS facility_id,g.address,g.city,g.state,g.zip,
             a.assertion_id,a.value,a.source_key,a.row_hash,r.source_url
-        FROM golden_facility g JOIN fact_assertions a ON a.facility_key=g.facility_key
+        FROM golden_facility g JOIN v_assertions_resolved a ON a.permanent_facility_id=g.facility_key
         LEFT JOIN ref_source_row r ON r.row_hash=a.row_hash
         WHERE a.field_key='lat_lon' AND a.basis='rooftop'
           AND NULLIF(btrim(a.value),'') IS NOT NULL""").fetchall()

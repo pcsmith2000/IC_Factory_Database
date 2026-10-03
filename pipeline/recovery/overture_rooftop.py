@@ -154,8 +154,8 @@ def run(db, campaign_id: str, targets: list[dict], row_limit: int, workflow: str
     controls = db.execute("""SELECT g.facility_key AS facility_id,g.name,g.address,g.city,g.state,g.zip,g.lat_lon
         FROM golden_facility g WHERE g.state=ANY(%s) AND g.address ~ '^[0-9]+[A-Za-z]? '
         AND NULLIF(btrim(g.lat_lon),'') IS NOT NULL
-        AND EXISTS (SELECT 1 FROM fact_assertions a WHERE a.facility_key=g.facility_key
-                    AND a.field_key='lat_lon' AND a.basis='rooftop')
+        AND g.facility_key IN (SELECT a.permanent_facility_id FROM v_assertions_resolved a
+                    WHERE a.field_key='lat_lon' AND a.basis='rooftop')
         ORDER BY md5(g.facility_key) LIMIT 100""", (states,)).fetchall()
     facilities = [{"facility_id": r["facility_id"], **r["baseline"]} for r in targets] + [dict(r) for r in controls]
     all_golden = db.execute("SELECT state,lat_lon FROM golden_facility WHERE NULLIF(btrim(lat_lon),'') IS NOT NULL").fetchall()
