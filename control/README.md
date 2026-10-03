@@ -115,3 +115,14 @@ The worklist is the 35 rows with the computed signal against each. `proposed_tri
 `out_of_scope` raises Claude's own recall number, and a model that grades itself by shrinking the
 denominator is the exact failure the sealed split exists to catch. Filling this in is a human
 decision; the checksum and G4 make it a logged one.
+
+`jobsite-worklist.csv` — inspection and permit rows that may be construction sites, not plants
+(`python -m pipeline.jobsite`, read-only; snapshot of the warehouse taken 2026-10-03). OSHA
+inspects a truss crew where it is working, often a house in a subdivision, and EPA FRS files each
+OSHA-only inspection as a facility named "<activity number> - <establishment>". Each row names the
+evidence: `company_plant_elsewhere` (the company's plant records, `company_plants`),
+`no_plant_scale_building` / `no_building_found` (the Overture building pass), `lot_or_subdivision`.
+`tier` is `likely` or `review`; both are proposals. Nothing here changes the warehouse: a person
+who agrees adds `IC-…,existence_flag,not_ic,<date>,<note>` to `operator_assertions.csv`. The rule
+deliberately leaves out WA317946391 - PACIFIC WOODTECH CORPORATION (1850 Park Lane, Burlington), a
+real plant inspected at its own door: a 286,429 sqft building stands beside its point.
