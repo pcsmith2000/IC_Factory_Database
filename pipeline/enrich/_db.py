@@ -17,19 +17,30 @@ from datetime import date
 # footprint of those is 4,583 sqft — small incidental structures, not plants. A rooftop geocode on
 # the same measurement resolved 18 of 19 with a median of 63,968 sqft. So a coordinate is only
 # worth measuring when a rooftop geocode produced it.
+#
+# Both flags read v_assertions_resolved, never fact_assertions by facility_key. Before the permanent
+# registry, 17 diverging id registries handed the same IC-number to different plants, so a raw
+# `facility_key = g.facility_key` also finds facts another release filed under that number for
+# ANOTHER plant: on 2026-10-03, 256 golden facilities read has_rooftop from someone else's rooftop
+# (and 161 missed their own, filed under an older number), 193 read geocode_tried the same way.
+# A facility wrongly marked done is never geocoded: a comprehensiveness loss nobody would see.
+# The sets are built once and joined (an EXISTS per row against the view times out on Postgres).
 SELECT_GOLDEN = """
+    WITH rooftop AS (SELECT DISTINCT permanent_facility_id AS fid FROM v_assertions_resolved
+                      WHERE field_key = 'lat_lon' AND basis = 'rooftop'
+                        AND permanent_facility_id IS NOT NULL),
+         tried AS (SELECT DISTINCT permanent_facility_id AS fid FROM v_assertions_resolved
+                    WHERE field_key = 'geocode_quality' AND permanent_facility_id IS NOT NULL)
     SELECT COALESCE(d.facility_id, g.facility_key) AS facility_id, g.facility_key,
            g.name, g.address, g.city, g.state, g.zip, g.lat_lon, g.status, g.expiry_date,
            g.naics,
            d.tier, g.release_tag,
-           EXISTS (SELECT 1 FROM fact_assertions a
-                    WHERE a.facility_key = g.facility_key
-                      AND a.field_key = 'lat_lon' AND a.basis = 'rooftop') AS has_rooftop,
-           EXISTS (SELECT 1 FROM fact_assertions a
-                    WHERE a.facility_key = g.facility_key
-                      AND a.field_key = 'geocode_quality') AS geocode_tried
+           (rt.fid IS NOT NULL) AS has_rooftop,
+           (tq.fid IS NOT NULL) AS geocode_tried
     FROM golden_facility g
     LEFT JOIN dim_facility d ON d.facility_key = g.facility_key
+    LEFT JOIN rooftop rt ON rt.fid = g.facility_key
+    LEFT JOIN tried tq ON tq.fid = g.facility_key
 """
 
 
