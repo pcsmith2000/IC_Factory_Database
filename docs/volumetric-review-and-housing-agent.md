@@ -121,7 +121,7 @@ proposal and ask one answerable question.
 ## 4. Housing (volumetric plants only)
 
 Decide whether this plant can build **permanent housing modules for a large Navy housing programme**:
-barracks / unaccompanied housing, family housing, dormitories, multi-family. VBC (Martinsville, VA:
+barracks / unaccompanied housing, family housing, dormitories, multi-family. VBC (Tracy, CA:
 600,000 sq ft, 1.25 million SF of multi-family modules a year) is the reference plant.
 
 Look for, with a URL and quote for each:
