@@ -17,6 +17,10 @@ on:
         description: "submissions per run"
         type: string
         default: "500"
+      only:
+        description: "comma-separated reviewed facility ids (blank = all pending)"
+        type: string
+        default: ""
       dry_run:
         description: "validate and report; write nothing"
         type: boolean
@@ -53,9 +57,11 @@ jobs:
         env:
           LIMIT: ${{ inputs.limit || '500' }}
           DRY_RUN: ${{ inputs.dry_run }}
+          ONLY: ${{ inputs.only }}
         run: |
           # A scheduled run has no inputs: it ingests for real.
           set -- --limit "$LIMIT"
+          [ -n "$ONLY" ] && set -- "$@" --only "$ONLY"
           [ "$DRY_RUN" = "true" ] && set -- "$@" --dry-run
           python -m pipeline.web_research.ingest "$@" | tee ingest.json
           { echo '```json'; cat ingest.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

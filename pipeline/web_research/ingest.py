@@ -319,14 +319,19 @@ def _rows(facility_id: str, p: dict, release_tag: str, now: str) -> tuple[list[t
     return list(refs.values()), facts
 
 
-def ingest(wh, *, limit: int = 200, dry_run: bool = False) -> dict:
+def ingest(wh, *, limit: int = 200, dry_run: bool = False, only: list[str] | None = None) -> dict:
     from ..golden_refresh import current_release
     from ..warehouse import SYNTHETIC_SOURCES, _date_row
     tag = current_release(wh)
     active = {r["facility_id"] for r in wh.query("SELECT facility_id FROM facility WHERE status = 'active'")}
     fields, taxonomy = set(assertable_fields()), _taxonomy()
-    pending = wh.query("SELECT submission_id, facility_id, payload FROM web_research_submission "
-                       "WHERE status = 'pending' ORDER BY submitted_at LIMIT ?", (limit,))
+    selection = "SELECT submission_id, facility_id, payload FROM web_research_submission WHERE status = 'pending'"
+    params: list = []
+    if only is not None:
+        ids = sorted(set(only))
+        selection += " AND facility_id IN (" + (",".join("?" for _ in ids) or "NULL") + ")"
+        params.extend(ids)
+    pending = wh.query(selection + " ORDER BY submitted_at LIMIT ?", (*params, limit))
     now = datetime.now(timezone.utc).isoformat()
     totals = {"submissions": len(pending), "ingested": 0, "partial": 0, "rejected": 0,
               "facts_written": 0, "sources_written": 0, "exclusions": 0, "duplicates": 0, "overrides": 0,
@@ -386,6 +391,7 @@ def main(argv=None) -> int:
     ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine")
     ap.add_argument("--limit", type=int, default=200, help="submissions per run")
     ap.add_argument("--dry-run", action="store_true", help="validate and report; write nothing")
+    ap.add_argument("--only", default=None, help="comma-separated facility ids; omit to process all pending facilities")
     ap.add_argument("--fields", action="store_true", help="print the assertable fields and exit")
     args = ap.parse_args(argv)
     if args.fields:
@@ -394,7 +400,8 @@ def main(argv=None) -> int:
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1
-    print(json.dumps(ingest(wh, limit=args.limit, dry_run=args.dry_run), indent=1, default=str))
+    only = [fid.strip() for fid in args.only.split(",") if fid.strip()] if args.only is not None else None
+    print(json.dumps(ingest(wh, limit=args.limit, dry_run=args.dry_run, only=only), indent=1, default=str))
     return 0
 
 
