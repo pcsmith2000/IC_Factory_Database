@@ -156,6 +156,22 @@ def test_ingest_writes_facts_with_their_provenance(wh):
     assert wh.query("SELECT status FROM web_research_submission")[0]["status"] == "ingested"
 
 
+def test_scoped_ingest_leaves_other_facilities_pending(wh):
+    submit(wh, payload(assertions=[A("zip", "34292", "s1", "VENICE Florida 34292")]), "selected")
+    submit(wh, payload(fid="IC-00002", verdict={"status": "not_ic", "reason": "The address is a head office",
+                                               "source_refs": ["s1"]}), "unrelated")
+    assert I.ingest(wh, only=[], dry_run=True)["submissions"] == 0
+    preview = I.ingest(wh, only=["IC-00001", "IC-00001"], dry_run=True)
+    assert (preview["submissions"], preview["exclusions"]) == (1, 0)
+    assert {r["status"] for r in wh.query("SELECT status FROM web_research_submission")} == {"pending"}
+    report = I.ingest(wh, only=["IC-00001"])
+    assert (report["submissions"], report["facts_written"], report["exclusions"]) == (1, 1, 0)
+    states = {r["submission_id"]: r["status"] for r in wh.query("SELECT submission_id, status FROM web_research_submission")}
+    assert states == {"selected": "ingested", "unrelated": "pending"}
+    gr.refresh(wh)
+    assert "IC-00002" in golden(wh)
+
+
 def test_a_registry_backed_correction_overrides_the_roster_but_a_map_listing_does_not(wh):
     submit(wh, payload(assertions=[A("address", "10980 Hughey Kimal Dr", "s1", "10980 HUGHEY KIMAL DR.\nVENICE"),
                                    A("name", "American Precast of Anywhere", "s3", "American Precast of Anywhere")]))
