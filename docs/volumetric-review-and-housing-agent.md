@@ -70,6 +70,10 @@ Answer three things:
   studs and joists, or light-gauge / structural steel frames or shipping containers. If the plant
   does both, use what this plant mainly makes. If you cannot tell, leave the leaf as it is and say
   so in the note; do not guess.
+- **Housing, or purpose-built modules?** Modules built for a purpose other than housing (labs,
+  cleanrooms, clinics, correctional cells, equipment rooms, kiosks) belong in **Specialty
+  Volumetric**; concrete or cementitious modules in **Other Material Volumetric Modular**; a plant
+  whose material no source states stays in **Modular (type not determined)** until one does.
 - **HUD-code only, or code-built modular too?** A plant that builds only HUD-code manufactured
   homes is **HUD Modular**, not wood volumetric. A plant with a state modular / IBC approval as well
   stays volumetric.

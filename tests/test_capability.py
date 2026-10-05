@@ -34,7 +34,7 @@ def test_something_outside_the_taxonomy_resolves_to_nothing():
 
 
 def test_every_leaf_has_exactly_one_group():
-    assert len(TX.leaves) == 19 and len(TX.groups) == 6
+    assert len(TX.leaves) == 22 and len(TX.groups) == 6
     assert all(TX.group_of[l] in TX.groups for l in TX.leaves)
 
 

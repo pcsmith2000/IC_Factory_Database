@@ -72,7 +72,7 @@ Stays IC:
 
 | Group | Leaf |
 |---|---|
-| Modular | Wood Volumetric Modular · Steel Volumetric Modular · HUD Modular (federal HUD code, "manufactured homes") · Relocatable Modular (mobile offices, classrooms, buildings made to be moved and reused) |
+| Modular | Wood Volumetric Modular · Steel Volumetric Modular · HUD Modular (federal HUD code, "manufactured homes") · Relocatable Modular (mobile offices, classrooms, buildings made to be moved and reused) · Specialty Volumetric (modules built for a purpose other than housing: labs, cleanrooms, clinics, correctional, equipment rooms, kiosks) · Other Material Volumetric Modular (concrete or cementitious modules, or both wood and steel) · Modular (type not determined) (material not yet verified) |
 | Panel | Open Wood Panel · Closed Wood Panel · Open LGS Panel · Closed LGS Panel · Exterior Envelope Panels · Precast Concrete Panel · SIP / ICF (Other Composite Panel) |
 | Pods | Bathroom Pods · Specialty Volumetric MEP (Skids, Racks) |
 | Mass Timber | Mass Timber (CLT) |

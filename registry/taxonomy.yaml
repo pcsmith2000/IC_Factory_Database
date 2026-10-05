@@ -26,9 +26,11 @@
 # `legacy`       the Layer 3 product_type values that land in this group, so the two vocabularies
 #                can be reconciled and the older one is not silently dropped.
 
-version: 3
+version: 4
 source: ADL capability taxonomy with definitions, supplied 2026-09-21;
-        Pre-Engineered Metal Building added on ADL's scope ruling, 2026-09-21
+        Pre-Engineered Metal Building added on ADL's scope ruling, 2026-09-21;
+        Specialty Volumetric, Other Material Volumetric Modular and Modular (type not determined)
+        made official on ADL's ruling, 2026-10-05
 
 groups:
   - name: Modular
@@ -62,6 +64,36 @@ groups:
                   mobile modular, mobile modular buildings]
         signals: [relocatable, temporary buildings, mobile offices, modular space, lease fleet,
                   portable classroom]
+      # The three leaves below were first written as owner rulings by the live wood volumetric
+      # review of 2026-10-03 (174 plants) and made official on ADL's ruling of 2026-10-05. The
+      # BR-IC/MCI housing rule reads Wood and Steel Volumetric; these are kept apart so a
+      # cleanroom or a concrete-module plant is never counted as a wood housing plant.
+      - name: Specialty Volumetric
+        description: >-
+          Factory-built volumetric modules purpose-built for uses other than housing: laboratories
+          and cleanrooms, healthcare and imaging suites, correctional cells, blast-resistant and
+          hazardous-material buildings, electrical and equipment rooms, telecom shelters, press
+          boxes, kiosks, drive-through and branded retail or restaurant modules.
+        aliases: [specialty volumetric, specialty modular, purpose-built modular,
+                  modular cleanrooms, modular laboratories, blast resistant buildings,
+                  modular correctional, modular e-houses, equipment shelters]
+        signals: [cleanroom, laboratory module, blast resistant, correctional, detention,
+                  e-house, equipment shelter, telecom shelter, press box, kiosk, drive-thru,
+                  guard booth]
+      - name: Other Material Volumetric Modular
+        description: >-
+          Factory-built volumetric modules framed or cast primarily in a material other than wood
+          or steel (reinforced or precast concrete, cementitious panels), or a plant that builds
+          both wood and steel modules.
+        aliases: [concrete modular, precast modular, concrete volumetric, cementitious modular,
+                  other material volumetric]
+        signals: [concrete modules, precast modules, cementitious, reinforced concrete modular]
+      - name: Modular (type not determined)
+        description: >-
+          A volumetric modular plant whose framing material could not be verified from any
+          source. A holding category: a source naming wood or steel moves the plant to that leaf.
+        aliases: [modular type not determined, volumetric material unverified]
+        signals: []
 
   - name: Pods
     legacy: []
