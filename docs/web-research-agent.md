@@ -166,7 +166,7 @@ The system records each document you cite as a `research_source` assertion (link
 
 `capability_leaf` values, by group:
 
-- **Modular:** HUD Modular, Wood Volumetric Modular, Steel Volumetric Modular, Relocatable Modular
+- **Modular:** HUD Modular, Wood Volumetric Modular, Steel Volumetric Modular, Relocatable Modular, Specialty Volumetric, Other Material Volumetric Modular, Modular (type not determined)
 - **Pods:** Bathroom Pods, Specialty Volumetric MEP (Skids, Racks)
 - **Panel:** Open Wood Panel, Closed Wood Panel, Open LGS Panel, Closed LGS Panel, Exterior Envelope Panels, Precast Concrete Panel, SIP / ICF (Other Composite Panel)
 - **Mass Timber:** Mass Timber (CLT)
