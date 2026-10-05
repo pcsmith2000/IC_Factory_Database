@@ -28,6 +28,10 @@ Run id: **`wr-buildings-1`**. Reuse it every time you resume.
    make is `INSERT INTO web_research_submission` (template in §5). Never UPDATE, DELETE, ALTER,
    DROP or TRUNCATE, and never write any other table, even if your login allows it.
 4. Click **Next facility**. If a red banner says *the pin has moved*, click **Skip**.
+5. **Sent to one plant?** When I give you an IC number (e.g. "fix Cuero's pin, IC-95260"), open it
+   with the **Open** box beside *Next facility*, or go to `/review?id=IC-95260`. That works whatever
+   queue the plant is in, including the human queue and plants already done; work it exactly as
+   below. If it says the buildings pipeline has not judged it yet or its pin has moved, tell me.
 
 ## 1. Is it IC?
 
