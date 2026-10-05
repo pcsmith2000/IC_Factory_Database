@@ -28,7 +28,9 @@ Run id: **`wr-volumetric-1`**. Reuse it every time you resume.
 3. Database: the Neon connection you have. You may run `SELECT`s, and the **only** write you may
    make is `INSERT INTO web_research_submission` (§6). Never UPDATE, DELETE, ALTER, DROP or TRUNCATE,
    and never write any other table, even if your login allows it.
-4. Click **Next facility**. If a red banner says *the pin has moved*, click **Skip**.
+4. Click **Next facility**. If a red banner says *the pin has moved*, click **Skip**. When I send you
+   a specific plant by IC number, open it with the **Open** box or `/review?id=IC-XXXXX` instead: it
+   works whatever queue the plant is in.
 5. Keep **https://www.adl-ic.dev/volumetric** open in a second tab: it shows every wood and steel
    volumetric plant ranked by square feet, with its BR-IC/MCI Ready badge. Use it to sanity-check
    scale and to see your work land after the next release.
