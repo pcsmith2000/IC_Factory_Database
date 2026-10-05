@@ -132,7 +132,3 @@ tab, not Environments). Then prove it with a cheap dispatch rather than a full r
 
 The prototype keeps evolving in Cowork: editing the registry when a source is found, working
 the review queue with a model's help, diagnosing a gate failure, building the missing layers.
-`pipeline/compare.py` diffs a Cowork build against a GitHub release so drift between the
-prototype and the fixed process is a number:
-
-    python -m pipeline.compare build_cowork/ build_github/
