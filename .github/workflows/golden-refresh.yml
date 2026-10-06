@@ -13,7 +13,7 @@ on:
   # GitHub drops most scheduled runs (13 fired in two days, ~4h apart), so the workflows that
   # write assertions also start a refresh when they finish. Draining the queue is idempotent.
   workflow_run:
-    workflows: [monitor-fix, operator-apply, web-research-ingest, duplicates]
+    workflows: [monitor-fix, operator-apply, facility-intake, web-research-ingest, duplicates]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -61,12 +61,13 @@ jobs:
       # operator-apply / monitor-fix run (2026-09-29: two duplicates dispatches cancelled both). Both
       # appends are idempotent, so every real refresh re-applies the files on main first: a cancelled
       # apply is healed by the next refresh, which runs on a schedule and after every writer.
-      - name: Re-apply people's rulings and monitor fixes (idempotent)
+      - name: Re-apply people's rulings, monitor fixes and new facilities (idempotent)
         if: inputs.dry_run != true
         continue-on-error: true           # a bad control file must not stop the queue from draining
         run: |
           python -m pipeline.operator_apply | tee operator.json
           python -m pipeline.monitor_fix | tee monitor_fix.json
+          python -m pipeline.facility_intake | tee intake.json || true    # a refused look-alike exits 1; the rest applied
           python3 -c "import json; o=json.load(open('operator.json')); m=json.load(open('monitor_fix.json')); print(f'operator: {o[\"written\"]} new, monitor_fix: {m[\"written\"]} new')" >> "$GITHUB_STEP_SUMMARY"
       - name: Refresh
         env:

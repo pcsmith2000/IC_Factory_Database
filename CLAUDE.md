@@ -64,6 +64,11 @@ IC-95437,state,NV,2026-09-26,https://github.com/pcsmith2000/IC_Factory_Database/
   main, `operator-apply.yml` appends them to `fact_assertions` as source `operator`. A person's `existence_flag` is
   `not_ic`, `closed` (both take the plant out of golden) or `review`. A capability ruling is a pair of lines,
   `capability_leaf` and `capability_group`, same date, naming a leaf of `registry/taxonomy.yaml` and its group.
+- A plant no source lists yet is added by a line in `control/new_facilities.csv` and a pull request, never by
+  SQL: see `docs/new-facility-agent.md`. `python -m pipeline.facility_intake --check` validates the file; on a PR,
+  `facility-intake.yml` dry-runs it against the warehouse and refuses look-alikes; on main it mints the IC-number
+  and appends the founding facts as source `facility_intake`, which keep the plant in golden across releases.
+  ADL employees add a plant from the Employee Feedback tab in ADL_Viz instead.
 - The warehouse workflows share one concurrency group, and GitHub keeps only ONE pending run per group: a
   newer queued run cancels the older pending one. Don't dispatch several warehouse workflows back to back;
   wait for each. `golden-refresh` re-applies both control files before it drains, so a cancelled

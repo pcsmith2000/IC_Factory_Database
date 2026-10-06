@@ -1,0 +1,67 @@
+# New facilities (control/new_facilities.csv, pipeline/facility_intake.py): a plant no source lists yet,
+# added by a reviewed pull request. On a pull request that changes the file, a dry run against the live
+# warehouse reports what would be minted and refuses look-alikes, so the reviewer sees it before merging.
+# On main it mints each new plant's IC-number and appends its founding facts; golden-refresh follows.
+name: facility-intake
+run-name: "New facilities${{ (github.event_name == 'pull_request' || inputs.dry_run) && ' (dry run)' || '' }}"
+
+on:
+  push:
+    branches: [main]
+    paths: [control/new_facilities.csv, pipeline/facility_intake.py, .github/workflows/facility-intake.yml]
+  pull_request:
+    paths: [control/new_facilities.csv]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "validate and report; mint and write nothing"
+        type: boolean
+        default: true
+
+# Writes share ic-warehouse-pipeline (never beside an ingestion, enrichment or golden refresh). A pull
+# request's dry run writes nothing, so it gets its own group: it must never cancel a pending writer.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('facility-intake-pr-{0}', github.event.pull_request.number) || 'ic-warehouse-pipeline' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+# bash -eo pipefail: without it `python ... | tee out.json` reports success when python fails.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  apply:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -e ".[postgres]"
+      - name: Validate the file
+        run: python -m pipeline.facility_intake --check
+      - name: Resolve the Neon warehouse connection
+        # A fork's pull request has no secrets: the file check above is all it gets.
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.IC_DB_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.IC_DB_DATABASE_URL_UNPOOLED }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID || secrets.NEON_PROJECT_ID }}
+        run: |
+          if [ -n "$DATABASE_URL" ]; then echo "DATABASE_URL=$DATABASE_URL" >> "$GITHUB_ENV"; echo "DATABASE_URL_UNPOOLED=$DATABASE_URL_UNPOOLED" >> "$GITHUB_ENV"; fi
+          python .github/scripts/neon_connection_string.py
+      - name: Apply
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run }}
+        run: |
+          # A push has no inputs: it applies for real. A pull request always dry-runs.
+          set --
+          [ "$DRY_RUN" = "true" ] && set -- --dry-run
+          python -m pipeline.facility_intake "$@" | tee apply.json
+          { echo '```json'; cat apply.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

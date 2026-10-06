@@ -68,6 +68,10 @@ SYNTHETIC_SOURCES = {  # assertion sources that are not registry entries
     # The warehouse monitor's evidenced corrections (pipeline/monitor_fix.py): directly below people,
     # above every other source, and limited to location/contact fields.
     "monitor_fix": {"name": "Monitor fix (control/monitor_fix_assertions.csv)", "class": "monitor_fix"},
+    # A plant no source lists yet, added by a reviewed pull request (pipeline/facility_intake.py). Its
+    # founding facts fill blanks and keep the plant in golden; every registry and list outranks them.
+    "facility_intake": {"name": "New facility (control/new_facilities.csv, reviewed pull request)",
+                        "class": "facility_intake"},
     # The building review pane (ADL_Viz /review): a pin a reviewer moved onto the plant they found,
     # with the source that places it there. basis review_pin_person / review_pin_agent.
     "building_review": {"name": "Building review pane (ADL_Viz /review)", "class": "building_review"},

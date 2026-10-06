@@ -41,7 +41,13 @@ from .warehouse import GOLDEN_FIELDS
 
 ROOT = Path(__file__).resolve().parent.parent
 CARRIED_CLASSES = ("enrichment", "tako_ai_search", "astra_manual_web_lookup", "human_feedback", "web_research",
-                   "monitor_fix", "operator")
+                   "monitor_fix", "operator", "facility_intake")
+# A plant that no source lists, added by hand: a line of control/new_facilities.csv
+# (pipeline/facility_intake.py) or an ADL employee's "Add a new factory" in ADL_Viz (employee_feedback
+# with creates_facility = 1). No release will ever assert anything about it, so it is kept in golden
+# by its founding facts rather than by the current release. Nothing else founds a plant: a carried
+# web lookup or correction never brings back a plant a later release dropped.
+FOUNDING_SOURCES = ("facility_intake",)
 
 # Each queued (facility_key, release_tag) resolves to a permanent facility the way
 # v_assertions_resolved does: through its release's registry and legacy_id_map, or directly when
@@ -87,12 +93,14 @@ def compute_full(wh, facility_ids: list[str], release_tag: str, rules: dict) -> 
     A facility is in golden only while the current release asserts something about it. Carried
     facts (enrichment, Tako, ASTRA, employee feedback) keep a plant's paid-for detail, but they must
     not resurrect a plant a later release dropped: that is the scope promote's EXISTS clause kept
-    before the registry, and it is kept here."""
+    before the registry, and it is kept here. The one exception is a plant added by hand, which no
+    release lists: its founding facts keep it (FOUNDING_SOURCES, founded)."""
     empty = {"rows": {}, "unfiltered": [], "quarantined": [], "excluded": set(), "conflicts": []}
     if not facility_ids:
         return empty
     asserts = wh.query(_basis_sql(len(facility_ids)), (*facility_ids, release_tag))
-    present = {a["facility_id"] for a in asserts if a["release_tag"] == release_tag}
+    present = {a["facility_id"] for a in asserts
+               if a["release_tag"] == release_tag or a["source_id"] in FOUNDING_SOURCES} | founded(wh, facility_ids)
     asserts = [a for a in asserts if a["facility_id"] in present]
     if not asserts:
         return empty
@@ -112,6 +120,17 @@ def compute_full(wh, facility_ids: list[str], release_tag: str, rules: dict) -> 
     rows, conflicts, excluded = golden_mod.split_excluded(rows, conflicts)
     return {"rows": {r["facility_id"]: r for r in rows}, "unfiltered": unfiltered, "quarantined": quarantined,
             "excluded": {g["facility_id"] for g in excluded}, "conflicts": conflicts}
+
+
+def founded(wh, facility_ids: list[str]) -> set[str]:
+    """Of these facilities, the ones an ADL employee created in ADL_Viz (employee_feedback ledger)."""
+    marks = ",".join("?" * len(facility_ids))
+    try:
+        return {r["facility_key"] for r in wh.query(
+            f"SELECT DISTINCT facility_key FROM employee_feedback WHERE creates_facility = 1 AND facility_key IN ({marks})",
+            tuple(facility_ids))}
+    except Exception:                                    # a warehouse without the ledger has none
+        return set()
 
 
 def compute(wh, facility_ids: list[str], release_tag: str, rules: dict) -> tuple[dict, list[dict], set[str]]:
