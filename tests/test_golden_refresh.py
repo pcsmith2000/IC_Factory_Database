@@ -99,6 +99,16 @@ def test_incremental_refreshes_equal_a_full_rebuild(wh):
     assert incremental["IC-00001"]["phone"] == "970-555-0101"
 
 
+def test_a_pin_moved_in_review_outlives_its_release(wh):
+    # A reviewer moved Ladabuild's pin onto the plant under the old release; a later release ships
+    # no building_review facts. The moved pin must still win over the rooftop geocode.
+    fact(wh, "IC-00009", "lat_lon", "39.0700,-108.5600", tag=OLD, source="building_review", cls="building_review",
+         basis="review_pin_person", date="2026-09-25")
+    gr.refresh(wh, all_facilities=True)
+    g = golden(wh)["IC-00001"]
+    assert g["lat_lon"] == "39.0700,-108.5600" and g["lat_lon__source"] == "building_review"
+
+
 def test_an_out_of_state_coordinate_is_withheld_and_is_not_a_loss(wh):
     gr.refresh(wh)
     # A later rooftop that lands in Maryland for a Colorado plant: E10 withholds it, and the

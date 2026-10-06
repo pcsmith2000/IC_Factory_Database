@@ -40,8 +40,11 @@ from .registry import load_yaml
 from .warehouse import GOLDEN_FIELDS
 
 ROOT = Path(__file__).resolve().parent.parent
+# Facts that outlive the release they were asserted under. building_review is a pin a reviewer moved
+# onto the plant in ADL_Viz /review: a person's (or the review agent's) correction, which a new
+# release must not silently undo.
 CARRIED_CLASSES = ("enrichment", "tako_ai_search", "astra_manual_web_lookup", "human_feedback", "web_research",
-                   "monitor_fix", "operator")
+                   "monitor_fix", "operator", "building_review")
 
 # Each queued (facility_key, release_tag) resolves to a permanent facility the way
 # v_assertions_resolved does: through its release's registry and legacy_id_map, or directly when
