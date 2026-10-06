@@ -7,7 +7,6 @@ precision audit had nothing to run against, and review_queue.csv reached a human
 classifier's own reasoning. A stub for classify.run exercises all of it offline.
 """
 import csv
-import os
 from pathlib import Path
 import pytest
 from pipeline import classify, run as run_mod
@@ -55,8 +54,7 @@ def classified(tmp_path, monkeypatch):
     # stopped a run from silently producing an unclassified "release". The stub stands in for the
     # provider so the rest of the path can be exercised without one.
     monkeypatch.setattr(run_mod, "ai_client_and_model", lambda m: (None, "stub/test", "stub"))
-    monkeypatch.setenv("IC_WAREHOUSE_ENGINE", "sqlite")
-    monkeypatch.setenv("IC_WAREHOUSE_PATH", str(tmp_path / "w.sqlite"))
+    monkeypatch.setenv("IC_WAREHOUSE_ENGINE", "none")
     monkeypatch.setenv("IC_ARCHIVE", "off")
     # Seven hand-written contract rows instead of the 100k in ic-csv/: the point is that the path
     # runs, not that it runs at scale, and a fixture keeps this a test rather than a five-minute

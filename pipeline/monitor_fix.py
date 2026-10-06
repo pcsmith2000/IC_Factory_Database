@@ -138,9 +138,9 @@ def apply(wh, *, path: Path = PATH, dry_run: bool = False) -> dict:
 def main(argv=None) -> int:
     import argparse
     from .registry import load_yaml
-    from .warehouse import open_warehouse, SqliteWarehouse
+    from .warehouse import open_warehouse, connect as connect_url
     ap = argparse.ArgumentParser(prog="python -m pipeline.monitor_fix")
-    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine")
+    ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     ap.add_argument("--check", action="store_true", help="validate the file and exit")
     ap.add_argument("--dry-run", action="store_true", help="report what would be written; write nothing")
     args = ap.parse_args(argv)
@@ -148,7 +148,7 @@ def main(argv=None) -> int:
     if args.check or bad:
         print("\n".join(bad) or f"{PATH.name}: {len(read()[1])} lines OK")
         return 1 if bad else 0
-    wh = (SqliteWarehouse(Path(args.db)) if args.db
+    wh = (connect_url(args.db) if args.db
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1

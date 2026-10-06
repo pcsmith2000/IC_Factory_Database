@@ -6,7 +6,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     services:
-      postgres:                          # the warehouse tests run on sqlite and, when this is up, on postgres too
+      postgres:                          # the warehouse tests run on postgres; without TEST_DATABASE_URL they skip
         image: postgres:16
         env: { POSTGRES_USER: ic, POSTGRES_PASSWORD: ic, POSTGRES_DB: ic_factory }
         ports: ["5432:5432"]

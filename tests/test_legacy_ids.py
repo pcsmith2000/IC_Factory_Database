@@ -5,7 +5,6 @@ import pytest
 
 from pipeline import facility_registry as fr
 from pipeline import legacy_ids as L
-from pipeline import warehouse
 
 NOW = "v1+reg.a+ids.00000000+ctl.x"      # the current golden release, registry 00000000
 OLD_A = "v1+reg.b+ids.aaaaaaaa+ctl.x"    # a release from a diverged registry
@@ -92,8 +91,8 @@ def test_a_number_with_no_identity_is_unresolved_and_never_guessed():
 
 # ---------------------------------------------------------------- against a warehouse
 @pytest.fixture
-def wh(tmp_path):
-    w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
+def wh(new_wh):
+    w = new_wh()
     yield w
     w.close()
 

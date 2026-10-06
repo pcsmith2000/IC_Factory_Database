@@ -390,9 +390,9 @@ def main(argv=None) -> int:
     import argparse
     from .facility_registry import RegistryConflict
     from .registry import load_yaml
-    from .warehouse import open_warehouse, SqliteWarehouse
+    from .warehouse import open_warehouse, connect as connect_url
     db = argparse.ArgumentParser(add_help=False)
-    db.add_argument("--db", default=argparse.SUPPRESS, help="sqlite path; default: the configured engine")
+    db.add_argument("--db", default=argparse.SUPPRESS, help="Postgres URL; default: DATABASE_URL")
     ap = argparse.ArgumentParser(prog="python -m pipeline.duplicates", parents=[db])
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("candidates", parents=[db], help="scan active golden for same-parcel numbers")
@@ -413,7 +413,7 @@ def main(argv=None) -> int:
     d.add_argument("--reason", default="")
     args = ap.parse_args(argv)
     path = getattr(args, "db", None)
-    wh = (SqliteWarehouse(Path(path)) if path
+    wh = (connect_url(path) if path
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1

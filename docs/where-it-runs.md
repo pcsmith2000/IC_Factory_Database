@@ -30,8 +30,9 @@ GitHub ↔ GCP connects through Workload Identity Federation — no long-lived k
   from this repo's `pyproject.toml`.
 - **Secret Manager** for `AI_GATEWAY_API_KEY`, `CENSUS_API_KEY` when running in Cloud Run;
   GitHub secrets when running on the runner.
-- **Warehouse: Neon (Postgres)** when `DATABASE_URL` is set — the persistent store across
-  quarterly runs; a SQLite file in `build/` otherwise (`docs/warehouse.md`). Cloud SQL for
+- **Warehouse: Neon (Postgres)** at `DATABASE_URL` — the persistent store across quarterly
+  runs (`docs/warehouse.md`); a run with no URL halts at the warehouse unless told
+  `IC_WAREHOUSE_ENGINE=none`. Cloud SQL for
   PostgreSQL is the drop-in when the project moves to Google Cloud.
 
 ## Credentials — where each one goes
@@ -47,7 +48,7 @@ page — a variable in the Secrets tab (or the reverse) reads as empty, not as a
 |---|---|---|---|
 | `BLOB_READ_WRITE_TOKEN` · `IC_DB_PRI_SOURCE_READ_WRITE_TOKEN` | Secrets | raw-source archive to Vercel Blob | no archive; raw files die with the runner (run record says so) |
 | `BLOB_STORE_ID` · `IC_DB_PRI_SOURCE_STORE_ID` | Secrets | names the blob store explicitly | the store id is read out of the token |
-| `DATABASE_URL` + `DATABASE_URL_UNPOOLED` · `IC_DB_DATABASE_URL`(`_UNPOOLED`) | Secrets | the Neon warehouse | falls back to the Neon integration below, else SQLite in the artifact |
+| `DATABASE_URL` + `DATABASE_URL_UNPOOLED` · `IC_DB_DATABASE_URL`(`_UNPOOLED`) | Secrets | the Neon warehouse | falls back to the Neon integration below, else the run halts at the warehouse |
 | `NEON_API_KEY` | Secrets | set by the Neon GitHub integration; used only when `DATABASE_URL` is absent | — |
 | `NEON_PROJECT_ID` | **Variables** | same integration path | — |
 | `AI_GATEWAY_API_KEY` · `IC_DB_AI_GATEWAY_API_KEY` · `VERCEL_AI_GATEWAY_API_KEY` | Secrets | every AI step: Layer 3 classification, Layer 1 `ai_extraction`, and stage 9's `vercel:*_search` server tools | all of them fail loudly — there is no second provider to fall through to |

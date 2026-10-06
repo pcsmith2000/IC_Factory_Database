@@ -182,14 +182,14 @@ def crosswalk(wh, dry_run: bool = False) -> dict:
 def main(argv=None) -> int:
     import argparse
     from .registry import load_yaml
-    from .warehouse import open_warehouse, SqliteWarehouse
+    from .warehouse import open_warehouse, connect as connect_url
     ap = argparse.ArgumentParser(prog="python -m pipeline.legacy_ids")
-    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine")
+    ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("crosswalk", help="map every historical IC-number to its permanent facility")
     c.add_argument("--dry-run", action="store_true", help="resolve and report; write nothing")
     args = ap.parse_args(argv)
-    wh = (SqliteWarehouse(Path(args.db)) if args.db
+    wh = (connect_url(args.db) if args.db
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1

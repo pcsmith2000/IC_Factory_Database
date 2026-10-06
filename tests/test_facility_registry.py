@@ -1,29 +1,16 @@
 """The permanent facility registry (epic #39, #41): seeded from golden, idempotent, never renumbers."""
 import json
-import os
 from pathlib import Path
 
 import pytest
 
 from pipeline import facility_registry as fr
-from pipeline import warehouse
-
-PG_URL = os.environ.get("TEST_DATABASE_URL")
-REGISTRY_TABLES = ("facility_event", "facility_match_key", "legacy_id_map", "facility")
 
 
-@pytest.fixture(params=["sqlite", "postgres"])
-def wh(request, tmp_path):
-    if request.param == "sqlite":
-        w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
-    else:
-        if not PG_URL:
-            pytest.skip("TEST_DATABASE_URL not set")
-        w = warehouse.PostgresWarehouse(PG_URL)
-        with w.transaction() as c:
-            for t in REGISTRY_TABLES + ("golden_facility",):
-                c.execute(f"DELETE FROM {t}")
-            c.execute(f"SELECT setval('facility_id_seq', {fr.ID_FLOOR}, false)")
+
+@pytest.fixture
+def wh(new_wh, tmp_path):
+    w = new_wh()
     yield w
     w.close()
 

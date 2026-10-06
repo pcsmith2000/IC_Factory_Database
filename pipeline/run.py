@@ -4,7 +4,7 @@
 
 Layer 1 is skipped with --layers 2-8 (use existing ic-csv/). --rerun asserts identical inputs
 so G3 tests id stability. Every run writes run_records/<timestamp>.json whatever happens; a
-successful release also loads the warehouse (pipeline/warehouse.py — SQLite now, BigQuery later).
+successful release also loads the warehouse (pipeline/warehouse.py, Postgres on Neon).
 """
 from __future__ import annotations
 import argparse, csv, json, os, sys
@@ -60,7 +60,7 @@ def main(argv=None) -> int:
     # between legitimate options and CI passes IC_CLASSIFIER_MODEL on every dispatch — warning on
     # that made the very first classified run print NOT A CLEAN RELEASE for no reason, which is
     # how a warning stops being read.
-    STATE = ("IC_CSV_DIR", "IC_ID_REGISTRY", "IC_WAREHOUSE_PATH", "IC_WAREHOUSE_ENGINE")
+    STATE = ("IC_CSV_DIR", "IC_ID_REGISTRY", "IC_WAREHOUSE_ENGINE")
     CONFIG = ("IC_CLASSIFIER_MODEL", "IC_ARCHIVE", "IC_AI")
     state_overrides = {k: os.environ[k] for k in STATE if os.environ.get(k)}
     overrides = {**state_overrides, **{k: os.environ[k] for k in CONFIG if os.environ.get(k)}}
@@ -76,7 +76,7 @@ def main(argv=None) -> int:
     # neither flag, so releases still land in run_records/. (Six tracked records were deleted by a
     # cleanup glob aimed at exactly these strays; the fix is to stop creating them.)
     rec_dir = out if (args.limit or args.out != ap.get_default("out")) else None
-    # IC_CSV_DIR mirrors IC_WAREHOUSE_PATH: the contract CSVs live in ic-csv/ for a real run, and
+    # IC_CSV_DIR: the contract CSVs live in ic-csv/ for a real run, and
     # a test or a side-by-side experiment can point Layer 2 somewhere else without writing into the
     # working tree. Without it the classified path could not be exercised offline at all, which is
     # why three defects on that path (product_type dropped, no audit input, review_queue missing
@@ -262,7 +262,7 @@ def main(argv=None) -> int:
         print(f"  layers {sorted(layers)}: stopping before layer 5 — no ids issued")
         _write_record(record, rec_dir); return 0
     hb.beat("5_reconcile")
-    # IC_ID_REGISTRY alongside IC_CSV_DIR and IC_WAREHOUSE_PATH. Ids are never renumbered, so a
+    # IC_ID_REGISTRY alongside IC_CSV_DIR. Ids are never renumbered, so a
     # run against fixture data writing here burns real IC numbers on plants that do not exist —
     # a test fixture took IC-94453 through IC-94456 for "700 ash blvd" and friends before this
     # existed. A test points it at a scratch file; a real run leaves it unset.
