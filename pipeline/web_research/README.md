@@ -37,7 +37,6 @@ A four-worker trial increased unconfirmed search responses. Subsequent rounds us
 
 Campaign evidence caching reuses successful public-page snapshots for at most four hours, retaining their original retrieval time and source run. Failed/unreadable pages are not cached, and new search URLs are fetched normally. Every row still requires a newly confirmed Tako search. This reduces repeat downloads without treating old search claims as new evidence.
 
-`pipeline.web_research.ledger` consolidates distinct primary-source proposals across rounds. Multiple values for the same facility field remain review. Its cumulative inventory is separate from the per-round novelty metric and does not authorize database writes.
 
 
 ## Approved assertion import

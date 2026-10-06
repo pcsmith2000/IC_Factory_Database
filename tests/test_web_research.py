@@ -228,19 +228,6 @@ def test_rooftop_requires_matching_street_not_only_house_number():
     assert not street_matches('831 New York 67 Bldg 46',{'formatted_street':'Church Ave','unit_number':'46'})
 
 
-def test_campaign_ledger_holds_competing_fills(tmp_path):
-    import json
-    from pipeline.web_research.ledger import consolidate
-    r=tmp_path/'round';r.mkdir()
-    def phone(value):
-        return dict(field='phone',value=value,source_url='https://state.gov/contact',quote='Plant phone '+value,scope='facility',source_kind='registry',quote_verified=True,identity_anchor_found=True,decision='candidate',relationship='fill')
-    (r/'results.json').write_text(json.dumps([dict(facility_id='IC-1',database_writes=0,proposals=[phone('111'),phone('222')])]))
-    result=consolidate([dict(facility_id='IC-1',name='Plant',phone=None)],[(1,r)],tmp_path/'out')
-    assert result['distinct_proposed_values']==2
-    assert result['cells_with_competing_proposals']==1
-    assert result['noncompeting_candidate_fills']==0
-
-
 def test_evidence_cache_keeps_original_age_and_retries_failed_pages(tmp_path):
     import json
     from datetime import datetime, timezone
