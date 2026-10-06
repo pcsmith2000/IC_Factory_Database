@@ -3,7 +3,7 @@ import csv
 
 import pytest
 
-from pipeline import golden_refresh as gr, operator_apply as O, warehouse
+from pipeline import golden_refresh as gr, operator_apply as O
 
 NOW = "v1+reg.a+ids.00000000+ctl.x"
 COLUMNS = ["facility_id", "field", "value", "retrieved_date", "note"]
@@ -16,8 +16,8 @@ def _write(path, rows):
 
 
 @pytest.fixture
-def wh(tmp_path):
-    w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
+def wh(new_wh):
+    w = new_wh()
     with w.transaction() as c:
         c.executemany("INSERT INTO facility (facility_id, status, merged_into, created_at, created_by) "
                       "VALUES (?, 'active', NULL, 't', 't')", [("IC-00001",), ("IC-00002",), ("IC-00003",)])

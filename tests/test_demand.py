@@ -1,5 +1,5 @@
 """Demand research: the verification rules, merging, and the load plan (no network, no database)."""
-import json, sqlite3
+import json
 
 from pipeline.demand import load
 from pipeline.demand.pipeline import (build_project, group_mentions, load_config, match_key, names_company, select,
@@ -106,18 +106,19 @@ def test_load_plan_mints_ids_and_matches_a_project_found_again():
     assert any(a["field"] == "units" and a["value"] == "121" for a in again["assertions"])
 
 
-def test_load_statements_run_and_are_idempotent_on_sqlite():
-    db = sqlite3.connect(":memory:")
-    for s in load.DDL:
-        db.execute(s)
-    p = load.plan(doc(build_project(VBC, [mention("https://a", name="Parkside Apartments", state="NJ", units=120)])),
-                  {}, 1, "demand-1", "2026-09-26T00:00:00Z")
-    for _ in range(2):
-        for sql, params in load.statements(p):
-            db.execute(sql.replace("%s", "?"), params)
-    assert db.execute("SELECT count(*) FROM demand_project").fetchone()[0] == 1
-    assert db.execute("SELECT review_status FROM demand_project").fetchone()[0] == "proposed"
-    assert db.execute("SELECT count(*) FROM demand_assertion").fetchone()[0] == len(p["assertions"])
+def test_load_statements_run_and_are_idempotent(pg_url):
+    import psycopg
+    with psycopg.connect(pg_url, autocommit=True) as db:
+        for s in load.DDL:
+            db.execute(s)
+        p = load.plan(doc(build_project(VBC, [mention("https://a", name="Parkside Apartments", state="NJ", units=120)])),
+                      {}, 1, "demand-1", "2026-09-26T00:00:00Z")
+        for _ in range(2):
+            for sql, params in load.statements(p):
+                db.execute(sql, params)
+        assert db.execute("SELECT count(*) FROM demand_project").fetchone()[0] == 1
+        assert db.execute("SELECT review_status FROM demand_project").fetchone()[0] == "proposed"
+        assert db.execute("SELECT count(*) FROM demand_assertion").fetchone()[0] == len(p["assertions"])
 
 
 def test_score_matches_aliases_and_addresses_and_counts_splits():

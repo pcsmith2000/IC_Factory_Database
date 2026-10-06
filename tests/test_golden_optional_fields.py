@@ -1,37 +1,30 @@
-import sqlite3, tempfile
 from pathlib import Path
 from pipeline import golden, warehouse
 from pipeline.registry import load_yaml
 
 
-def test_an_existing_golden_table_gains_the_new_columns_in_place():
+def test_an_existing_golden_table_gains_the_new_columns_in_place(pg_url):
     """CREATE TABLE IF NOT EXISTS is a no-op on a table that exists, so a warehouse laid down before
     website/sq_ft/operating_status would reject every load. The migration adds them; a table that
-    has them is left alone."""
-    with tempfile.TemporaryDirectory() as d:
-        db = Path(d) / "w.sqlite"
-        old_fields = [f for f in warehouse.GOLDEN_FIELDS if f not in ("website", "sq_ft", "operating_status")]
-        cols = ", ".join(f"{f} TEXT, {f}__source TEXT" for f in old_fields)
-        con = sqlite3.connect(db)
+    has them is left alone. Postgres validates a view's columns at CREATE, so this also proves the
+    migration runs before the view DDL."""
+    import psycopg
+    old_fields = [f for f in warehouse.GOLDEN_FIELDS if f not in ("website", "sq_ft", "operating_status")]
+    cols = ", ".join(f"{f} TEXT, {f}__source TEXT" for f in old_fields)
+    with psycopg.connect(pg_url, autocommit=True) as con:
         con.execute(f"CREATE TABLE golden_facility (facility_key TEXT PRIMARY KEY, release_tag TEXT NOT NULL, {cols}, n_assertions INTEGER, n_sources INTEGER)")
-        con.commit(); con.close()
-        before = {r[1] for r in sqlite3.connect(db).execute("PRAGMA table_info(golden_facility)")}
-        assert "website" not in before
-        wh = warehouse.SqliteWarehouse(db)                       # init_schema -> _migrate_golden
-        after = {r[1] for r in sqlite3.connect(db).execute("PRAGMA table_info(golden_facility)")}
-        for f in ("website", "sq_ft", "operating_status"):
-            assert f in after and f"{f}__source" in after
-        assert before <= after                                   # nothing dropped
-        with wh.transaction() as c:                              # the view built after the migration is readable
-            assert wh._rows(c.execute("SELECT count(*) AS n FROM v_golden_field"))[0]["n"] == 0
-        wh.close()
-        # Known limit of this test: SQLite resolves a view's columns on read, Postgres at CREATE. The
-        # ordering that matters for Neon — migrate before the view DDL — is asserted by construction
-        # in init_schema, not observable here.
-        wh2 = warehouse.SqliteWarehouse(db)                      # idempotent: second open adds nothing
-        with wh2.transaction() as c:
-            assert wh2._migrate_golden(c) == []
-        wh2.close()
+    wh = warehouse.PostgresWarehouse(pg_url)                     # init_schema -> _migrate_golden
+    after = wh.existing_columns("golden_facility")
+    for f in ("website", "sq_ft", "operating_status"):
+        assert f in after and f"{f}__source" in after
+    assert {"facility_key", *old_fields} <= after                 # nothing dropped
+    with wh.transaction() as c:                                  # the view built after the migration is readable
+        assert wh._rows(c.execute("SELECT count(*) AS n FROM v_golden_field"))[0]["n"] == 0
+    wh.close()
+    wh2 = warehouse.PostgresWarehouse(pg_url)                    # idempotent: second open adds nothing
+    with wh2.transaction() as c:
+        assert wh2._migrate_golden(c) == []
+    wh2.close()
 
 
 def test_a_website_on_a_row_becomes_a_golden_field_under_the_rules():

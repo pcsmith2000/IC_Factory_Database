@@ -299,10 +299,10 @@ def _flush(wh, b: dict, today: str) -> None:
 def main(argv=None) -> int:
     import argparse
     from .registry import load_yaml
-    from .warehouse import open_warehouse, SqliteWarehouse
+    from .warehouse import open_warehouse, connect as connect_url
     from .enrich import footprint
     ap = argparse.ArgumentParser(prog="python -m pipeline.buildings")
-    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine")
+    ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     ap.add_argument("--limit", type=int, default=500, help="facilities per run")
     ap.add_argument("--max-files", type=int, default=20, help="Overture parquet files read per run (~1 min each)")
     ap.add_argument("--refresh", action="store_true", help="re-judge facilities already judged at this point")
@@ -314,7 +314,7 @@ def main(argv=None) -> int:
                     help="judge only facilities a source states a plant size for (ground truth for a test)")
     args = ap.parse_args(argv)
     def connect():
-        return (SqliteWarehouse(Path(args.db)) if args.db
+        return (connect_url(args.db) if args.db
                 else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     wh = connect()
     if wh is None:

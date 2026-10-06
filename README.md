@@ -27,11 +27,11 @@ Layer 5b golden        rows → field-level assertions → survivorship rules �
 Layer 6  gates         G1 dedupe · G2 false-merge · G3 id stability · G4 control isolation · G5 classifier eval
 Layer 7  measure       recall on control · per-state coverage · bias index — reported, not steered
 Layer 8  publish       tagged release: registry version + id_registry hash + control checksum + prompt/model versions
-                       → warehouse: star schema; SQLite locally, Postgres (Neon) when DATABASE_URL is set
+                       → warehouse: star schema in Postgres (Neon), at DATABASE_URL
 ```
 
 Full design: `docs/pipeline-v4.md` (assumptions register inside). Data model: `docs/data-model.md`.
-Where it runs: `docs/where-it-runs.md`. Warehouse (star schema; SQLite / Neon Postgres): `docs/warehouse.md`. Runbook: `docs/runbook.md`. Contract: `docs/contract.md`.
+Where it runs: `docs/where-it-runs.md`. Warehouse (star schema; Neon Postgres): `docs/warehouse.md`. Runbook: `docs/runbook.md`. Contract: `docs/contract.md`.
 
 ## Deterministic vs AI vs human
 
@@ -62,14 +62,13 @@ pipeline/sources/              one fetcher per source id (fetch → archive → 
 prompts/EXTRACTION-PROMPT.md   frozen; AI transcription of prose location pages (corporate_locations)
 ic-csv/                        contract CSVs, one per source per run (generated)
 run_records/                   one JSON per run: inputs, versions, gate results, metrics
-build/ic_factory.sqlite        the local warehouse (generated); the cloud one is Neon via DATABASE_URL
 docs/                          pipeline design, assumptions register, contract, runbook
 .github/workflows/             ci.yml (tests on every push) · run.yml (quarterly pipeline run)
 ```
 
 Raw source archives and bulk downloads are **not** in git — they go to a private Vercel Blob
 store (`archive:` in `registry/config.yaml`), keyed `ic-sources/<source>/<date>/<file>` with a
-per-pull manifest. The warehouse is Neon Postgres via `DATABASE_URL`, SQLite locally.
+per-pull manifest. The warehouse is Neon Postgres via `DATABASE_URL`.
 
 ## Standing rules
 
@@ -95,7 +94,7 @@ pytest
 ## Status (v1.0)
 
 Scaffold of the v4 process. Layers 2, 5, 5b, 6 (all five gates), 7 and 8 run end to end
-against the contract, and Layer 8 loads the warehouse — SQLite locally, Neon Postgres in the cloud (`docs/warehouse.md`); Layer 3 carries the regimented classifier call; Layer 4 (entity
+against the contract, and Layer 8 loads the warehouse — Neon Postgres (`docs/warehouse.md`); Layer 3 carries the regimented classifier call; Layer 4 (entity
 resolution) passes rows through flagged NOT-ATTEMPTED and reports resolution_rate = 0 so the
 gap is visible; Layer 1 has a fetcher for every active source (`docs/sources.md`), written against
 endpoints found by search and not yet run live — the first `python -m pipeline.sources.check <id>`

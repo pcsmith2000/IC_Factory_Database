@@ -1,11 +1,9 @@
 """Layer 8 sink: the warehouse.
 
-One star schema (docs/warehouse.md), two engines behind one loader:
-  sqlite    a local file (default; standard library) — laptop and Cowork runs
-  postgres  Neon today, Cloud SQL for PostgreSQL later — selected whenever DATABASE_URL is set
-The SQL is written once in the dialect both engines share (ON CONFLICT upserts, TEXT/INTEGER/REAL);
-only the parameter placeholder differs. An engine that is selected but cannot be opened halts
-the run loudly — it is never silently skipped.
+One star schema (docs/warehouse.md) in Postgres (Neon), reached through DATABASE_URL. SQL is
+written with '?' placeholders and translated to psycopg's. A warehouse that is wanted but cannot be
+opened halts the run loudly — it is never silently skipped, and there is no local fallback: a run
+with no warehouse says so (IC_WAREHOUSE_ENGINE=none).
 
 Provenance is the point. `fact_assertions` is append-only and tagged by release; `golden_facility`
 is replaced per release and is a pure function of the assertions and registry/survivorship.yaml;
@@ -19,7 +17,7 @@ contract row. Nothing here decides anything; it records what Layers 5–7 decide
     python -m pipeline.warehouse sql "select state, count(*) from golden_facility group by 1"
 """
 from __future__ import annotations
-import hashlib, json, os, sqlite3, sys
+import hashlib, json, os, sys
 from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
@@ -335,7 +333,7 @@ def _float(x) -> float | None:
 
 # ---------------------------------------------------------------- engines
 class _Cursor:
-    """Executes shared-dialect SQL ('?' placeholders) on either driver; exposes rowcount and fetches."""
+    """Executes '?'-placeholder SQL on psycopg; exposes rowcount and fetches."""
     CHUNK = 1000
 
     def __init__(self, wh, raw):
@@ -353,7 +351,7 @@ class _Cursor:
         serial round trips. Nothing about the SQL or the result changes.
 
         Callers must NOT read rowcount off this to learn how many rows an ON CONFLICT ... DO NOTHING
-        actually inserted: psycopg and sqlite3 do not agree on what executemany's rowcount means.
+        actually inserted: psycopg's executemany rowcount is not that number.
         Count before and after instead (see load_release).
         """
         rows = list(seq)
@@ -392,9 +390,7 @@ class _Warehouse:
 
         The order matters and is not cosmetic. v_golden_field selects every golden column by
         name, and Postgres validates a view's columns at CREATE — so on a warehouse laid down
-        before a column existed, creating the view first fails the whole init. SQLite only
-        resolves a view when it is read, which is why a test on SQLite passed with the migration
-        in the wrong place.
+        before a column existed, creating the view first fails the whole init.
         """
         with self.transaction() as c:
             for stmt in DDL:                     # tables only; VIEWS is a separate list
@@ -402,37 +398,25 @@ class _Warehouse:
             self._migrate_golden(c)              # widen them before anything selects by name
             for stmt in VIEWS:                   # drops and recreates, so a widened table is seen
                 c.execute(stmt)
-            # The IC-number counter. Postgres: a sequence, so two writers can never draw the same
-            # number. SQLite (one writer by construction): a one-row table. Created at the floor
-            # and never lowered; pipeline/facility_registry.py owns it from here.
+            # The IC-number counter: a sequence, so two writers can never draw the same number.
+            # Created at the floor and never lowered; pipeline/facility_registry.py owns it from here.
             from .facility_registry import ID_FLOOR
-            if self.engine == "postgres":
-                c.execute(f"CREATE SEQUENCE IF NOT EXISTS facility_id_seq START WITH {ID_FLOOR} MINVALUE 1")
-                # One statement-level trigger: a 40,000-row release load enqueues each distinct
-                # (facility, release) once, not once per row.
-                c.execute("""CREATE OR REPLACE FUNCTION golden_mark_dirty() RETURNS trigger LANGUAGE plpgsql AS $fn$
-                    BEGIN
-                      INSERT INTO golden_dirty (facility_key, release_tag, since)
-                      SELECT DISTINCT facility_key, release_tag, to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
-                      FROM new_rows ON CONFLICT (facility_key, release_tag) DO NOTHING;
-                      RETURN NULL;
-                    END $fn$""")
-                c.execute("DROP TRIGGER IF EXISTS golden_dirty_on_fact ON fact_assertions")
-                c.execute("""CREATE TRIGGER golden_dirty_on_fact AFTER INSERT ON fact_assertions
-                             REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION golden_mark_dirty()""")
-            else:
-                c.execute("CREATE TABLE IF NOT EXISTS facility_id_counter (name TEXT PRIMARY KEY, next INTEGER NOT NULL)")
-                c.execute("INSERT INTO facility_id_counter VALUES ('facility_id', ?) ON CONFLICT (name) DO NOTHING", (ID_FLOOR,))
-                c.execute("""CREATE TRIGGER IF NOT EXISTS golden_dirty_on_fact AFTER INSERT ON fact_assertions
-                             BEGIN
-                               INSERT INTO golden_dirty (facility_key, release_tag, since)
-                               VALUES (NEW.facility_key, NEW.release_tag, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
-                               ON CONFLICT (facility_key, release_tag) DO NOTHING;
-                             END""")
-            if self.engine == "postgres":
-                # Execute raw: the migration contains Postgres's JSON existence operator '?'.
-                migration = Path(__file__).resolve().parent / "migrations" / "001_employee_feedback.sql"
-                c.raw.execute(migration.read_text())
+            c.execute(f"CREATE SEQUENCE IF NOT EXISTS facility_id_seq START WITH {ID_FLOOR} MINVALUE 1")
+            # One statement-level trigger: a 40,000-row release load enqueues each distinct
+            # (facility, release) once, not once per row.
+            c.execute("""CREATE OR REPLACE FUNCTION golden_mark_dirty() RETURNS trigger LANGUAGE plpgsql AS $fn$
+                BEGIN
+                  INSERT INTO golden_dirty (facility_key, release_tag, since)
+                  SELECT DISTINCT facility_key, release_tag, to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+                  FROM new_rows ON CONFLICT (facility_key, release_tag) DO NOTHING;
+                  RETURN NULL;
+                END $fn$""")
+            c.execute("DROP TRIGGER IF EXISTS golden_dirty_on_fact ON fact_assertions")
+            c.execute("""CREATE TRIGGER golden_dirty_on_fact AFTER INSERT ON fact_assertions
+                         REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION golden_mark_dirty()""")
+            # Execute raw: the migration contains Postgres's JSON existence operator '?'.
+            migration = Path(__file__).resolve().parent / "migrations" / "001_employee_feedback.sql"
+            c.raw.execute(migration.read_text())
 
     def _existing_columns(self, c, table: str) -> set[str]:
         raise NotImplementedError
@@ -488,8 +472,7 @@ class _Warehouse:
         changes nothing. Facts append; golden and conflicts are replaced; dimensions upsert."""
         tag, run_ts = record["release"]["tag"], record["started"]
         with self.transaction() as c:
-            if self.engine == "postgres":
-                c.execute("SELECT pg_advisory_xact_lock(7419026)")
+            c.execute("SELECT pg_advisory_xact_lock(7419026)")
             from .feedback import carry_forward
             from .golden import build_golden
             assertions, facilities = carry_forward(self, c, assertions, facilities)
@@ -570,7 +553,7 @@ class _Warehouse:
         # The golden written above is built from this run's rows alone, so it has none of the
         # enrichment earlier releases paid for. Once the permanent registry is live (#39), golden is
         # rebuilt at once through it, the carried facts restored, and the release frozen (#49), so
-        # no reader sees the un-enriched table for longer than this call. Unseeded (a laptop SQLite
+        # no reader sees the un-enriched table for longer than this call. Unseeded (an empty
         # warehouse): the golden above stands, as it always has.
         from .facility_registry import is_seeded
         if is_seeded(self):
@@ -589,28 +572,6 @@ class _Warehouse:
     def query(self, sql: str, params=()) -> list[dict]:
         with self.transaction() as c:
             return self._rows(c.execute(sql, params))
-
-
-class SqliteWarehouse(_Warehouse):
-    engine = "sqlite"
-
-    def __init__(self, path: Path):
-        self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(self.path)
-        self.conn.row_factory = sqlite3.Row
-        self.init_schema()
-
-    @contextmanager
-    def transaction(self):
-        with self.conn:
-            yield _Cursor(self, self.conn.cursor())
-
-    def _rows(self, raw) -> list[dict]:
-        return [dict(r) for r in raw.fetchall()]
-
-    def _existing_columns(self, c, table: str) -> set[str]:
-        return {r["name"] for r in self._rows(c.execute(f"PRAGMA table_info({table})"))}
 
 
 class PostgresWarehouse(_Warehouse):
@@ -646,12 +607,14 @@ class PostgresWarehouse(_Warehouse):
 
     def _existing_columns(self, c, table: str) -> set[str]:
         return {r["column_name"] for r in self._rows(c.execute(
-            "SELECT column_name FROM information_schema.columns WHERE table_name = ?", (table,)))}
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ?",
+            (table,)))}
 
 
 def open_warehouse(cfg: dict, root: Path):
-    """Engine: IC_WAREHOUSE_ENGINE env · else postgres when DATABASE_URL (or DATABASE_URL_UNPOOLED) is set ·
-    else warehouse.engine in config (default sqlite). IC_WAREHOUSE_PATH overrides the SQLite path."""
+    """The Postgres warehouse at DATABASE_URL_UNPOOLED or DATABASE_URL, or None when the run asks for
+    no warehouse (IC_WAREHOUSE_ENGINE=none, or warehouse.engine: none in config). No URL is an error,
+    never a quiet fallback."""
     w = cfg.get("warehouse") or {}
     # UNPOOLED wins, and which one won is worth saying out loud. Run 35393440727 died on
     # "password authentication failed for user 'neondb_owner'" with a perfectly good
@@ -660,32 +623,36 @@ def open_warehouse(cfg: dict, root: Path):
     # neither of those is the thing you have to go and fix.
     var = "DATABASE_URL_UNPOOLED" if os.environ.get("DATABASE_URL_UNPOOLED") else "DATABASE_URL"
     url = os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
-    engine = os.environ.get("IC_WAREHOUSE_ENGINE") or ("postgres" if url else w.get("engine", "sqlite"))
+    engine = os.environ.get("IC_WAREHOUSE_ENGINE") or w.get("engine") or "postgres"
     if engine in ("none", "off"):
         return None
-    if engine == "sqlite":
-        return SqliteWarehouse(root / (os.environ.get("IC_WAREHOUSE_PATH") or w.get("sqlite_path", "build/ic_factory.sqlite")))
-    if engine in ("postgres", "neon"):
-        if not url:
-            raise WarehouseNotImplemented("warehouse engine is postgres but DATABASE_URL is not set (neon env pull, or a GitHub secret)")
-        try:
-            return PostgresWarehouse(url)
-        except WarehouseNotImplemented:
-            raise
-        except Exception as e:
-            raise WarehouseUnreachable(
-                f"{var} did not connect: {type(e).__name__}: {str(e).strip().splitlines()[0]}\n"
-                f"       url {PostgresWarehouse._redact(url)}\n"
-                f"       (DATABASE_URL_UNPOOLED is read BEFORE DATABASE_URL, so a bad value there "
-                f"hides a good one here)") from e
-    raise WarehouseNotImplemented(f"unknown warehouse engine {engine!r} (sqlite | postgres | none)")
+    if engine not in ("postgres", "neon"):
+        raise WarehouseNotImplemented(f"unknown warehouse engine {engine!r} (postgres | none)")
+    if not url:
+        raise WarehouseNotImplemented("DATABASE_URL is not set (neon env pull, or a GitHub secret); "
+                                      "IC_WAREHOUSE_ENGINE=none runs without a warehouse")
+    return connect(url, var)
+
+
+def connect(url: str, var: str = "--db"):
+    """Open the warehouse at this URL, naming the variable it came from when it does not connect."""
+    try:
+        return PostgresWarehouse(url)
+    except WarehouseNotImplemented:
+        raise
+    except Exception as e:
+        raise WarehouseUnreachable(
+            f"{var} did not connect: {type(e).__name__}: {str(e).strip().splitlines()[0]}\n"
+            f"       url {PostgresWarehouse._redact(url)}\n"
+            f"       (DATABASE_URL_UNPOOLED is read BEFORE DATABASE_URL, so a bad value there "
+            f"hides a good one here)") from e
 
 
 # ---------------------------------------------------------------- CLI
 def main(argv=None) -> int:
     import argparse
     ap = argparse.ArgumentParser(prog="python -m pipeline.warehouse")
-    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine (DATABASE_URL → postgres, else warehouse.sqlite_path)")
+    ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init", help="create the schema (tables, indexes, views) on the configured engine; idempotent")
     p = sub.add_parser("provenance", help="every golden field of a facility, its winning source, and the contract row behind it")
@@ -697,15 +664,12 @@ def main(argv=None) -> int:
     root = Path(__file__).resolve().parent.parent
     from .registry import load_yaml
     cfg = load_yaml(root / "registry" / "config.yaml")
-    if args.db:
-        wh = SqliteWarehouse(Path(args.db) if Path(args.db).is_absolute() else root / args.db)
-    else:
-        try:
-            wh = open_warehouse(cfg, root)
-        except WarehouseNotImplemented as e:
-            print(e, file=sys.stderr); return 1
-        if wh is None:
-            print("warehouse engine is 'none'", file=sys.stderr); return 1
+    try:
+        wh = connect(args.db) if args.db else open_warehouse(cfg, root)
+    except (WarehouseNotImplemented, WarehouseUnreachable) as e:
+        print(e, file=sys.stderr); return 1
+    if wh is None:
+        print("warehouse engine is 'none'", file=sys.stderr); return 1
     if args.cmd == "init":
         print(f"schema ready on {wh.engine}: {wh.path}"); return 0
     if args.cmd == "provenance":

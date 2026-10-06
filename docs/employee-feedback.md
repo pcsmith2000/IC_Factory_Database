@@ -21,9 +21,8 @@ assertions are never deleted when a newer human correction wins.
 
 On PostgreSQL, `python -m pipeline.warehouse init` applies the idempotent
 `pipeline/migrations/001_employee_feedback.sql` after existing tables and views are initialized.
-Apply it to an isolated preview database first. Existing initialization also creates the
-ledger for SQLite, which supports release carry-forward tests; the web writer requires
-Postgres and the installed trigger. The migration adds no sample submissions.
+Apply it to an isolated preview database first. The web writer requires the installed
+trigger. The migration adds no sample submissions.
 
 `preserve_employee_feedback` reapplies ledger-backed assertions on every golden
 INSERT/UPDATE, carries the full employee history into the new release, and refreshes

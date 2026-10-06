@@ -386,9 +386,9 @@ def ingest(wh, *, limit: int = 200, dry_run: bool = False, only: list[str] | Non
 def main(argv=None) -> int:
     import argparse
     from ..registry import load_yaml
-    from ..warehouse import open_warehouse, SqliteWarehouse
+    from ..warehouse import open_warehouse, connect as connect_url
     ap = argparse.ArgumentParser(prog="python -m pipeline.web_research.ingest")
-    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine")
+    ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     ap.add_argument("--limit", type=int, default=200, help="submissions per run")
     ap.add_argument("--dry-run", action="store_true", help="validate and report; write nothing")
     ap.add_argument("--only", default=None, help="comma-separated facility ids; omit to process all pending facilities")
@@ -396,7 +396,7 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     if args.fields:
         print("\n".join(assertable_fields())); return 0
-    wh = (SqliteWarehouse(Path(args.db)) if args.db
+    wh = (connect_url(args.db) if args.db
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1

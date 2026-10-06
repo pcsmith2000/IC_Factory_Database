@@ -246,16 +246,16 @@ def refresh(wh, *, all_facilities: bool = False, batch: int = 500, max_batches: 
 
 def main(argv=None) -> int:
     import argparse
-    from .warehouse import open_warehouse, SqliteWarehouse
+    from .warehouse import open_warehouse, connect as connect_url
     ap = argparse.ArgumentParser(prog="python -m pipeline.golden_refresh")
-    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine")
+    ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     ap.add_argument("--all", action="store_true", help="every registered facility, not just the queue")
     ap.add_argument("--batch", type=int, default=500)
     ap.add_argument("--max-batches", type=int, default=None)
     ap.add_argument("--dry-run", action="store_true", help="compute and report; write nothing, drain nothing")
     ap.add_argument("--snapshot", action="store_true", help="freeze golden as it stands into golden_release; no refresh")
     args = ap.parse_args(argv)
-    wh = (SqliteWarehouse(Path(args.db)) if args.db
+    wh = (connect_url(args.db) if args.db
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1

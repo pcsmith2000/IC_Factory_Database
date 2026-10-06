@@ -1,32 +1,18 @@
 """Web-research ingestion: an external agent's cited findings, validated, into the assertion table."""
 import json
-import os
 
 import pytest
 
 from pipeline import golden_refresh as gr
-from pipeline import warehouse
 from pipeline.web_research import ingest as I
 
-PG_URL = os.environ.get("TEST_DATABASE_URL")
 NOW = "v1+reg.a+ids.00000000+ctl.x"
-TABLES = ("web_research_submission", "facility_duplicate_candidate", "golden_dirty", "facility_event", "facility_match_key", "legacy_id_map",
-          "release_registry", "golden_facility", "fact_assertions", "ref_source_row", "facility")
 FIELDS, TAX = set(I.assertable_fields()), I._taxonomy()
 
 
-@pytest.fixture(params=["sqlite", "postgres"])
-def wh(request, tmp_path):
-    if request.param == "sqlite":
-        w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
-    else:
-        if not PG_URL:
-            pytest.skip("TEST_DATABASE_URL not set")
-        w = warehouse.PostgresWarehouse(PG_URL)
-        with w.transaction() as c:
-            for t in TABLES:
-                c.execute(f"DELETE FROM {t}")
-            c.execute("DELETE FROM fact_assertions WHERE source_key = 'web_research'")
+@pytest.fixture
+def wh(new_wh, tmp_path):
+    w = new_wh()
     with w.transaction() as c:
         c.executemany("INSERT INTO facility (facility_id, status, merged_into, created_at, created_by) "
                       "VALUES (?, 'active', NULL, 't', 't')", [("IC-00001",), ("IC-00002",)])

@@ -43,8 +43,8 @@ def seed_feedback(wh, fid='IC-1', created=0):
         c.execute("INSERT INTO fact_assertions VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",('assertion','old-release',fid,'adl_employee_feedback','name','2026-09-18','Employee name','human_verified',0,'feedback',None,'human_feedback','2026-09-18T12:00:00Z'))
 
 
-def test_release_carries_feedback_once_with_original_lineage(tmp_path):
-    wh = warehouse.SqliteWarehouse(tmp_path/'test.sqlite')
+def test_release_carries_feedback_once_with_original_lineage(new_wh):
+    wh = new_wh()
     seed_feedback(wh)
     for tag in ['release-1','release-1','release-2']:
         load(wh,tag,[assertion('Registry name',source='registry')],[dict(facility_id='IC-1')])
@@ -56,8 +56,8 @@ def test_release_carries_feedback_once_with_original_lineage(tmp_path):
     wh.close()
 
 
-def test_dropped_external_facility_not_resurrected_but_employee_created_survives(tmp_path):
-    wh=warehouse.SqliteWarehouse(tmp_path/'test.sqlite')
+def test_dropped_external_facility_not_resurrected_but_employee_created_survives(new_wh):
+    wh = new_wh()
     seed_feedback(wh)
     load(wh,'release-1',[],[])
     assert not wh.query('SELECT * FROM golden_facility')

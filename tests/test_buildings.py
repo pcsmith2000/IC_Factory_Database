@@ -52,8 +52,8 @@ def test_a_person_s_decision_is_never_overridden():
 
 
 @pytest.fixture
-def wh(tmp_path, monkeypatch):
-    w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
+def wh(new_wh, monkeypatch):
+    w = new_wh()
     w.init_schema()
     with w.transaction() as c:
         c.execute("INSERT INTO golden_facility (facility_key, release_tag, name, lat_lon) VALUES "
@@ -132,17 +132,17 @@ def test_survivorship_the_containing_building_beats_the_nearby_largest_even_when
     assert rows[0]["building_sqft"] == "130000"            # a person's set beats the pipeline's
 
 
-def test_main_reconnects_after_reading_overture(tmp_path, monkeypatch):
+def test_main_reconnects_after_reading_overture(pg_url, monkeypatch):
     # A connection held through ~1 minute per Overture file is closed under us by an idle-suspending
     # database; main() must read the plan, close, measure, and write on a fresh connection.
     from pipeline.enrich import footprint
-    db = tmp_path / "w.sqlite"
-    w = warehouse.SqliteWarehouse(db); w.init_schema()
+    db = pg_url
+    w = warehouse.PostgresWarehouse(db)
     with w.transaction() as c:
         c.execute("INSERT INTO golden_facility (facility_key, release_tag, name, lat_lon) VALUES ('IC-1','r1','P',?)", (POINT,))
     w.close()
     opened, closed = [], []
-    real = warehouse.SqliteWarehouse
+    real = warehouse.PostgresWarehouse
 
     class Tracked(real):
         def __init__(self, *a, **k):
@@ -155,7 +155,7 @@ def test_main_reconnects_after_reading_overture(tmp_path, monkeypatch):
         assert opened and all(o in closed for o in opened), "the warehouse must be closed while Overture is read"
         return [{**p, "buildings": [bld("plant", 0, 90000, True)], "reason": "", "overture_release": "rel"} for p in points]
 
-    monkeypatch.setattr(warehouse, "SqliteWarehouse", Tracked)
+    monkeypatch.setattr(warehouse, "PostgresWarehouse", Tracked)
     monkeypatch.setattr(footprint, "around", fake_around)
     assert B.main(["--db", str(db)]) == 0
     assert len(opened) == 2 and len(closed) == 2
@@ -164,10 +164,10 @@ def test_main_reconnects_after_reading_overture(tmp_path, monkeypatch):
     w.close()
 
 
-def test_report_writes_one_line_per_judged_facility(tmp_path, monkeypatch):
+def test_report_writes_one_line_per_judged_facility(pg_url, tmp_path, monkeypatch):
     from pipeline.enrich import footprint
-    db = tmp_path / "w.sqlite"
-    w = warehouse.SqliteWarehouse(db); w.init_schema()
+    db = pg_url
+    w = warehouse.PostgresWarehouse(db)
     with w.transaction() as c:
         c.execute("INSERT INTO golden_facility (facility_key, release_tag, name, lat_lon) VALUES "
                   "('IC-1','r1','P',?), ('IC-2','r1','Q','36.0,-81.0')", (POINT,))
@@ -188,10 +188,10 @@ def test_only_narrows_the_plan(wh):
     assert B.plan(wh, limit=10, refresh=False, only=set()) == []
 
 
-def test_only_with_stated_sqft_judges_just_the_facilities_with_a_stated_size(tmp_path, monkeypatch):
+def test_only_with_stated_sqft_judges_just_the_facilities_with_a_stated_size(pg_url, monkeypatch):
     from pipeline.enrich import footprint
-    db = tmp_path / "w.sqlite"
-    w = warehouse.SqliteWarehouse(db); w.init_schema()
+    db = pg_url
+    w = warehouse.PostgresWarehouse(db)
     with w.transaction() as c:
         c.execute("INSERT INTO golden_facility (facility_key, release_tag, name, lat_lon, sq_ft) VALUES "
                   "('IC-1','r1','P',?, '120000'), ('IC-2','r1','Q','36.0,-81.0', NULL)", (POINT,))

@@ -22,7 +22,7 @@ def test_the_id_registry_is_only_written_when_layer_5_was_asked_for(tmp_path, mo
 
     monkeypatch.setenv("IC_ID_REGISTRY", str(registry))
     monkeypatch.setenv("IC_CSV_DIR", str(tmp_path / "csv"))
-    monkeypatch.setenv("IC_WAREHOUSE_PATH", str(tmp_path / "w.sqlite"))
+    monkeypatch.setenv("IC_WAREHOUSE_ENGINE", "none")
     monkeypatch.setenv("IC_AI", "off")
     monkeypatch.setenv("IC_ARCHIVE", "off")
     (tmp_path / "csv").mkdir(exist_ok=True)
