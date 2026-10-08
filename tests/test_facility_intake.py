@@ -3,7 +3,7 @@ import csv
 
 import pytest
 
-from pipeline import facility_intake as I, golden_refresh as gr, warehouse
+from pipeline import facility_intake as I, golden_refresh as gr
 from pipeline.registry import load_yaml
 
 NOW = "v1+reg.a+ids.00000000+ctl.x"
@@ -31,8 +31,8 @@ def write(path, rows):
 
 
 @pytest.fixture
-def wh(tmp_path):
-    w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
+def wh(new_wh):
+    w = new_wh()
     with w.transaction() as c:
         c.execute("INSERT INTO facility (facility_id, status, merged_into, created_at, created_by) "
                   "VALUES ('IC-00001', 'active', NULL, 't', 't')")

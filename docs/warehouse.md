@@ -1,18 +1,15 @@
-# Warehouse — star schema; SQLite locally, Postgres (Neon) in the cloud
+# Warehouse — star schema in Postgres (Neon)
 
 ## Engine
-One loader (`pipeline/warehouse.py`), one schema, two engines:
+One loader (`pipeline/warehouse.py`), one schema, one engine: Postgres on Neon, at
+`DATABASE_URL_UNPOOLED` or `DATABASE_URL` (a GitHub Actions secret, or `neon env pull` locally).
+It persists across runs, so `fact_assertions` really is append-only across releases. SQL is
+written with `?` placeholders and translated to psycopg's.
 
-| engine | when | where the data lives |
-|---|---|---|
-| **sqlite** | no `DATABASE_URL` in the environment (laptop, Cowork) | `warehouse.sqlite_path` in `registry/config.yaml`, default `build/ic_factory.sqlite`; a build artifact, never committed |
-| **postgres** | `DATABASE_URL` set (GitHub Actions secret, or `neon env pull` locally) | the Neon project; persists across runs, so `fact_assertions` really is append-only across releases |
-
-The SQL is written once in the dialect both share (`ON CONFLICT` upserts, `TEXT / INTEGER / REAL`);
-only the parameter placeholder differs. Selection order: `IC_WAREHOUSE_ENGINE` env ·
-`DATABASE_URL_UNPOOLED` / `DATABASE_URL` env (→ postgres) · `warehouse.engine` in config
-(default sqlite). `engine: none` disables the load. An engine that is selected but cannot be
-opened (no URL, driver missing, connection refused) halts the run at Layer 8 — never skipped.
+There is no local fallback. `IC_WAREHOUSE_ENGINE=none` (or `warehouse.engine: none` in config)
+runs with no warehouse at all; otherwise a warehouse that cannot be opened (no URL, driver
+missing, connection refused) halts the run — it is never skipped. Tests run against Postgres at
+`TEST_DATABASE_URL`, each in a schema of its own (`tests/conftest.py`), and skip without it.
 
 **Neon.** The loader prefers `DATABASE_URL_UNPOOLED` (direct connection): it runs DDL and one
 transaction per release, which does not belong on the PgBouncer transaction-mode pool. Both
@@ -67,7 +64,7 @@ facility            facility_id "IC-00001", status active | merged | retired, me
 facility_match_key  match_key (a reconcile signature) -> facility_id; many keys per plant, one plant per key
 facility_event      seed · mint · merge · split · retire · repoint, with actor and reason
 legacy_id_map       (registry hash, historical IC-number) -> permanent facility_id   (#42)
-facility_id_seq     Postgres sequence (SQLite: facility_id_counter), starts at IC-96841,
+facility_id_seq     Postgres sequence, starts at IC-96841,
                     above every number any registry ever issued; never lowered
 ```
 The 6,426 facilities in golden on 2026-09-24 keep their numbers (the owner's decision). Seed and

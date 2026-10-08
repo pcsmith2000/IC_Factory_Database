@@ -14,7 +14,7 @@ Here the registry is four tables in the warehouse (DDL in pipeline/warehouse.py)
     facility_event      every mint, seed, merge, split, retire and re-point, with actor and reason
     legacy_id_map       (registry hash, historical IC-number) -> permanent facility (#42)
 
-and the counter is a Postgres sequence (a one-row table on SQLite) that starts above every number
+and the counter is a Postgres sequence that starts above every number
 ever issued. This module seeds the registry from the current golden table, whose numbers the owner
 chose to keep as the permanent ones (2026-09-24), and reports its state.
 
@@ -88,19 +88,14 @@ def plan_seed(golden_ids: list[str], registry: dict, existing_keys: dict[str, st
 
 
 def _counter_next(wh, c) -> int:
-    if wh.engine == "postgres":
-        r = wh._rows(c.execute("SELECT last_value, is_called FROM facility_id_seq"))[0]
-        return int(r["last_value"]) + (1 if r["is_called"] else 0)
-    return int(wh._rows(c.execute("SELECT next FROM facility_id_counter WHERE name = 'facility_id'"))[0]["next"])
+    r = wh._rows(c.execute("SELECT last_value, is_called FROM facility_id_seq"))[0]
+    return int(r["last_value"]) + (1 if r["is_called"] else 0)
 
 
 def _raise_counter(wh, c, floor: int) -> int:
     """Never lowers: a counter already past the floor stays where it is."""
     target = max(_counter_next(wh, c), floor)
-    if wh.engine == "postgres":
-        c.execute("SELECT setval('facility_id_seq', ?, false)", (target,))
-    else:
-        c.execute("UPDATE facility_id_counter SET next = ? WHERE name = 'facility_id'", (target,))
+    c.execute("SELECT setval('facility_id_seq', ?, false)", (target,))
     return target
 
 
@@ -141,14 +136,10 @@ def seed(wh, registry_path: Path | None = None, actor: str = "facility_registry.
 
 
 def _draw(wh, c) -> str:
-    """The next IC-number. Postgres: nextval, so no two writers can ever draw the same number.
+    """The next IC-number: nextval, so no two writers can ever draw the same number.
     A number drawn by a run that later fails is burned, never reused: a gap is harmless and a reuse
     is exactly the fault this registry exists to end."""
-    if wh.engine == "postgres":
-        n = int(wh._rows(c.execute("SELECT nextval('facility_id_seq') AS n"))[0]["n"])
-    else:
-        n = _counter_next(wh, c)
-        c.execute("UPDATE facility_id_counter SET next = ? WHERE name = 'facility_id'", (n + 1,))
+    n = int(wh._rows(c.execute("SELECT nextval('facility_id_seq') AS n"))[0]["n"])
     return f"IC-{n:05d}"
 
 
@@ -268,7 +259,7 @@ def wh_rows(wh, c, sql, params=()):
 
 
 def export_json(wh, path: Path):
-    """id_registry.json as a read-only export for offline and SQLite runs. It is a superset: keys
+    """id_registry.json as a read-only export for offline runs. It is a superset: keys
     the file already holds are kept (retired numbers stay retired, never reissued), keys the
     registry added are written, and `next` never falls behind the sequence."""
     data = json.loads(path.read_text()) if path.exists() else {"next": 1, "ids": {}}
@@ -359,9 +350,9 @@ def status(wh) -> dict:
 def main(argv=None) -> int:
     import argparse
     from .registry import load_yaml
-    from .warehouse import open_warehouse, SqliteWarehouse
+    from .warehouse import open_warehouse, connect as connect_url
     ap = argparse.ArgumentParser(prog="python -m pipeline.facility_registry")
-    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine")
+    ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("seed", help="register every golden facility under its current number (idempotent)")
     s.add_argument("--dry-run", action="store_true", help="check coverage and collisions; write nothing")
@@ -378,7 +369,7 @@ def main(argv=None) -> int:
         p.add_argument("--actor", required=True, help="who: a person or a named agent")
         p.add_argument("--reason", required=True, help="why, in a sentence: recorded in facility_event")
     args = ap.parse_args(argv)
-    wh = (SqliteWarehouse(Path(args.db)) if args.db
+    wh = (connect_url(args.db) if args.db
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1

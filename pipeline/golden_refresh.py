@@ -40,8 +40,11 @@ from .registry import load_yaml
 from .warehouse import GOLDEN_FIELDS
 
 ROOT = Path(__file__).resolve().parent.parent
+# Facts that outlive the release they were asserted under. building_review is a pin a reviewer moved
+# onto the plant in ADL_Viz /review: a person's (or the review agent's) correction, which a new
+# release must not silently undo.
 CARRIED_CLASSES = ("enrichment", "tako_ai_search", "astra_manual_web_lookup", "human_feedback", "web_research",
-                   "monitor_fix", "operator", "facility_intake")
+                   "monitor_fix", "operator", "building_review", "facility_intake")
 # A plant that no source lists, added by hand: a line of control/new_facilities.csv
 # (pipeline/facility_intake.py) or an ADL employee's "Add a new factory" in ADL_Viz (employee_feedback
 # with creates_facility = 1). No release will ever assert anything about it, so it is kept in golden
@@ -124,13 +127,12 @@ def compute_full(wh, facility_ids: list[str], release_tag: str, rules: dict) -> 
 
 def founded(wh, facility_ids: list[str]) -> set[str]:
     """Of these facilities, the ones an ADL employee created in ADL_Viz (employee_feedback ledger)."""
+    if not wh.query("SELECT to_regclass('employee_feedback') IS NOT NULL AS ok")[0]["ok"]:
+        return set()                                     # a warehouse without the ledger has none
     marks = ",".join("?" * len(facility_ids))
-    try:
-        return {r["facility_key"] for r in wh.query(
-            f"SELECT DISTINCT facility_key FROM employee_feedback WHERE creates_facility = 1 AND facility_key IN ({marks})",
-            tuple(facility_ids))}
-    except Exception:                                    # a warehouse without the ledger has none
-        return set()
+    return {r["facility_key"] for r in wh.query(
+        f"SELECT DISTINCT facility_key FROM employee_feedback WHERE creates_facility = 1 AND facility_key IN ({marks})",
+        tuple(facility_ids))}
 
 
 def compute(wh, facility_ids: list[str], release_tag: str, rules: dict) -> tuple[dict, list[dict], set[str]]:
@@ -262,16 +264,16 @@ def refresh(wh, *, all_facilities: bool = False, batch: int = 500, max_batches: 
 
 def main(argv=None) -> int:
     import argparse
-    from .warehouse import open_warehouse, SqliteWarehouse
+    from .warehouse import open_warehouse, connect as connect_url
     ap = argparse.ArgumentParser(prog="python -m pipeline.golden_refresh")
-    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine")
+    ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     ap.add_argument("--all", action="store_true", help="every registered facility, not just the queue")
     ap.add_argument("--batch", type=int, default=500)
     ap.add_argument("--max-batches", type=int, default=None)
     ap.add_argument("--dry-run", action="store_true", help="compute and report; write nothing, drain nothing")
     ap.add_argument("--snapshot", action="store_true", help="freeze golden as it stands into golden_release; no refresh")
     args = ap.parse_args(argv)
-    wh = (SqliteWarehouse(Path(args.db)) if args.db
+    wh = (connect_url(args.db) if args.db
           else open_warehouse(load_yaml(ROOT / "registry" / "config.yaml"), ROOT))
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1

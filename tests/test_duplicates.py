@@ -1,16 +1,11 @@
 """Duplicate facilities at one parcel (#52): tiered, survivor chosen, merged through the registry."""
 import json
-import os
 
 import pytest
 
 from pipeline import duplicates as dup
 from pipeline import facility_registry as fr
-from pipeline import warehouse
 
-PG_URL = os.environ.get("TEST_DATABASE_URL")
-TABLES = ("facility_duplicate_candidate", "golden_dirty", "facility_event", "facility_match_key",
-          "legacy_id_map", "golden_facility", "facility")
 
 
 def row(fid, name, address, city="Phoenix", state="AZ", n=10, **kw):
@@ -84,17 +79,9 @@ def test_names_normalise():
 
 
 # ---------------------------------------------------------------- warehouse
-@pytest.fixture(params=["sqlite", "postgres"])
-def wh(request, tmp_path):
-    if request.param == "sqlite":
-        w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
-    else:
-        if not PG_URL:
-            pytest.skip("TEST_DATABASE_URL not set")
-        w = warehouse.PostgresWarehouse(PG_URL)
-        with w.transaction() as c:
-            for t in TABLES:
-                c.execute(f"DELETE FROM {t}")
+@pytest.fixture
+def wh(new_wh, tmp_path):
+    w = new_wh()
     G = [row("IC-09911", "Cavco Industries, Inc.", "2502 W Durango St", n=40),
          row("IC-93656", "Cavco Industries", "2502 West Durango Street", n=12),
          row("IC-95267", "Cavco", "2502 W. Durango St.", n=3),
@@ -214,10 +201,8 @@ def test_merged_facilities_leave_the_next_scan(wh):
     assert rep["candidates"] == 1 and rep["by_tier"]["review"] == 1
 
 
-def test_cli(wh, tmp_path, capsys):
-    if wh.engine != "sqlite":
-        pytest.skip("the CLI's --db is sqlite")
-    db = str(wh.path)
+def test_cli(wh, pg_url, capsys):
+    db = pg_url
     assert dup.main(["candidates", "--db", db]) == 0
     assert json.loads(capsys.readouterr().out)["new"] == 3
     assert dup.main(["--db", db, "apply", "--tier", "certain", "--actor", "cli", "--dry-run"]) == 0
@@ -243,11 +228,9 @@ def test_apply_can_take_one_sources_reviewed_list_and_leave_the_rest(wh):
     assert [m["facility_id"] for m in rep["merges"]] == ["IC-93656"]
 
 
-def test_cli_filters(wh, capsys):
-    if wh.engine != "sqlite":
-        pytest.skip("the CLI's --db is sqlite")
+def test_cli_filters(wh, pg_url, capsys):
     dup.candidates(wh)
-    assert dup.main(["apply", "--db", str(wh.path), "--actor", "t", "--dry-run", "--source", "web_research",
+    assert dup.main(["apply", "--db", pg_url, "--actor", "t", "--dry-run", "--source", "web_research",
                      "--only", "IC-93656,IC-95267", "--skip", "IC-95267"]) == 0
     out = json.loads(capsys.readouterr().out)
     assert (out["sources"], out["only"], out["skip"], out["merged"]) == (["web_research"], 2, ["IC-95267"], 0)

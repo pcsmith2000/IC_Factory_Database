@@ -10,19 +10,9 @@ ROOT = Path(__file__).resolve().parent.parent
 PG_URL = os.environ.get("TEST_DATABASE_URL")   # e.g. postgresql://ic:ic@127.0.0.1/ic_factory — postgres tests skip without it
 
 
-@pytest.fixture(params=["sqlite", "postgres"])
-def wh(request, tmp_path):
-    if request.param == "sqlite":
-        w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
-    else:
-        if not PG_URL:
-            pytest.skip("TEST_DATABASE_URL not set")
-        w = warehouse.PostgresWarehouse(PG_URL)
-        with w.transaction() as c:   # each test starts from an empty warehouse
-            for t in ("golden_dirty", "golden_release", "facility_event", "facility_match_key", "legacy_id_map",
-                      "release_registry", "facility", "fact_assertions", "dim_facility", "dim_source", "dim_field", "dim_date", "golden_facility", "conflicts",
-                      "fact_release_metrics", "ref_control", "ref_source_registry", "ref_known_gaps", "ref_source_row"):
-                c.execute(f"DELETE FROM {t}")
+@pytest.fixture
+def wh(new_wh, tmp_path):
+    w = new_wh()
     yield w
     w.close()
 
@@ -92,19 +82,22 @@ def test_reload_is_idempotent_and_second_release_appends_facts_and_replaces_gold
 
 def test_database_url_selects_postgres_and_is_never_silently_skipped(tmp_path: Path, monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False); monkeypatch.delenv("DATABASE_URL_UNPOOLED", raising=False)
-    w = warehouse.open_warehouse({"warehouse": {"engine": "sqlite", "sqlite_path": "x/w.sqlite"}}, tmp_path)
-    assert w.engine == "sqlite" and w.path == tmp_path / "x" / "w.sqlite"; w.close()
-    monkeypatch.setenv("IC_WAREHOUSE_ENGINE", "postgres")
-    with pytest.raises(warehouse.WarehouseNotImplemented, match="DATABASE_URL"):
+    monkeypatch.delenv("IC_WAREHOUSE_ENGINE", raising=False)
+    with pytest.raises(warehouse.WarehouseNotImplemented, match="DATABASE_URL"):    # no URL: an error, no fallback
+        warehouse.open_warehouse({}, tmp_path)
+    with pytest.raises(warehouse.WarehouseNotImplemented, match="unknown warehouse engine 'sqlite'"):
         warehouse.open_warehouse({"warehouse": {"engine": "sqlite"}}, tmp_path)
+    monkeypatch.setenv("IC_WAREHOUSE_ENGINE", "none")                               # asked for none: none
+    assert warehouse.open_warehouse({}, tmp_path) is None
     monkeypatch.delenv("IC_WAREHOUSE_ENGINE")
+    assert warehouse.PostgresWarehouse._redact("postgresql://u:secret@h/db") == "postgresql://u:***@h/db"
     if PG_URL:
         monkeypatch.setenv("DATABASE_URL", PG_URL)
-        w = warehouse.open_warehouse({"warehouse": {"engine": "sqlite"}}, tmp_path)
-        assert w.engine == "postgres" and "***" in w.path and ":ic@" not in w.path; w.close()
+        w = warehouse.open_warehouse({}, tmp_path)
+        assert w.engine == "postgres" and ":ic@" not in w.path; w.close()
 
 
-def test_adding_a_golden_field_widens_a_database_that_predates_it(tmp_path: Path):
+def test_adding_a_golden_field_widens_a_database_that_predates_it(pg_url):
     """CREATE TABLE IF NOT EXISTS does not widen an existing table. Without the reconcile step in
     init_schema, a warehouse built before `building_sqft` joined GOLDEN_FIELDS would keep its old
     shape and silently drop every write of that field — and CREATE VIEW v_golden_field, which names
@@ -112,14 +105,13 @@ def test_adding_a_golden_field_widens_a_database_that_predates_it(tmp_path: Path
     older = [f for f in warehouse.GOLDEN_FIELDS if f not in ("building_sqft", "existence_flag")]
     assert len(older) < len(warehouse.GOLDEN_FIELDS), "this test needs a field newer than the rest"
 
-    import sqlite3
+    import psycopg
     cols = ", ".join(f'{f} TEXT, "{f}__source" TEXT' for f in older)
-    con = sqlite3.connect(tmp_path / "old.sqlite")
-    con.execute(f"CREATE TABLE golden_facility (facility_key TEXT PRIMARY KEY, release_tag TEXT NOT NULL, "
-                f"{cols}, n_assertions INTEGER, n_sources INTEGER)")
-    con.commit(); con.close()
+    with psycopg.connect(pg_url, autocommit=True) as con:
+        con.execute(f"CREATE TABLE golden_facility (facility_key TEXT PRIMARY KEY, release_tag TEXT NOT NULL, "
+                    f"{cols}, n_assertions INTEGER, n_sources INTEGER)")
 
-    w = warehouse.SqliteWarehouse(tmp_path / "old.sqlite")
+    w = warehouse.PostgresWarehouse(pg_url)
     have = w.existing_columns("golden_facility")
     for f in warehouse.GOLDEN_FIELDS:
         assert f in have and f"{f}__source" in have, f"{f} was not added to a pre-existing golden_facility"
@@ -162,20 +154,19 @@ def test_promote_rebuilds_exactly_the_golden_the_loader_wrote(wh, tmp_path: Path
     assert shape(rebuilt) == shape(gold)
 
 
-def test_asserted_at_is_added_to_a_fact_table_that_predates_it(tmp_path: Path):
+def test_asserted_at_is_added_to_a_fact_table_that_predates_it(pg_url):
     """Same reconcile as the golden columns, for the same reason: without the column the loader's
     INSERT fails outright, and without the value survivorship cannot order two same-day
     measurements of the same facility."""
-    import sqlite3
-    con = sqlite3.connect(tmp_path / "old.sqlite")
-    con.execute("""CREATE TABLE fact_assertions (
+    import psycopg
+    with psycopg.connect(pg_url, autocommit=True) as con:
+        con.execute("""CREATE TABLE fact_assertions (
         assertion_id TEXT NOT NULL, release_tag TEXT NOT NULL,
         facility_key TEXT NOT NULL, source_key TEXT NOT NULL, field_key TEXT NOT NULL, date_key TEXT,
         value TEXT, basis TEXT, site_visit INTEGER, row_hash TEXT, confidence REAL, source_class TEXT,
         PRIMARY KEY (assertion_id, release_tag))""")
-    con.commit(); con.close()
 
-    w = warehouse.SqliteWarehouse(tmp_path / "old.sqlite")
+    w = warehouse.PostgresWarehouse(pg_url)
     assert "asserted_at" in w.existing_columns("fact_assertions")
     w.close()
 

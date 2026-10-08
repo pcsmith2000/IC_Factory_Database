@@ -22,8 +22,8 @@ archive:                                   # raw files, off the runner. Vercel B
   max_file_mb: 100                         # larger files are recorded by sha256 only (EPA zip: its filtered slice is archived instead)
 
 warehouse:
-  engine: sqlite                           # local default. DATABASE_URL in the env selects postgres (Neon now,
-  sqlite_path: build/ic_factory.sqlite     # Cloud SQL for PostgreSQL later) — same schema, one loader (docs/warehouse.md)
+  engine: postgres                         # Neon, at DATABASE_URL (docs/warehouse.md). IC_WAREHOUSE_ENGINE=none runs
+                                           # without a warehouse; there is no local fallback.
 
 frame:
   source: census_cbp

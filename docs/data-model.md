@@ -53,5 +53,3 @@ the list of things two sources disagree about — a review surface, not an error
 - Provenance per **field**, not per row: "where did this address come from" has an exact answer.
 - A G1 merge is re-pointing assertions to one facility id; a G2 false merge unwinds the same
   way. Nothing is deleted either time.
-- The Cowork prototype and the GitHub run, built from the same assertions and rules, must
-  produce identical golden tables. `pipeline/compare.py` measures any gap.

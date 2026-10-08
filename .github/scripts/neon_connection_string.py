@@ -25,7 +25,7 @@ def main() -> int:
         print("DATABASE_URL already set — using the repository secret"); return 0
     key, project = os.environ.get("NEON_API_KEY"), os.environ.get("NEON_PROJECT_ID")
     if not (key and project):
-        print("no DATABASE_URL secret and no NEON_API_KEY/NEON_PROJECT_ID from the Neon GitHub integration — warehouse will use sqlite (workflow artifact only)")
+        print("no DATABASE_URL secret and no NEON_API_KEY/NEON_PROJECT_ID from the Neon GitHub integration — a run that needs the warehouse will halt")
         return 0
     branch = os.environ.get("NEON_BRANCH_ID")
     if not branch:

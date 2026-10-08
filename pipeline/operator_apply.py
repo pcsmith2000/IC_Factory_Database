@@ -79,16 +79,16 @@ def main(argv=None) -> int:
     import argparse
     from . import control
     from .registry import load_yaml
-    from .warehouse import open_warehouse, SqliteWarehouse
+    from .warehouse import open_warehouse, connect as connect_url
     ap = argparse.ArgumentParser(prog="python -m pipeline.operator_apply")
-    ap.add_argument("--db", default=None, help="sqlite path; default: the configured engine")
+    ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     ap.add_argument("--dry-run", action="store_true", help="report what would be written; write nothing")
     args = ap.parse_args(argv)
     cfg = load_yaml(ROOT / "registry" / "config.yaml")
     bad = [p for p in control.check(cfg) if p.startswith("operator_assertions.csv")]
     if bad:
         print("\n".join(bad), file=sys.stderr); return 1
-    wh = SqliteWarehouse(Path(args.db)) if args.db else open_warehouse(cfg, ROOT)
+    wh = connect_url(args.db) if args.db else open_warehouse(cfg, ROOT)
     if wh is None:
         print("warehouse engine is 'none'", file=sys.stderr); return 1
     print(json.dumps(apply(wh, dry_run=args.dry_run), indent=1, default=str))

@@ -1,30 +1,17 @@
 """Continuous golden (#44): a queue filled by a trigger, drained per facility, equal to a full rebuild."""
-import os
 
 import pytest
 
 from pipeline import facility_registry as fr
 from pipeline import golden_refresh as gr
-from pipeline import warehouse
 
-PG_URL = os.environ.get("TEST_DATABASE_URL")
 NOW = "v1+reg.a+ids.00000000+ctl.x"       # current release, loaded through the permanent registry
 OLD = "v1+reg.b+ids.aaaaaaaa+ctl.x"       # an old release from a diverged registry
-TABLES = ("golden_dirty", "facility_event", "facility_match_key", "legacy_id_map", "release_registry",
-          "golden_facility", "fact_assertions", "facility")
 
 
-@pytest.fixture(params=["sqlite", "postgres"])
-def wh(request, tmp_path):
-    if request.param == "sqlite":
-        w = warehouse.SqliteWarehouse(tmp_path / "w.sqlite")
-    else:
-        if not PG_URL:
-            pytest.skip("TEST_DATABASE_URL not set")
-        w = warehouse.PostgresWarehouse(PG_URL)
-        with w.transaction() as c:
-            for t in TABLES:
-                c.execute(f"DELETE FROM {t}")
+@pytest.fixture
+def wh(new_wh, tmp_path):
+    w = new_wh()
     _world(w)
     yield w
     w.close()
@@ -97,6 +84,16 @@ def test_incremental_refreshes_equal_a_full_rebuild(wh):
     gr.refresh(wh, all_facilities=True)
     assert golden(wh) == incremental
     assert incremental["IC-00001"]["phone"] == "970-555-0101"
+
+
+def test_a_pin_moved_in_review_outlives_its_release(wh):
+    # A reviewer moved Ladabuild's pin onto the plant under the old release; a later release ships
+    # no building_review facts. The moved pin must still win over the rooftop geocode.
+    fact(wh, "IC-00009", "lat_lon", "39.0700,-108.5600", tag=OLD, source="building_review", cls="building_review",
+         basis="review_pin_person", date="2026-09-25")
+    gr.refresh(wh, all_facilities=True)
+    g = golden(wh)["IC-00001"]
+    assert g["lat_lon"] == "39.0700,-108.5600" and g["lat_lon__source"] == "building_review"
 
 
 def test_an_out_of_state_coordinate_is_withheld_and_is_not_a_loss(wh):

@@ -22,7 +22,7 @@ config and the files can never disagree silently. G4 verifies the checksum on ev
 
 `id_registry.json` starts empty: the first run issues IC-numbers from IC-00001. Numbers from the
 2026-09-09 build are not imported (its signatures were computed by different normalisation);
-that build is compared to the first release with `pipeline/compare.py`, not merged into it.
+that build is not merged into the first release.
 
 
 ## A normal quarter

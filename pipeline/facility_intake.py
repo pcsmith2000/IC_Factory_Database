@@ -158,7 +158,7 @@ def apply(wh, *, path: Path = PATH, dry_run: bool = False) -> dict:
     tag = current_release(wh)
     _, rows = read(path)
     keys = {r["match_key"]: r["facility_id"] for r in
-            wh.query("SELECT match_key, facility_id FROM facility_match_key WHERE match_key LIKE 'intake|%'")}
+            wh.query("SELECT match_key, facility_id FROM facility_match_key WHERE match_key LIKE ?", ("intake|%",))}
     status = {r["facility_id"]: r["status"] for r in wh.query("SELECT facility_id, status FROM facility")}
     golden = wh.query("SELECT facility_key, name, address, city, state FROM golden_facility")
     now = datetime.now(timezone.utc).isoformat()

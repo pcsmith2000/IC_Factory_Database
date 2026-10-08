@@ -61,7 +61,6 @@ Quarterly full run · annual frame refresh · between runs nothing merges.
 2. Load the real control, seeds, frame totals and the frozen prompt from the 2026-09-09 build.
 3. Layer 4 entity resolution — the binding constraint on recall.
 4. Class D certification directories through Playwright — 700–1,100 plants in the weakest segments.
-5. Compare a Cowork prototype build against a GitHub run with `pipeline/compare.py`.
 
 ## What was retired, and why
 
