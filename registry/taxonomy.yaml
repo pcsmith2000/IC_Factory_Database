@@ -273,4 +273,15 @@ groups:
 #     containers (container homes, ADUs, offices, pop-ups, storage), on a ruling of 2026-10-01.
 #     Plants that build new steel modules (e.g. Sea Box's IBC modular buildings, blast-resistant
 #     modules) stay as Steel Volumetric Modular.
+#   On ADL's rulings of 2026-10-08 (from the building review's human queue):
+#   - OSB, plywood and other sheathing / subfloor panel mills (e.g. Huber ZIP System and AdvanTech,
+#     softwood plywood): a building material, like lumber. Glulam, LVL and CLT plants stay.
+#   - Cleanroom wall and ceiling panel systems, self-storage door / hallway / partition systems,
+#     packaged HVAC and air-handling units, electrical equipment plants.
+#   - Design-build and general contractors for metal buildings, unless a page shows their own
+#     fabrication plant at the address.
+#   - Kit and package-home companies that only bundle stock lumber and parts. A plant that precuts
+#     or fabricates the structure (precut timber frames, panelized shells) stays, on what it makes.
+#   - Plants outside the United States.
+#   Steel carport, garage and light metal-building makers stay, as Pre-Engineered Metal Building.
 unmapped_legacy: []
