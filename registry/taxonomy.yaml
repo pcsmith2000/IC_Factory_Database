@@ -283,5 +283,14 @@ groups:
 #   - Kit and package-home companies that only bundle stock lumber and parts. A plant that precuts
 #     or fabricates the structure (precut timber frames, panelized shells) stays, on what it makes.
 #   - Plants outside the United States.
-#   Steel carport, garage and light metal-building makers stay, as Pre-Engineered Metal Building.
+#   Further owner rulings of 2026-10-08 (contact pass, wr-contacts-1):
+#   - E-houses, equipment / telecom shelters and generator or other equipment enclosures.
+#   - Walk-in cooler / freezer panel makers; greenhouse frames and kits.
+#   - Canopies, carports, shade structures and steel carport / garage kit makers (this replaces
+#     the earlier note that kept them as Pre-Engineered Metal Building).
+#   - Precast plants making only non-building products (septic tanks, pipe, vaults, barriers).
+#   - I-joist, LVL and glulam-only engineered-wood plants. CLT / mass timber stays.
+#   Stay in scope: metal roof and wall panel plants (incl. roofing/siding roll-formers and ACM
+#   cladding) as Exterior Envelope Panels; timber-frame / post-and-beam shops that cut and assemble
+#   frames in a plant.
 unmapped_legacy: []
