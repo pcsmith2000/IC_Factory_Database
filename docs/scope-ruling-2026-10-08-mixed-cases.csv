@@ -1,0 +1,14 @@
+facility_id,name,city,state,category,evidence,in_golden,confidence
+IC-94858,Superior Canopy Corp dba Superior Building Systems,Hamilton,IN,e,Superior Canopy makes canopies but also pre-engineered steel buildings and ACM fascia panels. https://superiorcanopy.com/,yes,medium
+IC-52340,Sunshine Rooms Inc.,Wichita,KS,d,Sunshine Rooms makes greenhouse kits but also sunrooms/solariums (building additions). https://sunshinerooms.com/contact-sunshine-rooms-inc/,yes,medium
+IC-53449,"ADVANCED INSULATION CONCEPTS, INC.",Florence,KY,c,ISOWALL insulated metal panels mainly for cold storage but also commercial and residential buildings. https://www.aicinsulate.com/aboutus.htm,yes,medium
+IC-95676,"Trachte, LLC - Braun Road Facility",Oregon,WI,b,nVent Trachte Braun Rd makes substation control buildings/E-houses and modular data centers; company also makes ChannelFrame PEMB. https://www.nvent.com/en-us/trachte/trachte-locations,yes,medium
+IC-93908,Easter-Owens Electric Company,ARVADA,CO,b,Crusoe Industries makes electrical enclosures/PDCs plus modular data centers. https://www.crusoe.ai/manufacturing,yes,medium
+IC-94216,TELAMON TECHNOLOGIES CORP.,DENTON,TX,b,IPS Shelters builds telecom shelters but also commercial and residential shelters from insulated panels. https://ipsshelters.com/contact/,yes,medium
+IC-94785,LoneStar Marine Shelters,Galveston,TX,b,LoneStar Marine makes steel blast/offshore shelters and control buildings plus accommodation modules; possibly closed. https://www.callanmarineltd.com/contact,yes,medium
+IC-94827,Professional Systems Inc,Hartland,WI,b,Professional Systems: modular enclosures and power/communications shelters plus portable classrooms and offices. https://governmentbidders.com/government_bidders/contractor-5698738-PROFESSIONAL-SYSTEM.htm,yes,medium
+IC-93603,Ventaire LLC dba Sagebrush Building Systems,TULSA,OK,b,"Ventaire/Sagebrush builds switchgear buildings plus permanent commercial modular buildings (banks, QSRs). https://ventairecorp.com/",yes,medium
+IC-94483,DRL CONSTRUCTION LLC,PHOENIX,AZ,f,DRL makes precast shelters and foundations but also precast structural panels. https://www.drlconstructionllc.com/structuresandinstallation,yes,medium
+IC-92925,"J. E. Hill Contractor, Inc.",Leesburg,FL,f,"J.E. Hill makes precast barriers, retaining walls and farm products but also prefabricated buildings. https://www.floridabuilding.org/mb/mb_org_lst.aspx",yes,medium
+IC-93140,PERFORMANCE CONCRETE STRUCTURES LLC,NEWNAN,GA,f,Performance Concrete makes pump station shelters and communication vaults but also SCIFs and DataWall ICF structures. https://pcstructures.com/,yes,medium
+IC-68913,Concrete Systems Inc/CSI Shelter Technologies,Londonderry,NH,f,CSI/United Concrete Building Group makes precast pump station solutions and precast concrete modular buildings. https://unitedconcrete.com/united-building-group/,yes,medium
