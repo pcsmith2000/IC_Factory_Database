@@ -14,7 +14,8 @@ Steps 1 to 3 are the existing building-review loop (v3, [`docs/building-review-a
 its rules still hold and are restated here where they matter. Step 4 is new.
 
 The database exists to be true: an empty cell beats a plausible wrong one. But a question you can
-answer with a cited source is yours to answer. **A person is the exception, under 1 in 6 facilities.**
+answer with a cited source is yours to answer. **A person is the exception, under 1 in 20 facilities**
+(see building-review-agent.md §3b for what you do instead).
 
 Run id: **`wr-volumetric-1`**. Reuse it every time you resume.
 
@@ -81,9 +82,9 @@ Answer three things:
   stays volumetric.
 
 **Is it here?** Look at the map. If the pin is on a house, an office, a field or the wrong town,
-find the plant's address and move the pin as v3 says: geocode the address with the US Census
-geocoder (`https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=<address>&benchmark=Public_AR_Current&format=json`),
-type that rough `lat, lon` and click **Go to typed point**, find the production building, click
+find the plant's address and move the pin as building-review-agent.md says: type the address in
+the pane's **Find address** box and click it (the pane geocodes it server-side; you don't need the
+Census site), find the production building, click
 **Set pin on map**, click the building, then **Move pin** with the address and URL in the note.
 Never type a coordinate you worked out from a picture. A closed or vanished plant gets
 **Not a plant here** with `closed` (needs two cited pages, or one registry/filing/certification
@@ -120,9 +121,13 @@ and the size is settled: within **0.5× to 2×** of a stated floor area, or matc
 building count, or, with no size stated, every production building on the site. Choose the
 buildings first, then check the size; never pick buildings because they sum to a number.
 
-**Needs a person** only when two credible sources conflict and nothing settles it, the main
-production building has no outline, or a scope question these rules don't settle. Attach your best
-proposal and ask one answerable question.
+**The main hall has no outline?** Trace it: **Draw building**, click its roof corners, **Finish
+outline** (building-review-agent.md §3). Never send a plant to a person for a missing outline.
+
+**Before Needs a person**, work through building-review-agent.md §3b: shared campuses, legacy names,
+closure signals, PO-box pins, plants outside the US, and the 2026-10-08 scope rulings. **Needs a person** is left only for two conflicting primary
+sources that every rule leaves open, or a scope question no ruling covers. Attach your best proposal
+and ask one yes-or-no question.
 
 ## 4. Housing (volumetric plants only)
 
