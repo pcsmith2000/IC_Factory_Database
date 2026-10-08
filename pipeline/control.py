@@ -17,7 +17,7 @@ from pathlib import Path
 from .contract import COLUMNS, row_hash, STATUS_BASES
 from .registry import load_yaml, sha256_file
 from .golden import FIELD_MAP
-from . import monitor_fix
+from . import facility_intake, monitor_fix
 
 ROOT = Path(__file__).resolve().parent.parent
 TRIAGE = {"in_scope_locatable", "in_scope_no_location", "out_of_scope"}
@@ -173,6 +173,7 @@ def check(cfg: dict, fix: bool = False) -> list[str]:
                             f"capability_group {leaf_group.get(v['capability_leaf'])!r} on the same date, got {v.get('capability_group')!r}")
 
     problems += monitor_fix.problems(c / "monitor_fix_assertions.csv")
+    problems += facility_intake.problems(c / "new_facilities.csv")
 
     # ---- prompt
     prompt = (ROOT / cfg["classifier"]["prompt_path"]).read_text()

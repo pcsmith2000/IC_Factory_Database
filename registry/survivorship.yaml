@@ -24,8 +24,12 @@
 # certification body (basis web_verified, 0.8) or the company's own site (web_primary, 0.7) ranks
 # just below people and site visits, above every automated source; within that, higher veracity
 # then recency wins. Everything else it asserts (web_cited, web_inferred) only fills a blank.
+# facility_intake (pipeline/facility_intake.py) is a plant no source lists yet, added by a reviewed
+# pull request. It is unlisted everywhere except the capability fields, so its founding facts fill
+# blanks and the first registry or list to publish the plant corrects them. On capability it sits
+# below ADL's lists and web-quoted capabilities and above the model's guess.
 lowest_priority_sources: [tako_ai_search, astra_manual_web_lookup, web_research]
-version: 6
+version: 7
 default_order: [adl_employee_feedback, operator, site_visit, "class:A", "class:D", "class:B", "class:C"]
 fields:
   name:            {order: [adl_employee_feedback, operator, "class:A", "class:D", "class:C", "class:B"], tie: most_recent}
@@ -76,8 +80,8 @@ fields:
   # quoted, with group and leaf asserted together (pipeline/web_research/ingest.py). It beats the
   # model's guess (a truss plant the model filed as Wood Volumetric Modular) and loses to ADL's
   # labels and to people. Any other web judgement still only fills a blank.
-  capability_group:    {order: [adl_employee_feedback, operator, "class:D", "basis:web_capability", capability], tie: most_recent}
-  capability_leaf:     {order: [adl_employee_feedback, operator, "class:D", "basis:web_capability", capability], tie: most_recent}
+  capability_group:    {order: [adl_employee_feedback, operator, "class:D", "basis:web_capability", facility_intake, capability], tie: most_recent}
+  capability_leaf:     {order: [adl_employee_feedback, operator, "class:D", "basis:web_capability", facility_intake, capability], tie: most_recent}
   secondary_capability: {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
   material:            {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
   sector:              {order: [adl_employee_feedback, operator, "class:D"], tie: most_recent}
