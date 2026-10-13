@@ -14,8 +14,8 @@ from urllib.parse import urlparse
 from pipeline.enrich import cache
 from pipeline.enrich.geocode import one_line, _post
 from pipeline.enrich._db import assertion, _rows_for
-from pipeline.web_research.rooftops import street_matches, street_rule
-from pipeline.web_research.run import norm
+from pipeline.recovery.streets import street_matches, street_rule
+from pipeline.web_research.pages import norm
 
 # A campaign freezes the cohort of facilities without a coordinate as golden shows them at the time.
 # The first cohort (2026-09-21) was frozen from a release whose id registry has since been
@@ -100,7 +100,7 @@ def identity_for(frozen, live, recovered):
 
     The frozen baseline is the rule. But the cohort was frozen from a release whose id registry
     diverged from the one now published, so some ids name a different plant today. A recovered
-    address that was verified against the LIVE identity (tako_address stores it as _identity) is
+    address that was verified against the LIVE identity (the retired Tako pass stored it as _identity) is
     worked under that identity instead — the address belongs to the plant golden now shows.
     """
     if norm(frozen.get('name'))==norm(live.get('name')) and not any(frozen.get(k) and norm(frozen.get(k))!=norm(live.get(k)) for k in ('city','state')):

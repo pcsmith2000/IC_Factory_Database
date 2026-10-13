@@ -19,7 +19,7 @@ The companion prompt for the agent that runs the passes is `docs/web-research-pi
 Three independent controls, so no single bug can overspend:
 
 1. **The budgeted gateway key.** The repository secret `AI_GATEWAY_API_KEY` now routes to the key the user
-   allocated for this work, and its gateway limit is the backstop. The key is **shared**: `tako-*`, `capability`,
+   allocated for this work, and its gateway limit is the backstop. The key is **shared**: `capability`,
    `bakeoff` and `enrich` workflows use it too, and the quarterly `pipeline-run` (next on 2026-10-01 12:00 UTC) triggers
    `enrich`, whose AI `locate` stage researches up to 200 facilities with it. The ledger counts only evaluation spend,
    so before each pass check that no other workflow using the key is running.
@@ -85,7 +85,7 @@ One facility at a time, every step logged to the pass artifact:
 
 1. **Crawl the known website** (free): homepage plus up to eight same-host pages whose link text or path mentions
    contact, about, location, plant, facility, capabilities or products. Respect robots.txt, a 20 s timeout and a 2 MB
-   page limit, reusing `pipeline/web_research/run.py` `fetch()`.
+   page limit, reusing the SSRF-safe opener in `pipeline/web_research/pages.py`.
 2. **Search only when needed** (paid): when there is no website, the site is dead, or step 1 cannot anchor the plant
    (no page mentions this city or street). One request per facility, provider chosen per pass (§5).
    **Search results are cached per (facility, provider, query) for the whole evaluation**, so a pass that changes only

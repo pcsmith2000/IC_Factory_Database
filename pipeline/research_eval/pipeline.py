@@ -95,7 +95,7 @@ def quote_ok(quote: str, page_text: str) -> bool:
     return len(q) >= 3 and q in ws(page_text)
 
 
-# --- fetching (reuses the Tako pass's SSRF-safe opener and contact decoders) ---------------------
+# --- fetching (the SSRF-safe opener and contact decoders in web_research/pages.py) ---------------------
 
 def _cache_key(*parts) -> str:
     return hashlib.sha256("\x1f".join(str(p) for p in parts).encode()).hexdigest()[:24]
@@ -111,7 +111,7 @@ class Fetcher:
 
     def _open(self, url: str):
         from urllib.request import Request, build_opener
-        from ..web_research.run import Redirects, safe_url
+        from ..web_research.pages import Redirects, safe_url
         safe_url(url)
         return build_opener(Redirects()).open(
             Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; ICFactoryResearch/1.0)"}), timeout=self.timeout)
@@ -159,7 +159,7 @@ class Fetcher:
             if "html" not in ctype and "text" not in ctype:
                 return {"url": url, "error": f"unsupported:{ctype[:40]}", "fetched_at": at}
             from bs4 import BeautifulSoup
-            from ..web_research.run import decode_contact_spans, decode_public_email_links
+            from ..web_research.pages import decode_contact_spans, decode_public_email_links
             soup = BeautifulSoup(raw, "html.parser")
             decode_contact_spans(soup); decode_public_email_links(soup)
             links = []

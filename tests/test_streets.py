@@ -1,9 +1,8 @@
 """The street check accepts USPS spellings of the same street and nothing looser."""
 import pytest
 
-from pipeline.recovery.streets import canonical, street_equivalent
+from pipeline.recovery.streets import canonical, street_equivalent, street_matches, street_rule
 from pipeline.recovery.run import validate_rooftop
-from pipeline.web_research.rooftops import street_matches, street_rule
 
 # Every pair below was rejected as street_name_mismatch by the verbatim check in campaign pass
 # paid-1 although Geocodio had returned a rooftop with the same house number, city and state.

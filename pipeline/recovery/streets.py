@@ -265,3 +265,36 @@ def street_equivalent(left: str, right: str, parcel: bool = False) -> tuple[bool
             return True, "parcel"
         return False, "suffix_differs" if suffix_differs else "direction_differs"
     return True, rule
+
+
+_ALIASES = {'street': 'st', 'road': 'rd', 'avenue': 'ave', 'boulevard': 'blvd', 'drive': 'dr', 'lane': 'ln',
+            'court': 'ct', 'highway': 'hwy', 'parkway': 'pkwy', 'trail': 'trl', 'north': 'n', 'south': 's',
+            'east': 'e', 'west': 'w', 'suite': 'ste'}
+
+
+def _verbatim_key(value) -> str:
+    """The street with locality, punctuation and common spellings folded away, for the exact rule."""
+    value = re.sub(r',\s*[^,]+,\s*[A-Za-z]{2}\s+\d{5}(?:-\d{4})?\s*$', '', str(value or ''))
+    value = re.sub(r'^(north|south|east|west),\s*(?=\d)', '', value.lower())
+    return ''.join(_ALIASES.get(t, t) for t in re.findall(r'[a-z0-9]+', value))
+
+
+def street_rule(address, components, parcel=False):
+    """The rule under which the source street and the geocoder's street are the same street, or
+    the reason they are not.  A verbatim comparison rejected 85 rooftop results in the first
+    campaign pass on spellings like "Hwy 231" / "US-231"."""
+    street = re.sub(r'^\d+[a-zA-Z]?\s*', '', address).strip()
+    street = re.split(r'(?i)\b(?:suite|ste|unit|bldg|building)\b|#', street, maxsplit=1)[0].strip()
+    unit = str(components.get('unit_number') or '')
+    if unit:
+        street = re.sub(r'\s+' + re.escape(unit) + r'$', '', street).strip()
+    returned = components.get('formatted_street')
+    if not returned:
+        return False, 'missing_street'
+    if _verbatim_key(street) == _verbatim_key(returned):
+        return True, 'exact'
+    return street_equivalent(street, returned, parcel=parcel)
+
+
+def street_matches(address, components, parcel=False):
+    return street_rule(address, components, parcel=parcel)[0]
