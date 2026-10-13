@@ -213,20 +213,6 @@ def slice_columns(line: list[dict], cols: list[tuple[str, float]]) -> dict[str, 
     return {k: " ".join(v) for k, v in out.items()}
 
 
-def pdf_tables(path: Path) -> list[list[list[str]]]:
-    """Every table on every page as rows of cell strings (pdfplumber only)."""
-    try:
-        import pdfplumber
-    except ImportError as e:
-        raise ImportError("pip install -e '.[acquire]' — pdfplumber is needed for PDF tables") from e
-    out = []
-    with pdfplumber.open(path) as pdf:
-        for p in pdf.pages:
-            for t in p.extract_tables() or []:
-                out.append([[(c or "").strip() for c in row] for row in t])
-    return out
-
-
 def html_tables(html: str) -> list[list[list[str]]]:
     """Every <table> as rows of cell strings, in document order (BeautifulSoup)."""
     try:
@@ -389,8 +375,3 @@ def pick(paths: list[Path], *extensions: str) -> list[Path]:
 def require(cond: bool, path: Path, why: str) -> None:
     if not cond:
         raise LayoutChanged(f"{why} — inspect the archived file {path}")
-
-
-def companies_block(html: str) -> str:
-    """Trim an HTML page to its visible text for an extraction prompt; caps size."""
-    return html_text(html)[:60000]

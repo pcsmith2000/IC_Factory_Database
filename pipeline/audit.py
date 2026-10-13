@@ -23,7 +23,8 @@ Langboard OSB, Kolbe & Kolbe, Sunset Moulding, Ken-Rich Millwork and four more m
 Nothing in the sample was defensible as IC, so the count is a floor and not an overstatement —
 which is the only way the number is worth quoting.
 
-    python -m pipeline.audit build/classify_cache --rows build/facilities.csv
+It has no command line. `pipeline/run.py` calls `scan` on the plants Layer 3 admitted, every run,
+and records the result in the run record as `layers.3_classify.precision_audit`.
 """
 from __future__ import annotations
 import re

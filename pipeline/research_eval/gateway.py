@@ -27,10 +27,6 @@ SEARCH_TOOLS = {
 PRICE_LINE_PER_M = {"input": 2.0, "output": 10.0}
 
 
-class BudgetExceeded(RuntimeError):
-    pass
-
-
 class GatewayError(RuntimeError):
     def __init__(self, status: int, body: str):
         self.status = status

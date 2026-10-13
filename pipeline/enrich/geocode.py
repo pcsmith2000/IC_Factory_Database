@@ -34,16 +34,6 @@ class GeocodioError(RuntimeError):
     pass
 
 
-class GeocodioQuotaExhausted(GeocodioError):
-    """The day's free-tier lookups are spent. Not a failure of this stage — a ceiling on it.
-
-    It reads like the footprint file ceiling: the addresses that did not get looked up are deferred,
-    not dropped. Nothing about them changed, the stage selects them again next run, and the
-    assertions it did earn before the ceiling are still written. Crashing here would throw away
-    those, and would make a red run out of a stage that behaved correctly.
-    """
-
-
 def one_line(r: dict) -> str:
     tail = " ".join(p for p in [r.get("city") or "", r.get("state") or "", r.get("zip") or ""] if p)
     return f"{(r.get('address') or '').strip()}, {tail}".strip().rstrip(",")
