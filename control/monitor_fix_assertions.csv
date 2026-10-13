@@ -153,3 +153,21 @@ IC-95036,website,https://claytonalabamahomes.com,2026-09-29,https://github.com/p
 IC-95038,website,https://www.cavcohomes.com/crouse,2026-09-29,https://github.com/pcsmith2000/IC_Factory_Database/issues/95,was 'http://r-anell.com'; r-anell.com redirects to cavcohomes.com/crouse (plant rebranded Cavco-Crouse) (owner audit workbook)
 IC-95117,website,https://sunbeltmodular.com,2026-09-29,https://github.com/pcsmith2000/IC_Factory_Database/issues/95,was ''; southeastmodular.com redirects to sunbeltmodular.com (owner audit workbook)
 IC-96149,website,https://www.atom-modular.com,2026-09-29,https://github.com/pcsmith2000/IC_Factory_Database/issues/95,was ''; atom-modular.com/about (owner audit workbook)
+IC-96350,address,221 Industrial Parkway,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,"brownlumber.com lists the Truss Plant at 221 Industrial Parkway, Columbiana, AL 35051; sbca_cm stored the retail yard at 21891 Hwy 25"
+IC-96350,zip,35051,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,"brownlumber.com: Truss Plant, 221 Industrial Parkway, Columbiana, AL 35051; the stored 35051-8614 is the retail yard's"
+IC-96350,website,https://brownlumber.com/,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,"brownlumber.com is the company's own site; web_research stored brownlumber.trexdealers.com, a Trex dealer locator page"
+IC-21965,website,https://www.championhomes.com,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,"Champion Home Builders' Lake City FL plant is a Champion Homes plant; ga_dca stored boxmanstudios.com, an unrelated company"
+IC-95536,state,PA,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 16625 and city Claysburg are PA; no source stored a state
+IC-93265,state,PA,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 18504 and city Scranton are PA; no source stored a state
+IC-95545,state,PA,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 19348 and city Kennett Square are PA; no source stored a state
+IC-93335,state,WV,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 25840 and city Fayetteville are WV; no source stored a state
+IC-92892,state,NC,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 28137 and city Richfield are NC; no source stored a state
+IC-95551,state,GA,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 30512 and city Blairsville are GA; no source stored a state
+IC-93395,state,FL,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 32174 and city Ormond Beach are FL; no source stored a state
+IC-95556,state,AL,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 35022 and city Bessemer are AL; no source stored a state
+IC-95155,state,TN,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 37890-3709 and city White Pine are TN; no source stored a state
+IC-95140,state,IN,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 46733 and city Decatur are IN; no source stored a state
+IC-95553,state,MI,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 48045 and city Harrison Township are MI; no source stored a state
+IC-95733,state,SD,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 57025 and city Elk Point are SD; no source stored a state
+IC-95727,state,UT,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 84302 and city Brigham City are UT; no source stored a state
+IC-93237,state,CA,2026-10-13,https://github.com/pcsmith2000/IC_Factory_Database/issues/143,ZIP 95023 and city Hollister are CA; no source stored a state
