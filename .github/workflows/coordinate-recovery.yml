@@ -1,9 +1,6 @@
 name: Budgeted rooftop recovery
 run-name: Rooftop recovery · ${{ inputs.mode || 'plan' }} · pass ${{ inputs.pass_id || '1' }}
 on:
-  push:
-    branches: [feat/coordinate-recovery]
-    paths: [.github/workflows/coordinate-recovery.yml]
   workflow_dispatch:
     inputs:
       mode:
