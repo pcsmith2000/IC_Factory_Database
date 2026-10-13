@@ -17,11 +17,8 @@ strings come from `neon env pull` locally and are set as repository secrets for 
 Neon scales to zero between quarterly runs. `python -m pipeline.warehouse init` creates the
 schema on an empty database (idempotent; the loader also does this on open).
 
-**Google Cloud later.** The path is Cloud SQL for PostgreSQL (or AlloyDB): `pg_dump` from Neon,
-restore, change the connection string, nothing else. If column analytics are ever wanted,
-BigQuery federated queries read Cloud SQL Postgres in place — the star schema stays where it
-is. `docs/gcp-setup.sh` remains for the raw-archive bucket and Workload Identity Federation;
-its BigQuery dataset step is no longer on the path.
+**Google Cloud later.** A possible later move to Cloud SQL for PostgreSQL, with its GCP resources
+and roles, is written up in `docs/future/google-cloud.md`. None of it is on the current path.
 
 ## Schema — a star with one derived table
 ```
@@ -236,26 +233,6 @@ Not in the warehouse: the files Layer 1 fetched go to a private Vercel Blob stor
 `manifest.json` (size, sha256, blob URL) per source and date. `ref_source_row.source_document`
 plus the run date is the key into it. Secret: `BLOB_READ_WRITE_TOKEN`.
 
-## GCP resources to create once (later, for Cloud Run Jobs)
-1. ~~GCS bucket~~ — raw archives live in Vercel Blob; a GCS uploader is a drop-in if that changes
-2. ~~BigQuery dataset `ic_factory`~~ — superseded by Neon / Cloud SQL for PostgreSQL
-3. Service account `ic-pipeline@<project>.iam.gserviceaccount.com`
-4. Workload Identity Federation pool + provider trusting repo `pcsmith2000/IC_Factory_Database`
-5. Secret Manager: `AI_GATEWAY_API_KEY`, `CENSUS_API_KEY`
-6. (later) Cloud Run Job `ic-pipeline-heavy` built from this repo
-
-## Roles on the service account
-| Role | Why |
-|---|---|
-| `roles/storage.objectAdmin` on the bucket | archives, bulk files |
-| `roles/bigquery.dataEditor` on the dataset | load tables |
-| `roles/bigquery.jobUser` on the project | run load/query jobs |
-| `roles/secretmanager.secretAccessor` | API keys in Cloud Run |
-| `roles/run.developer` | only when heavy steps move to Cloud Run Jobs |
-| `roles/iam.workloadIdentityUser` binding to the WIF principal for the repo | lets Actions assume the SA |
-
-People: `roles/bigquery.dataViewer` on the dataset for anyone who reads the golden table.
-
 ## Repo variables and secrets
-Variables: `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` (raw archives, later).
+Variables: `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT` (later; see `docs/future/google-cloud.md`).
 Secrets: `AI_GATEWAY_API_KEY`, `CENSUS_API_KEY`, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`.

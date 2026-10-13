@@ -72,7 +72,7 @@ python -m pipeline.control check         # the hand-placed inputs
    `BLOB_READ_WRITE_TOKEN` (Vercel Blob), `GEOCODIO_API_KEY` (stage 10), and either
    `DATABASE_URL` + `DATABASE_URL_UNPOOLED` or the Neon GitHub integration (Neon).
 3. Later, for Cloud Run Jobs: Workload Identity Federation for this repo; repo variables
-   `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT`.
+   `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT` (see `docs/future/google-cloud.md`).
 4. Pick one scheduler. This repo keeps the cron in Actions so the run, its failure and its
    release PR are in one place; Cloud Scheduler is not used.
 
