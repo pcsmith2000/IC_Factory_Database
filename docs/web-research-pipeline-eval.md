@@ -7,7 +7,7 @@ research agent's `wr-full-1` pass on the same facilities, at a cost we can affor
 write **nothing** to the warehouse, and end in a go / no-go for production runs funded from the rest of the
 $30 allocation.
 
-The companion prompt for the agent that runs the passes is `docs/web-research-pipeline-loop-prompt.md`.
+The companion prompt for the agent that ran the passes is `docs/history/web-research-pipeline-loop-prompt.md`; production runs from `docs/web-research-production-loop.md`.
 
 ## 1. Budget
 

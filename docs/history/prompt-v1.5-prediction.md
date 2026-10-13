@@ -143,4 +143,4 @@ no better than v1.5's ~829. The precedence diagnosis was wrong. But v1.5 does NO
 this paragraph promised it: the cause was found in run 22's cache instead, for nothing. The hedge
 rule was sized on 77 hedged reasons inside the 607 core-code NOT-IC rows, while the rule as written
 reached all 927 hedged NOT-IC rows in the population — 81 on a core code, 846 off it. See
-`docs/prompt-v1.7-prediction.md`.
+`docs/history/prompt-v1.7-prediction.md`.

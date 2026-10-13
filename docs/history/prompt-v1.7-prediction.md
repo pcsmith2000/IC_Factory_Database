@@ -6,7 +6,7 @@ not consulted, and the sealed quarter of it remains the check that none of this 
 
 ## First: the v1.6 verdict, which is what sent me here
 
-`docs/prompt-v1.5-prediction.md` closes with a falsifier — *"If v1.6 also balloons UNCERTAIN, this
+`docs/history/prompt-v1.5-prediction.md` closes with a falsifier — *"If v1.6 also balloons UNCERTAIN, this
 diagnosis is wrong and v1.5 deserves a full run to find out why."* It fired.
 
 Run 35259543326 (v1.6, prompt 0b4a70c2f1f3), read at batch 28 of 132 — 2,800 rows labelled, IC 464,
