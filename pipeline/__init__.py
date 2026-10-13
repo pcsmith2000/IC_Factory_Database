@@ -16,6 +16,24 @@ def ai_enabled() -> bool:
 
 
 AI_GATEWAY_BASE_URL = "https://ai-gateway.vercel.sh"
+MODEL_CATALOG_URL = AI_GATEWAY_BASE_URL + "/v1/models"
+
+
+def model_catalog(timeout: float = 30, retries: int = 0) -> dict:
+    """The gateway's model catalogue (GET /v1/models, no authentication needed), parsed as JSON.
+
+    The one place the price list is read. Each caller keeps its own timeout, and a caller about to
+    spend money can ask for retries so a transport blip does not throw the run away.
+    """
+    import json, time, urllib.request
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(MODEL_CATALOG_URL, timeout=timeout) as r:
+                return json.load(r)
+        except Exception:
+            if attempt == retries:
+                raise
+            time.sleep(2 ** attempt)
 # The two APIs spell the same model differently: first-party ids dash the minor version
 # ("claude-haiku-4-5"), the gateway's catalogue dots it and qualifies it by provider
 # ("anthropic/claude-haiku-4.5"). Sending one form to the other API is a 404, so translate

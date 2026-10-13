@@ -1,4 +1,5 @@
 import json
+import urllib.request
 from pipeline import run_report
 
 
@@ -19,7 +20,7 @@ def test_estimated_cost_uses_per_token_rates_and_preserves_missing(monkeypatch):
         def __enter__(self): return self
         def __exit__(self, *args): pass
         def read(self): return json.dumps({"data": [{"id": "test/model", "pricing": {"input": "0.000001", "output": "0.000002"}}]}).encode()
-    monkeypatch.setattr(run_report.urllib.request, "urlopen", lambda *a, **kw: Reply())
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **kw: Reply())
     result = run_report.estimate_cost("test/model", {"input_tokens": 100, "output_tokens": 50})
     assert result["model_usd"] == 0.0002
     assert result["basis"] == "estimate"

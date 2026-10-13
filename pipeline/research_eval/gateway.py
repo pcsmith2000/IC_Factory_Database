@@ -13,7 +13,6 @@ import json, os, time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-CATALOG_URL = "https://ai-gateway.vercel.sh/v1/models"
 CHAT_URL = "https://ai-gateway.vercel.sh/v1/chat/completions"
 # List price per search request (design section 5). Tako fast is free on the gateway through
 # 2026-09-30 and $7/1000 after; the ledger counts it at $7/1000 throughout.
@@ -41,8 +40,8 @@ class GatewayError(RuntimeError):
 def load_catalog(path: str | None = None) -> dict:
     if path and os.path.exists(path):
         return json.load(open(path))
-    with urlopen(CATALOG_URL, timeout=30) as r:
-        return json.load(r)
+    from .. import model_catalog
+    return model_catalog(timeout=30)
 
 
 def prices(catalog: dict, models: list[str]) -> dict[str, dict]:

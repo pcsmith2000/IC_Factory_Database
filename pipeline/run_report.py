@@ -9,7 +9,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import urllib.request
+from . import MODEL_CATALOG_URL, model_catalog
 
 DDL = """CREATE TABLE IF NOT EXISTS pipeline_run_events (
  run_id TEXT NOT NULL, attempt INTEGER NOT NULL, stage TEXT NOT NULL,
@@ -82,15 +82,14 @@ def estimate_cost(model, usage):
     if not model or any(usage.get(k) is None for k in ("input_tokens", "output_tokens")):
         return report
     try:
-        with urllib.request.urlopen("https://ai-gateway.vercel.sh/v1/models", timeout=5) as r:
-            models = json.load(r)["data"]
+        models = model_catalog(timeout=5)["data"]
         rate = next(m["pricing"] for m in models if m["id"] == model)
         # Aggregate usage cannot accurately price tiered contexts; do not invent a total.
         if rate.get("input_tiers") or rate.get("output_tiers"):
             return report
         report.update(model_usd=round(float(rate["input"]) * usage["input_tokens"] + float(rate["output"]) * usage["output_tokens"], 6),
                       input_usd_per_token=rate["input"], output_usd_per_token=rate["output"],
-                      pricing_source="https://ai-gateway.vercel.sh/v1/models")
+                      pricing_source=MODEL_CATALOG_URL)
     except Exception:
         pass
     return report

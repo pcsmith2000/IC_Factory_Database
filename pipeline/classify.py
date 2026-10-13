@@ -5,9 +5,9 @@ in prompts/CLASSIFIER-PROMPT.md; the model id, temperature and prompt hash are r
 run record. Batches are keyed by content hash so a re-run is a no-op for unchanged rows.
 Seeded positives/negatives are hidden in every batch and scored by gate G5.
 
-The provider is resolved once, in pipeline.ai_client_and_model: the Vercel AI Gateway when
-AI_GATEWAY_API_KEY is set, else the Anthropic API directly. Both speak the Messages API, so
-`classify_batch` is unchanged by the choice; only the model id is spelled differently.
+The provider is resolved once, in pipeline.ai_client_and_model: the Vercel AI Gateway, the only
+provider (it needs AI_GATEWAY_API_KEY; there is no direct Anthropic API fallback). The gateway
+speaks the Messages API, so `classify_batch` uses the anthropic SDK unchanged.
 """
 from __future__ import annotations
 import hashlib, json, math, os, re, time

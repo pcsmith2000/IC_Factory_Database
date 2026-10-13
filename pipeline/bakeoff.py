@@ -17,16 +17,15 @@ classify.batches() spreads them two per batch through the candidates. A model th
 gate here is a candidate, not a proven choice; the proof is a full run's own G5.
 """
 from __future__ import annotations
-import argparse, json, sys, urllib.request
+import argparse, json, sys
 from pathlib import Path
 
-from . import ai_client_and_model, gateway_model_id
+from . import ai_client_and_model, gateway_model_id, model_catalog
 from .classify import classify_batch, prompt_hash
 from .gates import g5_classifier_eval
 from .registry import load_yaml
 
 ROOT = Path(__file__).resolve().parent.parent
-MODELS_URL = "https://ai-gateway.vercel.sh/v1/models"
 # Full-run shape, measured on the 2026-09-16 candidate set AFTER families 3219 and 3212 were
 # admitted whole (classify.WIDE_NAICS_FAMILIES): ~13,000 rows in ~130 batches of 100, with the
 # frozen prompt re-sent each batch. Before the widening it was 2,922 rows in 30 batches, 150k in
@@ -42,16 +41,7 @@ def catalogue(retries: int = 3) -> dict[str, tuple[float, float]]:
     Retried like every other network read here — a transport blip fetching the price list should
     not throw away a bake-off that is about to spend money on model calls.
     """
-    import time
-    for attempt in range(retries + 1):
-        try:
-            with urllib.request.urlopen(MODELS_URL, timeout=60) as r:
-                data = json.load(r)["data"]
-            break
-        except Exception:
-            if attempt == retries:
-                raise
-            time.sleep(2 ** attempt)
+    data = model_catalog(timeout=60, retries=retries)["data"]
     out = {}
     for m in data:
         p = m.get("pricing") or {}
