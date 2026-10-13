@@ -1,8 +1,8 @@
 """Layer 8 sink: the warehouse.
 
-One star schema (docs/warehouse.md) in Postgres (Neon), reached through DATABASE_URL. SQL is
-written with '?' placeholders and translated to psycopg's. A warehouse that is wanted but cannot be
-opened halts the run loudly — it is never silently skipped, and there is no local fallback: a run
+One star schema (docs/warehouse.md) in Postgres (Neon), reached through DATABASE_URL_UNPOOLED or
+DATABASE_URL (pipeline/db.py). SQL is written with '?' placeholders and translated to psycopg's. A
+warehouse that is wanted but cannot be opened halts the run loudly — it is never silently skipped, and there is no local fallback: a run
 with no warehouse says so (IC_WAREHOUSE_ENGINE=none).
 
 Provenance is the point. `fact_assertions` is append-only and tagged by release; `golden_facility`
@@ -11,7 +11,7 @@ is replaced per release and is a pure function of the assertions and registry/su
 position. The `v_provenance` view walks that chain: golden value → winning source → assertion →
 contract row. Nothing here decides anything; it records what Layers 5–7 decided.
 
-    python -m pipeline.warehouse init                      # create the schema on the configured engine
+    python -m pipeline.warehouse init                      # create the schema; idempotent
     python -m pipeline.warehouse provenance IC-00001 [--field address]
     python -m pipeline.warehouse releases
     python -m pipeline.warehouse sql "select state, count(*) from golden_facility group by 1"
@@ -182,10 +182,10 @@ DDL = [
         facility_id TEXT REFERENCES facility (facility_id), method TEXT NOT NULL, confidence REAL,
         PRIMARY KEY (registry_hash, legacy_id))""",
     # Which id registry each release was built from (its tag's `+ids.<hash>`), so a view can join
-    # fact_assertions to legacy_id_map in SQL both engines share. Written by pipeline/legacy_ids.py.
+    # fact_assertions to legacy_id_map in SQL. Written by pipeline/legacy_ids.py.
     "CREATE TABLE IF NOT EXISTS release_registry (release_tag TEXT PRIMARY KEY, registry_hash TEXT NOT NULL)",
     # Continuous golden (#44): facilities whose assertions changed since golden last saw them.
-    # Filled by a trigger on fact_assertions (below, per engine) and by facility merges; drained
+    # Filled by a trigger on fact_assertions (created in init_schema) and by facility merges; drained
     # by pipeline/golden_refresh.py. Raw (facility_key, release_tag): the refresh resolves each
     # to its permanent facility, so the trigger needs no knowledge of the registry.
     """CREATE TABLE IF NOT EXISTS golden_dirty (
@@ -273,7 +273,7 @@ DDL = [
 
 # Views are created after the golden columns are reconciled, not with the tables: they name every
 # column in GOLDEN_FIELDS, so adding a field would make CREATE VIEW fail on a database whose
-# golden_facility predates it. See _Warehouse.init_schema.
+# golden_facility predates it. See PostgresWarehouse.init_schema.
 VIEWS = [
     # golden, one row per (facility, field): the wide table unpivoted (v_provenance depends on it: drop that first)
     "DROP VIEW IF EXISTS v_provenance",
@@ -333,15 +333,21 @@ def _float(x) -> float | None:
         return None
 
 
-# ---------------------------------------------------------------- engines
+# ---------------------------------------------------------------- the warehouse
 class _Cursor:
-    """Executes '?'-placeholder SQL on psycopg; exposes rowcount and fetches."""
+    """A psycopg cursor that takes '?' placeholders, and executemany in chunks.
+
+    Every caller's SQL (here, golden_refresh, facility_registry, duplicates, the tests...) is written
+    with '?', and translating at this one point is far less risky than rewriting all of it. The
+    rewrite is a plain replace, so a statement with a literal '?' in it (Postgres's JSON existence
+    operator) must go through `.raw` instead, as the migrations do."""
     CHUNK = 1000
 
-    def __init__(self, wh, raw):
-        self.wh, self.raw = wh, raw
-    def _sql(self, sql: str) -> str:
-        return sql.replace("?", self.wh.placeholder) if self.wh.placeholder != "?" else sql
+    def __init__(self, raw):
+        self.raw = raw
+    @staticmethod
+    def _sql(sql: str) -> str:
+        return sql.replace("?", "%s")
     def execute(self, sql: str, params=()):
         self.raw.execute(self._sql(sql), params)
         return self.raw
@@ -367,10 +373,39 @@ class _Cursor:
     def fetchall(self): return self.raw.fetchall()
 
 
-class _Warehouse:
-    engine = "?"
-    placeholder = "?"
-    path = ""
+class PostgresWarehouse:
+    """Neon (or any Postgres). Prefers the direct/unpooled URL for the loader — DDL and one long
+    transaction per release do not belong on a PgBouncer transaction-mode pool."""
+    engine = "postgres"
+
+    def __init__(self, url: str):
+        try:
+            import psycopg  # noqa: F401  (a missing driver is a deploy problem, said as such)
+        except ImportError as e:
+            raise WarehouseNotImplemented("DATABASE_URL is set but psycopg is not installed: pip install -e '.[postgres]'") from e
+        from .db import psycopg_connect
+        self.conn = psycopg_connect(url, dict_rows=True, connect_timeout=None)
+        self.path = self._redact(url)
+        self.init_schema()
+
+    @staticmethod
+    def _redact(url: str) -> str:
+        import re
+        return re.sub(r"://([^:/@]+):[^@]*@", r"://\1:***@", url)
+
+    @contextmanager
+    def transaction(self):
+        with self.conn.transaction():
+            with self.conn.cursor() as cur:
+                yield _Cursor(cur)
+
+    def _rows(self, raw) -> list[dict]:
+        return [dict(r) for r in raw.fetchall()] if raw.description else []
+
+    def _existing_columns(self, c, table: str) -> set[str]:
+        return {r["column_name"] for r in self._rows(c.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ?",
+            (table,)))}
 
     def existing_columns(self, table: str) -> set[str]:
         """Column names of an existing table, from outside a transaction.
@@ -422,9 +457,6 @@ class _Warehouse:
             for migration in sorted((Path(__file__).resolve().parent / "migrations").glob("*.sql")):
                 c.raw.execute(migration.read_text())
 
-    def _existing_columns(self, c, table: str) -> set[str]:
-        raise NotImplementedError
-
     # Widened beyond golden_facility when the enrichment stages merged in. asserted_at is when a
     # ROW was written, as distinct from date_key, when its SOURCE was retrieved. Survivorship needs
     # both: retrieved_date ranks one source against another, asserted_at separates two assertions
@@ -441,7 +473,7 @@ class _Warehouse:
         GOLDEN_FIELDS after the first release would be in the INSERT column list and absent from
         the table — every load after that would fail. Each missing column and its __source twin
         are added in place; nothing is dropped or rewritten, and a table that already has them is
-        left exactly as it was. Both engines accept ALTER TABLE ... ADD COLUMN ... TEXT."""
+        left exactly as it was."""
         added = []
         for table, cols in self.MIGRATE.items():
             want = cols if cols is not None else [x for f in GOLDEN_FIELDS
@@ -453,15 +485,8 @@ class _Warehouse:
                     added.append(f"{table}.{col}")
         return added
 
-    @contextmanager
-    def transaction(self):
-        raise NotImplementedError
-
     def close(self):
         self.conn.close()
-
-    def _rows(self, raw) -> list[dict]:
-        raise NotImplementedError
 
     def _assertion_count(self, c, tag: str) -> int:
         """Facts already held for this release tag. Used either side of the fact_assertions load so
@@ -508,9 +533,9 @@ class _Warehouse:
                             r.get("row_position"), r.get("source_identifier"), r.get("name_verbatim"), r.get("address_verbatim"),
                             r.get("city_verbatim"), r.get("state_verbatim"), r.get("zip_verbatim"), r.get("facility_id"),
                             r.get("match_method"), _float(r.get("match_confidence")), tag) for r in rows])
-            # the fact. ON CONFLICT DO NOTHING means rows offered != rows inserted, and the two
-            # drivers do not agree on what executemany reports in rowcount, so the number that goes
-            # on to fact_release_metrics is measured against the table rather than inferred.
+            # the fact. ON CONFLICT DO NOTHING means rows offered != rows inserted, and psycopg's
+            # executemany rowcount is not that number, so the number that goes on to
+            # fact_release_metrics is measured against the table rather than inferred.
             #
             # 13 columns, not 12: asserted_at is the last. It is when this ROW was written, as
             # against date_key, when its SOURCE was retrieved, and survivorship needs both — see
@@ -578,60 +603,26 @@ class _Warehouse:
             return self._rows(c.execute(sql, params))
 
 
-class PostgresWarehouse(_Warehouse):
-    """Neon (or any Postgres). Prefers the direct/unpooled URL for the loader — DDL and one long
-    transaction per release do not belong on a PgBouncer transaction-mode pool."""
-    engine = "postgres"
-    placeholder = "%s"
-
-    def __init__(self, url: str):
-        try:
-            import psycopg
-            from psycopg.rows import dict_row
-        except ImportError as e:
-            raise WarehouseNotImplemented("DATABASE_URL is set but psycopg is not installed: pip install -e '.[postgres]'") from e
-        self.psycopg = psycopg
-        self.conn = psycopg.connect(url, row_factory=dict_row)
-        self.path = self._redact(url)
-        self.init_schema()
-
-    @staticmethod
-    def _redact(url: str) -> str:
-        import re
-        return re.sub(r"://([^:/@]+):[^@]*@", r"://\1:***@", url)
-
-    @contextmanager
-    def transaction(self):
-        with self.conn.transaction():
-            with self.conn.cursor() as cur:
-                yield _Cursor(self, cur)
-
-    def _rows(self, raw) -> list[dict]:
-        return [dict(r) for r in raw.fetchall()] if raw.description else []
-
-    def _existing_columns(self, c, table: str) -> set[str]:
-        return {r["column_name"] for r in self._rows(c.execute(
-            "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ?",
-            (table,)))}
-
-
 def open_warehouse(cfg: dict, root: Path):
     """The Postgres warehouse at DATABASE_URL_UNPOOLED or DATABASE_URL, or None when the run asks for
     no warehouse (IC_WAREHOUSE_ENGINE=none, or warehouse.engine: none in config). No URL is an error,
     never a quiet fallback."""
     w = cfg.get("warehouse") or {}
+    engine = os.environ.get("IC_WAREHOUSE_ENGINE") or w.get("engine") or "postgres"
+    if engine in ("none", "off"):
+        return None
+    if engine != "postgres":
+        raise WarehouseNotImplemented(f"unknown warehouse engine {engine!r} (postgres | none)")
     # UNPOOLED wins, and which one won is worth saying out loud. Run 35393440727 died on
     # "password authentication failed for user 'neondb_owner'" with a perfectly good
     # DATABASE_URL set: DATABASE_URL_UNPOOLED held a different role's password and is read
     # first, so the working URL was never tried. The error named the host and the role, and
     # neither of those is the thing you have to go and fix.
-    var = "DATABASE_URL_UNPOOLED" if os.environ.get("DATABASE_URL_UNPOOLED") else "DATABASE_URL"
-    url = os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
-    engine = os.environ.get("IC_WAREHOUSE_ENGINE") or w.get("engine") or "postgres"
-    if engine in ("none", "off"):
-        return None
-    if engine not in ("postgres", "neon"):
-        raise WarehouseNotImplemented(f"unknown warehouse engine {engine!r} (postgres | none)")
+    from .db import resolve
+    try:
+        var, url = resolve()
+    except RuntimeError as e:                    # set, but not a usable URL (pipeline/db.py)
+        raise WarehouseUnreachable(str(e)) from e
     if not url:
         raise WarehouseNotImplemented("DATABASE_URL is not set (neon env pull, or a GitHub secret); "
                                       "IC_WAREHOUSE_ENGINE=none runs without a warehouse")
@@ -658,7 +649,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m pipeline.warehouse")
     ap.add_argument("--db", default=None, help="Postgres URL; default: DATABASE_URL")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("init", help="create the schema (tables, indexes, views) on the configured engine; idempotent")
+    sub.add_parser("init", help="create the schema (tables, indexes, views, migrations); idempotent")
     p = sub.add_parser("provenance", help="every golden field of a facility, its winning source, and the contract row behind it")
     p.add_argument("facility_id"); p.add_argument("--field")
     sub.add_parser("releases", help="fact_release_metrics, newest first")
