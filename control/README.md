@@ -68,6 +68,11 @@ millwork 0% — is the classifier keeping the IC families and dropping the ones 
 control rows and database rows. Provenance beats inference: re-deriving links by string
 similarity understated recall by 21 points.
 
+`control-status.csv` (each control row: found, located or missing, and why) and
+`crosswalk-candidates.csv` (proposed control-to-facility links for a person to confirm into
+`crosswalk.csv`) are run outputs, not inputs. `pipeline/run.py` writes them to `build/`, and they
+are not committed here.
+
 `seeds.csv` — the seeded eval set for G5. Contract columns plus `seed_label` (IC / NOT-IC),
 ~30 of each, hidden in every classifier batch. A seed that turns out to be wrong (the resort
 and marina) is corrected here, with a note, not silently dropped.
