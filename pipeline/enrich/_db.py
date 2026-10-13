@@ -265,6 +265,9 @@ def missing_golden_columns(db, fields: list[str]) -> list[str]:
     return [x for f in fields for x in (f, f"{f}__source") if x not in have]
 
 
+GOLDEN_COLUMN_SQL = 'ALTER TABLE golden_facility ADD COLUMN IF NOT EXISTS "{}" TEXT'
+
+
 def add_golden_columns(db, cols: list[str]) -> list[str]:
     for col in cols:
         db.query(GOLDEN_COLUMN_SQL.format(col), ())
