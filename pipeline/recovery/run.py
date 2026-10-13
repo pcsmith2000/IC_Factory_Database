@@ -15,7 +15,7 @@ from pipeline.enrich import cache
 from pipeline.enrich.geocode import one_line, _post
 from pipeline.enrich._db import assertion, _rows_for
 from pipeline.web_research.rooftops import street_matches, street_rule
-from pipeline.web_research.run import norm
+from pipeline.text import alnum_lower as norm
 
 # A campaign freezes the cohort of facilities without a coordinate as golden shows them at the time.
 # The first cohort (2026-09-21) was frozen from a release whose id registry has since been

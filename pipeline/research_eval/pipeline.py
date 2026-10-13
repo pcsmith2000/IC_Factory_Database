@@ -26,6 +26,7 @@ from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
 from . import gateway as gw
+from ..text import alnum_lower as norm
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 LITERAL = ("name", "address", "city", "state", "zip", "phone", "email", "website")
@@ -68,10 +69,6 @@ def merge(base: dict, over: dict) -> dict:
 def ws(s: str) -> str:
     """Whitespace-normalised text: the quote check's only allowance."""
     return re.sub(r"\s+", " ", str(s or "").replace(" ", " ")).strip()
-
-
-def norm(s) -> str:
-    return re.sub(r"[^a-z0-9]", "", str(s or "").lower())
 
 
 def host(url: str) -> str:

@@ -30,6 +30,8 @@ import json, re, sys
 from collections import Counter
 from pathlib import Path
 
+from .text import alnum_lower as _norm
+
 ROOT = Path(__file__).resolve().parent.parent
 CONFIDENCE = {"current": 1.0, "same_id": 0.95, "identity": 0.9, "address": 0.8, "unique_name": 0.7,
               "unresolved": None}
@@ -39,10 +41,6 @@ def registry_hash(release_tag: str) -> str:
     """The id-registry hash a release tag carries (`+ids.<hash>+`); '' when it carries none."""
     m = re.search(r"\+ids\.([0-9a-f]+)", release_tag or "")
     return m.group(1) if m else ""
-
-
-def _norm(v) -> str:
-    return re.sub(r"[^a-z0-9]", "", str(v or "").lower())
 
 
 def _identity(rows) -> tuple[dict, dict, dict, dict, dict]:

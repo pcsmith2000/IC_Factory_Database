@@ -16,16 +16,13 @@ import re
 import tempfile
 
 from pipeline.enrich._db import assertion, _rows_for
+from pipeline.text import alnum_lower as norm
 from pipeline.sources._common import http_get,pdf_lines
 
 
 URL='https://labor.maryland.gov/labor/build/buildactivemanu.pdf'
 SOURCE='md_labor_active_manufacturers'
 US_STATES=set('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split())
-
-
-def norm(value):
-    return re.sub(r'[^a-z0-9]','',str(value or '').lower())
 
 
 def parse_lines(lines: list[list[dict]]) -> list[dict]:
