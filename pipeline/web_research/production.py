@@ -230,8 +230,8 @@ def submit(url: str, run_id: str, pass_dirs: list[Path], health_report: dict, in
     if health_report.get("decision") != "grow":
         raise RuntimeError(f"health decision is {health_report.get('decision')!r}: nothing submitted")
     rows = submission_rows(run_id, pass_dirs, inputs)
-    import psycopg
-    with psycopg.connect(url, connect_timeout=20) as db:
+    from ..db import psycopg_connect
+    with psycopg_connect(url, connect_timeout=20) as db:
         with db.transaction():
             with db.cursor() as cur:
                 cur.executemany(INSERT, rows)
@@ -254,7 +254,8 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
     if a.cmd == "select":
         from ..research_eval.benchmark import PsycopgReader
-        url = next((u for u in (os.environ.get("DATABASE_URL_UNPOOLED", ""), os.environ.get("DATABASE_URL", "")) if u), "")
+        from ..db import resolve_url
+        url = resolve_url() or ""
         if not 1 <= a.size <= 3000:
             print("size must be 1..3000", file=sys.stderr); return 2
         named = [x.strip() for x in a.facilities.split(",") if x.strip()] or None
@@ -277,7 +278,8 @@ def main(argv=None) -> int:
         return 0
     if a.cmd == "submit":
         rep = json.loads(Path(a.health).read_text())
-        url = os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
+        from ..db import resolve_url
+        url = resolve_url()
         inputs = json.loads(Path(a.batch, "inputs.json").read_text()) if a.batch else None
         n = submit(url, a.run_id, [Path(p) for p in a.passes], rep, inputs)
         print(f"submitted {n} pending submissions for {a.run_id}"); return 0

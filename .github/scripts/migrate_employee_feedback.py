@@ -1,6 +1,7 @@
 """Apply and verify the employee-feedback schema in one PostgreSQL transaction."""
 import os
 
+from pipeline.db import resolve_url
 from pipeline.warehouse import PostgresWarehouse
 
 
@@ -35,9 +36,9 @@ class VerifiedWarehouse(PostgresWarehouse):
 
 
 def main():
-    url = os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
+    url = resolve_url()
     if not url:
-        raise RuntimeError("PostgreSQL connection missing; migration cannot fall back to SQLite")
+        raise RuntimeError("PostgreSQL connection missing: set DATABASE_URL_UNPOOLED or DATABASE_URL")
     warehouse = VerifiedWarehouse(url)
     warehouse.conn.close()
     lines = ["Employee feedback migration committed and verified."]

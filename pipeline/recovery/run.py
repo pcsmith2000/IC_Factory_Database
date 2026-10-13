@@ -47,12 +47,10 @@ def connect():
     # Keep the pure validation functions importable in lightweight development
     # environments. The workflow installs the postgres extra before any database
     # operation; unit tests for matching should not need a database driver.
-    import psycopg
-    from psycopg.rows import dict_row
-    url=next((os.environ[k] for k in ('DATABASE_URL_UNPOOLED','DATABASE_URL') if os.environ.get(k) and os.environ[k].isascii()),'')
+    from pipeline.db import psycopg_connect, resolve_url
+    url=resolve_url()
     if not url:raise RuntimeError('No usable database connection')
-    return psycopg.connect(url,row_factory=dict_row,connect_timeout=20,
-                          options='-c statement_timeout=60000 -c lock_timeout=15000')
+    return psycopg_connect(url,dict_rows=True,connect_timeout=20,statement_timeout_ms=60000,lock_timeout_ms=15000)
 
 
 def run_url():

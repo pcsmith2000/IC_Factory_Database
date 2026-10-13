@@ -14,7 +14,8 @@ Three tables, all append-only from here:
 
     python -m pipeline.demand.load --pass pass/ --run-id 123 [--write]
 
-The connection comes from DATABASE_URL (psycopg), otherwise Neon's HTTPS endpoint (pipeline/neon_sql.py).
+The connection comes from DATABASE_URL_UNPOOLED or DATABASE_URL (psycopg), otherwise Neon's HTTPS endpoint
+(pipeline/db.py).
 """
 from __future__ import annotations
 import argparse, hashlib, json, os, re, sys
@@ -116,8 +117,8 @@ def statements(p: dict) -> list[tuple[str, list]]:
 
 class Psycopg:
     def __init__(self, url: str):
-        import psycopg
-        self.db = psycopg.connect(url, connect_timeout=20)
+        from ..db import psycopg_connect
+        self.db = psycopg_connect(url, connect_timeout=20)
 
     def query(self, sql: str) -> list[tuple]:
         return self.db.execute(sql).fetchall()
@@ -129,25 +130,19 @@ class Psycopg:
 
 
 class NeonHttp:
-    """Neon's HTTPS SQL endpoint, one transaction per call (pipeline/neon_sql.py resolves the connection)."""
+    """Neon's HTTPS SQL endpoint, one transaction per call (pipeline/db.py resolves the connection)."""
     def __init__(self):
-        from .. import neon_sql
+        from .. import db
         if os.environ.get("DATABASE_URL") or os.environ.get("NEON_API_KEY"):
-            self.url = neon_sql.connection_string()
-            self.host = re.search(r"@([^/:?]+)", self.url).group(1)
+            self.url = db.neon_connection_string()
+            self.host = db.neon_host(self.url)
         else:                                            # a Claude cloud session: the egress proxy adds the header
-            self.url, self.host = None, f"{neon_sql.LIVE_HOST}.c-12.us-east-1.aws.neon.tech"
+            self.url, self.host = None, f"{db.LIVE_HOST}.c-12.us-east-1.aws.neon.tech"
 
     def _post(self, queries: list[dict], read_only: bool):
-        import urllib.request
-        body = json.dumps({"queries": queries} if len(queries) > 1 else queries[0]).encode()
-        headers = {"Content-Type": "application/json", "Neon-Batch-Read-Only": "true" if read_only else "false"}
-        if self.url:
-            headers["Neon-Connection-String"] = self.url
-        host = self.host
-        req = urllib.request.Request(f"https://{host}/sql", data=body, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=120) as r:
-            return json.load(r)
+        from ..db import neon_http
+        return neon_http(self.host, {"queries": queries} if len(queries) > 1 else queries[0],
+                         url=self.url, read_only=read_only)
 
     def query(self, sql: str) -> list[tuple]:
         res = self._post([{"query": sql, "params": []}], True)
@@ -165,7 +160,8 @@ class NeonHttp:
 
 
 def connect():
-    url = os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
+    from ..db import resolve_url
+    url = resolve_url()
     return Psycopg(url) if url else NeonHttp()
 
 

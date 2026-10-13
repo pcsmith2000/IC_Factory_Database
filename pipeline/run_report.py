@@ -23,11 +23,11 @@ SAFE = {"phase", "batches_done", "batches_total", "secs_per_batch", "eta_s", "ro
 
 
 def connection(reporting=True):
-    import psycopg
-    url = (os.environ.get("PIPELINE_REPORT_DATABASE_URL") if reporting else None) or os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
+    from .db import psycopg_connect, resolve_url
+    url = resolve_url(("PIPELINE_REPORT_DATABASE_URL",) if reporting else ())
     if not url:
         raise RuntimeError("No reporting database")
-    return psycopg.connect(url, connect_timeout=3, options="-c statement_timeout=5000 -c lock_timeout=2000")
+    return psycopg_connect(url, connect_timeout=3, statement_timeout_ms=5000, lock_timeout_ms=2000)
 
 
 def emit(stage: str, state: str, data: dict):

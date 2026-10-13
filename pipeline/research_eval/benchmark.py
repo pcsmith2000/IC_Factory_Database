@@ -43,13 +43,9 @@ _ID = re.compile(r"^[A-Z]+-\d+$")
 
 class PsycopgReader:
     def __init__(self, url: str):
-        import psycopg
-        from psycopg.rows import dict_row
-        self.db = psycopg.connect(url, connect_timeout=20, row_factory=dict_row,
-                                  options="-c default_transaction_read_only=on -c statement_timeout=120000")
-        self.db.read_only = True
-        if self.db.execute("SHOW transaction_read_only").fetchone()["transaction_read_only"] != "on":
-            raise RuntimeError("database read-only protection was not enabled")
+        from ..db import psycopg_connect
+        self.db = psycopg_connect(url, connect_timeout=20, dict_rows=True, read_only=True,
+                                  statement_timeout_ms=120000)
 
     def query(self, sql: str) -> list[dict]:
         return [dict(r) for r in self.db.execute(sql).fetchall()]
@@ -288,8 +284,8 @@ def main(argv=None) -> int:
     if a.neon_http:
         reader = NeonHttpReader()
     else:
-        urls = [os.environ.get(k, "").strip() for k in ("DATABASE_URL_UNPOOLED", "DATABASE_URL")]
-        url = next((u for u in urls if u and u.isascii()), "")
+        from ..db import resolve_url
+        url = resolve_url()
         if not url:
             print("no database URL", file=sys.stderr); return 1
         reader = PsycopgReader(url)
