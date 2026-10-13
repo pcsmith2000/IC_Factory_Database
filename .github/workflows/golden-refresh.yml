@@ -80,3 +80,12 @@ jobs:
           [ "$DRY_RUN" = "true" ] && set -- "$@" --dry-run
           python -m pipeline.golden_refresh "$@" | tee refresh.json
           { echo '```json'; cat refresh.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      # A ruling written down but never applied left test rows and non-US plants published for ten
+      # days (spot check 2026-10-13). Fail when golden still holds a plant a person ruled out; warn
+      # about rows that look like the standing scope rulings but carry no ruling yet.
+      - name: Check people's rulings landed in golden
+        if: inputs.dry_run != true
+        run: |
+          rc=0; python -m pipeline.ruling_check --json ruling_check.json || rc=$?
+          python3 -c "import json; r=json.load(open('ruling_check.json')); print(f'rulings: {len(r[\"unapplied\"])} not landed, {len(r[\"suspects\"])} suspects without a ruling')" >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
