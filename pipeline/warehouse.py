@@ -112,11 +112,9 @@ def _golden_columns() -> str:
     return ", ".join(f"{f} TEXT, {f}__source TEXT" for f in GOLDEN_FIELDS)
 
 
+# employee_feedback is not here: migrations/001_employee_feedback.sql owns it (and its trigger and
+# promotion function), applied by init_schema after these tables exist.
 DDL = [
-    """CREATE TABLE IF NOT EXISTS employee_feedback (feedback_id TEXT PRIMARY KEY,
-        facility_key TEXT NOT NULL, employee_name TEXT NOT NULL, auth_method TEXT NOT NULL,
-        channel TEXT NOT NULL, note TEXT NOT NULL, changes_json TEXT NOT NULL, created_at TEXT NOT NULL,
-        request_hash TEXT NOT NULL, creates_facility INTEGER NOT NULL DEFAULT 0)""",
     # asserted_at is when this ROW was written; date_key is when the SOURCE was retrieved. They are
     # different questions and survivorship needs both: retrieved_date ranks one source against
     # another, and asserted_at orders two assertions that share it. Without the second, re-measuring
@@ -418,9 +416,11 @@ class _Warehouse:
             c.execute("DROP TRIGGER IF EXISTS golden_dirty_on_fact ON fact_assertions")
             c.execute("""CREATE TRIGGER golden_dirty_on_fact AFTER INSERT ON fact_assertions
                          REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION golden_mark_dirty()""")
-            # Execute raw: the migration contains Postgres's JSON existence operator '?'.
-            migration = Path(__file__).resolve().parent / "migrations" / "001_employee_feedback.sql"
-            c.raw.execute(migration.read_text())
+            # migrations/NNN_*.sql, in name order, after every table above exists (001 inserts into
+            # dim_source and triggers on golden_facility). Each must be idempotent: it runs on every
+            # init. Executed raw: 001 contains Postgres's JSON existence operator '?'.
+            for migration in sorted((Path(__file__).resolve().parent / "migrations").glob("*.sql")):
+                c.raw.execute(migration.read_text())
 
     def _existing_columns(self, c, table: str) -> set[str]:
         raise NotImplementedError
